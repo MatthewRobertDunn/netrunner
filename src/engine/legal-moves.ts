@@ -1,0 +1,476 @@
+/**
+ * Legal moves: enumerate every decision a player can make right now.
+ *
+ * A move carries all typed data needed to apply it (card ids, servers, target
+ * instance ids, ability indices), so callers never have to infer details.
+ */
+
+import { cardDef } from "../cards/catalogue.ts";
+import { behaviors, supportStatus } from "../cards/effects.ts";
+import { abilityLegality, serversForAbility } from "./effects.ts";
+import { candidatesForBreach, chooseRandomAccess } from "./settle.ts";
+import {
+  availableCredits,
+  findCard,
+  isIcebreaker,
+  isRezzedIce,
+  memoryLimit,
+  memoryUsed,
+  player,
+  serverById,
+} from "./state.ts";
+import { rezCostFor } from "./runs.ts";
+import type { CardInstance, GameState, Move, PlayerSide, Prompt, ServerId } from "../types.ts";
+
+/** Every legal move for `player` in `state`. */
+export function getLegalMoves(state: GameState, playerSide: PlayerSide): Move[] {
+  if (state.winner) return [];
+  const moves: Move[] = [];
+  const p = player(state, playerSide);
+
+  // --- Setup: mulligans -----------------------------------------------------
+  if (state.turn.phase === "mulligans") {
+    const prompt = state.prompts.find((pr) => pr.kind === "mulligan");
+    if (prompt && prompt.player === playerSide) {
+      moves.push({ kind: "mulligan.take", player: playerSide });
+      moves.push({ kind: "mulligan.decline", player: playerSide });
+    }
+    return moves;
+  }
+
+  // --- Discard phase decisions ---------------------------------------------
+  if (state.turn.phase === "discard") {
+    const prompt = state.prompts.find((pr) => pr.kind === "discard" && pr.player === playerSide);
+    if (prompt && prompt.kind === "discard") {
+      const cards = player(state, playerSide).hand;
+      // Offer all legally-sized subsets of hand cards (bounded to `count` cards).
+      const count = Math.min(prompt.count, cards.length);
+      const combos = combinations(cards.map((c) => c.id), count);
+      for (const combo of combos) {
+        moves.push({ kind: "discard", player: playerSide, cardInstanceIds: combo });
+      }
+      return moves;
+    }
+    return [];
+  }
+
+  // --- Prompts (one actionable prompt at a time) ---------------------------
+  const prompt = state.prompts[0];
+  if (prompt) {
+    const promptMoves = movesForPrompt(state, playerSide, prompt);
+    return promptMoves;
+  }
+
+  // --- Run decisions -------------------------------------------------------
+  if (state.run) {
+    return runMoves(state, playerSide);
+  }
+
+  // --- Access decisions ----------------------------------------------------
+  if (state.breach) {
+    return breachMoves(state, playerSide);
+  }
+
+  // --- Action phase basics -------------------------------------------------
+  if (state.turn.phase !== "action" || p.clicks <= 0) return [];
+  if (playerSide === "corp") return corpActionMoves(state);
+  return runnerActionMoves(state);
+}
+
+// ---------------------------------------------------------------------------
+// Prompt-driven moves
+// ---------------------------------------------------------------------------
+
+function movesForPrompt(state: GameState, playerSide: PlayerSide, prompt: Prompt): Move[] {
+  if (prompt.player !== playerSide) return [];
+  switch (prompt.kind) {
+    case "mulligan":
+      return [
+        { kind: "mulligan.take", player: playerSide },
+        { kind: "mulligan.decline", player: playerSide },
+      ];
+    case "discard": {
+      const cards = player(state, playerSide).hand;
+      const count = Math.min(prompt.count, cards.length);
+      return combinations(cards.map((c) => c.id), count).map((combo) => ({
+        kind: "discard" as const,
+        player: playerSide,
+        cardInstanceIds: combo,
+      }));
+    }
+    case "choose-one": {
+      const moves: Move[] = [];
+      for (const option of prompt.options) {
+        if (option.creditCost && availableCredits(state, playerSide) < option.creditCost) continue;
+        if (option.clickCost && player(state, playerSide).clicks < option.clickCost) continue;
+        if (option.effect?.kind === "rez-card-free" && option.targetId) {
+          const found = findCard(state, option.targetId);
+          if (!found || found.card.rezzed === true) continue;
+        }
+        if (option.effect?.kind === "corp-install-ice-inward") {
+          const found = findCard(state, option.effect.targetId);
+          if (!found) continue;
+        }
+        moves.push({
+          kind: "prompt.answer",
+          player: playerSide,
+          promptId: prompt.id,
+          optionId: option.id,
+        });
+      }
+      return moves;
+    }
+    case "rez-window": {
+      const moves: Move[] = [];
+      for (const option of prompt.options) {
+        if ((option.creditCost ?? 0) > state.corp.credits) continue;
+        moves.push({
+          kind: "prompt.answer",
+          player: "corp",
+          promptId: prompt.id,
+          optionId: option.id,
+        });
+      }
+      moves.push({ kind: "prompt.answer", player: "corp", promptId: prompt.id, optionId: "pass" });
+      return moves;
+    }
+    case "access-decision": {
+      const found = findCard(state, prompt.cardId);
+      if (!found) return [{ kind: "runner.finishAccess" }];
+      const moves: Move[] = [{ kind: "runner.finishAccess" }];
+      const trashCost = cardDef(found.card.cardId).trashCost;
+      if (trashCost !== null && trashCost > 0 && state.runner.credits >= trashCost) {
+        moves.push({ kind: "runner.trashAccessed" });
+      }
+      return moves;
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Corp action phase
+// ---------------------------------------------------------------------------
+
+function corpActionMoves(state: GameState): Move[] {
+  const moves: Move[] = [];
+  const corp = state.corp;
+  if (corp.clicks <= 0) return moves;
+  moves.push({ kind: "corp.gainCredits" });
+  if (corp.deck.length > 0) moves.push({ kind: "corp.draw" });
+
+  // Install: hand cards that can be installed in their legal servers.
+  for (const card of corp.hand) {
+    const def = cardDef(card.cardId);
+    const servers = installServersFor(state, card);
+    if (servers.length === 0) continue;
+    if (def.type === "ice") {
+      // Ice install cost = number of ice already protecting that server.
+      for (const server of servers) {
+        if (server === "new-remote") {
+          // Installing ice in a brand-new remote costs 0 (no ice protecting it).
+          moves.push({ kind: "corp.install", cardId: card.cardId, server });
+          continue;
+        }
+        const cost = serverById(state, server).ice.length;
+        if (cost <= state.corp.credits) {
+          moves.push({ kind: "corp.install", cardId: card.cardId, server });
+        }
+      }
+    } else {
+      // Asset/upgrade/agenda installs are free (rule 1.16.6c).
+      for (const server of servers) {
+        moves.push({ kind: "corp.install", cardId: card.cardId, server });
+      }
+    }
+  }
+
+  // Play operations from hand.
+  for (const card of corp.hand) {
+    const def = cardDef(card.cardId);
+    if (def.type !== "operation") continue;
+    if (def.cost !== null && def.cost > state.corp.credits) continue;
+    moves.push({ kind: "corp.playOperation", cardId: card.cardId });
+  }
+
+  // Advance and score installed cards.
+  for (const card of corpInstalledCardsLocal(state)) {
+    const def = cardDef(card.cardId);
+    if (def.advancementRequirement === null && def.type !== "ice") continue;
+    moves.push({ kind: "corp.advance", targetId: card.id });
+    if (def.type === "agenda") {
+      const adv = card.advancement ?? 0;
+      const requirement = def.advancementRequirement ?? 0;
+      if (adv >= requirement) moves.push({ kind: "corp.score", targetId: card.id });
+    }
+  }
+
+  // Rez installed non-ice cards (ice is rezzed during runs only).
+  for (const card of corpInstalledCardsLocal(state)) {
+    const def = cardDef(card.cardId);
+    if (def.type !== "asset" && def.type !== "upgrade") continue;
+    if (card.rezzed === true) continue;
+    if (rezCostFor(state, card) <= state.corp.credits) {
+      moves.push({ kind: "corp.rez", targetId: card.id });
+    }
+  }
+
+  // Paid abilities on installed cards.
+  addAbilityMoves(state, "corp", corpInstalledCardsLocal(state), moves);
+  return moves;
+}
+
+/** Installation servers for a Corp hand card. */
+function installServersFor(state: GameState, card: CardInstance): (ServerId | "new-remote")[] {
+  const def = cardDef(card.cardId);
+  if (def.type === "ice") {
+    return ["hq", "rd", "archives", ...state.remotes.map((s) => s.id), "new-remote"];
+  }
+  if (def.type === "agenda" || def.type === "asset") {
+    // Only one card may be installed in a remote server root at a time.
+    return [
+      ...(state.remotes.filter((s) => s.root.length === 0).map((s) => s.id) as ServerId[]),
+      "new-remote",
+    ];
+  }
+  if (def.type === "upgrade") {
+    return ["hq", "rd", "archives", ...state.remotes.map((s) => s.id)];
+  }
+  return [];
+}
+
+// ---------------------------------------------------------------------------
+// Runner action phase
+// ---------------------------------------------------------------------------
+
+function runnerActionMoves(state: GameState): Move[] {
+  const moves: Move[] = [];
+  const runner = state.runner;
+  if (runner.clicks <= 0) return moves;
+  moves.push({ kind: "runner.gainCredits" });
+  if (runner.deck.length > 0) moves.push({ kind: "runner.draw" });
+
+  // Install programs/hardware/resources from hand.
+  for (const card of runner.hand) {
+    const def = cardDef(card.cardId);
+    if (def.type !== "program" && def.type !== "hardware" && def.type !== "resource") continue;
+    const cost = def.cost ?? 0;
+    if (cost > runner.credits) continue;
+    if (def.type === "program" && memoryUsed(state) + (def.memoryCost ?? 0) > memoryLimit(state)) {
+      continue;
+    }
+    moves.push({ kind: "runner.install", cardId: card.cardId });
+  }
+
+  // Play events from hand.
+  for (const card of runner.hand) {
+    const def = cardDef(card.cardId);
+    if (def.type !== "event") continue;
+    if (def.cost !== null && def.cost > runner.credits) continue;
+    if (def.minimumDeckSize !== null) continue;
+    if (card.cardId === "jailbreak" || card.cardId === "overclock") {
+      for (const server of ["hq", "rd"] as ServerId[]) {
+        moves.push({ kind: "runner.playEvent", cardId: card.cardId, server });
+      }
+    } else {
+      moves.push({ kind: "runner.playEvent", cardId: card.cardId });
+    }
+  }
+
+  // Run any server (central or existing remote).
+  for (const server of ["hq", "rd", "archives", ...state.remotes.map((s) => s.id)] as ServerId[]) {
+    if (cardRestrictsRun(state, server)) continue;
+    moves.push({ kind: "runner.run", server });
+  }
+
+  // Paid abilities on installed Runner cards.
+  addAbilityMoves(state, "runner", runner.installed, moves);
+  return moves;
+}
+
+/** Red Team forbids running the same central server twice per turn. */
+function cardRestrictsRun(state: GameState, server: ServerId): boolean {
+  if (!server.startsWith("remote-") && state.runner.ranServersThisTurn.includes(server)) {
+    // Only Red Team imposes this; if it is not installed the restriction does not apply.
+    if (state.runner.installed.some((c) => c.cardId === "red_team")) return true;
+  }
+  return false;
+}
+
+// ---------------------------------------------------------------------------
+// Run and breach moves
+// ---------------------------------------------------------------------------
+
+function runMoves(state: GameState, playerSide: PlayerSide): Move[] {
+  const run = state.run!;
+  const moves: Move[] = [];
+  if (playerSide === "corp") {
+    // Corp decisions during a run come through prompts (rez windows).
+    return moves;
+  }
+  if (run.phase === "encounter-ice") {
+    // Break window: icebreakers may break/pump, then resolve.
+    const ice = run.currentIceId ? findCard(state, run.currentIceId)?.card ?? null : null;
+    if (ice && isRezzedIce(ice)) {
+      addBreakMoves(state, ice, moves);
+    }
+    moves.push({ kind: "runner.resolveSubroutines" });
+    return moves;
+  }
+  if (run.phase === "movement") {
+    moves.push({ kind: "runner.jackOut" });
+    return moves;
+  }
+  return moves;
+}
+
+/** Icebreaker break/pump options during an encounter. */
+function addBreakMoves(state: GameState, ice: CardInstance, moves: Move[]): void {
+  const subs = behaviors.get(ice.cardId)?.subroutines ?? [];
+  const unbroken = subs.map((_, i) => i).filter((i) => {
+    const run = state.run!;
+    return !run.broken.includes(i) && !run.resolved.includes(i);
+  });
+  if (unbroken.length === 0) return;
+  const iceStrength = currentIceStrength(state, ice);
+
+  for (const program of state.runner.installed) {
+    if (!isIcebreaker(program)) continue;
+    const strengthOk = currentIceStrength(state, program) >= iceStrength;
+    for (const subIndex of unbroken) {
+      // Bran 1.0: lose [click] to break 1 subroutine; any installed icebreaker,
+      // no strength requirement.
+      if (ice.cardId === "bran_1_0") {
+        if (state.runner.clicks >= 1) {
+          moves.push({
+            kind: "runner.breakSubroutine",
+            programId: program.id,
+            subIndex,
+          });
+        }
+        continue;
+      }
+      if (strengthOk) {
+        const breakDef = behaviors.get(program.cardId)?.breakAbility;
+        const cost = breakDef?.creditCost ?? 1;
+        const breaks = breakDef?.breaks ?? [];
+        const iceSubtypes = cardDef(ice.cardId).subtypes;
+        const canBreak = breaks.length === 0 || iceSubtypes.some((s) => breaks.includes(s));
+        if (canBreak && availableCredits(state, "runner") >= cost) {
+          moves.push({
+            kind: "runner.breakSubroutine",
+            programId: program.id,
+            subIndex,
+          });
+        }
+      }
+    }
+    // Pump.
+    const pumpDef = behaviors.get(program.cardId)?.pumpAbility;
+    if (pumpDef && availableCredits(state, "runner") >= pumpDef.creditCost) {
+      moves.push({ kind: "runner.pumpIcebreaker", programId: program.id });
+    }
+  }
+}
+
+/** Strength of an ice/icebreaker, including static modifiers. */
+function currentIceStrength(state: GameState, card: CardInstance): number {
+  const printed = cardDef(card.cardId).strength ?? 0;
+  let extra = card.strengthBoost ?? 0;
+  if (card.cardId === "unity") {
+    // Unity's +X is static (not a pump): its strength equals installed icebreakers.
+    const count = state.runner.installed.filter((c) => isIcebreaker(c)).length;
+    extra = count - 1; // printed strength 1 already counted
+  }
+  if (card.cardId === "palisade" && (card.server?.startsWith("remote-") ?? false)) {
+    return printed + 2 + (card.strengthBoost ?? 0);
+  }
+  return printed + extra;
+}
+
+function breachMoves(state: GameState, playerSide: PlayerSide): Move[] {
+  const moveList: Move[] = [];
+  if (playerSide === "corp") {
+    // Corp decisions during a breach come through prompts.
+    return moveList;
+  }
+  const breach = state.breach!;
+  if (breach.accessing) return moveList; // access-decision prompt handles this
+  const candidates = candidatesForBreach(state).filter((c) =>
+    !breach.chosen.includes(c.instanceId)
+  );
+  if (candidates.length === 0) return moveList;
+  if (candidates.length === 1) return moveList; // auto-selected by settle
+  const random = candidates.filter((c) => c.random);
+  const specific = candidates.filter((c) => !c.random);
+  for (const c of specific) {
+    moveList.push({ kind: "runner.accessCard", targetId: c.instanceId });
+  }
+  if (random.length > 0 && chooseRandomAccess(state)) {
+    moveList.push({ kind: "runner.accessRandom" });
+  }
+  return moveList;
+}
+
+// ---------------------------------------------------------------------------
+// Shared helpers
+// ---------------------------------------------------------------------------
+
+function addAbilityMoves(
+  state: GameState,
+  side: PlayerSide,
+  cards: CardInstance[],
+  moves: Move[],
+): void {
+  for (const card of cards) {
+    const abilityCount = behaviors.get(card.cardId)?.paidAbilities?.length ?? 0;
+    if (supportStatus(card.cardId) === "unsupported") continue;
+    for (let i = 0; i < abilityCount; i++) {
+      const legality = abilityLegality(state, side, card, i);
+      if (!legality.ok) continue;
+      const servers = serversForAbility(state, card, i);
+      if (servers.length > 0) {
+        for (const server of servers) {
+          moves.push(
+            { kind: `${side}.ability`, targetId: card.id, abilityIndex: i, server } as Move,
+          );
+        }
+      } else {
+        moves.push({ kind: `${side}.ability`, targetId: card.id, abilityIndex: i } as Move);
+      }
+    }
+  }
+}
+
+/** All Corp cards installed in servers and central server roots. */
+function corpInstalledCardsLocal(state: GameState): CardInstance[] {
+  const cards: CardInstance[] = [];
+  for (const server of ["hq", "rd", "archives"] as ServerId[]) {
+    for (const c of state.corp.installed) {
+      if (c.zone === "play-area" && c.server === server) cards.push(c);
+    }
+  }
+  for (const s of state.remotes) cards.push(...s.root, ...s.ice);
+  return cards;
+}
+
+function combinations(ids: string[], size: number): string[][] {
+  if (size <= 0) return [[]];
+  if (size > ids.length) return [];
+  const result: string[][] = [];
+  const list = [...ids].sort();
+  const walk = (start: number, chosen: string[]): void => {
+    if (chosen.length === size) {
+      result.push([...chosen]);
+      return;
+    }
+    for (let i = start; i < list.length; i++) {
+      chosen.push(list[i]!);
+      walk(i + 1, chosen);
+      chosen.pop();
+    }
+  };
+  walk(0, []);
+  return result;
+}
+
+export {};
