@@ -17,8 +17,12 @@ CyberClick NetrunnerDB starter decks (Runner `4b9cf488-5bd9-4415-a57a-0864d4d0e6
 - **Visible support status.** Every card has a `CardBehavior` definition keyed by card id (rules
   text is never parsed). `cardSupport` / `starterDeckSupport` report `supported` / `partial` /
   `unsupported` per card.
-- **Tested.** `deno test` runs 49 tests across setup, cards, runs, visibility, determinism,
-  public-status, and play-test suites.
+- **Tested.** `deno test` runs 53 tests across setup, cards, runs, visibility, determinism,
+  public-status, AI playthrough, and UCT-vs-random strength suites.
+- **AI players.** `src/ai/mod.ts` exposes a `GameAI` interface (`name`, `chooseMove(state, side, legal)`),
+  a `RandomAI` (uniform pick using the state's own seeded PRNG), and a `UctAI` (MCTS with UCB1).
+  `playGame({ corp, runner, state })` runs a full game between any two AIs; decisions are routed by
+  *who may act* (the turn player, or the prompted player during rez windows and accesses).
 
 ## Setup
 
@@ -128,8 +132,13 @@ src/
     apply.ts          Validate + execute + settle a move
     state.ts          Zone movement, credits, damage
     rng.ts            Seeded PRNG
-tests/                Smoke, cards, setup, runs, visibility, determinism,
-                      play-test suites
+  ai/
+    types.ts          GameAI interface
+    random.ts         RandomAI
+    uct.ts            UctAI (MCTS with UCB1)
+    play.ts           playGame loop, AiGameError
+  tests/                Smoke, cards, setup, runs, visibility, determinism,
+                       public-status, AI playthrough, UCT-vs-random suites
 scripts/              import-starter-decks.ts (dev only)
 ```
 

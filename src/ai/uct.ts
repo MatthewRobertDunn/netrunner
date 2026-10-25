@@ -25,6 +25,8 @@ export interface UctOptions {
   exploration?: number;
   /** Move cap for a single playout (a full game from the current position). */
   playoutDepth?: number;
+  /** Hard wall-clock budget per decision, in milliseconds. */
+  timeBudgetMs?: number;
 }
 
 interface Node {
@@ -48,11 +50,13 @@ export class UctAI implements GameAI {
   private readonly iterations: number;
   private readonly exploration: number;
   private readonly playoutDepth: number;
+  private readonly timeBudgetMs: number;
 
   constructor(options: UctOptions = {}) {
-    this.iterations = options.iterations ?? 200;
+    this.iterations = options.iterations ?? 60;
     this.exploration = options.exploration ?? Math.SQRT2;
-    this.playoutDepth = options.playoutDepth ?? 300;
+    this.playoutDepth = options.playoutDepth ?? 200;
+    this.timeBudgetMs = options.timeBudgetMs ?? 2_000;
   }
 
   chooseMove(state: GameState, side: PlayerSide, legal: Move[]): Move {
@@ -68,7 +72,8 @@ export class UctAI implements GameAI {
       playerJustMoved: other(side),
     };
 
-    for (let i = 0; i < this.iterations; i++) {
+    const deadline = Date.now() + this.timeBudgetMs;
+    for (let i = 0; i < this.iterations && Date.now() < deadline; i++) {
       const sim = structuredClone(rootState);
       this.iterate(sim, root, side);
     }
@@ -144,21 +149,22 @@ export class UctAI implements GameAI {
       expanded = true;
       break;
     }
-    if (!expanded && !sim.winner) {
-      // Every child is stale-legal or the position has no moves; fall through
-      // to a playout from here anyway.
-    }
+    void expanded;
 
     // --- Simulation: uniform-random playout ---------------------------------
     const reward = this.playout(sim, me);
 
     // --- Back-propagation ----------------------------------------------------
+    // `reward` is from `me`'s perspective. A node's `playerJustMoved` is the
+    // side that made the move leading *into* that node, so a node is "good for
+    // me" exactly when its player is `me`. Store the reward in that player's
+    // frame (positive = good for them), so UCB1's mean is directly comparable.
     node.visits += 1;
-    node.totalReward += node.playerJustMoved === me ? -reward : reward;
+    node.totalReward += node.playerJustMoved === me ? reward : -reward;
     for (let i = path.length - 1; i >= 0; i--) {
       const step = path[i]!;
       step.node.visits += 1;
-      step.node.totalReward += step.node.playerJustMoved === me ? -reward : reward;
+      step.node.totalReward += step.node.playerJustMoved === me ? reward : -reward;
     }
   }
 
