@@ -28,20 +28,23 @@ import type { CardInstance, GameState, ServerId } from "../types.ts";
 export function settle(state: GameState): void {
   let guard = 0;
   while (guard++ < 1000) {
+
     if (state.winner) {
       state.prompts = [];
       state.run = null;
       state.breach = null;
       return;
     }
+
     if (state.prompts.length > 0) return; // waiting on a player decision
 
     if (state.run) {
+      // Breach resolution precedes run-phase stepping (rule 7.5).
+      if (state.breach) {
+        if (stepBreach(state)) return;
+        continue;
+      }
       if (stepRun(state)) return;
-      continue;
-    }
-    if (state.breach) {
-      if (stepBreach(state)) return;
       continue;
     }
 
@@ -55,6 +58,8 @@ export function settle(state: GameState): void {
     return;
   }
 }
+
+
 
 function promptOrFinishDiscard(state: GameState): void {
   const side = state.turn.player;
@@ -275,10 +280,10 @@ function approachToll(state: GameState): boolean {
 }
 
 function successStep(state: GameState): void {
-  // Successful-run triggers fire when the run becomes successful (rule 6.7.2).
   fireSuccessfulRun(state);
   if (state.winner) return;
   beginBreach(state, state.run!.server);
+  // Successful-run triggers fire when the run becomes successful (rule 6.7.2).
 }
 
 /** Set up a breach: determine the random access limit (rule 7.3.5). */

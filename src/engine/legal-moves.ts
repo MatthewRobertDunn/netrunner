@@ -62,7 +62,7 @@ export function getLegalMoves(state: GameState, playerSide: PlayerSide): Move[] 
   }
 
   // --- Run decisions -------------------------------------------------------
-  if (state.run) {
+  if (state.run && !state.breach) {
     return runMoves(state, playerSide);
   }
 
