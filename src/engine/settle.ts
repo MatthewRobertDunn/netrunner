@@ -28,7 +28,6 @@ import type { CardInstance, GameState, ServerId } from "../types.ts";
 export function settle(state: GameState): void {
   let guard = 0;
   while (guard++ < 1000) {
-
     if (state.winner) {
       state.prompts = [];
       state.run = null;
@@ -58,8 +57,6 @@ export function settle(state: GameState): void {
     return;
   }
 }
-
-
 
 function promptOrFinishDiscard(state: GameState): void {
   const side = state.turn.player;
