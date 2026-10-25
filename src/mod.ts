@@ -29,6 +29,8 @@
  * turn/phase, score area, server placement, run and breach progress, pending
  * prompts and support warnings. It never leaks hidden information, so both
  * players can safely call it and receive the same value.
+ *
+ * AI players live in `src/ai/mod.ts` (`RandomAI`, `UctAI`, `playGame`).
  */
 
 import { cardDef, tryCardDef } from "./cards/catalogue.ts";
@@ -71,6 +73,8 @@ export {
   startGame,
   validateDeck,
 };
+
+export * from "./ai/mod.ts";
 
 // ---------------------------------------------------------------------------
 // Player view

@@ -202,7 +202,7 @@ export function resolveSubroutine(state: GameState, ice: CardInstance, index: nu
     case "diviner-damage": {
       const trashed = dealDamage(state, 1, "net", () => rngNext(state));
       if (state.winner) return;
-      if (oddCostTrashed(trashed)) endRun(state);
+      if (oddCostTrashed(state, trashed)) endRun(state);
       break;
     }
     case "lose-credits-then-conditional-end-run": {
@@ -240,10 +240,11 @@ export function resolveSubroutine(state: GameState, ice: CardInstance, index: nu
 }
 
 /** Diviner helper: did the damage trash a card with an odd printed cost? */
-function oddCostTrashed(trashed: CardInstanceId[]): boolean {
+function oddCostTrashed(state: GameState, trashed: CardInstanceId[]): boolean {
   for (const id of trashed) {
-    const cardId = id.startsWith("runner-") ? id.slice("runner-".length) : id.slice(5);
-    const cost = cardDef(cardId).cost ?? null;
+    const found = findCard(state, id);
+    if (!found) continue;
+    const cost = cardDef(found.card.cardId).cost ?? null;
     if (cost !== null && cost % 2 === 1) return true;
   }
   return false;

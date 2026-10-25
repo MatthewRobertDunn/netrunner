@@ -324,35 +324,26 @@ function answerPrompt(state: GameState, promptId: number, optionId: string): voi
   if (!prompt || prompt.id !== promptId) return;
   switch (prompt.kind) {
     case "rez-window": {
-      if (optionId === "pass") {
-        state.prompts.shift();
-        return;
-      }
       const option = prompt.options.find((o) => o.id === optionId);
       if (!option?.targetId) {
+        // "Pass" (or an empty option): close the window and continue the run.
         state.prompts.shift();
+        finishCurrentApproach(state);
         return;
       }
       const found = findCard(state, option.targetId);
-      if (found) {
-        const ok = rezCard(state, found.card);
-        if (!ok) return; // not payable; leave the prompt open
-        fireInstall(state, found.card);
-        // Pay the rez cost.
-        spendCredits(state, "corp", option.creditCost ?? 0);
-        const remaining = state.prompts[0]?.id === prompt.id
-          ? (state.prompts[0] as import("../types.ts").Prompt & {
-            options: import("../types.ts").PromptOption[];
-          }).options.filter((o) =>
-            o.id !== optionId &&
-            o.targetId !== undefined &&
-            (o.creditCost ?? 0) <= state.corp.credits &&
-            findCard(state, o.targetId)?.card.rezzed !== true
-          )
-          : [];
+      if (!found) {
         state.prompts.shift();
-        if (remaining.length === 0) finishCurrentApproach(state);
+        finishCurrentApproach(state);
+        return;
       }
+      const ok = rezCard(state, found.card);
+      if (!ok) return; // not payable; leave the prompt open
+      fireInstall(state, found.card);
+      // Pay the rez cost.
+      spendCredits(state, "corp", option.creditCost ?? 0);
+      state.prompts.shift();
+      finishCurrentApproach(state);
       break;
     }
     case "choose-one": {
@@ -387,23 +378,23 @@ function answerPrompt(state: GameState, promptId: number, optionId: string): voi
       state.prompts.shift();
       break;
   }
-}
-
-/** After a rez window closes, encounter the ice if it is now rezzed. */
-function finishCurrentApproach(state: GameState): void {
-  const run = state.run;
-  if (!run) return;
-  const ice = run.currentIceId ? findCard(state, run.currentIceId)?.card ?? null : null;
-  if (ice && ice.rezzed === true) {
-    beginEncounter(state);
-  } else if (run.phase === "approach-ice") {
-    // Unrezzed ice is passed (rule 6.9.2c).
-    passIce(state);
+  /** After a rez window closes, encounter the ice if it is now rezzed. */
+  function finishCurrentApproach(state: GameState): void {
+    const run = state.run;
+    if (!run) return;
+    const ice = run.currentIceId ? findCard(state, run.currentIceId)?.card ?? null : null;
+    if (ice && ice.rezzed === true) {
+      beginEncounter(state);
+    } else if (run.phase === "approach-ice") {
+      // Unrezzed ice is passed (rule 6.9.2c).
+      passIce(state);
+    }
   }
 }
 
 // ---------------------------------------------------------------------------
 // Corp installs
+// ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
 
 function installCorpCard(state: GameState, cardId: string, server: ServerId | "new-remote"): void {

@@ -403,9 +403,8 @@ export function finishAccess(state: GameState, trashed: boolean): void {
       stealAgendaInstance(state, card.id);
       fireSteal(state, card);
     }
-    if (state.winner) return;
-    return;
   }
+  state.prompts = state.prompts.filter((pr) => pr.kind !== "access-decision");
   if (def.type === "agenda") {
     // "If, after resolving mid-access abilities, the Runner is still accessing an
     // agenda, they must steal it." (rule 7.1.6)
