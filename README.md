@@ -10,7 +10,9 @@ CyberClick NetrunnerDB starter decks (Runner `4b9cf488-5bd9-4415-a57a-0864d4d0e6
   `getPlayerView`, `getPublicGameStatus`, `getPublicGameStatusFor`, `starterDeckConfigs`,
   `starterDeckCardIds`, `cardSupport`, `starterDeckSupport`.
 - **Offline.** Card data is checked in at `data/cards.json` and `data/starter-decks.json`; the only
-  network consumer is the dev-time import script (`deno task import-decks`).
+  network consumers are the dev-time import script (`deno task import-decks`) and the image fetcher
+  (`deno task fetch-images`), which downloads `data/images/<card-id>.webp` (xlarge, 34 files) from
+  NetrunnerDB's card-images CDN.
 - **Deterministic.** A seeded PRNG stored in state makes replays reproducible. `applyMove` works on
   a deep copy so an illegal move can never mutate the caller's state; it returns either an
   `ApplyMoveResult` or an `IllegalMove` discriminated union.
@@ -33,6 +35,8 @@ deno --version
 # Install dependencies (none — the engine is self-contained).
 # Refresh the offline snapshots from NetrunnerDB (dev only, needs network).
 deno task import-decks
+# Download the xlarge WebP card images (dev only, needs network).
+deno task fetch-images
 
 # Run the test suite.
 deno task test
@@ -111,7 +115,7 @@ simply not offered as legal, and the game state records a `supportWarning` (visi
 ## Project layout
 
 ```
-data/                 Offline card snapshots + raw API responses
+data/                 Offline card snapshots + raw API responses + images/*.webp
 docs/                 rules-v26.03.txt, sources.md, rules-questions.md,
                       card-data-audit.md
 src/

@@ -14,8 +14,9 @@
   },
   "tasks": {
     "import-decks": "deno run --allow-net --allow-read --allow-write scripts/import-starter-decks.ts",
+    "fetch-images": "deno run --allow-net --allow-read --allow-write scripts/fetch-card-images.ts",
     "test": "deno test --allow-read",
-    "check": "deno check src/mod.ts scripts/import-starter-decks.ts",
+    "check": "deno check src/mod.ts scripts/import-starter-decks.ts scripts/fetch-card-images.ts",
     "lint": "deno lint src tests scripts",
     "fmt": "deno fmt src tests scripts",
     "fmt:check": "deno fmt --check src tests scripts"
