@@ -20,10 +20,10 @@ COPY --chown=65532:65532 public/ /app/public/
 
 USER 65532:65532
 
-ENV PORT=8000 HOST=0.0.0.0
+ENV PORT=8000
 EXPOSE 8000
 
 # Entrypoint is `tini -- deno run`; CMD carries the deno args.
-# Scoped permissions: read only /app/public, allow PORT/HOST env, allow
+# Scoped permissions: read only /app/public, allow the PORT env var, allow
 # binding the listen socket. No network access is needed at runtime.
-CMD ["run", "--allow-read=/app/public", "--allow-env=PORT,HOST", "--allow-net", "serve.ts"]
+CMD ["run", "--allow-read=/app/public", "--allow-env=PORT", "--allow-net", "serve.ts"]
