@@ -19,7 +19,9 @@
     "check": "deno check src/mod.ts scripts/import-starter-decks.ts scripts/fetch-card-images.ts",
     "lint": "deno lint src tests scripts",
     "fmt": "deno fmt src tests scripts",
-    "fmt:check": "deno fmt --check src tests scripts"
+    "fmt:check": "deno fmt --check src tests scripts",
+    "build-web": "deno run --allow-read --allow-write --allow-net --allow-run scripts/build-web.ts",
+    "serve-web": "deno run -A public/serve.ts"
   },
   "test": {
     "include": ["tests/"]
