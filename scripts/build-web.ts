@@ -15,7 +15,7 @@ const outfile = "public/dist/app.js";
 
 // 1. Bundle with Deno's own bundler (handles `with { type: "json" }` and
 //    `npm:` specifiers natively).
-const bundle = new Deno.Command("/usr/local/bin/deno", {
+const bundle = new Deno.Command(Deno.execPath(), {
   args: ["bundle", "--platform=browser", "-o", outfile, entry],
   stdout: "inherit",
   stderr: "inherit",
@@ -47,45 +47,21 @@ const images = await copyFiles("./data/images", "./public/images", ".webp");
 console.log(`copied ${images} card image(s) to public/images/`);
 
 // 3. Copy the NSG game-symbol and faction-glyph SVGs used by the UI.
-const NSG = "/tmp/opencode/assets/NSG-Visual-Assets/SVG";
-const svgMap: [string, string][] = [
-  // [source name, destination name]
-  ["Game Symbols/NSG_CREDIT.svg", "credit.svg"],
-  ["Game Symbols/NSG_CLICK_BLUE.svg", "click.svg"],
-  ["Game Symbols/NSG_CLICK.svg", "click-outline.svg"],
-  ["Game Symbols/NSG_TAG.svg", "tag.svg"],
-  ["Game Symbols/NSG_ADVANCEMENT_COUNTER.svg", "advancement.svg"],
-  ["Game Symbols/NSG_SUBROUTINE.svg", "subroutine.svg"],
-  ["Game Symbols/NSG_Mu.svg", "mu.svg"],
-  ["Game Symbols/NSG_LINK.svg", "link.svg"],
-  ["Game Symbols/NSG_CORE_DAMAGE.svg", "core-damage.svg"],
-  ["Game Symbols/NSG_REZ_COST.svg", "rez-cost.svg"],
-  ["Game Symbols/NSG_TRASH_COST bw.svg", "trash-cost.svg"],
-  ["Game Symbols/NSG_AGENDA.svg", "agenda.svg"],
-  ["Game Symbols/NSG_HQ_Icon.svg", "hq.svg"],
-  ["Game Symbols/NSG_RD_Icon.svg", "rd.svg"],
-  ["Game Symbols/NSG_Archives_Icon.svg", "archives.svg"],
-  ["Faction Glyphs/NSG_HB.svg", "faction-hb.svg"],
-  ["Faction Glyphs/NSG_JINTEKI.svg", "faction-jinteki.svg"],
-  ["Faction Glyphs/NSG_NBN.svg", "faction-nbn.svg"],
-  ["Faction Glyphs/NSG_WEYLAND.svg", "faction-weyland.svg"],
-  ["Faction Glyphs/NSG_CRIMINAL.svg", "faction-criminal.svg"],
-  ["Faction Glyphs/NSG_ANARCH.svg", "faction-anarch.svg"],
-  ["Faction Glyphs/NSG_SHAPER.svg", "faction-shaper.svg"],
-  ["Set Symbols/System Gateway Set Symbol.svg", "set-sysgw.svg"],
-];
-
+//    The source SVGs live in the checked-in `assets/svg/` directory so the
+//    build is fully self-contained (no host-only paths needed).
+const SVG_DIR = "./assets/svg";
+const svgDest = "./public/assets/svg";
 let svgCount = 0;
-await Deno.mkdir("./public/assets/svg", { recursive: true });
-for (const [src, dst] of svgMap) {
-  try {
-    await Deno.copyFile(`${NSG}/${src}`, `./public/assets/svg/${dst}`);
-    svgCount++;
-  } catch (e) {
-    if (e instanceof Deno.errors.NotFound) {
-      console.warn(`missing SVG asset: ${src}`);
-    } else throw e;
+try {
+  await Deno.mkdir(svgDest, { recursive: true });
+  for (const entry of Deno.readDirSync(SVG_DIR)) {
+    if (entry.isFile && entry.name.endsWith(".svg")) {
+      Deno.copyFileSync(`${SVG_DIR}/${entry.name}`, `${svgDest}/${entry.name}`);
+      svgCount++;
+    }
   }
+} catch (e) {
+  if (!(e instanceof Deno.errors.NotFound)) throw e;
 }
-console.log(`copied ${svgCount} NSG SVG symbol(s) to public/assets/svg/`);
+console.log(`copied ${svgCount} NSG SVG symbol(s) to ${svgDest}/`);
 console.log(`done: ${outfile}`);

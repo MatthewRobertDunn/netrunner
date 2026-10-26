@@ -47,6 +47,23 @@ deno task lint
 deno task fmt
 ```
 
+## Docker
+
+A production image builds the web bundle in a full Deno image and serves the
+resulting static site from a distroless runtime (~50 MB, no shell, nonroot):
+
+```sh
+docker build -t netrunner .
+docker run --rm -p 8000:8000 netrunner
+
+# Custom port / bind address:
+docker run --rm -e PORT=8080 -p 8080:8080 netrunner
+```
+
+The image entrypoint is `tini -- deno run --allow-read=/app/public
+--allow-env=PORT,HOST --allow-net serve.ts`; only the assembled `public/`
+directory is shipped.
+
 ## Usage
 
 ```ts

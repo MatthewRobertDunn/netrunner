@@ -1,5 +1,7 @@
 /** Tiny static file server for the web UI: deno run -A public/serve.ts */
-const port = 8000;
+
+const port = Number(Deno.env.get("PORT") ?? "8000");
+const host = Deno.env.get("HOST") ?? "0.0.0.0";
 
 const BASE = new URL("../", import.meta.url).pathname;
 const PUBLIC = BASE + "public/";
@@ -23,7 +25,7 @@ function resolve(path: string): string | null {
   return PUBLIC + file;
 }
 
-Deno.serve({ port }, async (req) => {
+Deno.serve({ port, hostname: host }, async (req) => {
   const url = new URL(req.url);
   const fsPath = resolve(url.pathname);
   if (!fsPath) return new Response("Forbidden", { status: 403 });
@@ -38,4 +40,4 @@ Deno.serve({ port }, async (req) => {
   }
 });
 
-console.log(`serving public/ on http://localhost:${port}`);
+console.log(`serving public/ on http://${host}:${port}`);
