@@ -38,6 +38,13 @@ deno task import-decks
 # Download the xlarge WebP card images (dev only, needs network).
 deno task fetch-images
 
+# Build the web bundle on the host (committed to git; the Docker image
+# ships it as-is, no build step in the image):
+deno task build-web
+
+# Serve the static site:
+deno task serve-web
+
 # Run the test suite.
 deno task test
 
@@ -49,8 +56,8 @@ deno task fmt
 
 ## Docker
 
-A production image builds the web bundle in a full Deno image and serves the
-resulting static site from a distroless runtime (~50 MB, no shell, nonroot):
+A production image serves the pre-built static site only — no build step,
+no shell, no package manager, runs as nonroot. ~50 MB base + 9.7 MB site.
 
 ```sh
 docker build -t netrunner .
@@ -60,9 +67,9 @@ docker run --rm -p 8000:8000 netrunner
 docker run --rm -e PORT=8080 -p 8080:8080 netrunner
 ```
 
-The image entrypoint is `tini -- deno run --allow-read=/app/public
---allow-env=PORT,HOST --allow-net serve.ts`; only the assembled `public/`
-directory is shipped.
+The image's only runtime dependency is the Deno interpreter, used by the
+tiny static file server (`public/serve.ts`) with scoped permissions:
+`--allow-read=/app/public --allow-env=PORT,HOST --allow-net`.
 
 ## Usage
 

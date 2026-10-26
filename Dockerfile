@@ -1,53 +1,29 @@
 # syntax=docker/dockerfile:1
 
-# ---------------------------------------------------------------------------
-# Build stage: bundle the engine + Vue app and assemble public/.
+# Production image: serves the pre-built static site only.
 #
-# `deno bundle` resolves npm:vue and the JSON data imports natively, so the
-# only inputs are the source tree, the card data/images, and the SVG assets.
-# ---------------------------------------------------------------------------
-
-FROM denoland/deno:alpine-2.9.8 AS build
-
-WORKDIR /app
-
-# Cache dependencies first: deno.lock pins npm:vue, and this layer is
-# invalidated only when source or data changes — never by asset edits.
-COPY deno.json deno.lock ./
-COPY data/cards.json data/starter-decks.json data/
-COPY src/ src/
-
-RUN --mount=type=cache,target=/deno-cache \
-    DENO_DIR=/deno-cache deno bundle --platform=browser \
-      -o /tmp/deps.js src/web/entry.ts
-
-# Full build: bundle + copy card images and NSG SVG symbols into public/.
-COPY public/ public/
-COPY data/images data/images/
-COPY assets/ assets/
-COPY scripts/build-web.ts scripts/build-web.ts
-
-RUN --mount=type=cache,target=/deno-cache \
-    DENO_DIR=/deno-cache deno run \
-      --allow-read --allow-write --allow-net --allow-run \
-      scripts/build-web.ts
-
-# ---------------------------------------------------------------------------
-# Runtime stage: distroless Deno with only the assembled static site —
-# no shell, no package manager, runs as nonroot. `serve.ts` has zero
-# dependencies beyond the Deno runtime, so no cache is needed here.
+# The web bundle (public/dist/app.js) and assets are built on the host via
+# `deno task build-web` and committed, so this image has no build step — it
+# just ships the static files. The only runtime dependency is the Deno
+# interpreter, used by the tiny static file server (public/serve.ts).
 #
-# The image entrypoint is `/tini -- /bin/deno`, so CMD carries deno args.
-# ---------------------------------------------------------------------------
+#   docker build -t netrunner .
+#   docker run --rm -p 8000:8000 netrunner
 
 FROM denoland/deno:distroless-2.9.8
 
 WORKDIR /app/public
-COPY --from=build --chown=65532:65532 /app/public/ /app/public/
+
+# Ship only the assembled static site. No source, no node_modules, no cache.
+# --chown=65532:65532 matches the nonroot user in the base image.
+COPY public/ /app/public/
 
 USER 65532:65532
 
 ENV PORT=8000 HOST=0.0.0.0
 EXPOSE 8000
 
+# Entrypoint is `tini -- deno run`; CMD carries the deno args.
+# Scoped permissions: read only /app/public, allow PORT/HOST env, allow
+# binding the listen socket. No network access is needed at runtime.
 CMD ["run", "--allow-read=/app/public", "--allow-env=PORT,HOST", "--allow-net", "serve.ts"]

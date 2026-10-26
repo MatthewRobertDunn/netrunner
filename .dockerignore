@@ -1,6 +1,5 @@
-# Keep the build context minimal: only src, data inputs, SVG assets, the
-# checked-in public shell (index.html, css, serve.ts) and build scripts.
-# Everything under public/{dist,images,assets} is regenerated in-image.
+# Only dev artifacts are excluded; the built static site under public/ is
+# committed and shipped as-is.
 
 .git
 .gitignore
@@ -9,15 +8,11 @@ opencode.json
 README.md
 docs
 tests
-
-# Engine data not needed by the web build
-data/raw
-
-# Web build outputs (regenerated inside the image)
-public/dist
-public/images
-public/assets
-
-# Docker files themselves
+scripts
+src
+data
+assets
+deno.json
+deno.lock
 Dockerfile
 .dockerignore
