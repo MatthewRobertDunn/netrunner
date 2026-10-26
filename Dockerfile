@@ -15,8 +15,8 @@ FROM denoland/deno:distroless-2.9.8
 WORKDIR /app/public
 
 # Ship only the assembled static site. No source, no node_modules, no cache.
-# --chown=65532:65532 matches the nonroot user in the base image.
-COPY public/ /app/public/
+# --chown matches the nonroot user (65532) in the base image.
+COPY --chown=65532:65532 public/ /app/public/
 
 USER 65532:65532
 
