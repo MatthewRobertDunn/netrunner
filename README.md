@@ -69,7 +69,38 @@ docker run --rm -e PORT=8080 -p 8080:8080 netrunner
 
 The image's only runtime dependency is the Deno interpreter, used by the
 tiny static file server (`public/serve.ts`) with scoped permissions:
-`--allow-read=/app/public --allow-env=PORT,HOST --allow-net`.
+`--allow-read=/app/public --allow-env=PORT --allow-net`. It binds 0.0.0.0 by
+default; set `PORT` to change the port.
+
+### Pre-built multi-arch images
+
+Ready-to-use tarballs for `linux/amd64` and `linux/arm64` are checked into
+`release/` (equivalent to what `docker build` of the Dockerfile produces):
+
+```sh
+docker load -i release/netrunner-amd64.tar   # yields netrunner:amd64
+docker load -i release/netrunner-arm64.tar   # yields netrunner:arm64
+docker run --rm -p 8000:8000 netrunner:amd64
+```
+
+They are produced by `scripts/export-docker-images.sh`, which uses
+[`crane`](https://github.com/google/go-containerregistry) instead of a Docker
+daemon — so the images can be built on hosts where `dockerd` cannot
+`mount(2)`/`unshare(2)` (e.g. unprivileged containers). Requires `crane` and
+GNU `tar`:
+
+```sh
+scripts/export-docker-images.sh
+```
+
+An alternative is `docker buildx` via `docker-bake.hcl`:
+
+```sh
+docker buildx create --use
+docker buildx bake --load netrunner-amd64 netrunner-arm64
+docker save netrunner:amd64 -o release/netrunner-amd64.tar
+docker save netrunner:arm64 -o release/netrunner-arm64.tar
+```
 
 ## Usage
 
