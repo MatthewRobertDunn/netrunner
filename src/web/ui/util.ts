@@ -59,6 +59,12 @@ export function imageFor(cardId: CardId | string): string | null {
   return cardOf(cardId) ? `images/${String(cardId)}.webp` : null;
 }
 
+/** Card text with the catalogue's markup tags (<strong>, <em>, …) stripped. */
+export function plainCardText(cardId: CardId | string): string {
+  const def = cardOf(cardId);
+  return def ? def.text.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim() : "";
+}
+
 export function serverLabel(server: string): string {
   switch (server) {
     case "hq":
@@ -105,7 +111,9 @@ export function formatEvent(state: GameState, e: GameEvent): string {
     case "load-credits":
       return `Loads ${e.amount} [credit] on ${cardTitle(cardIdOfInstance(state, e.targetId))}`;
     case "take-credits":
-      return `${side(e.player)} takes ${e.amount} [credit] from ${cardTitle(cardIdOfInstance(state, e.targetId))}`;
+      return `${side(e.player)} takes ${e.amount} [credit] from ${
+        cardTitle(cardIdOfInstance(state, e.targetId))
+      }`;
     case "install": {
       const where = e.server ? ` in ${serverLabel(e.server)}` : "";
       return `${side(e.player)} installs ${cardTitle(cardIdOfInstance(state, e.cardId))}${where}`;
@@ -116,10 +124,57 @@ export function formatEvent(state: GameState, e: GameEvent): string {
       return `Corp rezzes ${cardTitle(cardIdOfInstance(state, e.cardId))}`;
     case "derez":
       return `Corp derezzes ${cardTitle(cardIdOfInstance(state, e.cardId))}`;
+    case "access":
+      return `Runner accesses ${cardTitle(cardIdOfInstance(state, e.cardId))} in ${
+        serverLabel(e.server)
+      }`;
+    case "trash": {
+      const card = findCardIn(state, e.cardId);
+      const who = e.from === "access" ? "The Runner" : "Corp";
+      return `${who} trashes ${cardTitle(card?.cardId ?? String(e.cardId))} from ${e.from}`;
+    }
+    case "run-start":
+      return `Runner runs ${serverLabel(e.server)}`;
+    case "approach-ice":
+      return `Runner approaches ${cardTitle(cardIdOfInstance(state, e.cardId))}`;
+    case "encounter-ice":
+      return `Runner encounters ${cardTitle(cardIdOfInstance(state, e.cardId))}`;
+    case "break-subroutine":
+      return `Runner breaks a subroutine on ${cardTitle(cardIdOfInstance(state, e.cardId))}`;
+    case "resolve-subroutine":
+      return `${cardTitle(cardIdOfInstance(state, e.cardId))} resolves a subroutine`;
+    case "pass-ice":
+      return `Runner passes ${cardTitle(cardIdOfInstance(state, e.cardId))}`;
+    case "jack-out":
+      return "Runner jacks out";
+    case "run-successful":
+      return `Run on ${serverLabel(e.server)} is successful`;
+    case "run-unsuccessful":
+      return `Run on ${serverLabel(e.server)} is unsuccessful`;
+    case "run-end":
+      return `Run on ${serverLabel(e.server)} ends`;
+    case "breach":
+      return `Runner breaches ${serverLabel(e.server)}`;
+    case "damage": {
+      const cards = e.trashed.length
+        ? ` (trashes ${e.trashed.map((id) => cardTitle(cardIdOfInstance(state, id))).join(", ")})`
+        : "";
+      return `${side(e.player)} takes ${e.amount} ${e.kind} damage${cards}`;
+    }
+    case "flatline":
+      return "Runner is flatlined";
+    case "decked":
+      return `${side(e.player)} is decked`;
+    case "discard":
+      return `${side(e.player)} discards ${cardTitle(cardIdOfInstance(state, e.cardId))}`;
     case "advance":
-      return `Corp advances ${cardTitle(cardIdOfInstance(state, e.cardId))} (${e.amount} counter(s))`;
+      return `Corp advances ${
+        cardTitle(cardIdOfInstance(state, e.cardId))
+      } (${e.amount} counter(s))`;
     case "score":
-      return `Corp scores ${cardTitle(cardIdOfInstance(state, e.cardId))} (${e.points} agenda point(s))`;
+      return `Corp scores ${
+        cardTitle(cardIdOfInstance(state, e.cardId))
+      } (${e.points} agenda point(s))`;
     default:
       return e.type;
   }
@@ -175,7 +230,9 @@ export function describeMove(state: GameState, move: Move): string {
     case "runner.jackOut":
       return "Jack out";
     case "runner.breakSubroutine":
-      return `Break subroutine ${move.subIndex + 1} with ${cardTitle(findCardIn(state, move.programId)?.cardId ?? "")}`;
+      return `Break subroutine ${move.subIndex + 1} with ${
+        cardTitle(findCardIn(state, move.programId)?.cardId ?? "")
+      }`;
     case "runner.pumpIcebreaker":
       return `Pump strength — ${cardTitle(findCardIn(state, move.programId)?.cardId ?? "")}`;
     case "runner.bioroidBreak":

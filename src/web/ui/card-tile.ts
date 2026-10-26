@@ -28,7 +28,9 @@ export default defineComponent({
     highlight: { type: Boolean, default: false },
     badge: { type: String, default: "" },
     small: { type: Boolean, default: false },
+    clickable: { type: Boolean, default: false },
   },
+  emits: ["zoom"],
   setup(props: {
     card: CardInfo | null;
     facedown: boolean;
@@ -36,6 +38,7 @@ export default defineComponent({
     highlight: boolean;
     badge: string;
     small: boolean;
+    clickable: boolean;
   }) {
     const def = computed(() => {
       const card = props.card;
@@ -53,8 +56,9 @@ export default defineComponent({
   template: `
     <div
       class="card-tile"
-      :class="{ facedown, ice, highlight, small, 'is-agenda': isAgenda }"
+      :class="{ facedown, ice, highlight, small, 'is-agenda': isAgenda, clickable }"
       :title="def ? def.title + '\\n' + def.strippedText : 'Facedown card'"
+      @click="clickable && card && card.cardId !== 'hidden' && $emit('zoom', card.cardId)"
     >
       <img v-if="img" class="card-img" :src="img" :alt="def ? def.title : ''" loading="lazy" />
       <div v-else class="card-face-fallback">

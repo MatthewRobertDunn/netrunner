@@ -396,9 +396,8 @@ export function finishAccess(state: GameState, trashed: boolean): void {
   const def = cardDef(card.cardId);
   if (trashed) {
     spendCredits(state, "runner", def.trashCost ?? 0);
-    state.log.push({ type: "trash", cardId: card.id, from: "access" });
     const wasAgenda = def.type === "agenda";
-    toDiscard(state, card, "access");
+    toDiscard(state, card, "access"); // logs the trash event
     if (wasAgenda) {
       stealAgendaInstance(state, card.id);
       fireSteal(state, card);

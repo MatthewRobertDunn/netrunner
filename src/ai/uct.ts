@@ -98,7 +98,7 @@ export class UctAI implements GameAI {
     let node: Node = root;
 
     // --- Selection: descend fully-expanded nodes with UCB1 -----------------
-    while (node.children.every((c) => c !== null)) {
+    while (node.moves.length > 0 && node.children.every((c) => c !== null)) {
       let bestScore = -Infinity;
       let bestIndex = 0;
       for (let i = 0; i < node.children.length; i++) {
@@ -116,7 +116,9 @@ export class UctAI implements GameAI {
       }
       const child = node.children[bestIndex]!;
       path.push({ node, childIndex: bestIndex });
-      const result = engine.applyMove(sim, node.playerJustMoved ?? "corp", child.move);
+      // Moves stored at a node belong to the player to move there, which is
+      // the opponent of `playerJustMoved`.
+      const result = engine.applyMove(sim, other(node.playerJustMoved ?? "corp"), child.move);
       if (result.kind === "illegal-move") return; // tree is stale; skip iteration
       Object.assign(sim, result.state);
       node = child.node;
@@ -128,7 +130,7 @@ export class UctAI implements GameAI {
     for (let i = 0; i < node.children.length; i++) {
       if (node.children[i] !== null) continue;
       const move = node.moves[i]!;
-      const result = engine.applyMove(sim, node.playerJustMoved ?? "corp", move);
+      const result = engine.applyMove(sim, other(node.playerJustMoved ?? "corp"), move);
       if (result.kind === "illegal-move") continue; // tree is stale; skip
       Object.assign(sim, result.state);
       const side = sim.turn.player;

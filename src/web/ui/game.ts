@@ -13,15 +13,23 @@
 import { computed, defineComponent, ref, watch } from "npm:vue@3.5.13/dist/vue.esm-bundler.js";
 import type { PropType } from "npm:vue@3.5.13/dist/vue.esm-bundler.js";
 import CardTile from "./card-tile.ts";
+import CardZoom from "./card-zoom.ts";
 import { engine } from "../../mod.ts";
-import type { GameState, Move, PlayerSide, PublicGameStatus, ViewCard } from "../../types.ts";
+import type {
+  CardInstance,
+  GameState,
+  Move,
+  PlayerSide,
+  PublicGameStatus,
+  ViewCard,
+} from "../../types.ts";
 import {
   actorOf,
+  cardTitle,
   describeMove,
   findCardIn,
   formatEvent,
   handOf,
-  cardTitle,
   promptFor,
 } from "./util.ts";
 
@@ -45,7 +53,7 @@ function moveKey(m: Move): string {
 
 export default defineComponent({
   name: "GameScreen",
-  components: { CardTile },
+  components: { CardTile, CardZoom },
   props: {
     state: { type: Object as PropType<GameState>, required: true },
     humanSide: { type: String as PropType<PlayerSide>, required: true },
@@ -63,6 +71,7 @@ export default defineComponent({
     { emit }: { emit: (event: "move" | "new-game", ...args: unknown[]) => void },
   ) {
     const discardSelected = ref<string[]>([]);
+    const zoomCardId = ref<string | null>(null);
 
     const status = computed<PublicGameStatus>(() =>
       engine.getPublicGameStatusFor(props.state, props.humanSide)
@@ -78,11 +87,11 @@ export default defineComponent({
     const runner = computed(() => status.value.players.runner);
     const prompt = computed(() => promptFor(props.state, props.humanSide));
     const legal = computed<Move[]>(() =>
-      isHumanTurn.value ? engine.getLegalMoves(props.state, props.humanSide) : [],
+      isHumanTurn.value ? engine.getLegalMoves(props.state, props.humanSide) : []
     );
     const hand = computed(() => handOf(props.state, props.humanSide));
     const discardCount = computed(() =>
-      prompt.value && prompt.value.kind === "discard" ? prompt.value.count : 0,
+      prompt.value && prompt.value.kind === "discard" ? prompt.value.count : 0
     );
     const selectedKey = computed(() => [...discardSelected.value].sort().join(","));
     const canDiscard = computed(() => {
@@ -117,6 +126,16 @@ export default defineComponent({
       },
     );
 
+    // When the runner accesses a card, pop it up automatically so it's easy
+    // to read before deciding to trash or finish access. Close it when the
+    // access ends (the card was trashed or the access finished).
+    watch(
+      accessedCard,
+      (card: CardInstance | null) => {
+        zoomCardId.value = card && card.cardId !== "hidden" ? card.cardId : null;
+      },
+    );
+
     function label(move: Move): string {
       return describeMove(props.state, move);
     }
@@ -147,6 +166,14 @@ export default defineComponent({
       emit("move", move);
     }
 
+    function zoom(cardId: string) {
+      zoomCardId.value = cardId;
+    }
+
+    function closeZoom() {
+      zoomCardId.value = null;
+    }
+
     function isCurrentIce(card: ViewCard): boolean {
       const r = status.value.run;
       if (!r || !r.currentIce) return false;
@@ -171,6 +198,7 @@ export default defineComponent({
     return {
       // data
       discardSelected,
+      zoomCardId,
       // computed
       status,
       actor,
@@ -196,6 +224,8 @@ export default defineComponent({
       toggleDiscard,
       submitDiscard,
       play,
+      zoom,
+      closeZoom,
       isCurrentIce,
       serverGlyph,
       runMove,
@@ -251,8 +281,10 @@ export default defineComponent({
                   <card-tile
                     :card="card"
                     ice
+                    clickable
                     :highlight="isCurrentIce(card)"
                     :badge="isCurrentIce(card) ? 'RUN' : ''"
+                    @zoom="zoom"
                   />
                 </div>
               </template>
@@ -310,6 +342,15 @@ export default defineComponent({
             <div v-if="prompt" class="prompt-box" data-testid="prompt">
               <div class="prompt-title">{{ promptTitle(prompt) }}</div>
 
+              <div v-if="accessedCard" class="accessed-card-strip">
+                <span class="accessed-label">Accessing</span>
+                <card-tile
+                  :card="accessedCard"
+                  clickable
+                  @zoom="zoom"
+                />
+              </div>
+
               <div v-if="prompt.kind === 'discard'" class="discard-picker">
                 <div class="hint">Choose {{ discardCount }} card(s) to discard:</div>
                 <div class="hand-row picker">
@@ -324,6 +365,8 @@ export default defineComponent({
                       :card="{ cardId: c.cardId, rezzed: true, advancement: 0 }"
                       :badge="discardSelected.includes(c.id) ? '✓' : ''"
                       small
+                      clickable
+                      @zoom="zoom"
                     />
                   </div>
                 </div>
@@ -370,6 +413,8 @@ export default defineComponent({
             v-for="c in hand"
             :key="c.id"
             :card="{ cardId: c.cardId, rezzed: true, advancement: 0 }"
+            clickable
+            @zoom="zoom"
           />
           <span v-if="!hand.length" class="empty-hand">(no cards in hand)</span>
         </div>
@@ -391,6 +436,8 @@ export default defineComponent({
       <div v-if="warnings.length" class="support-warnings" data-testid="warnings">
         <span v-for="(w, i) in warnings" :key="i">⚠ {{ w }}</span>
       </div>
+
+      <card-zoom v-if="zoomCardId" :card-id="zoomCardId" @close="closeZoom" />
     </div>
   `,
 });

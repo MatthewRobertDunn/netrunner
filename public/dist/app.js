@@ -20285,11 +20285,6 @@ function finishAccess(state, trashed) {
   const def2 = cardDef(card.cardId);
   if (trashed) {
     spendCredits(state, "runner", def2.trashCost ?? 0);
-    state.log.push({
-      type: "trash",
-      cardId: card.id,
-      from: "access"
-    });
     const wasAgenda = def2.type === "agenda";
     toDiscard(state, card, "access");
     if (wasAgenda) {
@@ -22046,7 +22041,7 @@ var UctAI = class {
   iterate(sim, root, me) {
     const path = [];
     let node = root;
-    while (node.children.every((c) => c !== null)) {
+    while (node.moves.length > 0 && node.children.every((c) => c !== null)) {
       let bestScore = -Infinity;
       let bestIndex = 0;
       for (let i = 0; i < node.children.length; i++) {
@@ -22062,7 +22057,7 @@ var UctAI = class {
         node,
         childIndex: bestIndex
       });
-      const result = engine.applyMove(sim, node.playerJustMoved ?? "corp", child.move);
+      const result = engine.applyMove(sim, other(node.playerJustMoved ?? "corp"), child.move);
       if (result.kind === "illegal-move") return;
       Object.assign(sim, result.state);
       node = child.node;
@@ -22072,7 +22067,7 @@ var UctAI = class {
     for (let i = 0; i < node.children.length; i++) {
       if (node.children[i] !== null) continue;
       const move = node.moves[i];
-      const result = engine.applyMove(sim, node.playerJustMoved ?? "corp", move);
+      const result = engine.applyMove(sim, other(node.playerJustMoved ?? "corp"), move);
       if (result.kind === "illegal-move") continue;
       Object.assign(sim, result.state);
       const side = sim.turn.player;
@@ -22365,6 +22360,10 @@ function cardOf(cardId) {
 function imageFor(cardId) {
   return cardOf(cardId) ? `images/${String(cardId)}.webp` : null;
 }
+function plainCardText(cardId) {
+  const def2 = cardOf(cardId);
+  return def2 ? def2.text.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim() : "";
+}
 function serverLabel(server) {
   switch (server) {
     case "hq":
@@ -22420,6 +22419,45 @@ function formatEvent(state, e) {
       return `Corp rezzes ${cardTitle(cardIdOfInstance(state, e.cardId))}`;
     case "derez":
       return `Corp derezzes ${cardTitle(cardIdOfInstance(state, e.cardId))}`;
+    case "access":
+      return `Runner accesses ${cardTitle(cardIdOfInstance(state, e.cardId))} in ${serverLabel(e.server)}`;
+    case "trash": {
+      const card = findCardIn(state, e.cardId);
+      const who = e.from === "access" ? "The Runner" : "Corp";
+      return `${who} trashes ${cardTitle(card?.cardId ?? String(e.cardId))} from ${e.from}`;
+    }
+    case "run-start":
+      return `Runner runs ${serverLabel(e.server)}`;
+    case "approach-ice":
+      return `Runner approaches ${cardTitle(cardIdOfInstance(state, e.cardId))}`;
+    case "encounter-ice":
+      return `Runner encounters ${cardTitle(cardIdOfInstance(state, e.cardId))}`;
+    case "break-subroutine":
+      return `Runner breaks a subroutine on ${cardTitle(cardIdOfInstance(state, e.cardId))}`;
+    case "resolve-subroutine":
+      return `${cardTitle(cardIdOfInstance(state, e.cardId))} resolves a subroutine`;
+    case "pass-ice":
+      return `Runner passes ${cardTitle(cardIdOfInstance(state, e.cardId))}`;
+    case "jack-out":
+      return "Runner jacks out";
+    case "run-successful":
+      return `Run on ${serverLabel(e.server)} is successful`;
+    case "run-unsuccessful":
+      return `Run on ${serverLabel(e.server)} is unsuccessful`;
+    case "run-end":
+      return `Run on ${serverLabel(e.server)} ends`;
+    case "breach":
+      return `Runner breaches ${serverLabel(e.server)}`;
+    case "damage": {
+      const cards2 = e.trashed.length ? ` (trashes ${e.trashed.map((id) => cardTitle(cardIdOfInstance(state, id))).join(", ")})` : "";
+      return `${side(e.player)} takes ${e.amount} ${e.kind} damage${cards2}`;
+    }
+    case "flatline":
+      return "Runner is flatlined";
+    case "decked":
+      return `${side(e.player)} is decked`;
+    case "discard":
+      return `${side(e.player)} discards ${cardTitle(cardIdOfInstance(state, e.cardId))}`;
     case "advance":
       return `Corp advances ${cardTitle(cardIdOfInstance(state, e.cardId))} (${e.amount} counter(s))`;
     case "score":
@@ -22540,8 +22578,15 @@ var card_tile_default = defineComponent({
     small: {
       type: Boolean,
       default: false
+    },
+    clickable: {
+      type: Boolean,
+      default: false
     }
   },
+  emits: [
+    "zoom"
+  ],
   setup(props) {
     const def2 = computed2(() => {
       const card = props.card;
@@ -22563,8 +22608,9 @@ var card_tile_default = defineComponent({
   template: `
     <div
       class="card-tile"
-      :class="{ facedown, ice, highlight, small, 'is-agenda': isAgenda }"
+      :class="{ facedown, ice, highlight, small, 'is-agenda': isAgenda, clickable }"
       :title="def ? def.title + '\\n' + def.strippedText : 'Facedown card'"
+      @click="clickable && card && card.cardId !== 'hidden' && $emit('zoom', card.cardId)"
     >
       <img v-if="img" class="card-img" :src="img" :alt="def ? def.title : ''" loading="lazy" />
       <div v-else class="card-face-fallback">
@@ -22582,6 +22628,83 @@ var card_tile_default = defineComponent({
       <div v-if="card && card.rezzed === false && !facedown" class="unrezzed-flag">D</div>
       <div v-if="facedown" class="facedown-label">?</div>
     </div>
+  `
+});
+
+// src/web/ui/card-zoom.ts
+var card_zoom_default = defineComponent({
+  name: "CardZoom",
+  props: {
+    cardId: {
+      type: String,
+      default: null
+    }
+  },
+  emits: [
+    "close"
+  ],
+  setup(props, { emit: emit2 }) {
+    const def2 = computed2(() => props.cardId ? cardOf(props.cardId) : null);
+    const img = computed2(() => props.cardId ? imageFor(props.cardId) : null);
+    const text = computed2(() => props.cardId ? plainCardText(props.cardId) : "");
+    return {
+      def: def2,
+      img,
+      text,
+      onClose: () => emit2("close")
+    };
+  },
+  template: `
+    <transition name="zoom">
+      <div
+        v-if="cardId"
+        class="zoom-backdrop"
+        @click.self="onClose"
+        @keydown.escape="onClose"
+        tabindex="0"
+        data-testid="card-zoom"
+      >
+        <div class="zoom-card">
+          <img
+            v-if="img"
+            class="zoom-art"
+            :src="img"
+            :alt="def ? def.title : ''"
+          />
+          <div v-else class="zoom-face-fallback">
+            <div class="zoom-name">{{ def ? def.title : cardId }}</div>
+            <div class="zoom-type">{{ def ? def.type : '' }}</div>
+          </div>
+
+          <div class="zoom-info">
+            <div class="zoom-title">
+              {{ def ? def.title : cardId }}
+              <span v-if="def && def.unique" class="zoom-unique">\u25CF</span>
+            </div>
+            <div class="zoom-type-line">
+              <span v-if="def">{{ def.type }}</span>
+              <span v-if="def && def.side" class="zoom-side" :class="def.side">
+                {{ def.side === 'corp' ? 'Corp' : 'Runner' }}
+              </span>
+              <span v-if="def && def.faction" class="zoom-faction">\xB7 {{ def.faction }}</span>
+            </div>
+
+            <div v-if="def" class="zoom-stats">
+              <span v-if="def.cost !== null" class="zoom-stat">Cost {{ def.cost }}</span>
+              <span v-if="def.agendaPoints !== null" class="zoom-stat">AP {{ def.agendaPoints }}</span>
+              <span v-if="def.strength !== null" class="zoom-stat">Str {{ def.strength }}</span>
+              <span v-if="def.trashCost !== null" class="zoom-stat">Trash {{ def.trashCost }}</span>
+              <span v-if="def.memoryCost !== null" class="zoom-stat">Mem {{ def.memoryCost }}</span>
+            </div>
+
+            <p v-if="text" class="zoom-text">{{ text }}</p>
+            <p v-else-if="def" class="zoom-text zoom-text-empty">(no printed text)</p>
+
+            <button class="zoom-close" @click="onClose" data-testid="zoom-close">\u2715 Close</button>
+          </div>
+        </div>
+      </div>
+    </transition>
   `
 });
 
@@ -22604,7 +22727,8 @@ function moveKey(m) {
 var game_default = defineComponent({
   name: "GameScreen",
   components: {
-    CardTile: card_tile_default
+    CardTile: card_tile_default,
+    CardZoom: card_zoom_default
   },
   props: {
     state: {
@@ -22630,6 +22754,7 @@ var game_default = defineComponent({
   ],
   setup(props, { emit: emit2 }) {
     const discardSelected = ref([]);
+    const zoomCardId = ref(null);
     const status = computed2(() => engine.getPublicGameStatusFor(props.state, props.humanSide));
     const actor = computed2(() => actorOf2(props.state));
     const isHumanTurn = computed2(() => !props.state.winner && actor.value === props.humanSide);
@@ -22668,6 +22793,9 @@ var game_default = defineComponent({
     watch2(() => props.state, () => {
       discardSelected.value = [];
     });
+    watch2(accessedCard, (card) => {
+      zoomCardId.value = card && card.cardId !== "hidden" ? card.cardId : null;
+    });
     function label(move) {
       return describeMove(props.state, move);
     }
@@ -22694,6 +22822,12 @@ var game_default = defineComponent({
     function play(move) {
       emit2("move", move);
     }
+    function zoom(cardId) {
+      zoomCardId.value = cardId;
+    }
+    function closeZoom() {
+      zoomCardId.value = null;
+    }
     function isCurrentIce(card) {
       const r = status.value.run;
       if (!r || !r.currentIce) return false;
@@ -22712,6 +22846,7 @@ var game_default = defineComponent({
     return {
       // data
       discardSelected,
+      zoomCardId,
       // computed
       status,
       actor,
@@ -22737,6 +22872,8 @@ var game_default = defineComponent({
       toggleDiscard,
       submitDiscard,
       play,
+      zoom,
+      closeZoom,
       isCurrentIce,
       serverGlyph,
       runMove,
@@ -22792,8 +22929,10 @@ var game_default = defineComponent({
                   <card-tile
                     :card="card"
                     ice
+                    clickable
                     :highlight="isCurrentIce(card)"
                     :badge="isCurrentIce(card) ? 'RUN' : ''"
+                    @zoom="zoom"
                   />
                 </div>
               </template>
@@ -22851,6 +22990,15 @@ var game_default = defineComponent({
             <div v-if="prompt" class="prompt-box" data-testid="prompt">
               <div class="prompt-title">{{ promptTitle(prompt) }}</div>
 
+              <div v-if="accessedCard" class="accessed-card-strip">
+                <span class="accessed-label">Accessing</span>
+                <card-tile
+                  :card="accessedCard"
+                  clickable
+                  @zoom="zoom"
+                />
+              </div>
+
               <div v-if="prompt.kind === 'discard'" class="discard-picker">
                 <div class="hint">Choose {{ discardCount }} card(s) to discard:</div>
                 <div class="hand-row picker">
@@ -22865,6 +23013,8 @@ var game_default = defineComponent({
                       :card="{ cardId: c.cardId, rezzed: true, advancement: 0 }"
                       :badge="discardSelected.includes(c.id) ? '\u2713' : ''"
                       small
+                      clickable
+                      @zoom="zoom"
                     />
                   </div>
                 </div>
@@ -22911,6 +23061,8 @@ var game_default = defineComponent({
             v-for="c in hand"
             :key="c.id"
             :card="{ cardId: c.cardId, rezzed: true, advancement: 0 }"
+            clickable
+            @zoom="zoom"
           />
           <span v-if="!hand.length" class="empty-hand">(no cards in hand)</span>
         </div>
@@ -22932,6 +23084,8 @@ var game_default = defineComponent({
       <div v-if="warnings.length" class="support-warnings" data-testid="warnings">
         <span v-for="(w, i) in warnings" :key="i">\u26A0 {{ w }}</span>
       </div>
+
+      <card-zoom v-if="zoomCardId" :card-id="zoomCardId" @close="closeZoom" />
     </div>
   `
 });
