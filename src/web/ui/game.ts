@@ -14,6 +14,7 @@ import { computed, defineComponent, ref, watch } from "npm:vue@3.5.13/dist/vue.e
 import type { PropType } from "npm:vue@3.5.13/dist/vue.esm-bundler.js";
 import CardTile from "./card-tile.ts";
 import CardZoom from "./card-zoom.ts";
+import { cardDef } from "../../cards/catalogue.ts";
 import { engine } from "../../mod.ts";
 import type {
   CardInstance,
@@ -120,6 +121,32 @@ export default defineComponent({
       }
       return null;
     });
+
+    /**
+     * Access decisions for the zoomed card (rule 7.2.2): pass, or the basic
+     * trash ability when the card has a trash cost the Runner can pay.
+     * Agenda stealing is mandatory and automatic (rule 7.2.3), so no button.
+     */
+    const accessActions = computed(() => {
+      const actions: { label: string; move: Move }[] = [];
+      for (const p of props.state.prompts) {
+        if (p.kind !== "access-decision") continue;
+        const found = findCardIn(props.state, p.cardId);
+        const trashCost = found ? cardDef(found.cardId).trashCost : null;
+        if (
+          trashCost !== null && trashCost > 0 && props.state.runner.credits >= trashCost
+        ) {
+          actions.push({
+            label: `Trash (${trashCost} [credit])`,
+            move: { kind: "runner.trashAccessed" },
+          });
+        }
+        actions.push({ label: "Finish access", move: { kind: "runner.finishAccess" } });
+        break;
+      }
+      return actions;
+    });
+
     const serverRows = computed(() => status.value.servers);
 
     watch(
@@ -261,6 +288,7 @@ export default defineComponent({
       run,
       breach,
       accessedCard,
+      accessActions,
       serverRows,
       // methods
       label,
@@ -399,17 +427,20 @@ export default defineComponent({
           </template>
 
           <template v-else>
-            <div v-if="prompt" class="prompt-box" data-testid="prompt">
-              <div class="prompt-title">{{ promptTitle(prompt) }}</div>
+            <!-- Access decisions live on the card popup (rule 7.2.2), so the
+                 action panel shows nothing while one is pending. Clicking the
+                 notice reopens the popup. -->
+            <button
+              v-if="accessedCard"
+              class="banner-wait banner-access"
+              data-testid="access-notice"
+              @click="zoom(accessedCard.cardId)"
+            >
+              Accessing {{ name(accessedCard.cardId) }} — decide on the card
+            </button>
 
-              <div v-if="accessedCard" class="accessed-card-strip">
-                <span class="accessed-label">Accessing</span>
-                <card-tile
-                  :card="accessedCard"
-                  clickable
-                  @zoom="zoom"
-                />
-              </div>
+            <div v-else-if="prompt" class="prompt-box" data-testid="prompt">
+              <div class="prompt-title">{{ promptTitle(prompt) }}</div>
 
               <div v-if="prompt.kind === 'discard'" class="discard-picker">
                 <div class="hint">Choose {{ discardCount }} card(s) to discard:</div>
@@ -515,7 +546,13 @@ export default defineComponent({
         </div>
       </aside>
 
-      <card-zoom v-if="zoomCardId" :card-id="zoomCardId" @close="closeZoom" />
+      <card-zoom
+        v-if="zoomCardId"
+        :card-id="zoomCardId"
+        :actions="accessActions"
+        @close="closeZoom"
+        @move="play"
+      />
     </div>
   `,
 });

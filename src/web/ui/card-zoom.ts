@@ -4,6 +4,10 @@
  * plus the card's printed title, type line, and text. Click the backdrop or
  * press Esc to close.
  *
+ * While the Runner is accessing a card the popup also carries the access
+ * decision buttons (rule 7.2.2: one mid-access window — pass, or the basic
+ * trash ability if the card has a payable trash cost).
+ *
  * Uses `setup()` (Composition API) so `deno check` gets full typing.
  */
 
@@ -15,8 +19,10 @@ export default defineComponent({
   name: "CardZoom",
   props: {
     cardId: { type: String as PropType<string | null>, default: null },
+    /** Optional buttons shown under the card text (e.g. access decisions). */
+    actions: { type: Array as PropType<{ label: string; move: unknown }[]>, default: () => [] },
   },
-  emits: ["close"],
+  emits: ["close", "move"],
   setup(props: { cardId: string | null }, { emit }: { emit: (event: "close") => void }) {
     const def = computed(() => (props.cardId ? cardOf(props.cardId) : null));
     const img = computed(() => (props.cardId ? imageFor(props.cardId) : null));
@@ -68,9 +74,16 @@ export default defineComponent({
             </div>
 
             <p v-if="text" class="zoom-text">{{ text }}</p>
-            <p v-else-if="def" class="zoom-text zoom-text-empty">(no printed text)</p>
 
-            <button class="zoom-close" @click="onClose" data-testid="zoom-close">✕ Close</button>
+            <div v-if="actions.length" class="zoom-actions">
+              <button
+                v-for="a in actions"
+                :key="a.label"
+                class="move-btn primary"
+                @click="$emit('move', a.move)"
+              >{{ a.label }}</button>
+            </div>
+            <button v-else class="zoom-close" @click="onClose" data-testid="zoom-close">✕ Close</button>
           </div>
         </div>
       </div>

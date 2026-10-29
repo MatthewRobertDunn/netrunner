@@ -22438,9 +22438,9 @@ function describeMove(state, move) {
     case "runner.accessRandom":
       return "Access a random card";
     case "runner.trashAccessed":
-      return "Trash the accessed card";
+      return "Trash";
     case "runner.finishAccess":
-      return "Keep the accessed card (finish access)";
+      return "Finish access";
     case "runner.payToll":
       return move.method === "credits" ? "Pay the toll (credits)" : "Pay the toll (click)";
     case "prompt.answer": {
@@ -22558,10 +22558,16 @@ var card_zoom_default = defineComponent({
     cardId: {
       type: String,
       default: null
+    },
+    /** Optional buttons shown under the card text (e.g. access decisions). */
+    actions: {
+      type: Array,
+      default: () => []
     }
   },
   emits: [
-    "close"
+    "close",
+    "move"
   ],
   setup(props, { emit: emit2 }) {
     const def2 = computed2(() => props.cardId ? cardOf(props.cardId) : null);
@@ -22618,9 +22624,16 @@ var card_zoom_default = defineComponent({
             </div>
 
             <p v-if="text" class="zoom-text">{{ text }}</p>
-            <p v-else-if="def" class="zoom-text zoom-text-empty">(no printed text)</p>
 
-            <button class="zoom-close" @click="onClose" data-testid="zoom-close">\u2715 Close</button>
+            <div v-if="actions.length" class="zoom-actions">
+              <button
+                v-for="a in actions"
+                :key="a.label"
+                class="move-btn primary"
+                @click="$emit('move', a.move)"
+              >{{ a.label }}</button>
+            </div>
+            <button v-else class="zoom-close" @click="onClose" data-testid="zoom-close">\u2715 Close</button>
           </div>
         </div>
       </div>
@@ -22709,6 +22722,30 @@ var game_default = defineComponent({
         if (p2.kind === "access-decision") return findCardIn(props.state, p2.cardId);
       }
       return null;
+    });
+    const accessActions = computed2(() => {
+      const actions = [];
+      for (const p2 of props.state.prompts) {
+        if (p2.kind !== "access-decision") continue;
+        const found = findCardIn(props.state, p2.cardId);
+        const trashCost = found ? cardDef(found.cardId).trashCost : null;
+        if (trashCost !== null && trashCost > 0 && props.state.runner.credits >= trashCost) {
+          actions.push({
+            label: `Trash (${trashCost} [credit])`,
+            move: {
+              kind: "runner.trashAccessed"
+            }
+          });
+        }
+        actions.push({
+          label: "Finish access",
+          move: {
+            kind: "runner.finishAccess"
+          }
+        });
+        break;
+      }
+      return actions;
     });
     const serverRows = computed2(() => status.value.servers);
     watch2(() => props.state, () => {
@@ -22818,6 +22855,7 @@ var game_default = defineComponent({
       run,
       breach,
       accessedCard,
+      accessActions,
       serverRows,
       // methods
       label,
@@ -22956,17 +22994,20 @@ var game_default = defineComponent({
           </template>
 
           <template v-else>
-            <div v-if="prompt" class="prompt-box" data-testid="prompt">
-              <div class="prompt-title">{{ promptTitle(prompt) }}</div>
+            <!-- Access decisions live on the card popup (rule 7.2.2), so the
+                 action panel shows nothing while one is pending. Clicking the
+                 notice reopens the popup. -->
+            <button
+              v-if="accessedCard"
+              class="banner-wait banner-access"
+              data-testid="access-notice"
+              @click="zoom(accessedCard.cardId)"
+            >
+              Accessing {{ name(accessedCard.cardId) }} \u2014 decide on the card
+            </button>
 
-              <div v-if="accessedCard" class="accessed-card-strip">
-                <span class="accessed-label">Accessing</span>
-                <card-tile
-                  :card="accessedCard"
-                  clickable
-                  @zoom="zoom"
-                />
-              </div>
+            <div v-else-if="prompt" class="prompt-box" data-testid="prompt">
+              <div class="prompt-title">{{ promptTitle(prompt) }}</div>
 
               <div v-if="prompt.kind === 'discard'" class="discard-picker">
                 <div class="hint">Choose {{ discardCount }} card(s) to discard:</div>
@@ -23072,7 +23113,13 @@ var game_default = defineComponent({
         </div>
       </aside>
 
-      <card-zoom v-if="zoomCardId" :card-id="zoomCardId" @close="closeZoom" />
+      <card-zoom
+        v-if="zoomCardId"
+        :card-id="zoomCardId"
+        :actions="accessActions"
+        @close="closeZoom"
+        @move="play"
+      />
     </div>
   `
 });

@@ -275,9 +275,9 @@ export function describeMove(state: GameState, move: Move): string {
     case "runner.accessRandom":
       return "Access a random card";
     case "runner.trashAccessed":
-      return "Trash the accessed card";
+      return "Trash";
     case "runner.finishAccess":
-      return "Keep the accessed card (finish access)";
+      return "Finish access";
     case "runner.payToll":
       return move.method === "credits" ? "Pay the toll (credits)" : "Pay the toll (click)";
     case "prompt.answer": {

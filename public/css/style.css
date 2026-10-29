@@ -445,6 +445,16 @@ html, body {
   font-size: 15px;
   color: var(--dim);
 }
+.banner-access {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  cursor: pointer;
+}
+.banner-access:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
 .banner-win {
   color: var(--win);
   font-weight: 700;
@@ -868,6 +878,17 @@ html, body {
 .zoom-text-empty {
   color: var(--dim);
   font-style: italic;
+}
+/* Access decision buttons shown on the popup while accessing a card. */
+.zoom-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+.zoom-actions .move-btn {
+  flex: 1;
+  min-width: 120px;
 }
 .zoom-close {
   margin-top: 6px;
