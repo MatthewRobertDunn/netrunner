@@ -73,6 +73,8 @@ export default defineComponent({
   ) {
     const discardSelected = ref<string[]>([]);
     const zoomCardId = ref<string | null>(null);
+    /** Game-log dock visibility (right sidebar). */
+    const logOpen = ref(true);
 
     const status = computed<PublicGameStatus>(() =>
       engine.getPublicGameStatusFor(props.state, props.humanSide)
@@ -240,6 +242,7 @@ export default defineComponent({
       // data
       discardSelected,
       zoomCardId,
+      logOpen,
       // computed
       status,
       actor,
@@ -277,7 +280,8 @@ export default defineComponent({
     };
   },
   template: `
-    <div class="game">
+    <div class="game" :class="{ 'log-collapsed': !logOpen }">
+      <div class="game-main">
       <!-- ================= HEADER ================= -->
       <header class="game-header">
         <div class="turn-badge">
@@ -380,7 +384,7 @@ export default defineComponent({
         </template>
       </section>
 
-      <!-- ================= ACTION + LOG ================= -->
+      <!-- ================= ACTION PANEL ================= -->
       <section class="action-row">
         <div class="action-panel" data-testid="action-panel">
           <template v-if="state.winner">
@@ -453,13 +457,6 @@ export default defineComponent({
             </div>
           </template>
         </div>
-
-        <div class="log-panel">
-          <h3>Game log</h3>
-          <ul>
-            <li v-for="(line, i) in events" :key="i">{{ line }}</li>
-          </ul>
-        </div>
       </section>
 
       <!-- ================= RUNNER AREA ================= -->
@@ -501,6 +498,22 @@ export default defineComponent({
       <div v-if="warnings.length" class="support-warnings" data-testid="warnings">
         <span v-for="(w, i) in warnings" :key="i">⚠ {{ w }}</span>
       </div>
+      </div><!-- /game-main -->
+
+      <!-- ================= LOG DOCK (right) ================= -->
+      <aside class="log-dock" :class="{ collapsed: !logOpen }">
+        <button
+          class="log-toggle"
+          :title="logOpen ? 'Collapse log' : 'Expand log'"
+          @click="logOpen = !logOpen"
+        >{{ logOpen ? '›' : '‹' }}</button>
+        <div v-if="logOpen" class="log-panel" data-testid="log-panel">
+          <h3>Game log</h3>
+          <ul>
+            <li v-for="(line, i) in events" :key="i">{{ line }}</li>
+          </ul>
+        </div>
+      </aside>
 
       <card-zoom v-if="zoomCardId" :card-id="zoomCardId" @close="closeZoom" />
     </div>

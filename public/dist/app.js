@@ -22675,6 +22675,7 @@ var game_default = defineComponent({
   setup(props, { emit: emit2 }) {
     const discardSelected = ref([]);
     const zoomCardId = ref(null);
+    const logOpen = ref(true);
     const status = computed2(() => engine.getPublicGameStatusFor(props.state, props.humanSide));
     const actor = computed2(() => actorOf2(props.state));
     const isHumanTurn = computed2(() => !props.state.winner && actor.value === props.humanSide);
@@ -22798,6 +22799,7 @@ var game_default = defineComponent({
       // data
       discardSelected,
       zoomCardId,
+      logOpen,
       // computed
       status,
       actor,
@@ -22835,7 +22837,8 @@ var game_default = defineComponent({
     };
   },
   template: `
-    <div class="game">
+    <div class="game" :class="{ 'log-collapsed': !logOpen }">
+      <div class="game-main">
       <!-- ================= HEADER ================= -->
       <header class="game-header">
         <div class="turn-badge">
@@ -22938,7 +22941,7 @@ var game_default = defineComponent({
         </template>
       </section>
 
-      <!-- ================= ACTION + LOG ================= -->
+      <!-- ================= ACTION PANEL ================= -->
       <section class="action-row">
         <div class="action-panel" data-testid="action-panel">
           <template v-if="state.winner">
@@ -23011,13 +23014,6 @@ var game_default = defineComponent({
             </div>
           </template>
         </div>
-
-        <div class="log-panel">
-          <h3>Game log</h3>
-          <ul>
-            <li v-for="(line, i) in events" :key="i">{{ line }}</li>
-          </ul>
-        </div>
       </section>
 
       <!-- ================= RUNNER AREA ================= -->
@@ -23059,6 +23055,22 @@ var game_default = defineComponent({
       <div v-if="warnings.length" class="support-warnings" data-testid="warnings">
         <span v-for="(w, i) in warnings" :key="i">\u26A0 {{ w }}</span>
       </div>
+      </div><!-- /game-main -->
+
+      <!-- ================= LOG DOCK (right) ================= -->
+      <aside class="log-dock" :class="{ collapsed: !logOpen }">
+        <button
+          class="log-toggle"
+          :title="logOpen ? 'Collapse log' : 'Expand log'"
+          @click="logOpen = !logOpen"
+        >{{ logOpen ? '\u203A' : '\u2039' }}</button>
+        <div v-if="logOpen" class="log-panel" data-testid="log-panel">
+          <h3>Game log</h3>
+          <ul>
+            <li v-for="(line, i) in events" :key="i">{{ line }}</li>
+          </ul>
+        </div>
+      </aside>
 
       <card-zoom v-if="zoomCardId" :card-id="zoomCardId" @close="closeZoom" />
     </div>
