@@ -20890,7 +20890,7 @@ function combinations(ids, size) {
 function copyState(state) {
   return JSON.parse(JSON.stringify(state));
 }
-function applyMove(state, playerSide, move) {
+function applyMove(state, playerSide, move, opts = {}) {
   const legal = getLegalMoves(state, playerSide);
   const ok = legal.some((m) => sameMove(m, move));
   if (!ok) {
@@ -20900,7 +20900,7 @@ function applyMove(state, playerSide, move) {
       move
     };
   }
-  const next = copyState(state);
+  const next = opts.mutate ? state : copyState(state);
   const mark = next.log.length;
   applyResolvedMove(next, playerSide, move);
   settle(next);
@@ -21998,9 +21998,10 @@ var UctAI = class {
         node,
         childIndex: bestIndex
       });
-      const result = engine.applyMove(sim, other(node.playerJustMoved ?? "corp"), child.move);
+      const result = engine.applyMove(sim, other(node.playerJustMoved ?? "corp"), child.move, {
+        mutate: true
+      });
       if (result.kind === "illegal-move") return;
-      Object.assign(sim, result.state);
       node = child.node;
       if (sim.winner) break;
     }
@@ -22008,9 +22009,10 @@ var UctAI = class {
     for (let i = 0; i < node.children.length; i++) {
       if (node.children[i] !== null) continue;
       const move = node.moves[i];
-      const result = engine.applyMove(sim, other(node.playerJustMoved ?? "corp"), move);
+      const result = engine.applyMove(sim, other(node.playerJustMoved ?? "corp"), move, {
+        mutate: true
+      });
       if (result.kind === "illegal-move") continue;
-      Object.assign(sim, result.state);
       const side = sim.turn.player;
       const legal = engine.getLegalMoves(sim, side);
       const child = {
@@ -22050,9 +22052,10 @@ var UctAI = class {
       const legal = engine.getLegalMoves(sim, side);
       if (legal.length === 0) break;
       const move = legal[rngInt(sim, legal.length)];
-      const result = engine.applyMove(sim, side, move);
+      const result = engine.applyMove(sim, side, move, {
+        mutate: true
+      });
       if (result.kind === "illegal-move") break;
-      Object.assign(sim, result.state);
     }
     return terminalReward(sim, me);
   }
@@ -22212,8 +22215,8 @@ var engine = {
   getLegalMoves(state, player2) {
     return getLegalMoves(state, player2);
   },
-  applyMove(state, player2, move) {
-    return applyMove(state, player2, move);
+  applyMove(state, player2, move, opts = {}) {
+    return applyMove(state, player2, move, opts);
   },
   /**
    * Public game status (rule 1.10): only information both players are always
