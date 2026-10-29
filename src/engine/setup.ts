@@ -262,6 +262,7 @@ export function startGame(config: GameConfig): GameState {
     prompts: [],
     log: [],
     rngState: seed | 0,
+    drawMode: "top",
     agendaPointTarget: config.agendaPointTarget ?? 7,
     winner: null,
     winReason: null,

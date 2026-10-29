@@ -18905,6 +18905,27 @@ function verifyFixtureAgainstSnapshot() {
   return problems;
 }
 
+// src/engine/rng.ts
+function rngNext(state) {
+  state.rngState = state.rngState + 1831565813 | 0;
+  let t = state.rngState;
+  t = Math.imul(t ^ t >>> 15, t | 1);
+  t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+  return ((t ^ t >>> 14) >>> 0) / 4294967296;
+}
+function rngInt(state, n) {
+  return Math.floor(rngNext(state) * n);
+}
+function shuffle(state, list) {
+  for (let i = list.length - 1; i > 0; i--) {
+    const j = rngInt(state, i + 1);
+    const tmp = list[i];
+    list[i] = list[j];
+    list[j] = tmp;
+  }
+  return list;
+}
+
 // src/engine/state.ts
 function player(state, side) {
   return side === "corp" ? state.corp : state.runner;
@@ -18940,6 +18961,12 @@ function createRemote(state) {
   };
   state.servers.push(server);
   return server;
+}
+function nextDeckCard(state, side) {
+  const p2 = player(state, side);
+  if (p2.deck.length === 0) return null;
+  const idx = state.drawMode === "random" ? rngInt(state, p2.deck.length) : 0;
+  return p2.deck[idx];
 }
 function pruneEmptyRemotes(state) {
   const gone = [];
@@ -18990,8 +19017,9 @@ function drawCards(state, side, count) {
   const p2 = player(state, side);
   let drawn = 0;
   for (let i = 0; i < count; i++) {
-    const card = p2.deck.shift();
-    if (!card) break;
+    if (p2.deck.length === 0) break;
+    const idx = state.drawMode === "random" ? rngInt(state, p2.deck.length) : 0;
+    const card = p2.deck.splice(idx, 1)[0];
     card.zone = "hand";
     p2.hand.push(card);
     drawn++;
@@ -19200,27 +19228,6 @@ function takeCreditsFrom(state, card, amount) {
     player: card.owner
   });
   return taken;
-}
-
-// src/engine/rng.ts
-function rngNext(state) {
-  state.rngState = state.rngState + 1831565813 | 0;
-  let t = state.rngState;
-  t = Math.imul(t ^ t >>> 15, t | 1);
-  t ^= t + Math.imul(t ^ t >>> 7, t | 61);
-  return ((t ^ t >>> 14) >>> 0) / 4294967296;
-}
-function rngInt(state, n) {
-  return Math.floor(rngNext(state) * n);
-}
-function shuffle(state, list) {
-  for (let i = list.length - 1; i > 0; i--) {
-    const j = rngInt(state, i + 1);
-    const tmp = list[i];
-    list[i] = list[j];
-    list[j] = tmp;
-  }
-  return list;
 }
 
 // src/engine/runs.ts
@@ -20240,7 +20247,7 @@ function candidatesForBreach(state) {
     }
   } else if (server === "rd") {
     if (breach.randomAccessesUsed < breach.randomAccessLimit) {
-      const top = state.corp.deck[0];
+      const top = nextDeckCard(state, "corp");
       if (top) push(top, true);
     }
   } else if (server === "archives") {
@@ -21813,6 +21820,7 @@ function startGame(config) {
     prompts: [],
     log: [],
     rngState: seed | 0,
+    drawMode: "top",
     agendaPointTarget: config.agendaPointTarget ?? 7,
     winner: null,
     winReason: null,
@@ -21942,6 +21950,7 @@ var UctAI = class {
   chooseMove(state, side, legal) {
     if (legal.length === 1) return legal[0];
     const rootState = structuredClone(state);
+    rootState.drawMode = "random";
     const root = {
       visits: 0,
       totalReward: 0,

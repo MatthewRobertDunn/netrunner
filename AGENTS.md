@@ -79,3 +79,15 @@ gitignored and stay on disk only — never commit them.
 
 7. **`deno fmt` then `deno check`.** Format first, then check — formatting can
    change how errors line up.
+
+8. **`applyMove` works on a copy and returns the new state.** It never
+   mutates the caller's object. Tests that check the result must read
+   `result.state`, not the original.
+
+9. **The AI must not know the opponent's deck order.** Simulations run with
+   `drawMode: "random"` (set on the clone in `UctAI.chooseMove`), so every
+   draw pulls a random card from the remaining deck instead of the top one.
+   The real game always uses `"top"`. The multiset of cards in the
+   opponent's deck is still visible to the AI, which is the accepted
+   concession. Don't shuffle the deck — that's O(n) per playout; the flag is
+   O(1) per draw.

@@ -353,6 +353,14 @@ export interface GameState {
   log: GameEvent[];
   /** Seeded PRNG state; advancing it keeps games deterministic. */
   rngState: number;
+  /**
+   * How draws resolve. The real game always draws from the top of the deck —
+   * deck order is hidden information (rule 1.10) and neither player knows it.
+   * AI simulations set this to `"random"` so a playout can't exploit a
+   * specific draw order the search memorised; the multiset of cards in the
+   * opponent's deck is still visible, which is an accepted concession.
+   */
+  drawMode: "top" | "random";
   agendaPointTarget: number;
   winner: PlayerSide | "draw" | null;
   winReason: string | null;

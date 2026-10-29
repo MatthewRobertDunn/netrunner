@@ -8,6 +8,7 @@
 
 import { cardDef, isIce } from "../cards/catalogue.ts";
 import { behaviors } from "../cards/effects.ts";
+import { rngInt } from "./rng.ts";
 import type {
   CardInstance,
   GameState,
@@ -55,6 +56,19 @@ export function createRemote(state: GameState): ServerState {
   const server: ServerState = { id: nextRemoteId(state), root: [], ice: [] };
   state.servers.push(server);
   return server;
+}
+
+/**
+ * The next card a player would draw. In the real game that's the top of the
+ * deck (hidden information, rule 1.10). In an AI simulation with
+ * `drawMode: "random"` it's a uniformly random card from the remaining deck,
+ * so the search can't plan around a specific draw order.
+ */
+export function nextDeckCard(state: GameState, side: PlayerSide): CardInstance | null {
+  const p = player(state, side);
+  if (p.deck.length === 0) return null;
+  const idx = state.drawMode === "random" ? rngInt(state, p.deck.length) : 0;
+  return p.deck[idx]!;
 }
 
 /**
@@ -110,8 +124,9 @@ export function drawCards(state: GameState, side: PlayerSide, count: number): nu
   const p = player(state, side);
   let drawn = 0;
   for (let i = 0; i < count; i++) {
-    const card = p.deck.shift();
-    if (!card) break;
+    if (p.deck.length === 0) break;
+    const idx = state.drawMode === "random" ? rngInt(state, p.deck.length) : 0;
+    const card = p.deck.splice(idx, 1)[0]!;
     card.zone = "hand";
     p.hand.push(card);
     drawn++;

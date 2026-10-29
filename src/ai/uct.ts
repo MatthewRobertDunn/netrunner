@@ -64,6 +64,10 @@ export class UctAI implements GameAI {
 
     // Working copy: MCTS mutates its simulation states freely.
     const rootState = structuredClone(state);
+    // Deck order is hidden information (rule 1.10). The AI must not be able to
+    // plan around a specific draw order, so simulations draw a random card
+    // from the remaining deck instead of the top one.
+    rootState.drawMode = "random";
     const root: Node = {
       visits: 0,
       totalReward: 0,

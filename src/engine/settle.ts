@@ -21,6 +21,7 @@ import {
 } from "./runs.ts";
 import {
   findCard,
+  nextDeckCard,
   player,
   pruneEmptyRemotes,
   serverById,
@@ -361,7 +362,7 @@ export function candidatesForBreach(state: GameState): BreachCandidate[] {
     }
   } else if (server === "rd") {
     if (breach.randomAccessesUsed < breach.randomAccessLimit) {
-      const top = state.corp.deck[0];
+      const top = nextDeckCard(state, "corp");
       if (top) push(top, true);
     }
   } else if (server === "archives") {
