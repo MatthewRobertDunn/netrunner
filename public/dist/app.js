@@ -18942,7 +18942,13 @@ function createRemote(state) {
   return server;
 }
 function pruneEmptyRemotes(state) {
-  state.servers = state.servers.filter((s) => isCentral(s.id) || s.root.length > 0 || s.ice.length > 0);
+  const gone = [];
+  state.servers = state.servers.filter((s) => {
+    if (isCentral(s.id) || s.root.length > 0 || s.ice.length > 0) return true;
+    gone.push(s.id);
+    return false;
+  });
+  return gone;
 }
 function findCard(state, instanceId) {
   for (const side of [
@@ -19943,6 +19949,13 @@ function settle(state) {
       state.run = null;
       state.breach = null;
       return;
+    }
+    const gone = pruneEmptyRemotes(state);
+    if (state.run && gone.includes(state.run.server)) {
+      state.breach = null;
+      state.prompts = state.prompts.filter((p2) => p2.kind !== "access-decision" && p2.kind !== "rez-window");
+      state.run.phase = "run-ends";
+      continue;
     }
     if (state.prompts.length > 0) return;
     if (state.run) {
