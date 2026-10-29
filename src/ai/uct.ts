@@ -121,10 +121,13 @@ export class UctAI implements GameAI {
       const child = node.children[bestIndex]!;
       path.push({ node, childIndex: bestIndex });
       // Moves stored at a node belong to the player to move there, which is
-      // the opponent of `playerJustMoved`.
-      const result = engine.applyMove(sim, other(node.playerJustMoved ?? "corp"), child.move);
+      // the opponent of `playerJustMoved`. This iteration owns `sim` (it was
+      // cloned at the top of `chooseMove`), so apply in place — copying the
+      // state on every edge walked is the dominant cost of the search.
+      const result = engine.applyMove(
+        sim, other(node.playerJustMoved ?? "corp"), child.move, { mutate: true },
+      );
       if (result.kind === "illegal-move") return; // tree is stale; skip iteration
-      Object.assign(sim, result.state);
       node = child.node;
       if (sim.winner) break;
     }
@@ -134,9 +137,10 @@ export class UctAI implements GameAI {
     for (let i = 0; i < node.children.length; i++) {
       if (node.children[i] !== null) continue;
       const move = node.moves[i]!;
-      const result = engine.applyMove(sim, other(node.playerJustMoved ?? "corp"), move);
+      const result = engine.applyMove(
+        sim, other(node.playerJustMoved ?? "corp"), move, { mutate: true },
+      );
       if (result.kind === "illegal-move") continue; // tree is stale; skip
-      Object.assign(sim, result.state);
       const side = sim.turn.player;
       const legal = engine.getLegalMoves(sim, side);
       const child: Child = {
@@ -182,9 +186,8 @@ export class UctAI implements GameAI {
       const legal = engine.getLegalMoves(sim, side);
       if (legal.length === 0) break;
       const move = legal[rngInt(sim, legal.length)]!;
-      const result = engine.applyMove(sim, side, move);
+      const result = engine.applyMove(sim, side, move, { mutate: true });
       if (result.kind === "illegal-move") break;
-      Object.assign(sim, result.state);
     }
     return terminalReward(sim, me);
   }

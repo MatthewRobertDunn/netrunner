@@ -491,6 +491,15 @@ export interface ApplyMoveResult {
   warnings: string[];
 }
 
+/**
+ * Options for `applyMove`. AI simulations that own their own state can pass
+ * `mutate: true` to skip the defensive copy — the dominant cost in a
+ * Monte-Carlo search. Callers must not reuse the original state afterwards.
+ */
+export interface ApplyMoveOptions {
+  mutate?: boolean;
+}
+
 /** Returned when a move is not legal; the original state is untouched. */
 export interface IllegalMove {
   kind: "illegal-move";
@@ -583,7 +592,12 @@ export interface GameEngine {
   startGame(config: GameConfig): GameState;
   getLegalMoves(state: GameState, player: PlayerSide): Move[];
   /** Apply a legal move, or get a structured `IllegalMove` explanation. */
-  applyMove(state: GameState, player: PlayerSide, move: Move): ApplyMoveResult | IllegalMove;
+  applyMove(
+    state: GameState,
+    player: PlayerSide,
+    move: Move,
+    opts?: ApplyMoveOptions,
+  ): ApplyMoveResult | IllegalMove;
   /** Public game status (rule 1.10): same value for either viewer. */
   getPublicGameStatus(state: GameState): PublicGameStatus;
   /** Public game status as seen by `viewer`; Corp may see its own installed card ids. */

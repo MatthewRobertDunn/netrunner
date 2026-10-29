@@ -46,6 +46,7 @@ import { getPublicGameStatus, getPublicGameStatusFor } from "./engine/public-sta
 import { startGame, validateDeck } from "./engine/setup.ts";
 import { findCard, player } from "./engine/state.ts";
 import type {
+  ApplyMoveOptions,
   ApplyMoveResult,
   CardId,
   CardInstance,
@@ -237,8 +238,13 @@ export const engine: GameEngine = {
   getLegalMoves(state: GameState, player: PlayerSide): Move[] {
     return getLegalMoves(state, player);
   },
-  applyMove(state: GameState, player: PlayerSide, move: Move): ApplyMoveResult | IllegalMove {
-    return applyMove(state, player, move);
+  applyMove(
+    state: GameState,
+    player: PlayerSide,
+    move: Move,
+    opts: ApplyMoveOptions = {},
+  ): ApplyMoveResult | IllegalMove {
+    return applyMove(state, player, move, opts);
   },
   /**
    * Public game status (rule 1.10): only information both players are always
@@ -269,6 +275,6 @@ export {
   verifyFixtureAgainstSnapshot,
 };
 
-export type { CardInstance, CardInstanceId };
+export type { ApplyMoveOptions, CardInstance, CardInstanceId };
 
 export const supportWarningsOf = (state: GameState): string[] => [...state.supportWarnings];

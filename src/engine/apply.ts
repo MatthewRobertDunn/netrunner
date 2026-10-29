@@ -50,10 +50,28 @@ function copyState(state: GameState): GameState {
   return JSON.parse(JSON.stringify(state)) as GameState;
 }
 
+export interface ApplyMoveOptions {
+  /**
+   * Apply the move directly on `state` without copying it first.
+   *
+   * The engine normally copies the state before applying a move so a rejected
+   * move can never partially mutate the caller's state. AI simulations that
+   * already own their own state (a UCT search clone, a random playout) pay for
+   * that copy on every edge they walk — the dominant cost in a Monte-Carlo
+   * search. Passing `mutate: true` skips the copy and mutates `state` in
+   * place; the returned `ApplyMoveResult.state` is the same object.
+   *
+   * Callers must not reuse the original `state` after a mutated apply. The
+   * public engine API (`engine.applyMove`) never mutates.
+   */
+  mutate?: boolean;
+}
+
 export function applyMove(
   state: GameState,
   playerSide: PlayerSide,
   move: Move,
+  opts: ApplyMoveOptions = {},
 ): ApplyMoveResult | IllegalMove {
   const legal = getLegalMoves(state, playerSide);
   const ok = legal.some((m) => sameMove(m, move));
@@ -64,8 +82,7 @@ export function applyMove(
       move,
     };
   }
-  // Work on a copy so failures cannot partially mutate the original state.
-  const next = copyState(state);
+  const next = opts.mutate ? state : copyState(state);
   const mark = next.log.length;
   applyResolvedMove(next, playerSide, move);
   settle(next);
