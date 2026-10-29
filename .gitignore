@@ -12,3 +12,9 @@ tmp/
 # Local SSH keys
 orange
 orange.pub
+# GitHub fine-grained personal access token (never commit)
+gh_fine_grained_key.txt
+# Local tool config (contains API keys) + crash dumps
+opencode.json
+core
+core.*
