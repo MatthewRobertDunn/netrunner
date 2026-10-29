@@ -29,6 +29,8 @@ export default defineComponent({
     badge: { type: String, default: "" },
     small: { type: Boolean, default: false },
     clickable: { type: Boolean, default: false },
+    // Facedown tiles show the corp card back instead of the runner's.
+    corp: { type: Boolean, default: false },
   },
   emits: ["zoom"],
   setup(props: {
@@ -39,6 +41,7 @@ export default defineComponent({
     badge: string;
     small: boolean;
     clickable: boolean;
+    corp: boolean;
   }) {
     const def = computed(() => {
       const card = props.card;
@@ -66,6 +69,9 @@ export default defineComponent({
           <div class="card-name">{{ def.title }}</div>
           <div class="card-type">{{ def.type }}</div>
         </template>
+        <template v-else-if="corp">
+          <img class="corp-back-img" src="assets/corp-back.svg" alt="" />
+        </template>
         <template v-else>
           <div class="card-back-pattern"></div>
         </template>
@@ -74,7 +80,7 @@ export default defineComponent({
       <div v-if="card && card.strength !== undefined" class="counter str-counter">{{ card.strength }}</div>
       <div v-if="badge" class="counter badge-counter">{{ badge }}</div>
       <div v-if="card && card.rezzed === false && !facedown" class="unrezzed-flag">D</div>
-      <div v-if="facedown" class="facedown-label">?</div>
+      <div v-if="facedown && !corp" class="facedown-label">?</div>
     </div>
   `,
 });

@@ -22449,7 +22449,7 @@ function formatEvent(state, e, viewer) {
     case "breach":
       return `Runner breaches ${serverLabel(e.server)}`;
     case "damage": {
-      const cards2 = e.trashed.length ? ` (trashes ${e.trashed.map((id) => visible(id)).join(", ")})` : "";
+      const cards2 = e.trashed.length ? ` (trashes ${e.trashed.length} card${e.trashed.length > 1 ? "s" : ""})` : "";
       return `${side(e.player)} takes ${e.amount} ${e.kind} damage${cards2}`;
     }
     case "flatline":
@@ -22475,11 +22475,7 @@ function cardVisibleTo(state, id, viewer) {
   if (!card) return false;
   if (card.owner === viewer) return true;
   if (card.cardId === viewer) return true;
-  const openZones = [
-    "discard",
-    "score"
-  ];
-  if (openZones.includes(card.zone)) return true;
+  if (card.zone === "score") return true;
   if (card.rezzed === true) return true;
   for (const p2 of state.prompts) {
     if (p2.kind === "access-decision" && p2.cardId === id) return true;
@@ -22599,6 +22595,11 @@ var card_tile_default = defineComponent({
     clickable: {
       type: Boolean,
       default: false
+    },
+    // Facedown tiles show the corp card back instead of the runner's.
+    corp: {
+      type: Boolean,
+      default: false
     }
   },
   emits: [
@@ -22635,6 +22636,9 @@ var card_tile_default = defineComponent({
           <div class="card-name">{{ def.title }}</div>
           <div class="card-type">{{ def.type }}</div>
         </template>
+        <template v-else-if="corp">
+          <img class="corp-back-img" src="assets/corp-back.svg" alt="" />
+        </template>
         <template v-else>
           <div class="card-back-pattern"></div>
         </template>
@@ -22643,7 +22647,7 @@ var card_tile_default = defineComponent({
       <div v-if="card && card.strength !== undefined" class="counter str-counter">{{ card.strength }}</div>
       <div v-if="badge" class="counter badge-counter">{{ badge }}</div>
       <div v-if="card && card.rezzed === false && !facedown" class="unrezzed-flag">D</div>
-      <div v-if="facedown" class="facedown-label">?</div>
+      <div v-if="facedown && !corp" class="facedown-label">?</div>
     </div>
   `
 });
@@ -22853,6 +22857,15 @@ var game_default = defineComponent({
     function serverGlyph(id) {
       return SERVER_GLYPH[id] ?? "assets/svg/set-sysgw.svg";
     }
+    const rootCards = computed2(() => {
+      const map2 = {};
+      for (const c of corp.value.installed) {
+        if (c.server && c.iceIndex === void 0) {
+          (map2[c.server] ??= []).push(c);
+        }
+      }
+      return map2;
+    });
     function runMove(server) {
       return legal.value.find((m) => m.kind === "runner.run" && m.server === server);
     }
@@ -22914,6 +22927,7 @@ var game_default = defineComponent({
       breach,
       accessedCard,
       serverRows,
+      rootCards,
       // methods
       label,
       name,
@@ -22974,34 +22988,46 @@ var game_default = defineComponent({
 
         <div class="servers" data-testid="servers">
           <div v-for="s in serverRows" :key="s.id" class="server">
-            <div class="server-ice-row">
-              <template v-for="(card, i) in s.ice" :key="card.id">
-                <div class="ice-slot">
-                  <card-tile
-                    :card="card"
-                    ice
-                    clickable
-                    :highlight="isCurrentIce(card)"
-                    :badge="isCurrentIce(card) ? 'RUN' : ''"
-                    @zoom="zoom"
-                  />
-                </div>
-              </template>
-              <div v-for="n in s.unrezzedCount" :key="'u' + s.id + n" class="ice-slot facedown">
-                <card-tile facedown ice />
+            <div class="server-ice-stack">
+              <div v-for="card in s.ice" :key="card.id" class="ice-slot">
+                <card-tile
+                  :card="card"
+                  ice
+                  clickable
+                  :highlight="isCurrentIce(card)"
+                  :badge="isCurrentIce(card) ? 'RUN' : ''"
+                  @zoom="zoom"
+                />
               </div>
-              <div class="server-label">
-                <img class="sym server-glyph" :src="serverGlyph(s.id)" :alt="name(s.id)" />
-                <span>{{ name(s.id) }}</span>
-                <span v-if="s.rootCount" class="root-count">+{{ s.rootCount }} root</span>
-                <button
-                  v-if="runMove(s.id) && !state.run"
-                  class="run-btn"
-                  @click="play(runMove(s.id))"
-                  :data-testid="'run-' + s.id"
-                >Run</button>
+              <div v-for="n in s.unrezzedCount" :key="'u' + s.id + n" class="ice-slot facedown">
+                <card-tile facedown ice corp />
               </div>
             </div>
+            <div v-if="(rootCards[s.id] ?? []).length" class="server-root-row">
+              <template v-for="c in rootCards[s.id]" :key="c.id">
+                <card-tile
+                  v-if="c.cardId !== 'hidden'"
+                  :card="{ cardId: c.cardId, rezzed: c.rezzed, advancement: c.advancement }"
+                  small
+                  clickable
+                  @zoom="zoom"
+                />
+                <card-tile v-else facedown small corp />
+              </template>
+            </div>
+            <div class="server-card">
+              <img class="corp-back-img" src="assets/corp-back.svg" alt="" />
+              <div class="server-card-face">
+                <img class="server-glyph" :src="serverGlyph(s.id)" :alt="name(s.id)" />
+                <span class="server-name">{{ name(s.id) }}</span>
+              </div>
+            </div>
+            <button
+              v-if="runMove(s.id) && !state.run"
+              class="run-btn"
+              @click="play(runMove(s.id))"
+              :data-testid="'run-' + s.id"
+            >Run</button>
           </div>
         </div>
       </section>

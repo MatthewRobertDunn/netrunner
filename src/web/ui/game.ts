@@ -185,6 +185,17 @@ export default defineComponent({
       return SERVER_GLYPH[id] ?? "assets/svg/set-sysgw.svg";
     }
 
+    /** Corp root (non-ice) installed cards per server id, viewer-aware. */
+    const rootCards = computed<Record<string, ViewCard[]>>(() => {
+      const map: Record<string, ViewCard[]> = {};
+      for (const c of corp.value.installed) {
+        if (c.server && c.iceIndex === undefined) {
+          (map[c.server] ??= []).push(c);
+        }
+      }
+      return map;
+    });
+
     function runMove(server: string): Move | undefined {
       return legal.value.find(
         (m: Move) => m.kind === "runner.run" && (m as { server: string }).server === server,
@@ -259,6 +270,7 @@ export default defineComponent({
       breach,
       accessedCard,
       serverRows,
+      rootCards,
       // methods
       label,
       name,
@@ -319,34 +331,46 @@ export default defineComponent({
 
         <div class="servers" data-testid="servers">
           <div v-for="s in serverRows" :key="s.id" class="server">
-            <div class="server-ice-row">
-              <template v-for="(card, i) in s.ice" :key="card.id">
-                <div class="ice-slot">
-                  <card-tile
-                    :card="card"
-                    ice
-                    clickable
-                    :highlight="isCurrentIce(card)"
-                    :badge="isCurrentIce(card) ? 'RUN' : ''"
-                    @zoom="zoom"
-                  />
-                </div>
-              </template>
-              <div v-for="n in s.unrezzedCount" :key="'u' + s.id + n" class="ice-slot facedown">
-                <card-tile facedown ice />
+            <div class="server-ice-stack">
+              <div v-for="card in s.ice" :key="card.id" class="ice-slot">
+                <card-tile
+                  :card="card"
+                  ice
+                  clickable
+                  :highlight="isCurrentIce(card)"
+                  :badge="isCurrentIce(card) ? 'RUN' : ''"
+                  @zoom="zoom"
+                />
               </div>
-              <div class="server-label">
-                <img class="sym server-glyph" :src="serverGlyph(s.id)" :alt="name(s.id)" />
-                <span>{{ name(s.id) }}</span>
-                <span v-if="s.rootCount" class="root-count">+{{ s.rootCount }} root</span>
-                <button
-                  v-if="runMove(s.id) && !state.run"
-                  class="run-btn"
-                  @click="play(runMove(s.id))"
-                  :data-testid="'run-' + s.id"
-                >Run</button>
+              <div v-for="n in s.unrezzedCount" :key="'u' + s.id + n" class="ice-slot facedown">
+                <card-tile facedown ice corp />
               </div>
             </div>
+            <div v-if="(rootCards[s.id] ?? []).length" class="server-root-row">
+              <template v-for="c in rootCards[s.id]" :key="c.id">
+                <card-tile
+                  v-if="c.cardId !== 'hidden'"
+                  :card="{ cardId: c.cardId, rezzed: c.rezzed, advancement: c.advancement }"
+                  small
+                  clickable
+                  @zoom="zoom"
+                />
+                <card-tile v-else facedown small corp />
+              </template>
+            </div>
+            <div class="server-card">
+              <img class="corp-back-img" src="assets/corp-back.svg" alt="" />
+              <div class="server-card-face">
+                <img class="server-glyph" :src="serverGlyph(s.id)" :alt="name(s.id)" />
+                <span class="server-name">{{ name(s.id) }}</span>
+              </div>
+            </div>
+            <button
+              v-if="runMove(s.id) && !state.run"
+              class="run-btn"
+              @click="play(runMove(s.id))"
+              :data-testid="'run-' + s.id"
+            >Run</button>
           </div>
         </div>
       </section>

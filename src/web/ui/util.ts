@@ -160,8 +160,11 @@ export function formatEvent(
     case "breach":
       return `Runner breaches ${serverLabel(e.server)}`;
     case "damage": {
+      // Damage trashes from the Runner's grip are secret — the Corp never
+      // learns which cards were hit (rule 4.2). The card ids are still in the
+      // event for engine use, but the log must not name them.
       const cards = e.trashed.length
-        ? ` (trashes ${e.trashed.map((id) => visible(id)).join(", ")})`
+        ? ` (trashes ${e.trashed.length} card${e.trashed.length > 1 ? "s" : ""})`
         : "";
       return `${side(e.player)} takes ${e.amount} ${e.kind} damage${cards}`;
     }
@@ -187,10 +190,10 @@ function cardIdOfInstance(state: GameState, id: CardInstanceId): string {
 
 /**
  * Whether the card instance's identity is public knowledge for `viewer`
- * (rule 1.10): rezzed Corp cards, cards the viewer owns, cards in any
- * discard pile, scored agendas, the accessed card during a breach, and the
- * identity card. Everything else — facedown Corp installs, the opponent's
- * hand and deck — stays hidden.
+ * (rule 1.10): rezzed Corp cards, cards the viewer owns, scored agendas, the
+ * identity card, and the card currently being accessed. Everything else —
+ * facedown Corp installs, the opponent's hand, deck, and discard pile — stays
+ * hidden. A discard only becomes known when its cards are actually accessed.
  */
 function cardVisibleTo(
   state: GameState,
@@ -201,9 +204,8 @@ function cardVisibleTo(
   if (!card) return false; // unknown id → don't leak a title
   if (card.owner === viewer) return true;
   if (card.cardId === viewer) return true; // identity card
-  // Discard piles and score areas are open information.
-  const openZones = ["discard", "score"];
-  if (openZones.includes(card.zone)) return true;
+  // Scored agendas are open information.
+  if (card.zone === "score") return true;
   // Rezzed Corp cards are public; unrezzed ones are not.
   if (card.rezzed === true) return true;
   // The card currently being accessed is visible to the runner.
