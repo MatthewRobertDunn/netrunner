@@ -57,11 +57,19 @@ export function createRemote(state: GameState): ServerState {
   return server;
 }
 
-/** Remove remote servers with no cards and no ice (centrals are permanent). */
-export function pruneEmptyRemotes(state: GameState): void {
-  state.servers = state.servers.filter((s) =>
-    isCentral(s.id) || s.root.length > 0 || s.ice.length > 0
-  );
+/**
+ * Checkpoint cleanup (rule 4.6.2 / 4.6.10): a remote server with no cards in
+ * its root and no ice protecting it ceases to exist. Centrals are permanent.
+ * Returns the ids of the servers that were removed.
+ */
+export function pruneEmptyRemotes(state: GameState): ServerId[] {
+  const gone: ServerId[] = [];
+  state.servers = state.servers.filter((s) => {
+    if (isCentral(s.id) || s.root.length > 0 || s.ice.length > 0) return true;
+    gone.push(s.id);
+    return false;
+  });
+  return gone;
 }
 
 export function findCard(

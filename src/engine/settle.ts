@@ -19,7 +19,14 @@ import {
   iceAt,
   passIce,
 } from "./runs.ts";
-import { findCard, player, serverById, spendCredits, toDiscard } from "./state.ts";
+import {
+  findCard,
+  player,
+  pruneEmptyRemotes,
+  serverById,
+  spendCredits,
+  toDiscard,
+} from "./state.ts";
 import { rngNext } from "./rng.ts";
 import { beginCorpTurn, beginRunnerTurn, setGameOver } from "./turns.ts";
 import type { CardInstance, GameState, ServerId } from "../types.ts";
@@ -33,6 +40,19 @@ export function settle(state: GameState): void {
       state.run = null;
       state.breach = null;
       return;
+    }
+
+    // Checkpoint (rule 4.6.10): a remote server with nothing in its root and
+    // no ice ceases to exist. If that happens during a run against it, the run
+    // ends — neither successful nor unsuccessful (rule 4.6.10b).
+    const gone = pruneEmptyRemotes(state);
+    if (state.run && gone.includes(state.run.server)) {
+      state.breach = null;
+      state.prompts = state.prompts.filter(
+        (p) => p.kind !== "access-decision" && p.kind !== "rez-window",
+      );
+      state.run.phase = "run-ends";
+      continue;
     }
 
     if (state.prompts.length > 0) return; // waiting on a player decision
