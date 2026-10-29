@@ -287,9 +287,9 @@ html, body {
   gap: 8px;
 }
 .servers {
-  display: grid;
-  gap: 8px;
-  grid-template-columns: repeat(4, 1fr);
+  display: flex;
+  gap: 28px;
+  justify-content: flex-start;
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 10px;
@@ -870,6 +870,6 @@ html, body {
     grid-template-columns: 1fr;
   }
   .servers {
-    grid-template-columns: repeat(2, 1fr);
+    flex-wrap: wrap;
   }
 }
