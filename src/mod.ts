@@ -123,18 +123,11 @@ function sideCards(state: GameState, side: PlayerSide) {
  */
 export function getPlayerView(state: GameState, viewer: PlayerSide): PlayerView {
   const hideCorpInstalled = viewer !== "corp";
-  const corpInstalled: ViewCard[] = [];
-  for (const server of ["hq", "rd", "archives"] as ServerId[]) {
-    for (const c of player(state, "corp").installed) {
-      if (c.zone !== "play-area" || c.server !== server) continue;
-      corpInstalled.push(viewCard(c, { hidden: hideCorpInstalled && c.rezzed !== true }));
-    }
-  }
-  for (const s of state.remotes) {
-    for (const c of [...s.root, ...s.ice]) {
-      corpInstalled.push(viewCard(c, { hidden: hideCorpInstalled && c.rezzed !== true }));
-    }
-  }
+  const corpInstalled: ViewCard[] = state.servers.flatMap((s) =>
+    [...s.root, ...s.ice].map((c) =>
+      viewCard(c, { hidden: hideCorpInstalled && c.rezzed !== true })
+    )
+  );
 
   const corpSide = sideCards(state, "corp");
   const runnerSide = sideCards(state, "runner");

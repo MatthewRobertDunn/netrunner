@@ -340,8 +340,12 @@ export interface GameState {
   };
   corp: PlayerState;
   runner: PlayerState;
-  /** Remote servers only; central servers are derived from player state. */
-  remotes: ServerState[];
+  /**
+   * All servers, central and remote, in a uniform shape. The three central
+   * servers (hq, rd, archives) always exist; remotes are created on demand.
+   * Only breach/access behaviour differs between central and remote servers.
+   */
+  servers: ServerState[];
   run: RunState | null;
   breach: BreachState | null;
   prompts: Prompt[];
@@ -536,10 +540,12 @@ export interface PublicPlayerStatus {
 
 export interface PublicServerStatus {
   id: ServerId;
-  rootCount: number;
+  /** Cards in the server's root, hidden when unrezzed Corp cards (rule 1.10). */
+  root: ViewCard[];
+  /** Rezzed ice protecting the server, outermost last. */
   ice: ViewCard[];
-  /** Number of unrezzed ice/cards in this server (public to both players). */
-  unrezzedCount: number;
+  /** Number of unrezzed ice protecting this server (public to both players). */
+  unrezzedIceCount: number;
 }
 
 export interface PublicRunStatus {

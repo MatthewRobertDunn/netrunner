@@ -120,8 +120,8 @@ Deno.test("public status: server placement and counts are public", () => {
   );
   assertEquals(central.length, 3, "central servers always appear");
   for (const server of shared.servers) {
-    assertEquals(typeof server.rootCount, "number");
-    assertEquals(typeof server.unrezzedCount, "number");
+    assert(Array.isArray(server.root), "server.root is an array");
+    assertEquals(typeof server.unrezzedIceCount, "number");
     assert(Array.isArray(server.ice), "server.ice is an array");
   }
 });

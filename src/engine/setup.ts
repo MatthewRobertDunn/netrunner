@@ -251,7 +251,12 @@ export function startGame(config: GameConfig): GameState {
     turn: { number: 0, player: "corp", phase: "mulligans" },
     corp: null as unknown as GameState["corp"],
     runner: null as unknown as GameState["runner"],
-    remotes: [],
+    // All five servers in a uniform shape; remotes are appended on demand.
+    servers: [
+      { id: "hq", root: [], ice: [] },
+      { id: "rd", root: [], ice: [] },
+      { id: "archives", root: [], ice: [] },
+    ],
     run: null,
     breach: null,
     prompts: [],

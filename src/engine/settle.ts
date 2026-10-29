@@ -19,7 +19,7 @@ import {
   iceAt,
   passIce,
 } from "./runs.ts";
-import { findCard, player, spendCredits, toDiscard } from "./state.ts";
+import { findCard, player, serverById, spendCredits, toDiscard } from "./state.ts";
 import { rngNext } from "./rng.ts";
 import { beginCorpTurn, beginRunnerTurn, setGameOver } from "./turns.ts";
 import type { CardInstance, GameState, ServerId } from "../types.ts";
@@ -151,12 +151,7 @@ function currentIce(state: GameState): CardInstance | null {
 }
 
 function corpRootCards(state: GameState, server: ServerId): CardInstance[] {
-  const root = state.corp.installed.filter((c) => c.zone === "play-area" && c.server === server);
-  if (server.startsWith("remote")) {
-    const s = state.remotes.find((x) => x.id === server);
-    if (s) root.push(...s.root);
-  }
-  return root;
+  return serverById(state, server).root;
 }
 
 /** Corp rez options for the current approach (approached ice + non-ice cards). */
@@ -192,7 +187,7 @@ function rezSafeCost(state: GameState, card: CardInstance): number {
   const def = cardDef(card.cardId);
   if (def.type === "ice") {
     // Ice rez cost is its install cost (rule 1.16.6b).
-    const server = state.remotes.find((s) => s.ice.some((c) => c.id === card.id));
+    const server = state.servers.find((s) => s.ice.some((c) => c.id === card.id));
     if (server) return server.ice.length;
   }
   return def.cost ?? 0;
@@ -423,11 +418,13 @@ function stealAgendaInstance(state: GameState, cardId: string): void {
   card.server = undefined;
   card.iceIndex = undefined;
   card.advancement = 0;
-  for (const s of state.remotes) {
+  for (const s of state.servers) {
     const i = s.root.findIndex((c) => c.id === cardId);
     if (i >= 0) s.root.splice(i, 1);
+    const j = s.ice.findIndex((c) => c.id === cardId);
+    if (j >= 0) s.ice.splice(j, 1);
   }
-  for (const list of [state.corp.installed, state.corp.hand, state.corp.discard, state.corp.deck]) {
+  for (const list of [state.corp.hand, state.corp.discard, state.corp.deck]) {
     const i = list.findIndex((c) => c.id === cardId);
     if (i >= 0) list.splice(i, 1);
   }
@@ -448,11 +445,13 @@ export function scoreAgenda(state: GameState, cardId: string): void {
   card.server = undefined;
   card.iceIndex = undefined;
   card.advancement = 0;
-  for (const s of state.remotes) {
+  for (const s of state.servers) {
     const i = s.root.findIndex((c) => c.id === cardId);
     if (i >= 0) s.root.splice(i, 1);
+    const j = s.ice.findIndex((c) => c.id === cardId);
+    if (j >= 0) s.ice.splice(j, 1);
   }
-  for (const list of [state.corp.installed, state.corp.hand, state.corp.discard, state.corp.deck]) {
+  for (const list of [state.corp.hand, state.corp.discard, state.corp.deck]) {
     const i = list.findIndex((c) => c.id === cardId);
     if (i >= 0) list.splice(i, 1);
   }

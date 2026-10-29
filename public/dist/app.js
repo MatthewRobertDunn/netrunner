@@ -18909,23 +18909,26 @@ function verifyFixtureAgainstSnapshot() {
 function player(state, side) {
   return side === "corp" ? state.corp : state.runner;
 }
-function installedInRoot(state, id) {
-  return state.corp.installed.filter((c) => c.zone === "play-area" && c.server === id);
-}
-function centralServer(state, id) {
-  return {
-    id,
-    root: installedInRoot(state, id),
-    ice: []
-  };
+var CENTRAL_IDS = [
+  "hq",
+  "rd",
+  "archives"
+];
+function isCentral(id) {
+  return CENTRAL_IDS.includes(id);
 }
 function serverById(state, id) {
-  if (id === "hq" || id === "rd" || id === "archives") return centralServer(state, id);
-  return state.remotes.find((s) => s.id === id);
+  return state.servers.find((s) => s.id === id);
+}
+function serverExists(state, id) {
+  return state.servers.some((s) => s.id === id);
+}
+function allServers(state) {
+  return state.servers.map((s) => s.id);
 }
 function nextRemoteId(state) {
   let n = 1;
-  const ids = new Set(state.remotes.map((s) => s.id));
+  const ids = new Set(state.servers.map((s) => s.id));
   while (ids.has(`remote-${n}`)) n++;
   return `remote-${n}`;
 }
@@ -18935,11 +18938,11 @@ function createRemote(state) {
     root: [],
     ice: []
   };
-  state.remotes.push(server);
+  state.servers.push(server);
   return server;
 }
 function pruneEmptyRemotes(state) {
-  state.remotes = state.remotes.filter((s) => s.root.length > 0 || s.ice.length > 0);
+  state.servers = state.servers.filter((s) => isCentral(s.id) || s.root.length > 0 || s.ice.length > 0);
 }
 function findCard(state, instanceId) {
   for (const side of [
@@ -18965,7 +18968,7 @@ function findCard(state, instanceId) {
       };
     }
   }
-  for (const s of state.remotes) {
+  for (const s of state.servers) {
     const c = [
       ...s.root,
       ...s.ice
@@ -19060,7 +19063,7 @@ function detachFromPlayer(p2, card) {
 function moveCardTo(state, card, zone, side, opts = {}) {
   const from = findCard(state, card.id);
   if (from) detachFromPlayer(player(state, from.side), card);
-  for (const s of state.remotes) {
+  for (const s of state.servers) {
     const i = s.root.findIndex((c) => c.id === card.id);
     if (i >= 0) s.root.splice(i, 1);
     const j = s.ice.findIndex((c) => c.id === card.id);
@@ -19216,7 +19219,6 @@ function shuffle(state, list) {
 
 // src/engine/runs.ts
 function iceAt(state, server) {
-  if (server === "hq" || server === "rd" || server === "archives") return [];
   return serverById(state, server).ice;
 }
 function rezCostFor(state, card) {
@@ -19436,15 +19438,7 @@ function queueFreeRezPrompt(state, card) {
   });
 }
 function iceAtAllServers(state) {
-  const ids = [];
-  for (const s of state.remotes) ids.push(...s.ice);
-  for (const s of [
-    "hq",
-    "rd",
-    "archives"
-  ]) ids.push(...iceAt(state, s));
-  for (const c of state.corp.installed) if (c.zone === "play-area" && c.server) ids.push(c);
-  return ids;
+  return state.servers.flatMap((s) => s.ice);
 }
 function fireSuccessfulRun(state) {
   const run = state.run;
@@ -19641,7 +19635,6 @@ function installIceInward(state, targetId, fromIceId) {
   detach(state.corp.hand);
   detach(state.corp.discard);
   detach(state.corp.deck);
-  detach(state.corp.installed);
   card.zone = "play-area";
   card.server = server;
   card.advancement = 0;
@@ -19814,7 +19807,7 @@ function beginCorpTurn(state) {
     turn: state.turn.number
   });
   if (state.winner) return;
-  const nicos = state.remotes.flatMap((s) => s.root).filter((c) => c.cardId === "nico_campaign" && c.rezzed);
+  const nicos = state.servers.flatMap((s) => s.root).filter((c) => c.cardId === "nico_campaign" && c.rezzed);
   for (const nico of nicos) {
     const taken = Math.min(nico.hostedCredits ?? 0, 3);
     nico.hostedCredits = (nico.hostedCredits ?? 0) - taken;
@@ -20061,12 +20054,7 @@ function currentIce(state) {
   return run.position !== null ? ice[run.position] ?? null : null;
 }
 function corpRootCards(state, server) {
-  const root = state.corp.installed.filter((c) => c.zone === "play-area" && c.server === server);
-  if (server.startsWith("remote")) {
-    const s = state.remotes.find((x) => x.id === server);
-    if (s) root.push(...s.root);
-  }
-  return root;
+  return serverById(state, server).root;
 }
 function corpRezOptions(state) {
   const run = state.run;
@@ -20096,7 +20084,7 @@ function corpRezOptions(state) {
 function rezSafeCost(state, card) {
   const def2 = cardDef(card.cardId);
   if (def2.type === "ice") {
-    const server = state.remotes.find((s) => s.ice.some((c) => c.id === card.id));
+    const server = state.servers.find((s) => s.ice.some((c) => c.id === card.id));
     if (server) return server.ice.length;
   }
   return def2.cost ?? 0;
@@ -20308,12 +20296,13 @@ function stealAgendaInstance(state, cardId) {
   card.server = void 0;
   card.iceIndex = void 0;
   card.advancement = 0;
-  for (const s of state.remotes) {
+  for (const s of state.servers) {
     const i = s.root.findIndex((c) => c.id === cardId);
     if (i >= 0) s.root.splice(i, 1);
+    const j = s.ice.findIndex((c) => c.id === cardId);
+    if (j >= 0) s.ice.splice(j, 1);
   }
   for (const list of [
-    state.corp.installed,
     state.corp.hand,
     state.corp.discard,
     state.corp.deck
@@ -20340,12 +20329,13 @@ function scoreAgenda(state, cardId) {
   card.server = void 0;
   card.iceIndex = void 0;
   card.advancement = 0;
-  for (const s of state.remotes) {
+  for (const s of state.servers) {
     const i = s.root.findIndex((c) => c.id === cardId);
     if (i >= 0) s.root.splice(i, 1);
+    const j = s.ice.findIndex((c) => c.id === cardId);
+    if (j >= 0) s.ice.splice(j, 1);
   }
   for (const list of [
-    state.corp.installed,
     state.corp.hand,
     state.corp.discard,
     state.corp.deck
@@ -20630,26 +20620,18 @@ function installServersFor(state, card) {
   const def2 = cardDef(card.cardId);
   if (def2.type === "ice") {
     return [
-      "hq",
-      "rd",
-      "archives",
-      ...state.remotes.map((s) => s.id),
+      ...allServers(state),
       "new-remote"
     ];
   }
   if (def2.type === "agenda" || def2.type === "asset") {
     return [
-      ...state.remotes.filter((s) => s.root.length === 0).map((s) => s.id),
+      ...state.servers.filter((s) => !isCentral(s.id) && s.root.length === 0).map((s) => s.id),
       "new-remote"
     ];
   }
   if (def2.type === "upgrade") {
-    return [
-      "hq",
-      "rd",
-      "archives",
-      ...state.remotes.map((s) => s.id)
-    ];
+    return allServers(state);
   }
   return [];
 }
@@ -20699,12 +20681,7 @@ function runnerActionMoves(state) {
       });
     }
   }
-  for (const server of [
-    "hq",
-    "rd",
-    "archives",
-    ...state.remotes.map((s) => s.id)
-  ]) {
+  for (const server of allServers(state)) {
     if (cardRestrictsRun(state, server)) continue;
     moves.push({
       kind: "runner.run",
@@ -20855,18 +20832,10 @@ function addAbilityMoves(state, side, cards2, moves) {
   }
 }
 function corpInstalledCardsLocal(state) {
-  const cards2 = [];
-  for (const server of [
-    "hq",
-    "rd",
-    "archives"
-  ]) {
-    for (const c of state.corp.installed) {
-      if (c.zone === "play-area" && c.server === server) cards2.push(c);
-    }
-  }
-  for (const s of state.remotes) cards2.push(...s.root, ...s.ice);
-  return cards2;
+  return state.servers.flatMap((s) => [
+    ...s.root,
+    ...s.ice
+  ]);
 }
 function combinations(ids, size) {
   if (size <= 0) return [
@@ -21228,16 +21197,13 @@ function installCorpCard(state, cardId, server) {
   spendClicks(state, "corp", 1);
   const target = server;
   const resolved = target === "new-remote" ? createRemote(state).id : target;
-  if (target !== "new-remote" && !isCentral(target) && !state.remotes.some((s) => s.id === target)) return;
+  if (!serverExists(state, resolved)) return;
+  const s = serverById(state, resolved);
   if (isIce(def2)) {
-    spendCredits(state, "corp", iceCount(state, resolved));
-    const remote = state.remotes.find((s) => s.id === resolved);
-    if (remote) remote.ice.push(card);
+    spendCredits(state, "corp", s.ice.length);
+    s.ice.push(card);
   } else {
-    const remote = state.remotes.find((s) => s.id === resolved);
-    if (remote && (def2.type === "agenda" || def2.type === "asset")) {
-      remote.root.push(card);
-    }
+    s.root.push(card);
   }
   const idx = state.corp.hand.findIndex((c) => c.id === card.id);
   if (idx >= 0) state.corp.hand.splice(idx, 1);
@@ -21251,19 +21217,6 @@ function installCorpCard(state, cardId, server) {
     player: "corp",
     server: resolved
   });
-}
-function isCentral(server) {
-  return server === "hq" || server === "rd" || server === "archives";
-}
-function iceCount(state, server) {
-  if (isCentral(server)) {
-    return state.corp.installed.filter((c) => c.zone === "play-area" && c.server === server).length;
-  }
-  return serverIce(state, server).length;
-}
-function serverIce(state, server) {
-  if (isCentral(server)) return [];
-  return state.remotes.find((s) => s.id === server)?.ice ?? [];
 }
 function installRunnerCard(state, cardId) {
   const card = state.runner.hand.find((c) => c.cardId === cardId);
@@ -21536,12 +21489,7 @@ function breachCandidatesLocal(state) {
       random
     });
   };
-  const root = state.corp.installed.filter((c) => c.zone === "play-area" && c.server === server);
-  if (server.startsWith("remote-")) {
-    const s = state.remotes.find((x) => x.id === server);
-    if (s) root.push(...s.root);
-  }
-  for (const c of root) push(c, false);
+  for (const c of serverById(state, server).root) push(c, false);
   if (server === "hq") {
     if (breach.randomAccessesUsed < breach.randomAccessLimit) {
       for (const c of state.corp.hand) push(c, true);
@@ -21564,18 +21512,10 @@ function startFirstTurn(state) {
   beginCorpTurn(state);
 }
 function corpInstalledCards(state) {
-  const cards2 = [];
-  for (const server of [
-    "hq",
-    "rd",
-    "archives"
-  ]) {
-    for (const c of state.corp.installed) {
-      if (c.zone === "play-area" && c.server === server) cards2.push(c);
-    }
-  }
-  for (const s of state.remotes) cards2.push(...s.root, ...s.ice);
-  return cards2;
+  return state.servers.flatMap((s) => [
+    ...s.root,
+    ...s.ice
+  ]);
 }
 
 // src/engine/public-status.ts
@@ -21595,20 +21535,10 @@ function viewCard(card, hidden) {
 }
 function installedCards(state, side) {
   if (side === "runner") return state.runner.installed;
-  const cards2 = [];
-  for (const server of [
-    "hq",
-    "rd",
-    "archives"
-  ]) {
-    for (const c of state.corp.installed) {
-      if (c.zone === "play-area" && c.server === server) cards2.push(c);
-    }
-  }
-  for (const remote of state.remotes) {
-    cards2.push(...remote.root, ...remote.ice);
-  }
-  return cards2;
+  return state.servers.flatMap((s) => [
+    ...s.root,
+    ...s.ice
+  ]);
 }
 function publicPlayer(state, side, viewer) {
   const p2 = player(state, side);
@@ -21628,34 +21558,18 @@ function publicPlayer(state, side, viewer) {
     installed: installedCards(state, side).map((c) => viewCard(c, hideInstalled && c.rezzed !== true))
   };
 }
-function serverStatus(id, root, ice) {
-  const all = [
-    ...root,
-    ...ice
-  ];
-  const rezzed = all.filter((c) => c.rezzed === true);
-  const unrezzed = all.filter((c) => c.rezzed !== true);
+function serverStatus(state, id, hideInstalled) {
+  const s = state.servers.find((x) => x.id === id);
+  const iceVisible = s.ice.filter((c) => !hideInstalled || c.rezzed === true);
   return {
     id,
-    rootCount: root.length,
-    ice: rezzed.map((c) => viewCard(c, false)),
-    unrezzedCount: unrezzed.length
+    root: s.root.map((c) => viewCard(c, hideInstalled && c.rezzed !== true)),
+    ice: iceVisible.map((c) => viewCard(c, false)),
+    unrezzedIceCount: s.ice.length - iceVisible.length
   };
 }
-function publicServers(state) {
-  const servers = [];
-  for (const server of [
-    "hq",
-    "rd",
-    "archives"
-  ]) {
-    const cards2 = state.corp.installed.filter((c) => c.zone === "play-area" && c.server === server);
-    servers.push(serverStatus(server, cards2, []));
-  }
-  for (const remote of state.remotes) {
-    servers.push(serverStatus(remote.id, remote.root, remote.ice));
-  }
-  return servers;
+function publicServers(state, hideInstalled) {
+  return state.servers.map((s) => serverStatus(state, s.id, hideInstalled));
 }
 function publicRun(state) {
   const run = state.run;
@@ -21687,27 +21601,12 @@ function publicBreach(state) {
   };
 }
 function getPublicGameStatus(state) {
-  return {
-    turn: {
-      ...state.turn
-    },
-    winner: state.winner,
-    winReason: state.winReason,
-    agendaPointTarget: state.agendaPointTarget,
-    players: {
-      corp: publicPlayer(state, "corp", "runner"),
-      runner: publicPlayer(state, "runner", "runner")
-    },
-    servers: publicServers(state),
-    run: publicRun(state),
-    breach: publicBreach(state),
-    prompts: state.prompts,
-    warnings: [
-      ...state.supportWarnings
-    ]
-  };
+  return publicStatus(state, true);
 }
 function getPublicGameStatusFor(state, viewer) {
+  return publicStatus(state, viewer !== "corp");
+}
+function publicStatus(state, hideCorpInstalled) {
   return {
     turn: {
       ...state.turn
@@ -21716,10 +21615,10 @@ function getPublicGameStatusFor(state, viewer) {
     winReason: state.winReason,
     agendaPointTarget: state.agendaPointTarget,
     players: {
-      corp: publicPlayer(state, "corp", viewer),
-      runner: publicPlayer(state, "runner", viewer)
+      corp: publicPlayer(state, "corp", hideCorpInstalled ? "runner" : "corp"),
+      runner: publicPlayer(state, "runner", "runner")
     },
-    servers: publicServers(state),
+    servers: publicServers(state, hideCorpInstalled),
     run: publicRun(state),
     breach: publicBreach(state),
     prompts: state.prompts,
@@ -21878,7 +21777,24 @@ function startGame(config) {
     },
     corp: null,
     runner: null,
-    remotes: [],
+    // All five servers in a uniform shape; remotes are appended on demand.
+    servers: [
+      {
+        id: "hq",
+        root: [],
+        ice: []
+      },
+      {
+        id: "rd",
+        root: [],
+        ice: []
+      },
+      {
+        id: "archives",
+        root: [],
+        ice: []
+      }
+    ],
     run: null,
     breach: null,
     prompts: [],
@@ -22167,29 +22083,12 @@ function sideCards(state, side) {
 }
 function getPlayerView(state, viewer) {
   const hideCorpInstalled = viewer !== "corp";
-  const corpInstalled = [];
-  for (const server of [
-    "hq",
-    "rd",
-    "archives"
-  ]) {
-    for (const c of player(state, "corp").installed) {
-      if (c.zone !== "play-area" || c.server !== server) continue;
-      corpInstalled.push(viewCard2(c, {
-        hidden: hideCorpInstalled && c.rezzed !== true
-      }));
-    }
-  }
-  for (const s of state.remotes) {
-    for (const c of [
-      ...s.root,
-      ...s.ice
-    ]) {
-      corpInstalled.push(viewCard2(c, {
-        hidden: hideCorpInstalled && c.rezzed !== true
-      }));
-    }
-  }
+  const corpInstalled = state.servers.flatMap((s) => [
+    ...s.root,
+    ...s.ice
+  ].map((c) => viewCard2(c, {
+    hidden: hideCorpInstalled && c.rezzed !== true
+  })));
   const corpSide = sideCards(state, "corp");
   const runnerSide = sideCards(state, "runner");
   return {
@@ -22343,10 +22242,10 @@ function findCardIn(state, id) {
       for (const c of list) if (c.id === id) return c;
     }
   }
-  for (const remote of state.remotes) {
+  for (const s of state.servers) {
     for (const c of [
-      ...remote.root,
-      ...remote.ice
+      ...s.root,
+      ...s.ice
     ]) if (c.id === id) return c;
   }
   return null;
@@ -22857,15 +22756,6 @@ var game_default = defineComponent({
     function serverGlyph(id) {
       return SERVER_GLYPH[id] ?? "assets/svg/set-sysgw.svg";
     }
-    const rootCards = computed2(() => {
-      const map2 = {};
-      for (const c of corp.value.installed) {
-        if (c.server && c.iceIndex === void 0) {
-          (map2[c.server] ??= []).push(c);
-        }
-      }
-      return map2;
-    });
     function runMove(server) {
       return legal.value.find((m) => m.kind === "runner.run" && m.server === server);
     }
@@ -22927,7 +22817,6 @@ var game_default = defineComponent({
       breach,
       accessedCard,
       serverRows,
-      rootCards,
       // methods
       label,
       name,
@@ -22988,6 +22877,25 @@ var game_default = defineComponent({
 
         <div class="servers" data-testid="servers">
           <div v-for="s in serverRows" :key="s.id" class="server">
+            <div class="server-card">
+              <img class="corp-back-img" src="assets/corp-back.svg" alt="" />
+              <div class="server-card-face">
+                <img class="server-glyph" :src="serverGlyph(s.id)" :alt="name(s.id)" />
+                <span class="server-name">{{ name(s.id) }}</span>
+              </div>
+            </div>
+            <div v-if="s.root.length" class="server-root-row">
+              <template v-for="c in s.root" :key="c.id">
+                <card-tile
+                  v-if="c.cardId !== 'hidden'"
+                  :card="{ cardId: c.cardId, rezzed: c.rezzed, advancement: c.advancement }"
+                  small
+                  clickable
+                  @zoom="zoom"
+                />
+                <card-tile v-else facedown small corp />
+              </template>
+            </div>
             <div class="server-ice-stack">
               <div v-for="card in s.ice" :key="card.id" class="ice-slot">
                 <card-tile
@@ -22999,27 +22907,8 @@ var game_default = defineComponent({
                   @zoom="zoom"
                 />
               </div>
-              <div v-for="n in s.unrezzedCount" :key="'u' + s.id + n" class="ice-slot facedown">
+              <div v-for="n in s.unrezzedIceCount" :key="'u' + s.id + n" class="ice-slot facedown">
                 <card-tile facedown ice corp />
-              </div>
-            </div>
-            <div v-if="(rootCards[s.id] ?? []).length" class="server-root-row">
-              <template v-for="c in rootCards[s.id]" :key="c.id">
-                <card-tile
-                  v-if="c.cardId !== 'hidden'"
-                  :card="{ cardId: c.cardId, rezzed: c.rezzed, advancement: c.advancement }"
-                  small
-                  clickable
-                  @zoom="zoom"
-                />
-                <card-tile v-else facedown small corp />
-              </template>
-            </div>
-            <div class="server-card">
-              <img class="corp-back-img" src="assets/corp-back.svg" alt="" />
-              <div class="server-card-face">
-                <img class="server-glyph" :src="serverGlyph(s.id)" :alt="name(s.id)" />
-                <span class="server-name">{{ name(s.id) }}</span>
               </div>
             </div>
             <button

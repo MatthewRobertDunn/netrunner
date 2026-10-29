@@ -27,6 +27,8 @@ import {
   moveCardTo,
   player,
   pruneEmptyRemotes,
+  serverById,
+  serverExists,
   spendClicks,
   spendCredits,
 } from "./state.ts";
@@ -404,20 +406,18 @@ function installCorpCard(state: GameState, cardId: string, server: ServerId | "n
   spendClicks(state, "corp", 1);
   const target: ServerId | "new-remote" = server;
   const resolved: ServerId = target === "new-remote" ? createRemote(state).id : target;
-  if (
-    target !== "new-remote" && !isCentral(target) && !state.remotes.some((s) => s.id === target)
-  ) return;
+  if (!serverExists(state, resolved)) return;
 
-  // Pay ice install cost (rule 1.16.6b); assets/upgrades/agendas are free.
+  // All servers hold root cards and ice in the same shape; only breach/access
+  // behaviour differs between central and remote servers.
+  const s = serverById(state, resolved);
   if (isIce(def)) {
-    spendCredits(state, "corp", iceCount(state, resolved));
-    const remote = state.remotes.find((s) => s.id === resolved);
-    if (remote) remote.ice.push(card);
+    // Pay ice install cost (rule 1.16.6b): one credit per ice already
+    // protecting the server; assets/agendas/upgrades are free.
+    spendCredits(state, "corp", s.ice.length);
+    s.ice.push(card); // outermost position (rule 8.5)
   } else {
-    const remote = state.remotes.find((s) => s.id === resolved);
-    if (remote && (def.type === "agenda" || def.type === "asset")) {
-      remote.root.push(card);
-    }
+    s.root.push(card);
   }
   const idx = state.corp.hand.findIndex((c) => c.id === card.id);
   if (idx >= 0) state.corp.hand.splice(idx, 1);
@@ -426,22 +426,6 @@ function installCorpCard(state: GameState, cardId: string, server: ServerId | "n
   card.rezzed = false;
   state.corp.installedThisTurn.push(card.id);
   state.log.push({ type: "install", cardId: card.id, player: "corp", server: resolved });
-}
-
-function isCentral(server: ServerId): boolean {
-  return server === "hq" || server === "rd" || server === "archives";
-}
-
-function iceCount(state: GameState, server: ServerId): number {
-  if (isCentral(server)) {
-    return state.corp.installed.filter((c) => c.zone === "play-area" && c.server === server).length;
-  }
-  return serverIce(state, server).length;
-}
-
-function serverIce(state: GameState, server: ServerId): CardInstance[] {
-  if (isCentral(server)) return [];
-  return state.remotes.find((s) => s.id === server)?.ice ?? [];
 }
 
 // ---------------------------------------------------------------------------
@@ -718,12 +702,7 @@ function breachCandidatesLocal(state: GameState): { instanceId: string; random: 
     if (breach.chosen.includes(c.id)) return;
     result.push({ instanceId: c.id, random });
   };
-  const root = state.corp.installed.filter((c) => c.zone === "play-area" && c.server === server);
-  if (server.startsWith("remote-")) {
-    const s = state.remotes.find((x) => x.id === server);
-    if (s) root.push(...s.root);
-  }
-  for (const c of root) push(c, false);
+  for (const c of serverById(state, server).root) push(c, false);
   if (server === "hq") {
     if (breach.randomAccessesUsed < breach.randomAccessLimit) {
       for (const c of state.corp.hand) push(c, true);
@@ -748,16 +727,9 @@ function startFirstTurn(state: GameState): void {
   beginCorpTurn(state);
 }
 
-/** All Corp cards installed in servers and central server roots. */
+/** All Corp cards installed in servers (root cards and ice). */
 function corpInstalledCards(state: GameState): CardInstance[] {
-  const cards: CardInstance[] = [];
-  for (const server of ["hq", "rd", "archives"] as ServerId[]) {
-    for (const c of state.corp.installed) {
-      if (c.zone === "play-area" && c.server === server) cards.push(c);
-    }
-  }
-  for (const s of state.remotes) cards.push(...s.root, ...s.ice);
-  return cards;
+  return state.servers.flatMap((s) => [...s.root, ...s.ice]);
 }
 
 export { beginBreach, endRun, finishRun, initiateRun, moveCardTo };

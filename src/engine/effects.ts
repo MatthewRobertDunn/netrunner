@@ -122,11 +122,7 @@ function queueFreeRezPrompt(state: GameState, card: CardInstance): void {
 }
 
 function iceAtAllServers(state: GameState): CardInstance[] {
-  const ids: CardInstance[] = [];
-  for (const s of state.remotes) ids.push(...s.ice);
-  for (const s of ["hq", "rd", "archives"] as ServerId[]) ids.push(...iceAt(state, s));
-  for (const c of state.corp.installed) if (c.zone === "play-area" && c.server) ids.push(c);
-  return ids;
+  return state.servers.flatMap((s) => s.ice);
 }
 
 /** Successful-run triggers (rule 6.7.2a). */
@@ -315,7 +311,6 @@ function installIceInward(state: GameState, targetId: string, fromIceId: string)
   detach(state.corp.hand);
   detach(state.corp.discard);
   detach(state.corp.deck);
-  detach(state.corp.installed);
   card.zone = "play-area";
   card.server = server;
   card.advancement = 0;

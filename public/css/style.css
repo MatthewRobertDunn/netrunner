@@ -295,8 +295,9 @@ html, body {
   border-radius: 10px;
   padding: 10px;
 }
-/* Each server is a vertical card stack: ice on top, root cards, then the
-   server itself rendered as a corp card back, run button underneath. */
+/* Each server is a vertical card stack: the server card itself (corp card
+   back), its root cards behind it, then ice laid out horizontally toward the
+   centre of the playspace (rule 4.6.9a), run button nearest the runner. */
 .server {
   display: flex;
   flex-direction: column;
@@ -308,12 +309,25 @@ html, body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  min-height: 40px;
+  min-height: 66px;
+}
+/* Ice is rendered horizontally (rule 4.6.9a): the tile keeps its portrait
+   dimensions but is rotated 90° inside a landscape slot. */
+.ice-slot {
+  position: relative;
+  width: 92px;
+  height: 66px;
+}
+.ice-slot .card-tile {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(90deg);
 }
 /* Overlap the ice column like the tabletop: show the top sliver of each
    card below the previous one. */
 .server-ice-stack .ice-slot + .ice-slot {
-  margin-top: -58px;
+  margin-top: -34px;
 }
 .ice-slot.facedown {
   opacity: 0.9;

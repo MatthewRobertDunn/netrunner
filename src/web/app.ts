@@ -9,7 +9,7 @@
 
 import { defineComponent, markRaw, shallowRef } from "npm:vue@3.5.13/dist/vue.esm-bundler.js";
 import type { Ref } from "npm:vue@3.5.13/dist/vue.esm-bundler.js";
-import { UctAI, engine, starterDeckConfigs } from "../mod.ts";
+import { engine, starterDeckConfigs, UctAI } from "../mod.ts";
 import type { GameState, Move, PlayerSide } from "../types.ts";
 import GameScreen from "./ui/game.ts";
 

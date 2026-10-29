@@ -37,7 +37,7 @@ export function beginCorpTurn(state: GameState): void {
   if (state.winner) return;
 
   // Nico Campaign: "When your turn begins, take 3 credits from this asset."
-  const nicos = state.remotes.flatMap((s) => s.root).filter((c) =>
+  const nicos = state.servers.flatMap((s) => s.root).filter((c) =>
     c.cardId === "nico_campaign" && c.rezzed
   );
   for (const nico of nicos) {

@@ -41,8 +41,8 @@ export function findCardIn(state: GameState, id: CardInstanceId): CardInstance |
       for (const c of list) if (c.id === id) return c;
     }
   }
-  for (const remote of state.remotes) {
-    for (const c of [...remote.root, ...remote.ice]) if (c.id === id) return c;
+  for (const s of state.servers) {
+    for (const c of [...s.root, ...s.ice]) if (c.id === id) return c;
   }
   return null;
 }

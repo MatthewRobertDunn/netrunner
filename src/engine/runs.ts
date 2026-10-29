@@ -9,7 +9,6 @@ import { serverById, spendCredits } from "./state.ts";
 import type { CardInstance, GameState, ServerId } from "../types.ts";
 
 export function iceAt(state: GameState, server: ServerId): CardInstance[] {
-  if (server === "hq" || server === "rd" || server === "archives") return [];
   return serverById(state, server).ice;
 }
 

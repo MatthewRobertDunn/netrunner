@@ -25,45 +25,43 @@ export function other(side: PlayerSide): PlayerSide {
   return side === "corp" ? "runner" : "corp";
 }
 
-function installedInRoot(state: GameState, id: ServerId): CardInstance[] {
-  return state.corp.installed.filter((c) => c.zone === "play-area" && c.server === id);
-}
+const CENTRAL_IDS: ServerId[] = ["hq", "rd", "archives"];
 
-export function centralServer(state: GameState, id: ServerId): ServerState {
-  return { id, root: installedInRoot(state, id), ice: [] };
+export function isCentral(id: ServerId): boolean {
+  return CENTRAL_IDS.includes(id);
 }
 
 export function serverById(state: GameState, id: ServerId): ServerState {
-  if (id === "hq" || id === "rd" || id === "archives") return centralServer(state, id);
-  return state.remotes.find((s) => s.id === id)!;
+  return state.servers.find((s) => s.id === id)!;
 }
 
 export function serverExists(state: GameState, id: ServerId): boolean {
-  if (id === "hq" || id === "rd" || id === "archives") return true;
-  return state.remotes.some((s) => s.id === id);
+  return state.servers.some((s) => s.id === id);
 }
 
 /** All servers currently able to be run on (central + existing remotes). */
 export function allServers(state: GameState): ServerId[] {
-  return ["hq", "rd", "archives", ...state.remotes.map((s) => s.id)];
+  return state.servers.map((s) => s.id);
 }
 
 export function nextRemoteId(state: GameState): ServerId {
   let n = 1;
-  const ids = new Set(state.remotes.map((s) => s.id));
+  const ids = new Set(state.servers.map((s) => s.id));
   while (ids.has(`remote-${n}`)) n++;
   return `remote-${n}`;
 }
 
 export function createRemote(state: GameState): ServerState {
   const server: ServerState = { id: nextRemoteId(state), root: [], ice: [] };
-  state.remotes.push(server);
+  state.servers.push(server);
   return server;
 }
 
-/** Remove remote servers with no cards and no ice. */
+/** Remove remote servers with no cards and no ice (centrals are permanent). */
 export function pruneEmptyRemotes(state: GameState): void {
-  state.remotes = state.remotes.filter((s) => s.root.length > 0 || s.ice.length > 0);
+  state.servers = state.servers.filter((s) =>
+    isCentral(s.id) || s.root.length > 0 || s.ice.length > 0
+  );
 }
 
 export function findCard(
@@ -78,7 +76,7 @@ export function findCard(
       if (c) return { card: c, side };
     }
   }
-  for (const s of state.remotes) {
+  for (const s of state.servers) {
     const c = [...s.root, ...s.ice].find((x) => x.id === instanceId);
     if (c) return { card: c, side: "corp" };
   }
@@ -87,12 +85,7 @@ export function findCard(
 
 /** All Corp cards installed in servers (root cards and ice). */
 export function corpInstalled(state: GameState): CardInstance[] {
-  return [
-    ...installedInRoot(state, "hq"),
-    ...installedInRoot(state, "rd"),
-    ...installedInRoot(state, "archives"),
-    ...state.remotes.flatMap((s) => [...s.root, ...s.ice]),
-  ];
+  return state.servers.flatMap((s) => [...s.root, ...s.ice]);
 }
 
 export function installedCard(
@@ -186,7 +179,7 @@ export function moveCardTo(
 ): void {
   const from = findCard(state, card.id);
   if (from) detachFromPlayer(player(state, from.side), card);
-  for (const s of state.remotes) {
+  for (const s of state.servers) {
     const i = s.root.findIndex((c) => c.id === card.id);
     if (i >= 0) s.root.splice(i, 1);
     const j = s.ice.findIndex((c) => c.id === card.id);
@@ -212,6 +205,8 @@ export function moveCardTo(
       card.advancement = 0;
       break;
     case "play-area":
+      // Runner cards live in runner.installed; Corp cards live in the
+      // server's root (installCorpCard pushes ice directly into server.ice).
       p.installed.push(card);
       if (opts.server) card.server = opts.server;
       break;

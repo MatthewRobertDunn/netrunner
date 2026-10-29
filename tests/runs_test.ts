@@ -59,7 +59,9 @@ Deno.test("run: Runner breaks all subroutines and accesses a card", () => {
   // Finish the Corp's turn.
   current = turn(current, "corp");
   // Runner's turn: run the remote.
-  const remote = current.remotes[0]?.id;
+  const remote = current.servers.find((s) =>
+    !s.id.startsWith("hq") && !["rd", "archives"].includes(s.id)
+  )?.id;
   if (!remote) return;
   const runMove = engine.getLegalMoves(current, "runner").find(
     (m) => m.kind === "runner.run" && m.server === remote,

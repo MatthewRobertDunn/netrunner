@@ -42,21 +42,12 @@ function viewCard(card: CardInstance, hidden: boolean): ViewCard {
 }
 
 /**
- * Cards installed for `side`. For the Corp these live in the servers/remotes
- * (rule 4.1); for the Runner they live in the Runner's `installed` list.
+ * Cards installed for `side`. For the Corp these live in the servers
+ * (rule 4.6.7); for the Runner they live in the Runner's `installed` list.
  */
 function installedCards(state: GameState, side: "corp" | "runner"): CardInstance[] {
   if (side === "runner") return state.runner.installed;
-  const cards: CardInstance[] = [];
-  for (const server of ["hq", "rd", "archives"] as ServerId[]) {
-    for (const c of state.corp.installed) {
-      if (c.zone === "play-area" && c.server === server) cards.push(c);
-    }
-  }
-  for (const remote of state.remotes) {
-    cards.push(...remote.root, ...remote.ice);
-  }
-  return cards;
+  return state.servers.flatMap((s) => [...s.root, ...s.ice]);
 }
 
 function publicPlayer(
@@ -84,30 +75,21 @@ function publicPlayer(
   };
 }
 
-function serverStatus(id: ServerId, root: CardInstance[], ice: CardInstance[]): PublicServerStatus {
-  const all = [...root, ...ice];
-  const rezzed = all.filter((c) => c.rezzed === true);
-  const unrezzed = all.filter((c) => c.rezzed !== true);
+function serverStatus(state: GameState, id: ServerId, hideInstalled: boolean): PublicServerStatus {
+  const s = state.servers.find((x) => x.id === id)!;
+  // Rule 1.10: the Corp always knows its own cards; the Runner only sees
+  // rezzed ice identities plus the count of unrezzed ice.
+  const iceVisible = s.ice.filter((c) => !hideInstalled || c.rezzed === true);
   return {
     id,
-    rootCount: root.length,
-    ice: rezzed.map((c) => viewCard(c, false)),
-    unrezzedCount: unrezzed.length,
+    root: s.root.map((c) => viewCard(c, hideInstalled && c.rezzed !== true)),
+    ice: iceVisible.map((c) => viewCard(c, false)),
+    unrezzedIceCount: s.ice.length - iceVisible.length,
   };
 }
 
-function publicServers(state: GameState): PublicServerStatus[] {
-  const servers: PublicServerStatus[] = [];
-  for (const server of ["hq", "rd", "archives"] as ServerId[]) {
-    const cards = state.corp.installed.filter(
-      (c) => c.zone === "play-area" && c.server === server,
-    );
-    servers.push(serverStatus(server, cards, []));
-  }
-  for (const remote of state.remotes) {
-    servers.push(serverStatus(remote.id, remote.root, remote.ice));
-  }
-  return servers;
+function publicServers(state: GameState, hideInstalled: boolean): PublicServerStatus[] {
+  return state.servers.map((s) => serverStatus(state, s.id, hideInstalled));
 }
 
 function publicRun(state: GameState): PublicRunStatus | null {
@@ -146,42 +128,34 @@ function publicBreach(state: GameState): PublicBreachStatus | null {
  * intersection of what both players know.
  */
 export function getPublicGameStatus(state: GameState): PublicGameStatus {
-  return {
-    turn: { ...state.turn },
-    winner: state.winner,
-    winReason: state.winReason,
-    agendaPointTarget: state.agendaPointTarget,
-    players: {
-      corp: publicPlayer(state, "corp", "runner"),
-      runner: publicPlayer(state, "runner", "runner"),
-    },
-    servers: publicServers(state),
-    run: publicRun(state),
-    breach: publicBreach(state),
-    prompts: state.prompts,
-    warnings: [...state.supportWarnings],
-  };
+  // Viewer-agnostic: unrezzed Corp installed cards are hidden (the intersection
+  // of what both players know).
+  return publicStatus(state, true);
 }
 
 /**
- * Build the public game-status DTO as seen by `viewer`. The only difference
- * from `getPublicGameStatus` is that the Corp sees the ids of its own
- * unrezzed installed cards (rule 1.10: you always know your own cards).
+ * Build the public game-status DTO as seen by `viewer`. The Corp additionally
+ * sees the ids of its own unrezzed installed cards (rule 1.10: you always know
+ * your own cards).
  */
 export function getPublicGameStatusFor(
   state: GameState,
   viewer: "corp" | "runner",
 ): PublicGameStatus {
+  return publicStatus(state, viewer !== "corp");
+}
+
+function publicStatus(state: GameState, hideCorpInstalled: boolean): PublicGameStatus {
   return {
     turn: { ...state.turn },
     winner: state.winner,
     winReason: state.winReason,
     agendaPointTarget: state.agendaPointTarget,
     players: {
-      corp: publicPlayer(state, "corp", viewer),
-      runner: publicPlayer(state, "runner", viewer),
+      corp: publicPlayer(state, "corp", hideCorpInstalled ? "runner" : "corp"),
+      runner: publicPlayer(state, "runner", "runner"),
     },
-    servers: publicServers(state),
+    servers: publicServers(state, hideCorpInstalled),
     run: publicRun(state),
     breach: publicBreach(state),
     prompts: state.prompts,

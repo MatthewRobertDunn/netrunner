@@ -10,8 +10,10 @@ import { behaviors, supportStatus } from "../cards/effects.ts";
 import { abilityLegality, serversForAbility } from "./effects.ts";
 import { candidatesForBreach, chooseRandomAccess } from "./settle.ts";
 import {
+  allServers,
   availableCredits,
   findCard,
+  isCentral,
   isIcebreaker,
   isRezzedIce,
   memoryLimit,
@@ -223,17 +225,21 @@ function corpActionMoves(state: GameState): Move[] {
 function installServersFor(state: GameState, card: CardInstance): (ServerId | "new-remote")[] {
   const def = cardDef(card.cardId);
   if (def.type === "ice") {
-    return ["hq", "rd", "archives", ...state.remotes.map((s) => s.id), "new-remote"];
+    // Ice can protect any server (rule 4.6.7d), outermost position (rule 8.5).
+    return [...allServers(state), "new-remote"];
   }
   if (def.type === "agenda" || def.type === "asset") {
-    // Only one card may be installed in a remote server root at a time.
+    // Assets and agendas cannot be installed in central roots (rule 4.6.7e);
+    // only one card may be installed in a remote server root at a time.
     return [
-      ...(state.remotes.filter((s) => s.root.length === 0).map((s) => s.id) as ServerId[]),
+      ...(state.servers.filter((s) => !isCentral(s.id) && s.root.length === 0).map((s) =>
+        s.id
+      ) as ServerId[]),
       "new-remote",
     ];
   }
   if (def.type === "upgrade") {
-    return ["hq", "rd", "archives", ...state.remotes.map((s) => s.id)];
+    return allServers(state);
   }
   return [];
 }
@@ -277,7 +283,7 @@ function runnerActionMoves(state: GameState): Move[] {
   }
 
   // Run any server (central or existing remote).
-  for (const server of ["hq", "rd", "archives", ...state.remotes.map((s) => s.id)] as ServerId[]) {
+  for (const server of allServers(state)) {
     if (cardRestrictsRun(state, server)) continue;
     moves.push({ kind: "runner.run", server });
   }
@@ -441,16 +447,9 @@ function addAbilityMoves(
   }
 }
 
-/** All Corp cards installed in servers and central server roots. */
+/** All Corp cards installed in servers (root cards and ice). */
 function corpInstalledCardsLocal(state: GameState): CardInstance[] {
-  const cards: CardInstance[] = [];
-  for (const server of ["hq", "rd", "archives"] as ServerId[]) {
-    for (const c of state.corp.installed) {
-      if (c.zone === "play-area" && c.server === server) cards.push(c);
-    }
-  }
-  for (const s of state.remotes) cards.push(...s.root, ...s.ice);
-  return cards;
+  return state.servers.flatMap((s) => [...s.root, ...s.ice]);
 }
 
 function combinations(ids: string[], size: number): string[][] {
