@@ -19961,7 +19961,7 @@ function settle(state) {
     if (state.run && gone.includes(state.run.server)) {
       state.breach = null;
       state.prompts = state.prompts.filter((p2) => p2.kind !== "access-decision" && p2.kind !== "rez-window");
-      state.run.phase = "run-ends";
+      finishRun(state);
       continue;
     }
     if (state.prompts.length > 0) return;
@@ -20291,9 +20291,9 @@ function finishAccess(state, trashed) {
   if (!found) return;
   const card = found.card;
   const def2 = cardDef(card.cardId);
+  const wasAgenda = def2.type === "agenda";
   if (trashed) {
     spendCredits(state, "runner", def2.trashCost ?? 0);
-    const wasAgenda = def2.type === "agenda";
     toDiscard(state, card, "access");
     if (wasAgenda) {
       stealAgendaInstance(state, card.id);
@@ -20301,7 +20301,7 @@ function finishAccess(state, trashed) {
     }
   }
   state.prompts = state.prompts.filter((pr) => pr.kind !== "access-decision");
-  if (def2.type === "agenda") {
+  if (wasAgenda && !state.runner.score.some((c) => c.id === card.id)) {
     stealAgendaInstance(state, card.id);
     fireSteal(state, card);
   }
@@ -20646,7 +20646,10 @@ function installServersFor(state, card) {
   }
   if (def2.type === "agenda" || def2.type === "asset") {
     return [
-      ...state.servers.filter((s) => !isCentral(s.id) && s.root.length === 0).map((s) => s.id),
+      ...state.servers.filter((s) => !isCentral(s.id) && !s.root.some((c) => {
+        const t = cardDef(c.cardId).type;
+        return t === "asset" || t === "agenda";
+      })).map((s) => s.id),
       "new-remote"
     ];
   }
