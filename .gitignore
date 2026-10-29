@@ -7,3 +7,7 @@ extraction/
 # Local scratch
 tmp/
 *.log
+
+# Local SSH keys
+orange
+orange.pub

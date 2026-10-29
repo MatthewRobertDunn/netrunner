@@ -17,6 +17,7 @@
     "fetch-images": "deno run --allow-net --allow-read --allow-write scripts/fetch-card-images.ts",
     "test": "deno test --allow-read",
     "check-ai": "deno run --allow-read scripts/check-ai.ts",
+    "publish": "deno run --allow-read --allow-write --allow-run --allow-net scripts/publish.ts",
     "check": "deno check src/mod.ts scripts/import-starter-decks.ts scripts/fetch-card-images.ts",
     "lint": "deno lint src tests scripts",
     "fmt": "deno fmt src tests scripts",

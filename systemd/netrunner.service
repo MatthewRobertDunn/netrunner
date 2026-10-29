@@ -1,0 +1,17 @@
+[Unit]
+Description=Netrunner web UI (distroless image)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+# Load the release tarball into Docker, then run it.
+# The image is tagged `netrunner:arm64` so the unit can restart cleanly.
+ExecStartPre=-/bin/sh -c 'docker load -i /home/matty/code/denorunner/release/netrunner-arm64.tar'
+ExecStart=docker run --rm --name netrunner -p 8000:8000 netrunner:arm64
+Restart=always
+RestartSec=5
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Install]
+WantedBy=default.target

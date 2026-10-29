@@ -102,6 +102,42 @@ docker save netrunner:amd64 -o release/netrunner-amd64.tar
 docker save netrunner:arm64 -o release/netrunner-arm64.tar
 ```
 
+## Running under systemd
+
+A user unit (`systemd/netrunner.service`) runs the release image under `systemctl --user`:
+
+- `ExecStartPre` loads the tarball into Docker (so the unit can restart cleanly even if the
+  image was never loaded manually),
+- `ExecStart` runs the container, tagged `netrunner:<arch>`,
+- `Restart=always` + `StartLimitIntervalSec=300`/`StartLimitBurst=5` keep it up.
+
+Install it on a host where `/workspace` is mapped to `/home/matty/code/denorunner`:
+
+```sh
+cp systemd/netrunner.service ~/.config/systemd/user/netrunner.service
+systemctl --user daemon-reload
+systemctl --user enable --now netrunner.service
+systemctl --user status netrunner.service
+```
+
+Then visit `http://<host>:8000/`.
+
+## Publishing a release
+
+`deno task publish` rebuilds the web bundle, exports the docker image tarball for the
+target architecture, loads it on the server, restarts the systemd unit, and polls the
+health endpoint until it returns 200. The SSH key is the checked-in `orange` file
+(gitignored) — it is passed via `ssh -i` only and never installed.
+
+```sh
+deno task publish                       # defaults to arm64
+deno task publish --arch amd64          # or amd64
+```
+
+`/workspace` is mapped to `/home/matty/code/denorunner` on the host, so the tarball needs
+no scp — the publish script just runs `docker load -i` and `systemctl --user restart`
+over SSH.
+
 ## Usage
 
 ```ts

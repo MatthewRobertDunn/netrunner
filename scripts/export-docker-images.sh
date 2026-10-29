@@ -58,28 +58,26 @@ for arch in arm64 amd64; do
     -o "$WORK_DIR/$arch.tar" \
     "$BASE_IMAGE"
 
-  # crane tags the archive with the base image's ref. Retag it as
-  # netrunner:<arch> so `docker load -i release/netrunner-<arch>.tar`
-  # yields a usable tag. (In-place edit: no archive rewrite needed.)
-  mkdir -p "$WORK_DIR/manifest"
-  tar -xf "$WORK_DIR/$arch.tar" -C "$WORK_DIR/manifest" manifest.json
-  sed -i "s|\"RepoTags\":\[[^]]*\]|\"RepoTags\":[\"$IMAGE_NAME:$arch\"]|" \
-    "$WORK_DIR/manifest/manifest.json"
-  tar --delete -f "$WORK_DIR/$arch.tar" manifest.json ./manifest.json 2>/dev/null || true
-  tar --append -f "$WORK_DIR/$arch.tar" \
-    -C "$WORK_DIR/manifest" manifest.json
+  # Retag as netrunner:<arch> so `docker load -i release/netrunner-<arch>.tar`
+  # yields a usable tag. Unpack, edit manifest.json, and re-tar cleanly.
+  rm -rf "$WORK_DIR/unpack"
+  mkdir -p "$WORK_DIR/unpack"
+  tar -xf "$WORK_DIR/$arch.tar" -C "$WORK_DIR/unpack"
 
-  cp "$WORK_DIR/$arch.tar" "$RELEASE_DIR/$IMAGE_NAME-$arch.tar"
+  sed -i "s|\"RepoTags\":\[[^]]*\]|\"RepoTags\":[\"$IMAGE_NAME:$arch\"]|" \
+    "$WORK_DIR/unpack/manifest.json"
+
+  tar --sort=name --mtime=@0 --format=ustar \
+      -C "$WORK_DIR/unpack" -cf "$RELEASE_DIR/$IMAGE_NAME-$arch.tar" .
 
   # Report what was built.
-  cfg=$(grep -o '"Config":"sha256:[0-9a-f]*' "$WORK_DIR/manifest/manifest.json" | cut -d: -f3-)
-  tar -xf "$WORK_DIR/$arch.tar" -C "$WORK_DIR/manifest" "sha256:$cfg"
+  cfg=$(grep -o '"Config":"sha256:[0-9a-f]*' "$WORK_DIR/unpack/manifest.json" | cut -d: -f3-)
   echo "    tag:      $IMAGE_NAME:$arch"
   echo "    config:   ${cfg:0:12}…"
   echo "    size:     $(du -h "$RELEASE_DIR/$IMAGE_NAME-$arch.tar" | cut -f1)"
-  grep -o '"User":"[^"]*"'        "$WORK_DIR/manifest/sha256:$cfg" | sed 's/^/    user:     /'
-  grep -o '"WorkingDir":"[^"]*"'  "$WORK_DIR/manifest/sha256:$cfg" | sed 's/^/    workdir:  /'
-  grep -o '"ExposedPorts":{[^}]*}' "$WORK_DIR/manifest/sha256:$cfg" | sed 's/^/    ports:    /'
+  grep -o '"User":"[^"]*"'        "$WORK_DIR/unpack/sha256:$cfg" | sed 's/^/    user:     /'
+  grep -o '"WorkingDir":"[^"]*"'  "$WORK_DIR/unpack/sha256:$cfg" | sed 's/^/    workdir:  /'
+  grep -o '"ExposedPorts":{[^}]*}' "$WORK_DIR/unpack/sha256:$cfg" | sed 's/^/    ports:    /'
 done
 
 echo
