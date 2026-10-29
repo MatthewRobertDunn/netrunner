@@ -31,6 +31,7 @@ import {
   formatEvent,
   handOf,
   promptFor,
+  serverLabel,
 } from "./util.ts";
 
 const SERVER_GLYPH: Record<string, string> = {
@@ -105,7 +106,7 @@ export default defineComponent({
       );
     });
     const events = computed<string[]>(() => {
-      const lines = props.state.log.map((e) => formatEvent(props.state, e));
+      const lines = props.state.log.map((e) => formatEvent(props.state, e, props.humanSide));
       return lines.slice(-150).reverse();
     });
     const warnings = computed<string[]>(() => props.state.supportWarnings.slice(-5));
@@ -190,6 +191,46 @@ export default defineComponent({
       );
     }
 
+    /** Moves that belong to a specific hand card (install / play). */
+    function isCardMove(m: Move): boolean {
+      return m.kind === "runner.install" || m.kind === "runner.playEvent" ||
+        m.kind === "corp.install" || m.kind === "corp.playOperation";
+    }
+
+    /** Generic moves (credits, runs, jack out, …) for the action panel. */
+    const generalMoves = computed<Move[]>(() => legal.value.filter((m: Move) => !isCardMove(m)));
+
+    /** Legal actions for one card in the human player's hand. */
+    function handActionsFor(c: CardInstance): Move[] {
+      if (!isHumanTurn.value || prompt.value) return [];
+      return legal.value.filter((m: Move) => {
+        switch (m.kind) {
+          case "runner.install":
+          case "runner.playEvent":
+          case "corp.install":
+          case "corp.playOperation":
+            return m.cardId === c.cardId;
+          default:
+            return false;
+        }
+      });
+    }
+
+    /** Short button label for an under-card action (the card is above it). */
+    function shortActionLabel(m: Move): string {
+      switch (m.kind) {
+        case "runner.install":
+          return "Install";
+        case "corp.install":
+          return `Install → ${serverLabel(m.server)}`;
+        case "runner.playEvent":
+        case "corp.playOperation":
+          return "Play";
+        default:
+          return describeMove(props.state, m);
+      }
+    }
+
     function promptTitle(p: { kind: string; title?: string }): string {
       if (p.kind === "choose-one" && p.title) return p.title;
       return PROMPT_TITLES[p.kind] ?? p.kind;
@@ -208,6 +249,7 @@ export default defineComponent({
       runner,
       prompt,
       legal,
+      generalMoves,
       hand,
       discardCount,
       canDiscard,
@@ -230,6 +272,8 @@ export default defineComponent({
       serverGlyph,
       runMove,
       promptTitle,
+      handActionsFor,
+      shortActionLabel,
     };
   },
   template: `
@@ -388,7 +432,7 @@ export default defineComponent({
 
             <div v-else class="moves" data-testid="action-moves">
               <button
-                v-for="m in legal"
+                v-for="m in generalMoves"
                 :key="moveKey(m)"
                 class="move-btn"
                 @click="play(m)"
@@ -409,13 +453,22 @@ export default defineComponent({
       <!-- ================= RUNNER AREA ================= -->
       <section class="runner-area">
         <div class="hand-row runner-hand" data-testid="human-hand">
-          <card-tile
-            v-for="c in hand"
-            :key="c.id"
-            :card="{ cardId: c.cardId, rezzed: true, advancement: 0 }"
-            clickable
-            @zoom="zoom"
-          />
+          <div v-for="c in hand" :key="c.id" class="hand-card">
+            <card-tile
+              :card="{ cardId: c.cardId, rezzed: true, advancement: 0 }"
+              clickable
+              @zoom="zoom"
+            />
+            <div v-if="handActionsFor(c).length" class="card-actions">
+              <button
+                v-for="m in handActionsFor(c)"
+                :key="moveKey(m)"
+                class="move-btn card-action-btn"
+                @click="play(m)"
+                :data-move="m.kind"
+              >{{ shortActionLabel(m) }}</button>
+            </div>
+          </div>
           <span v-if="!hand.length" class="empty-hand">(no cards in hand)</span>
         </div>
         <div class="player-strip runner" :class="{ active: state.turn.player === 'runner' }">

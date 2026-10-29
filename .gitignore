@@ -7,6 +7,7 @@ extraction/
 # Local scratch
 tmp/
 *.log
+.playwright-mcp/
 
 # Local SSH keys
 orange

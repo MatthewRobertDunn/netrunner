@@ -80,9 +80,18 @@ export function serverLabel(server: string): string {
   }
 }
 
-/** One line of log text for a game event. */
-export function formatEvent(state: GameState, e: GameEvent): string {
+/** One line of log text for a game event, as seen by `viewer`. */
+export function formatEvent(
+  state: GameState,
+  e: GameEvent,
+  viewer: PlayerSide,
+): string {
   const side = (p: PlayerSide) => (p === "corp" ? "Corp" : "Runner");
+  // A card id is visible to the viewer when it is rezzed, owned by the
+  // viewer, or currently being accessed by the Runner. Everything else
+  // (facedown Corp installs, the opponent's hand/deck/discard) is hidden.
+  const visible = (id: CardInstanceId) =>
+    cardVisibleTo(state, id, viewer) ? cardTitle(cardIdOfInstance(state, id)) : "a card";
   switch (e.type) {
     case "game-started":
       return "Game started";
@@ -109,42 +118,37 @@ export function formatEvent(state: GameState, e: GameEvent): string {
     case "lose-clicks":
       return `${side(e.player)} loses ${e.amount} [click]`;
     case "load-credits":
-      return `Loads ${e.amount} [credit] on ${cardTitle(cardIdOfInstance(state, e.targetId))}`;
+      return `Loads ${e.amount} [credit] on ${visible(e.targetId)}`;
     case "take-credits":
-      return `${side(e.player)} takes ${e.amount} [credit] from ${
-        cardTitle(cardIdOfInstance(state, e.targetId))
-      }`;
+      return `${side(e.player)} takes ${e.amount} [credit] from ${visible(e.targetId)}`;
     case "install": {
       const where = e.server ? ` in ${serverLabel(e.server)}` : "";
-      return `${side(e.player)} installs ${cardTitle(cardIdOfInstance(state, e.cardId))}${where}`;
+      return `${side(e.player)} installs ${visible(e.cardId)}${where}`;
     }
     case "play":
-      return `${side(e.player)} plays ${cardTitle(cardIdOfInstance(state, e.cardId))}`;
+      return `${side(e.player)} plays ${visible(e.cardId)}`;
     case "rez":
-      return `Corp rezzes ${cardTitle(cardIdOfInstance(state, e.cardId))}`;
+      return `Corp rezzes ${visible(e.cardId)}`;
     case "derez":
-      return `Corp derezzes ${cardTitle(cardIdOfInstance(state, e.cardId))}`;
+      return `Corp derezzes ${visible(e.cardId)}`;
     case "access":
-      return `Runner accesses ${cardTitle(cardIdOfInstance(state, e.cardId))} in ${
-        serverLabel(e.server)
-      }`;
+      return `Runner accesses ${visible(e.cardId)} in ${serverLabel(e.server)}`;
     case "trash": {
-      const card = findCardIn(state, e.cardId);
       const who = e.from === "access" ? "The Runner" : "Corp";
-      return `${who} trashes ${cardTitle(card?.cardId ?? String(e.cardId))} from ${e.from}`;
+      return `${who} trashes ${visible(e.cardId)} from ${e.from}`;
     }
     case "run-start":
       return `Runner runs ${serverLabel(e.server)}`;
     case "approach-ice":
-      return `Runner approaches ${cardTitle(cardIdOfInstance(state, e.cardId))}`;
+      return `Runner approaches ${visible(e.cardId)}`;
     case "encounter-ice":
-      return `Runner encounters ${cardTitle(cardIdOfInstance(state, e.cardId))}`;
+      return `Runner encounters ${visible(e.cardId)}`;
     case "break-subroutine":
-      return `Runner breaks a subroutine on ${cardTitle(cardIdOfInstance(state, e.cardId))}`;
+      return `Runner breaks a subroutine on ${visible(e.cardId)}`;
     case "resolve-subroutine":
-      return `${cardTitle(cardIdOfInstance(state, e.cardId))} resolves a subroutine`;
+      return `${visible(e.cardId)} resolves a subroutine`;
     case "pass-ice":
-      return `Runner passes ${cardTitle(cardIdOfInstance(state, e.cardId))}`;
+      return `Runner passes ${visible(e.cardId)}`;
     case "jack-out":
       return "Runner jacks out";
     case "run-successful":
@@ -157,7 +161,7 @@ export function formatEvent(state: GameState, e: GameEvent): string {
       return `Runner breaches ${serverLabel(e.server)}`;
     case "damage": {
       const cards = e.trashed.length
-        ? ` (trashes ${e.trashed.map((id) => cardTitle(cardIdOfInstance(state, id))).join(", ")})`
+        ? ` (trashes ${e.trashed.map((id) => visible(id)).join(", ")})`
         : "";
       return `${side(e.player)} takes ${e.amount} ${e.kind} damage${cards}`;
     }
@@ -166,15 +170,11 @@ export function formatEvent(state: GameState, e: GameEvent): string {
     case "decked":
       return `${side(e.player)} is decked`;
     case "discard":
-      return `${side(e.player)} discards ${cardTitle(cardIdOfInstance(state, e.cardId))}`;
+      return `${side(e.player)} discards ${visible(e.cardId)}`;
     case "advance":
-      return `Corp advances ${
-        cardTitle(cardIdOfInstance(state, e.cardId))
-      } (${e.amount} counter(s))`;
+      return `Corp advances ${visible(e.cardId)} (${e.amount} counter(s))`;
     case "score":
-      return `Corp scores ${
-        cardTitle(cardIdOfInstance(state, e.cardId))
-      } (${e.points} agenda point(s))`;
+      return `Corp scores ${visible(e.cardId)} (${e.points} agenda point(s))`;
     default:
       return e.type;
   }
@@ -183,6 +183,35 @@ export function formatEvent(state: GameState, e: GameEvent): string {
 function cardIdOfInstance(state: GameState, id: CardInstanceId): string {
   const card = findCardIn(state, id);
   return card ? card.cardId : String(id);
+}
+
+/**
+ * Whether the card instance's identity is public knowledge for `viewer`
+ * (rule 1.10): rezzed Corp cards, cards the viewer owns, cards in any
+ * discard pile, scored agendas, the accessed card during a breach, and the
+ * identity card. Everything else — facedown Corp installs, the opponent's
+ * hand and deck — stays hidden.
+ */
+function cardVisibleTo(
+  state: GameState,
+  id: CardInstanceId,
+  viewer: PlayerSide,
+): boolean {
+  const card = findCardIn(state, id);
+  if (!card) return false; // unknown id → don't leak a title
+  if (card.owner === viewer) return true;
+  if (card.cardId === viewer) return true; // identity card
+  // Discard piles and score areas are open information.
+  const openZones = ["discard", "score"];
+  if (openZones.includes(card.zone)) return true;
+  // Rezzed Corp cards are public; unrezzed ones are not.
+  if (card.rezzed === true) return true;
+  // The card currently being accessed is visible to the runner.
+  for (const p of state.prompts) {
+    if (p.kind === "access-decision" && p.cardId === id) return true;
+  }
+  if (state.breach?.accessing === id) return true;
+  return false;
 }
 
 /** Human-readable label for a legal move. */

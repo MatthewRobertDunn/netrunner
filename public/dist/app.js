@@ -22378,8 +22378,9 @@ function serverLabel(server) {
       return server;
   }
 }
-function formatEvent(state, e) {
+function formatEvent(state, e, viewer) {
   const side = (p2) => p2 === "corp" ? "Corp" : "Runner";
+  const visible = (id) => cardVisibleTo(state, id, viewer) ? cardTitle(cardIdOfInstance(state, id)) : "a card";
   switch (e.type) {
     case "game-started":
       return "Game started";
@@ -22406,38 +22407,37 @@ function formatEvent(state, e) {
     case "lose-clicks":
       return `${side(e.player)} loses ${e.amount} [click]`;
     case "load-credits":
-      return `Loads ${e.amount} [credit] on ${cardTitle(cardIdOfInstance(state, e.targetId))}`;
+      return `Loads ${e.amount} [credit] on ${visible(e.targetId)}`;
     case "take-credits":
-      return `${side(e.player)} takes ${e.amount} [credit] from ${cardTitle(cardIdOfInstance(state, e.targetId))}`;
+      return `${side(e.player)} takes ${e.amount} [credit] from ${visible(e.targetId)}`;
     case "install": {
       const where = e.server ? ` in ${serverLabel(e.server)}` : "";
-      return `${side(e.player)} installs ${cardTitle(cardIdOfInstance(state, e.cardId))}${where}`;
+      return `${side(e.player)} installs ${visible(e.cardId)}${where}`;
     }
     case "play":
-      return `${side(e.player)} plays ${cardTitle(cardIdOfInstance(state, e.cardId))}`;
+      return `${side(e.player)} plays ${visible(e.cardId)}`;
     case "rez":
-      return `Corp rezzes ${cardTitle(cardIdOfInstance(state, e.cardId))}`;
+      return `Corp rezzes ${visible(e.cardId)}`;
     case "derez":
-      return `Corp derezzes ${cardTitle(cardIdOfInstance(state, e.cardId))}`;
+      return `Corp derezzes ${visible(e.cardId)}`;
     case "access":
-      return `Runner accesses ${cardTitle(cardIdOfInstance(state, e.cardId))} in ${serverLabel(e.server)}`;
+      return `Runner accesses ${visible(e.cardId)} in ${serverLabel(e.server)}`;
     case "trash": {
-      const card = findCardIn(state, e.cardId);
       const who = e.from === "access" ? "The Runner" : "Corp";
-      return `${who} trashes ${cardTitle(card?.cardId ?? String(e.cardId))} from ${e.from}`;
+      return `${who} trashes ${visible(e.cardId)} from ${e.from}`;
     }
     case "run-start":
       return `Runner runs ${serverLabel(e.server)}`;
     case "approach-ice":
-      return `Runner approaches ${cardTitle(cardIdOfInstance(state, e.cardId))}`;
+      return `Runner approaches ${visible(e.cardId)}`;
     case "encounter-ice":
-      return `Runner encounters ${cardTitle(cardIdOfInstance(state, e.cardId))}`;
+      return `Runner encounters ${visible(e.cardId)}`;
     case "break-subroutine":
-      return `Runner breaks a subroutine on ${cardTitle(cardIdOfInstance(state, e.cardId))}`;
+      return `Runner breaks a subroutine on ${visible(e.cardId)}`;
     case "resolve-subroutine":
-      return `${cardTitle(cardIdOfInstance(state, e.cardId))} resolves a subroutine`;
+      return `${visible(e.cardId)} resolves a subroutine`;
     case "pass-ice":
-      return `Runner passes ${cardTitle(cardIdOfInstance(state, e.cardId))}`;
+      return `Runner passes ${visible(e.cardId)}`;
     case "jack-out":
       return "Runner jacks out";
     case "run-successful":
@@ -22449,7 +22449,7 @@ function formatEvent(state, e) {
     case "breach":
       return `Runner breaches ${serverLabel(e.server)}`;
     case "damage": {
-      const cards2 = e.trashed.length ? ` (trashes ${e.trashed.map((id) => cardTitle(cardIdOfInstance(state, id))).join(", ")})` : "";
+      const cards2 = e.trashed.length ? ` (trashes ${e.trashed.map((id) => visible(id)).join(", ")})` : "";
       return `${side(e.player)} takes ${e.amount} ${e.kind} damage${cards2}`;
     }
     case "flatline":
@@ -22457,11 +22457,11 @@ function formatEvent(state, e) {
     case "decked":
       return `${side(e.player)} is decked`;
     case "discard":
-      return `${side(e.player)} discards ${cardTitle(cardIdOfInstance(state, e.cardId))}`;
+      return `${side(e.player)} discards ${visible(e.cardId)}`;
     case "advance":
-      return `Corp advances ${cardTitle(cardIdOfInstance(state, e.cardId))} (${e.amount} counter(s))`;
+      return `Corp advances ${visible(e.cardId)} (${e.amount} counter(s))`;
     case "score":
-      return `Corp scores ${cardTitle(cardIdOfInstance(state, e.cardId))} (${e.points} agenda point(s))`;
+      return `Corp scores ${visible(e.cardId)} (${e.points} agenda point(s))`;
     default:
       return e.type;
   }
@@ -22469,6 +22469,23 @@ function formatEvent(state, e) {
 function cardIdOfInstance(state, id) {
   const card = findCardIn(state, id);
   return card ? card.cardId : String(id);
+}
+function cardVisibleTo(state, id, viewer) {
+  const card = findCardIn(state, id);
+  if (!card) return false;
+  if (card.owner === viewer) return true;
+  if (card.cardId === viewer) return true;
+  const openZones = [
+    "discard",
+    "score"
+  ];
+  if (openZones.includes(card.zone)) return true;
+  if (card.rezzed === true) return true;
+  for (const p2 of state.prompts) {
+    if (p2.kind === "access-decision" && p2.cardId === id) return true;
+  }
+  if (state.breach?.accessing === id) return true;
+  return false;
 }
 function describeMove(state, move) {
   switch (move.kind) {
@@ -22777,7 +22794,7 @@ var game_default = defineComponent({
       ].sort().join(",") === selectedKey.value);
     });
     const events = computed2(() => {
-      const lines = props.state.log.map((e) => formatEvent(props.state, e));
+      const lines = props.state.log.map((e) => formatEvent(props.state, e, props.humanSide));
       return lines.slice(-150).reverse();
     });
     const warnings = computed2(() => props.state.supportWarnings.slice(-5));
@@ -22839,6 +22856,37 @@ var game_default = defineComponent({
     function runMove(server) {
       return legal.value.find((m) => m.kind === "runner.run" && m.server === server);
     }
+    function isCardMove(m) {
+      return m.kind === "runner.install" || m.kind === "runner.playEvent" || m.kind === "corp.install" || m.kind === "corp.playOperation";
+    }
+    const generalMoves = computed2(() => legal.value.filter((m) => !isCardMove(m)));
+    function handActionsFor(c) {
+      if (!isHumanTurn.value || prompt.value) return [];
+      return legal.value.filter((m) => {
+        switch (m.kind) {
+          case "runner.install":
+          case "runner.playEvent":
+          case "corp.install":
+          case "corp.playOperation":
+            return m.cardId === c.cardId;
+          default:
+            return false;
+        }
+      });
+    }
+    function shortActionLabel(m) {
+      switch (m.kind) {
+        case "runner.install":
+          return "Install";
+        case "corp.install":
+          return `Install \u2192 ${serverLabel(m.server)}`;
+        case "runner.playEvent":
+        case "corp.playOperation":
+          return "Play";
+        default:
+          return describeMove(props.state, m);
+      }
+    }
     function promptTitle(p2) {
       if (p2.kind === "choose-one" && p2.title) return p2.title;
       return PROMPT_TITLES[p2.kind] ?? p2.kind;
@@ -22856,6 +22904,7 @@ var game_default = defineComponent({
       runner,
       prompt,
       legal,
+      generalMoves,
       hand,
       discardCount,
       canDiscard,
@@ -22877,7 +22926,9 @@ var game_default = defineComponent({
       isCurrentIce,
       serverGlyph,
       runMove,
-      promptTitle
+      promptTitle,
+      handActionsFor,
+      shortActionLabel
     };
   },
   template: `
@@ -23036,7 +23087,7 @@ var game_default = defineComponent({
 
             <div v-else class="moves" data-testid="action-moves">
               <button
-                v-for="m in legal"
+                v-for="m in generalMoves"
                 :key="moveKey(m)"
                 class="move-btn"
                 @click="play(m)"
@@ -23057,13 +23108,22 @@ var game_default = defineComponent({
       <!-- ================= RUNNER AREA ================= -->
       <section class="runner-area">
         <div class="hand-row runner-hand" data-testid="human-hand">
-          <card-tile
-            v-for="c in hand"
-            :key="c.id"
-            :card="{ cardId: c.cardId, rezzed: true, advancement: 0 }"
-            clickable
-            @zoom="zoom"
-          />
+          <div v-for="c in hand" :key="c.id" class="hand-card">
+            <card-tile
+              :card="{ cardId: c.cardId, rezzed: true, advancement: 0 }"
+              clickable
+              @zoom="zoom"
+            />
+            <div v-if="handActionsFor(c).length" class="card-actions">
+              <button
+                v-for="m in handActionsFor(c)"
+                :key="moveKey(m)"
+                class="move-btn card-action-btn"
+                @click="play(m)"
+                :data-move="m.kind"
+              >{{ shortActionLabel(m) }}</button>
+            </div>
+          </div>
           <span v-if="!hand.length" class="empty-hand">(no cards in hand)</span>
         </div>
         <div class="player-strip runner" :class="{ active: state.turn.player === 'runner' }">
