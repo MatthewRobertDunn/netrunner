@@ -229,16 +229,26 @@ function installServersFor(state: GameState, card: CardInstance): (ServerId | "n
     return [...allServers(state), "new-remote"];
   }
   if (def.type === "agenda" || def.type === "asset") {
-    // Assets and agendas cannot be installed in central roots (rule 4.6.7e);
-    // only one card may be installed in a remote server root at a time.
+    // Assets and agendas cannot be installed in central roots (rule 4.6.7e),
+    // and a remote root may hold at most one of them (rule 8.5.6a) — but an
+    // upgrade may share the root, so the filter is on asset/agenda count,
+    // not on root length.
     return [
-      ...(state.servers.filter((s) => !isCentral(s.id) && s.root.length === 0).map((s) =>
-        s.id
-      ) as ServerId[]),
+      ...(state.servers
+        .filter((s) =>
+          !isCentral(s.id) && !s.root.some((c) => {
+            const t = cardDef(c.cardId).type;
+            return t === "asset" || t === "agenda";
+          })
+        )
+        .map((s) => s.id) as ServerId[]),
       "new-remote",
     ];
   }
   if (def.type === "upgrade") {
+    // Upgrades may be installed in the root of any server (rule 8.5.2c).
+    // (Central-only upgrade restrictions from rule 8.5.12 are not modelled;
+    // no starter upgrade has one.)
     return allServers(state);
   }
   return [];

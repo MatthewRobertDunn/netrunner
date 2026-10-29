@@ -52,7 +52,7 @@ export function settle(state: GameState): void {
       state.prompts = state.prompts.filter(
         (p) => p.kind !== "access-decision" && p.kind !== "rez-window",
       );
-      state.run.phase = "run-ends";
+      finishRun(state);
       continue;
     }
 
@@ -410,9 +410,13 @@ export function finishAccess(state: GameState, trashed: boolean): void {
   if (!found) return;
   const card = found.card;
   const def = cardDef(card.cardId);
+  const wasAgenda = def.type === "agenda";
   if (trashed) {
+    // Rule 7.1.5a: the basic trash ability is only available when the card has
+    // a payable trash cost. An agenda with no trash cost can never reach this
+    // branch, but if it ever does, trashing it must also steal it — the two
+    // outcomes are not independent (rule 7.1.6).
     spendCredits(state, "runner", def.trashCost ?? 0);
-    const wasAgenda = def.type === "agenda";
     toDiscard(state, card, "access"); // logs the trash event
     if (wasAgenda) {
       stealAgendaInstance(state, card.id);
@@ -420,9 +424,11 @@ export function finishAccess(state: GameState, trashed: boolean): void {
     }
   }
   state.prompts = state.prompts.filter((pr) => pr.kind !== "access-decision");
-  if (def.type === "agenda") {
-    // "If, after resolving mid-access abilities, the Runner is still accessing an
-    // agenda, they must steal it." (rule 7.1.6)
+  // "If, after resolving mid-access abilities, the Runner is still accessing an
+  // agenda, they must steal it." (rule 7.1.6). Stealing is mandatory and happens
+  // exactly once — whether the Runner trashed the card during the mid-access
+  // window or passed. Don't double-steal if the trash branch already did.
+  if (wasAgenda && !state.runner.score.some((c) => c.id === card.id)) {
     stealAgendaInstance(state, card.id);
     fireSteal(state, card);
   }
