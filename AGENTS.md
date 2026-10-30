@@ -12,12 +12,11 @@ the build/verify loop plus the mistakes I keep repeating.
 # Format
 deno fmt
 
-# Test suite (67 tests, ~10s)
+# Test suite (107 tests, ~11s)
 deno task test
 
-# CPU profile the UCT AI (writes uct.cpuprofile + uct.md; md has top-10 + call tree)
-deno run --allow-read --cpu-prof --cpu-prof-dir . --cpu-prof-name uct.cpuprofile \
-  --cpu-prof-md scripts/prof-uct.ts
+# AI sanity: EvalAI vs RandomAI win rates + move variety (~1 min)
+deno run --allow-read scripts/check-ai.ts
 
 # Rebuild the web bundle (committed to git; the Docker image ships it as-is)
 deno run --allow-all scripts/build-web.ts
@@ -96,8 +95,8 @@ disk only — never commit them.
 8. **`applyMove` works on a copy and returns the new state.** It never mutates the caller's object.
    Tests that check the result must read `result.state`, not the original.
 
-9. **The AI must not know the opponent's deck order.** Simulations run with `drawMode: "random"`
-   (set on the clone in `UctAI.chooseMove`), so every draw pulls a random card from the remaining
-   deck instead of the top one. The real game always uses `"top"`. The multiset of cards in the
-   opponent's deck is still visible to the AI, which is the accepted concession. Don't shuffle the
-   deck — that's O(n) per playout; the flag is O(1) per draw.
+9. **The AI must not know the opponent's deck order.** Simulations run on states built by
+   `determinize(view, ctx, rng)`, which sets `drawMode: "random"` on the hypothesis, so every draw
+   pulls a random card from the remaining deck instead of the top one. The real game always uses
+   `"top"`. The multiset of cards in hidden zones is visible to the AI via `ctx` (the accepted
+   concession). Don't shuffle the deck — that's O(n) per playout; the flag is O(1) per draw.
