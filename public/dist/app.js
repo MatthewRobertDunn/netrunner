@@ -1,7 +1,8 @@
 var __defProp = Object.defineProperty;
 var __export = (target, all) => {
-  for (var name in all)
+  for (var name in all) {
     __defProp(target, name, { get: all[name], enumerable: true });
+  }
 };
 
 // ../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-dom/3.5.13/dist/runtime-dom.esm-bundler.js
@@ -174,7 +175,7 @@ __export(runtime_dom_esm_bundler_exports, {
   withKeys: () => withKeys,
   withMemo: () => withMemo,
   withModifiers: () => withModifiers,
-  withScopeId: () => withScopeId
+  withScopeId: () => withScopeId,
 });
 
 // ../usr/local/share/deno/npm/registry.npmjs.org/@vue/shared/3.5.13/dist/shared.esm-bundler.js
@@ -189,8 +190,9 @@ var EMPTY_ARR = true ? Object.freeze([]) : [];
 var NOOP = () => {
 };
 var NO = () => false;
-var isOn = (key) => key.charCodeAt(0) === 111 && key.charCodeAt(1) === 110 && // uppercase letter
-(key.charCodeAt(2) > 122 || key.charCodeAt(2) < 97);
+var isOn = (key) =>
+  key.charCodeAt(0) === 111 && key.charCodeAt(1) === 110 && // uppercase letter
+  (key.charCodeAt(2) > 122 || key.charCodeAt(2) < 97);
 var isModelListener = (key) => key.startsWith("onUpdate:");
 var extend = Object.assign;
 var remove = (arr, el) => {
@@ -219,12 +221,15 @@ var toRawType = (value) => {
   return toTypeString(value).slice(8, -1);
 };
 var isPlainObject = (val) => toTypeString(val) === "[object Object]";
-var isIntegerKey = (key) => isString(key) && key !== "NaN" && key[0] !== "-" && "" + parseInt(key, 10) === key;
+var isIntegerKey = (key) =>
+  isString(key) && key !== "NaN" && key[0] !== "-" && "" + parseInt(key, 10) === key;
 var isReservedProp = /* @__PURE__ */ makeMap(
   // the leading comma is intentional so empty string "" is also included
-  ",key,ref,ref_for,ref_key,onVnodeBeforeMount,onVnodeMounted,onVnodeBeforeUpdate,onVnodeUpdated,onVnodeBeforeUnmount,onVnodeUnmounted"
+  ",key,ref,ref_for,ref_key,onVnodeBeforeMount,onVnodeMounted,onVnodeBeforeUpdate,onVnodeUpdated,onVnodeBeforeUnmount,onVnodeUnmounted",
 );
-var isBuiltInDirective = /* @__PURE__ */ makeMap("bind,cloak,else-if,else,for,html,if,model,on,once,pre,show,slot,text,memo");
+var isBuiltInDirective = /* @__PURE__ */ makeMap(
+  "bind,cloak,else-if,else,for,html,if,model,on,once,pre,show,slot,text,memo",
+);
 var cacheStringFunction = (fn) => {
   const cache = /* @__PURE__ */ Object.create(null);
   return (str) => {
@@ -256,7 +261,7 @@ var def = (obj, key, value, writable = false) => {
     configurable: true,
     enumerable: false,
     writable,
-    value
+    value,
   });
 };
 var looseToNumber = (val) => {
@@ -269,10 +274,20 @@ var toNumber = (val) => {
 };
 var _globalThis;
 var getGlobalThis = () => {
-  return _globalThis || (_globalThis = typeof globalThis !== "undefined" ? globalThis : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : typeof global !== "undefined" ? global : {});
+  return _globalThis ||
+    (_globalThis = typeof globalThis !== "undefined"
+      ? globalThis
+      : typeof self !== "undefined"
+      ? self
+      : typeof window !== "undefined"
+      ? window
+      : typeof global !== "undefined"
+      ? global
+      : {});
 };
 function genCacheKey(source, options) {
-  return source + JSON.stringify(options, (_, val) => typeof val === "function" ? val.toString() : val);
+  return source +
+    JSON.stringify(options, (_, val) => typeof val === "function" ? val.toString() : val);
 }
 var PatchFlagNames = {
   [1]: `TEXT`,
@@ -288,14 +303,15 @@ var PatchFlagNames = {
   [1024]: `DYNAMIC_SLOTS`,
   [2048]: `DEV_ROOT_FRAGMENT`,
   [-1]: `HOISTED`,
-  [-2]: `BAIL`
+  [-2]: `BAIL`,
 };
 var slotFlagsText = {
   [1]: "STABLE",
   [2]: "DYNAMIC",
-  [3]: "FORWARDED"
+  [3]: "FORWARDED",
 };
-var GLOBALS_ALLOWED = "Infinity,undefined,NaN,isFinite,isNaN,parseFloat,parseInt,decodeURI,decodeURIComponent,encodeURI,encodeURIComponent,Math,Number,Date,Array,Object,Boolean,String,RegExp,Map,Set,JSON,Intl,BigInt,console,Error,Symbol";
+var GLOBALS_ALLOWED =
+  "Infinity,undefined,NaN,isFinite,isNaN,parseFloat,parseInt,decodeURI,decodeURIComponent,encodeURI,encodeURIComponent,Math,Number,Date,Array,Object,Boolean,String,RegExp,Map,Set,JSON,Intl,BigInt,console,Error,Symbol";
 var isGloballyAllowed = /* @__PURE__ */ makeMap(GLOBALS_ALLOWED);
 var range = 2;
 function generateCodeFrame(source, start = 0, end = source.length) {
@@ -407,22 +423,33 @@ function normalizeProps(props) {
   }
   return props;
 }
-var HTML_TAGS = "html,body,base,head,link,meta,style,title,address,article,aside,footer,header,hgroup,h1,h2,h3,h4,h5,h6,nav,section,div,dd,dl,dt,figcaption,figure,picture,hr,img,li,main,ol,p,pre,ul,a,b,abbr,bdi,bdo,br,cite,code,data,dfn,em,i,kbd,mark,q,rp,rt,ruby,s,samp,small,span,strong,sub,sup,time,u,var,wbr,area,audio,map,track,video,embed,object,param,source,canvas,script,noscript,del,ins,caption,col,colgroup,table,thead,tbody,td,th,tr,button,datalist,fieldset,form,input,label,legend,meter,optgroup,option,output,progress,select,textarea,details,dialog,menu,summary,template,blockquote,iframe,tfoot";
-var SVG_TAGS = "svg,animate,animateMotion,animateTransform,circle,clipPath,color-profile,defs,desc,discard,ellipse,feBlend,feColorMatrix,feComponentTransfer,feComposite,feConvolveMatrix,feDiffuseLighting,feDisplacementMap,feDistantLight,feDropShadow,feFlood,feFuncA,feFuncB,feFuncG,feFuncR,feGaussianBlur,feImage,feMerge,feMergeNode,feMorphology,feOffset,fePointLight,feSpecularLighting,feSpotLight,feTile,feTurbulence,filter,foreignObject,g,hatch,hatchpath,image,line,linearGradient,marker,mask,mesh,meshgradient,meshpatch,meshrow,metadata,mpath,path,pattern,polygon,polyline,radialGradient,rect,set,solidcolor,stop,switch,symbol,text,textPath,title,tspan,unknown,use,view";
-var MATH_TAGS = "annotation,annotation-xml,maction,maligngroup,malignmark,math,menclose,merror,mfenced,mfrac,mfraction,mglyph,mi,mlabeledtr,mlongdiv,mmultiscripts,mn,mo,mover,mpadded,mphantom,mprescripts,mroot,mrow,ms,mscarries,mscarry,msgroup,msline,mspace,msqrt,msrow,mstack,mstyle,msub,msubsup,msup,mtable,mtd,mtext,mtr,munder,munderover,none,semantics";
+var HTML_TAGS =
+  "html,body,base,head,link,meta,style,title,address,article,aside,footer,header,hgroup,h1,h2,h3,h4,h5,h6,nav,section,div,dd,dl,dt,figcaption,figure,picture,hr,img,li,main,ol,p,pre,ul,a,b,abbr,bdi,bdo,br,cite,code,data,dfn,em,i,kbd,mark,q,rp,rt,ruby,s,samp,small,span,strong,sub,sup,time,u,var,wbr,area,audio,map,track,video,embed,object,param,source,canvas,script,noscript,del,ins,caption,col,colgroup,table,thead,tbody,td,th,tr,button,datalist,fieldset,form,input,label,legend,meter,optgroup,option,output,progress,select,textarea,details,dialog,menu,summary,template,blockquote,iframe,tfoot";
+var SVG_TAGS =
+  "svg,animate,animateMotion,animateTransform,circle,clipPath,color-profile,defs,desc,discard,ellipse,feBlend,feColorMatrix,feComponentTransfer,feComposite,feConvolveMatrix,feDiffuseLighting,feDisplacementMap,feDistantLight,feDropShadow,feFlood,feFuncA,feFuncB,feFuncG,feFuncR,feGaussianBlur,feImage,feMerge,feMergeNode,feMorphology,feOffset,fePointLight,feSpecularLighting,feSpotLight,feTile,feTurbulence,filter,foreignObject,g,hatch,hatchpath,image,line,linearGradient,marker,mask,mesh,meshgradient,meshpatch,meshrow,metadata,mpath,path,pattern,polygon,polyline,radialGradient,rect,set,solidcolor,stop,switch,symbol,text,textPath,title,tspan,unknown,use,view";
+var MATH_TAGS =
+  "annotation,annotation-xml,maction,maligngroup,malignmark,math,menclose,merror,mfenced,mfrac,mfraction,mglyph,mi,mlabeledtr,mlongdiv,mmultiscripts,mn,mo,mover,mpadded,mphantom,mprescripts,mroot,mrow,ms,mscarries,mscarry,msgroup,msline,mspace,msqrt,msrow,mstack,mstyle,msub,msubsup,msup,mtable,mtd,mtext,mtr,munder,munderover,none,semantics";
 var VOID_TAGS = "area,base,br,col,embed,hr,img,input,link,meta,param,source,track,wbr";
 var isHTMLTag = /* @__PURE__ */ makeMap(HTML_TAGS);
 var isSVGTag = /* @__PURE__ */ makeMap(SVG_TAGS);
 var isMathMLTag = /* @__PURE__ */ makeMap(MATH_TAGS);
 var isVoidTag = /* @__PURE__ */ makeMap(VOID_TAGS);
-var specialBooleanAttrs = `itemscope,allowfullscreen,formnovalidate,ismap,nomodule,novalidate,readonly`;
+var specialBooleanAttrs =
+  `itemscope,allowfullscreen,formnovalidate,ismap,nomodule,novalidate,readonly`;
 var isSpecialBooleanAttr = /* @__PURE__ */ makeMap(specialBooleanAttrs);
-var isBooleanAttr = /* @__PURE__ */ makeMap(specialBooleanAttrs + `,async,autofocus,autoplay,controls,default,defer,disabled,hidden,inert,loop,open,required,reversed,scoped,seamless,checked,muted,multiple,selected`);
+var isBooleanAttr = /* @__PURE__ */ makeMap(
+  specialBooleanAttrs +
+    `,async,autofocus,autoplay,controls,default,defer,disabled,hidden,inert,loop,open,required,reversed,scoped,seamless,checked,muted,multiple,selected`,
+);
 function includeBooleanAttr(value) {
   return !!value || value === "";
 }
-var isKnownHtmlAttr = /* @__PURE__ */ makeMap(`accept,accept-charset,accesskey,action,align,allow,alt,async,autocapitalize,autocomplete,autofocus,autoplay,background,bgcolor,border,buffered,capture,challenge,charset,checked,cite,class,code,codebase,color,cols,colspan,content,contenteditable,contextmenu,controls,coords,crossorigin,csp,data,datetime,decoding,default,defer,dir,dirname,disabled,download,draggable,dropzone,enctype,enterkeyhint,for,form,formaction,formenctype,formmethod,formnovalidate,formtarget,headers,height,hidden,high,href,hreflang,http-equiv,icon,id,importance,inert,integrity,ismap,itemprop,keytype,kind,label,lang,language,loading,list,loop,low,manifest,max,maxlength,minlength,media,min,multiple,muted,name,novalidate,open,optimum,pattern,ping,placeholder,poster,preload,radiogroup,readonly,referrerpolicy,rel,required,reversed,rows,rowspan,sandbox,scope,scoped,selected,shape,size,sizes,slot,span,spellcheck,src,srcdoc,srclang,srcset,start,step,style,summary,tabindex,target,title,translate,type,usemap,value,width,wrap`);
-var isKnownSvgAttr = /* @__PURE__ */ makeMap(`xmlns,accent-height,accumulate,additive,alignment-baseline,alphabetic,amplitude,arabic-form,ascent,attributeName,attributeType,azimuth,baseFrequency,baseline-shift,baseProfile,bbox,begin,bias,by,calcMode,cap-height,class,clip,clipPathUnits,clip-path,clip-rule,color,color-interpolation,color-interpolation-filters,color-profile,color-rendering,contentScriptType,contentStyleType,crossorigin,cursor,cx,cy,d,decelerate,descent,diffuseConstant,direction,display,divisor,dominant-baseline,dur,dx,dy,edgeMode,elevation,enable-background,end,exponent,fill,fill-opacity,fill-rule,filter,filterRes,filterUnits,flood-color,flood-opacity,font-family,font-size,font-size-adjust,font-stretch,font-style,font-variant,font-weight,format,from,fr,fx,fy,g1,g2,glyph-name,glyph-orientation-horizontal,glyph-orientation-vertical,glyphRef,gradientTransform,gradientUnits,hanging,height,href,hreflang,horiz-adv-x,horiz-origin-x,id,ideographic,image-rendering,in,in2,intercept,k,k1,k2,k3,k4,kernelMatrix,kernelUnitLength,kerning,keyPoints,keySplines,keyTimes,lang,lengthAdjust,letter-spacing,lighting-color,limitingConeAngle,local,marker-end,marker-mid,marker-start,markerHeight,markerUnits,markerWidth,mask,maskContentUnits,maskUnits,mathematical,max,media,method,min,mode,name,numOctaves,offset,opacity,operator,order,orient,orientation,origin,overflow,overline-position,overline-thickness,panose-1,paint-order,path,pathLength,patternContentUnits,patternTransform,patternUnits,ping,pointer-events,points,pointsAtX,pointsAtY,pointsAtZ,preserveAlpha,preserveAspectRatio,primitiveUnits,r,radius,referrerPolicy,refX,refY,rel,rendering-intent,repeatCount,repeatDur,requiredExtensions,requiredFeatures,restart,result,rotate,rx,ry,scale,seed,shape-rendering,slope,spacing,specularConstant,specularExponent,speed,spreadMethod,startOffset,stdDeviation,stemh,stemv,stitchTiles,stop-color,stop-opacity,strikethrough-position,strikethrough-thickness,string,stroke,stroke-dasharray,stroke-dashoffset,stroke-linecap,stroke-linejoin,stroke-miterlimit,stroke-opacity,stroke-width,style,surfaceScale,systemLanguage,tabindex,tableValues,target,targetX,targetY,text-anchor,text-decoration,text-rendering,textLength,to,transform,transform-origin,type,u1,u2,underline-position,underline-thickness,unicode,unicode-bidi,unicode-range,units-per-em,v-alphabetic,v-hanging,v-ideographic,v-mathematical,values,vector-effect,version,vert-adv-y,vert-origin-x,vert-origin-y,viewBox,viewTarget,visibility,width,widths,word-spacing,writing-mode,x,x-height,x1,x2,xChannelSelector,xlink:actuate,xlink:arcrole,xlink:href,xlink:role,xlink:show,xlink:title,xlink:type,xmlns:xlink,xml:base,xml:lang,xml:space,y,y1,y2,yChannelSelector,z,zoomAndPan`);
+var isKnownHtmlAttr = /* @__PURE__ */ makeMap(
+  `accept,accept-charset,accesskey,action,align,allow,alt,async,autocapitalize,autocomplete,autofocus,autoplay,background,bgcolor,border,buffered,capture,challenge,charset,checked,cite,class,code,codebase,color,cols,colspan,content,contenteditable,contextmenu,controls,coords,crossorigin,csp,data,datetime,decoding,default,defer,dir,dirname,disabled,download,draggable,dropzone,enctype,enterkeyhint,for,form,formaction,formenctype,formmethod,formnovalidate,formtarget,headers,height,hidden,high,href,hreflang,http-equiv,icon,id,importance,inert,integrity,ismap,itemprop,keytype,kind,label,lang,language,loading,list,loop,low,manifest,max,maxlength,minlength,media,min,multiple,muted,name,novalidate,open,optimum,pattern,ping,placeholder,poster,preload,radiogroup,readonly,referrerpolicy,rel,required,reversed,rows,rowspan,sandbox,scope,scoped,selected,shape,size,sizes,slot,span,spellcheck,src,srcdoc,srclang,srcset,start,step,style,summary,tabindex,target,title,translate,type,usemap,value,width,wrap`,
+);
+var isKnownSvgAttr = /* @__PURE__ */ makeMap(
+  `xmlns,accent-height,accumulate,additive,alignment-baseline,alphabetic,amplitude,arabic-form,ascent,attributeName,attributeType,azimuth,baseFrequency,baseline-shift,baseProfile,bbox,begin,bias,by,calcMode,cap-height,class,clip,clipPathUnits,clip-path,clip-rule,color,color-interpolation,color-interpolation-filters,color-profile,color-rendering,contentScriptType,contentStyleType,crossorigin,cursor,cx,cy,d,decelerate,descent,diffuseConstant,direction,display,divisor,dominant-baseline,dur,dx,dy,edgeMode,elevation,enable-background,end,exponent,fill,fill-opacity,fill-rule,filter,filterRes,filterUnits,flood-color,flood-opacity,font-family,font-size,font-size-adjust,font-stretch,font-style,font-variant,font-weight,format,from,fr,fx,fy,g1,g2,glyph-name,glyph-orientation-horizontal,glyph-orientation-vertical,glyphRef,gradientTransform,gradientUnits,hanging,height,href,hreflang,horiz-adv-x,horiz-origin-x,id,ideographic,image-rendering,in,in2,intercept,k,k1,k2,k3,k4,kernelMatrix,kernelUnitLength,kerning,keyPoints,keySplines,keyTimes,lang,lengthAdjust,letter-spacing,lighting-color,limitingConeAngle,local,marker-end,marker-mid,marker-start,markerHeight,markerUnits,markerWidth,mask,maskContentUnits,maskUnits,mathematical,max,media,method,min,mode,name,numOctaves,offset,opacity,operator,order,orient,orientation,origin,overflow,overline-position,overline-thickness,panose-1,paint-order,path,pathLength,patternContentUnits,patternTransform,patternUnits,ping,pointer-events,points,pointsAtX,pointsAtY,pointsAtZ,preserveAlpha,preserveAspectRatio,primitiveUnits,r,radius,referrerPolicy,refX,refY,rel,rendering-intent,repeatCount,repeatDur,requiredExtensions,requiredFeatures,restart,result,rotate,rx,ry,scale,seed,shape-rendering,slope,spacing,specularConstant,specularExponent,speed,spreadMethod,startOffset,stdDeviation,stemh,stemv,stitchTiles,stop-color,stop-opacity,strikethrough-position,strikethrough-thickness,string,stroke,stroke-dasharray,stroke-dashoffset,stroke-linecap,stroke-linejoin,stroke-miterlimit,stroke-opacity,stroke-width,style,surfaceScale,systemLanguage,tabindex,tableValues,target,targetX,targetY,text-anchor,text-decoration,text-rendering,textLength,to,transform,transform-origin,type,u1,u2,underline-position,underline-thickness,unicode,unicode-bidi,unicode-range,units-per-em,v-alphabetic,v-hanging,v-ideographic,v-mathematical,values,vector-effect,version,vert-adv-y,vert-origin-x,vert-origin-y,viewBox,viewTarget,visibility,width,widths,word-spacing,writing-mode,x,x-height,x1,x2,xChannelSelector,xlink:actuate,xlink:arcrole,xlink:href,xlink:role,xlink:show,xlink:title,xlink:type,xmlns:xlink,xml:base,xml:lang,xml:space,y,y1,y2,yChannelSelector,z,zoomAndPan`,
+);
 function isRenderableAttrValue(value) {
   if (value == null) {
     return false;
@@ -432,7 +459,10 @@ function isRenderableAttrValue(value) {
 }
 var cssVarNameEscapeSymbolsRE = /[ !"#$%&'()*+,./:;<=>?@[\\\]^`{|}~]/g;
 function getEscapedCssVarName(key, doubleEscape) {
-  return key.replace(cssVarNameEscapeSymbolsRE, (s) => doubleEscape ? s === '"' ? '\\\\\\"' : `\\\\${s}` : `\\${s}`);
+  return key.replace(
+    cssVarNameEscapeSymbolsRE,
+    (s) => doubleEscape ? s === '"' ? '\\\\\\"' : `\\\\${s}` : `\\${s}`,
+  );
 }
 function looseCompareArrays(a, b) {
   if (a.length !== b.length) return false;
@@ -487,7 +517,10 @@ var isRef = (val) => {
   return !!(val && val["__v_isRef"] === true);
 };
 var toDisplayString = (val) => {
-  return isString(val) ? val : val == null ? "" : isArray(val) || isObject(val) && (val.toString === objectToString || !isFunction(val.toString)) ? isRef(val) ? toDisplayString(val.value) : JSON.stringify(val, replacer, 2) : String(val);
+  return isString(val) ? val : val == null ? "" : isArray(val) ||
+      isObject(val) && (val.toString === objectToString || !isFunction(val.toString))
+    ? isRef(val) ? toDisplayString(val.value) : JSON.stringify(val, replacer, 2)
+    : String(val);
 };
 var replacer = (_key, val) => {
   if (isRef(val)) {
@@ -495,17 +528,17 @@ var replacer = (_key, val) => {
   } else if (isMap(val)) {
     return {
       [`Map(${val.size})`]: [
-        ...val.entries()
+        ...val.entries(),
       ].reduce((entries, [key, val2], i) => {
         entries[stringifySymbol(key, i) + " =>"] = val2;
         return entries;
-      }, {})
+      }, {}),
     };
   } else if (isSet(val)) {
     return {
       [`Set(${val.size})`]: [
-        ...val.values()
-      ].map((v) => stringifySymbol(v))
+        ...val.values(),
+      ].map((v) => stringifySymbol(v)),
     };
   } else if (isSymbol(val)) {
     return stringifySymbol(val);
@@ -778,7 +811,6 @@ function endBatch() {
       e.flags &= ~8;
       if (e.flags & 1) {
         try {
-          ;
           e.trigger();
         } catch (err) {
           if (!error) error = err;
@@ -818,7 +850,10 @@ function cleanupDeps(sub) {
 }
 function isDirty(sub) {
   for (let link = sub.deps; link; link = link.nextDep) {
-    if (link.dep.version !== link.version || link.dep.computed && (refreshComputed(link.dep.computed) || link.dep.version !== link.version)) {
+    if (
+      link.dep.version !== link.version ||
+      link.dep.computed && (refreshComputed(link.dep.computed) || link.dep.version !== link.version)
+    ) {
       return true;
     }
   }
@@ -950,7 +985,12 @@ var Link = class {
     this.sub = sub;
     this.dep = dep;
     this.version = dep.version;
-    this.nextDep = this.prevDep = this.nextSub = this.prevSub = this.prevActiveLink = void 0;
+    this.nextDep =
+      this.prevDep =
+      this.nextSub =
+      this.prevSub =
+      this.prevActiveLink =
+        void 0;
   }
 };
 var Dep = class {
@@ -1000,7 +1040,7 @@ var Dep = class {
     }
     if (activeSub.onTrack) {
       activeSub.onTrack(extend({
-        effect: activeSub
+        effect: activeSub,
       }, debugInfo));
     }
     return link;
@@ -1017,14 +1057,13 @@ var Dep = class {
         for (let head = this.subsHead; head; head = head.nextSub) {
           if (head.sub.onTrigger && !(head.sub.flags & 8)) {
             head.sub.onTrigger(extend({
-              effect: head.sub
+              effect: head.sub,
             }, debugInfo));
           }
         }
       }
       for (let link = this.subs; link; link = link.prevSub) {
         if (link.sub.notify()) {
-          ;
           link.sub.dep.notify();
         }
       }
@@ -1074,7 +1113,7 @@ function track(target, type, key) {
       dep.track({
         target,
         type,
-        key
+        key,
       });
     } else {
       dep.track();
@@ -1096,7 +1135,7 @@ function trigger(target, type, key, newValue, oldValue, oldTarget) {
           key,
           newValue,
           oldValue,
-          oldTarget
+          oldTarget,
         });
       } else {
         dep.trigger();
@@ -1112,7 +1151,9 @@ function trigger(target, type, key, newValue, oldValue, oldTarget) {
     if (targetIsArray && key === "length") {
       const newLength = Number(newValue);
       depsMap.forEach((dep, key2) => {
-        if (key2 === "length" || key2 === ARRAY_ITERATE_KEY || !isSymbol(key2) && key2 >= newLength) {
+        if (
+          key2 === "length" || key2 === ARRAY_ITERATE_KEY || !isSymbol(key2) && key2 >= newLength
+        ) {
           run(dep);
         }
       });
@@ -1172,7 +1213,9 @@ var arrayInstrumentations = {
     return iterator(this, Symbol.iterator, toReactive);
   },
   concat(...args) {
-    return reactiveReadArray(this).concat(...args.map((x) => isArray(x) ? reactiveReadArray(x) : x));
+    return reactiveReadArray(this).concat(
+      ...args.map((x) => isArray(x) ? reactiveReadArray(x) : x),
+    );
   },
   entries() {
     return iterator(this, "entries", (value) => {
@@ -1254,7 +1297,7 @@ var arrayInstrumentations = {
   },
   values() {
     return iterator(this, "values", toReactive);
-  }
+  },
 };
 function iterator(self2, method, wrapValue) {
   const arr = shallowReadArray(self2);
@@ -1283,11 +1326,11 @@ function apply(self2, method, fn, thisArg, wrappedRetFn, args) {
   let wrappedFn = fn;
   if (arr !== self2) {
     if (needsWrap) {
-      wrappedFn = function(item, index) {
+      wrappedFn = function (item, index) {
         return fn.call(this, toReactive(item), index, self2);
       };
     } else if (fn.length > 2) {
-      wrappedFn = function(item, index) {
+      wrappedFn = function (item, index) {
         return fn.call(this, item, index, self2);
       };
     }
@@ -1300,11 +1343,11 @@ function reduce(self2, method, fn, args) {
   let wrappedFn = fn;
   if (arr !== self2) {
     if (!isShallow(self2)) {
-      wrappedFn = function(acc, item, index) {
+      wrappedFn = function (acc, item, index) {
         return fn.call(this, acc, toReactive(item), index, self2);
       };
     } else if (fn.length > 3) {
-      wrappedFn = function(acc, item, index) {
+      wrappedFn = function (acc, item, index) {
         return fn.call(this, acc, item, index, self2);
       };
     }
@@ -1330,7 +1373,11 @@ function noTracking(self2, method, args = []) {
   return res;
 }
 var isNonTrackableKeys = /* @__PURE__ */ makeMap(`__proto__,__v_isRef,__isVue`);
-var builtInSymbols = new Set(/* @__PURE__ */ Object.getOwnPropertyNames(Symbol).filter((key) => key !== "arguments" && key !== "caller").map((key) => Symbol[key]).filter(isSymbol));
+var builtInSymbols = new Set(
+  /* @__PURE__ */ Object.getOwnPropertyNames(Symbol).filter((key) =>
+    key !== "arguments" && key !== "caller"
+  ).map((key) => Symbol[key]).filter(isSymbol),
+);
 function hasOwnProperty2(key) {
   if (!isSymbol(key)) key = String(key);
   const obj = toRaw(this);
@@ -1352,9 +1399,16 @@ var BaseReactiveHandler = class {
     } else if (key === "__v_isShallow") {
       return isShallow2;
     } else if (key === "__v_raw") {
-      if (receiver === (isReadonly2 ? isShallow2 ? shallowReadonlyMap : readonlyMap : isShallow2 ? shallowReactiveMap : reactiveMap).get(target) || // receiver is not the reactive proxy, but has the same prototype
-      // this means the receiver is a user proxy of the reactive proxy
-      Object.getPrototypeOf(target) === Object.getPrototypeOf(receiver)) {
+      if (
+        receiver ===
+          (isReadonly2
+            ? isShallow2 ? shallowReadonlyMap : readonlyMap
+            : isShallow2
+            ? shallowReactiveMap
+            : reactiveMap).get(target) || // receiver is not the reactive proxy, but has the same prototype
+        // this means the receiver is a user proxy of the reactive proxy
+        Object.getPrototypeOf(target) === Object.getPrototypeOf(receiver)
+      ) {
         return target;
       }
       return;
@@ -1375,7 +1429,7 @@ var BaseReactiveHandler = class {
       // if this is a proxy wrapping a ref, return methods using the raw ref
       // as receiver so that we don't have to call `toRaw` on the ref in all
       // its class methods
-      isRef2(target) ? target : receiver
+      isRef2(target) ? target : receiver,
     );
     if (isSymbol(key) ? builtInSymbols.has(key) : isNonTrackableKeys(key)) {
       return res;
@@ -1416,7 +1470,9 @@ var MutableReactiveHandler = class extends BaseReactiveHandler {
         }
       }
     }
-    const hadKey = isArray(target) && isIntegerKey(key) ? Number(key) < target.length : hasOwn(target, key);
+    const hadKey = isArray(target) && isIntegerKey(key)
+      ? Number(key) < target.length
+      : hasOwn(target, key);
     const result = Reflect.set(target, key, value, isRef2(target) ? target : receiver);
     if (target === toRaw(receiver)) {
       if (!hadKey) {
@@ -1472,7 +1528,7 @@ var shallowReadonlyHandlers = /* @__PURE__ */ new ReadonlyReactiveHandler(true);
 var toShallow = (value) => value;
 var getProto = (v) => Reflect.getPrototypeOf(v);
 function createIterableMethod(method, isReadonly2, isShallow2) {
-  return function(...args) {
+  return function (...args) {
     const target = this["__v_raw"];
     const rawTarget = toRaw(target);
     const targetIsMap = isMap(rawTarget);
@@ -1485,26 +1541,30 @@ function createIterableMethod(method, isReadonly2, isShallow2) {
       // iterator protocol
       next() {
         const { value, done } = innerIterator.next();
-        return done ? {
-          value,
-          done
-        } : {
-          value: isPair ? [
-            wrap(value[0]),
-            wrap(value[1])
-          ] : wrap(value),
-          done
-        };
+        return done
+          ? {
+            value,
+            done,
+          }
+          : {
+            value: isPair
+              ? [
+                wrap(value[0]),
+                wrap(value[1]),
+              ]
+              : wrap(value),
+            done,
+          };
       },
       // iterable protocol
       [Symbol.iterator]() {
         return this;
-      }
+      },
     };
   };
 }
 function createReadonlyMethod(type) {
-  return function(...args) {
+  return function (...args) {
     if (true) {
       const key = args[0] ? `on key "${args[0]}" ` : ``;
       warn(`${capitalize(type)} operation ${key}failed: target is readonly.`, toRaw(this));
@@ -1560,82 +1620,87 @@ function createInstrumentations(readonly2, shallow) {
       return target.forEach((value, key) => {
         return callback.call(thisArg, wrap(value), wrap(key), observed);
       });
-    }
+    },
   };
-  extend(instrumentations, readonly2 ? {
-    add: createReadonlyMethod("add"),
-    set: createReadonlyMethod("set"),
-    delete: createReadonlyMethod("delete"),
-    clear: createReadonlyMethod("clear")
-  } : {
-    add(value) {
-      if (!shallow && !isShallow(value) && !isReadonly(value)) {
-        value = toRaw(value);
+  extend(
+    instrumentations,
+    readonly2
+      ? {
+        add: createReadonlyMethod("add"),
+        set: createReadonlyMethod("set"),
+        delete: createReadonlyMethod("delete"),
+        clear: createReadonlyMethod("clear"),
       }
-      const target = toRaw(this);
-      const proto = getProto(target);
-      const hadKey = proto.has.call(target, value);
-      if (!hadKey) {
-        target.add(value);
-        trigger(target, "add", value, value);
-      }
-      return this;
-    },
-    set(key, value) {
-      if (!shallow && !isShallow(value) && !isReadonly(value)) {
-        value = toRaw(value);
-      }
-      const target = toRaw(this);
-      const { has, get } = getProto(target);
-      let hadKey = has.call(target, key);
-      if (!hadKey) {
-        key = toRaw(key);
-        hadKey = has.call(target, key);
-      } else if (true) {
-        checkIdentityKeys(target, has, key);
-      }
-      const oldValue = get.call(target, key);
-      target.set(key, value);
-      if (!hadKey) {
-        trigger(target, "add", key, value);
-      } else if (hasChanged(value, oldValue)) {
-        trigger(target, "set", key, value, oldValue);
-      }
-      return this;
-    },
-    delete(key) {
-      const target = toRaw(this);
-      const { has, get } = getProto(target);
-      let hadKey = has.call(target, key);
-      if (!hadKey) {
-        key = toRaw(key);
-        hadKey = has.call(target, key);
-      } else if (true) {
-        checkIdentityKeys(target, has, key);
-      }
-      const oldValue = get ? get.call(target, key) : void 0;
-      const result = target.delete(key);
-      if (hadKey) {
-        trigger(target, "delete", key, void 0, oldValue);
-      }
-      return result;
-    },
-    clear() {
-      const target = toRaw(this);
-      const hadItems = target.size !== 0;
-      const oldTarget = true ? isMap(target) ? new Map(target) : new Set(target) : void 0;
-      const result = target.clear();
-      if (hadItems) {
-        trigger(target, "clear", void 0, void 0, oldTarget);
-      }
-      return result;
-    }
-  });
+      : {
+        add(value) {
+          if (!shallow && !isShallow(value) && !isReadonly(value)) {
+            value = toRaw(value);
+          }
+          const target = toRaw(this);
+          const proto = getProto(target);
+          const hadKey = proto.has.call(target, value);
+          if (!hadKey) {
+            target.add(value);
+            trigger(target, "add", value, value);
+          }
+          return this;
+        },
+        set(key, value) {
+          if (!shallow && !isShallow(value) && !isReadonly(value)) {
+            value = toRaw(value);
+          }
+          const target = toRaw(this);
+          const { has, get } = getProto(target);
+          let hadKey = has.call(target, key);
+          if (!hadKey) {
+            key = toRaw(key);
+            hadKey = has.call(target, key);
+          } else if (true) {
+            checkIdentityKeys(target, has, key);
+          }
+          const oldValue = get.call(target, key);
+          target.set(key, value);
+          if (!hadKey) {
+            trigger(target, "add", key, value);
+          } else if (hasChanged(value, oldValue)) {
+            trigger(target, "set", key, value, oldValue);
+          }
+          return this;
+        },
+        delete(key) {
+          const target = toRaw(this);
+          const { has, get } = getProto(target);
+          let hadKey = has.call(target, key);
+          if (!hadKey) {
+            key = toRaw(key);
+            hadKey = has.call(target, key);
+          } else if (true) {
+            checkIdentityKeys(target, has, key);
+          }
+          const oldValue = get ? get.call(target, key) : void 0;
+          const result = target.delete(key);
+          if (hadKey) {
+            trigger(target, "delete", key, void 0, oldValue);
+          }
+          return result;
+        },
+        clear() {
+          const target = toRaw(this);
+          const hadItems = target.size !== 0;
+          const oldTarget = true ? isMap(target) ? new Map(target) : new Set(target) : void 0;
+          const result = target.clear();
+          if (hadItems) {
+            trigger(target, "clear", void 0, void 0, oldTarget);
+          }
+          return result;
+        },
+      },
+  );
   const iteratorMethods = [
     "keys",
     "values",
     "entries",
-    Symbol.iterator
+    Symbol.iterator,
   ];
   iteratorMethods.forEach((method) => {
     instrumentations[method] = createIterableMethod(method, readonly2, shallow);
@@ -1652,26 +1717,34 @@ function createInstrumentationGetter(isReadonly2, shallow) {
     } else if (key === "__v_raw") {
       return target;
     }
-    return Reflect.get(hasOwn(instrumentations, key) && key in target ? instrumentations : target, key, receiver);
+    return Reflect.get(
+      hasOwn(instrumentations, key) && key in target ? instrumentations : target,
+      key,
+      receiver,
+    );
   };
 }
 var mutableCollectionHandlers = {
-  get: /* @__PURE__ */ createInstrumentationGetter(false, false)
+  get: /* @__PURE__ */ createInstrumentationGetter(false, false),
 };
 var shallowCollectionHandlers = {
-  get: /* @__PURE__ */ createInstrumentationGetter(false, true)
+  get: /* @__PURE__ */ createInstrumentationGetter(false, true),
 };
 var readonlyCollectionHandlers = {
-  get: /* @__PURE__ */ createInstrumentationGetter(true, false)
+  get: /* @__PURE__ */ createInstrumentationGetter(true, false),
 };
 var shallowReadonlyCollectionHandlers = {
-  get: /* @__PURE__ */ createInstrumentationGetter(true, true)
+  get: /* @__PURE__ */ createInstrumentationGetter(true, true),
 };
 function checkIdentityKeys(target, has, key) {
   const rawKey = toRaw(key);
   if (rawKey !== key && has.call(target, rawKey)) {
     const type = toRawType(target);
-    warn(`Reactive ${type} contains both the raw and reactive versions of the same object${type === `Map` ? ` as keys` : ``}, which can lead to inconsistencies. Avoid differentiating between the raw and reactive versions of an object and only use the reactive version if possible.`);
+    warn(
+      `Reactive ${type} contains both the raw and reactive versions of the same object${
+        type === `Map` ? ` as keys` : ``
+      }, which can lead to inconsistencies. Avoid differentiating between the raw and reactive versions of an object and only use the reactive version if possible.`,
+    );
   }
 }
 var reactiveMap = /* @__PURE__ */ new WeakMap();
@@ -1699,16 +1772,40 @@ function reactive(target) {
   if (isReadonly(target)) {
     return target;
   }
-  return createReactiveObject(target, false, mutableHandlers, mutableCollectionHandlers, reactiveMap);
+  return createReactiveObject(
+    target,
+    false,
+    mutableHandlers,
+    mutableCollectionHandlers,
+    reactiveMap,
+  );
 }
 function shallowReactive(target) {
-  return createReactiveObject(target, false, shallowReactiveHandlers, shallowCollectionHandlers, shallowReactiveMap);
+  return createReactiveObject(
+    target,
+    false,
+    shallowReactiveHandlers,
+    shallowCollectionHandlers,
+    shallowReactiveMap,
+  );
 }
 function readonly(target) {
-  return createReactiveObject(target, true, readonlyHandlers, readonlyCollectionHandlers, readonlyMap);
+  return createReactiveObject(
+    target,
+    true,
+    readonlyHandlers,
+    readonlyCollectionHandlers,
+    readonlyMap,
+  );
 }
 function shallowReadonly(target) {
-  return createReactiveObject(target, true, shallowReadonlyHandlers, shallowReadonlyCollectionHandlers, shallowReadonlyMap);
+  return createReactiveObject(
+    target,
+    true,
+    shallowReadonlyHandlers,
+    shallowReadonlyCollectionHandlers,
+    shallowReadonlyMap,
+  );
 }
 function createReactiveObject(target, isReadonly2, baseHandlers, collectionHandlers, proxyMap) {
   if (!isObject(target)) {
@@ -1788,7 +1885,7 @@ var RefImpl = class {
       this.dep.track({
         target: this,
         type: "get",
-        key: "value"
+        key: "value",
       });
     } else {
       this.dep.track();
@@ -1808,7 +1905,7 @@ var RefImpl = class {
           type: "set",
           key: "value",
           newValue,
-          oldValue
+          oldValue,
         });
       } else {
         this.dep.trigger();
@@ -1823,7 +1920,7 @@ function triggerRef(ref2) {
         target: ref2,
         type: "set",
         key: "value",
-        newValue: ref2._value
+        newValue: ref2._value,
       });
     } else {
       ref2.dep.trigger();
@@ -1837,7 +1934,8 @@ function toValue(source) {
   return isFunction(source) ? source() : unref(source);
 }
 var shallowUnwrapHandlers = {
-  get: (target, key, receiver) => key === "__v_raw" ? target : unref(Reflect.get(target, key, receiver)),
+  get: (target, key, receiver) =>
+    key === "__v_raw" ? target : unref(Reflect.get(target, key, receiver)),
   set: (target, key, value, receiver) => {
     const oldValue = target[key];
     if (isRef2(oldValue) && !isRef2(value)) {
@@ -1846,10 +1944,12 @@ var shallowUnwrapHandlers = {
     } else {
       return Reflect.set(target, key, value, receiver);
     }
-  }
+  },
 };
 function proxyRefs(objectWithRefs) {
-  return isReactive(objectWithRefs) ? objectWithRefs : new Proxy(objectWithRefs, shallowUnwrapHandlers);
+  return isReactive(objectWithRefs)
+    ? objectWithRefs
+    : new Proxy(objectWithRefs, shallowUnwrapHandlers);
 }
 var CustomRefImpl = class {
   constructor(factory) {
@@ -1946,18 +2046,22 @@ var ComputedRefImpl = class {
    */
   notify() {
     this.flags |= 16;
-    if (!(this.flags & 8) && // avoid infinite self recursion
-    activeSub !== this) {
+    if (
+      !(this.flags & 8) && // avoid infinite self recursion
+      activeSub !== this
+    ) {
       batch(this, true);
       return true;
-    } else if (true) ;
+    } else if (true);
   }
   get value() {
-    const link = true ? this.dep.track({
-      target: this,
-      type: "get",
-      key: "value"
-    }) : this.dep.track();
+    const link = true
+      ? this.dep.track({
+        target: this,
+        type: "get",
+        key: "value",
+      })
+      : this.dep.track();
     refreshComputed(this);
     if (link) {
       link.version = this.dep.version;
@@ -1991,13 +2095,13 @@ function computed(getterOrOptions, debugOptions, isSSR = false) {
 var TrackOpTypes = {
   "GET": "get",
   "HAS": "has",
-  "ITERATE": "iterate"
+  "ITERATE": "iterate",
 };
 var TriggerOpTypes = {
   "SET": "set",
   "ADD": "add",
   "DELETE": "delete",
-  "CLEAR": "clear"
+  "CLEAR": "clear",
 };
 var INITIAL_WATCHER_VALUE = {};
 var cleanupMap = /* @__PURE__ */ new WeakMap();
@@ -2017,7 +2121,11 @@ function onWatcherCleanup(cleanupFn, failSilently = false, owner = activeWatcher
 function watch(source, cb, options = EMPTY_OBJ) {
   const { immediate, deep, once, scheduler, augmentJob, call } = options;
   const warnInvalidSource = (s) => {
-    (options.onWarn || warn)(`Invalid watch source: `, s, `A watch source can only be a getter/effect function, a ref, a reactive object, or an array of these types.`);
+    (options.onWarn || warn)(
+      `Invalid watch source: `,
+      s,
+      `A watch source can only be a getter/effect function, a ref, a reactive object, or an array of these types.`,
+    );
   };
   const reactiveGetter = (source2) => {
     if (deep) return source2;
@@ -2039,17 +2147,18 @@ function watch(source, cb, options = EMPTY_OBJ) {
   } else if (isArray(source)) {
     isMultiSource = true;
     forceTrigger = source.some((s) => isReactive(s) || isShallow(s));
-    getter = () => source.map((s) => {
-      if (isRef2(s)) {
-        return s.value;
-      } else if (isReactive(s)) {
-        return reactiveGetter(s);
-      } else if (isFunction(s)) {
-        return call ? call(s, 2) : s();
-      } else {
-        warnInvalidSource(s);
-      }
-    });
+    getter = () =>
+      source.map((s) => {
+        if (isRef2(s)) {
+          return s.value;
+        } else if (isReactive(s)) {
+          return reactiveGetter(s);
+        } else if (isFunction(s)) {
+          return call ? call(s, 2) : s();
+        } else {
+          warnInvalidSource(s);
+        }
+      });
   } else if (isFunction(source)) {
     if (cb) {
       getter = call ? () => call(source, 2) : source;
@@ -2066,9 +2175,11 @@ function watch(source, cb, options = EMPTY_OBJ) {
         const currentEffect = activeWatcher;
         activeWatcher = effect2;
         try {
-          return call ? call(source, 3, [
-            boundCleanup
-          ]) : source(boundCleanup);
+          return call
+            ? call(source, 3, [
+              boundCleanup,
+            ])
+            : source(boundCleanup);
         } finally {
           activeWatcher = currentEffect;
         }
@@ -2097,14 +2208,21 @@ function watch(source, cb, options = EMPTY_OBJ) {
       watchHandle();
     };
   }
-  let oldValue = isMultiSource ? new Array(source.length).fill(INITIAL_WATCHER_VALUE) : INITIAL_WATCHER_VALUE;
+  let oldValue = isMultiSource
+    ? new Array(source.length).fill(INITIAL_WATCHER_VALUE)
+    : INITIAL_WATCHER_VALUE;
   const job = (immediateFirstRun) => {
     if (!(effect2.flags & 1) || !effect2.dirty && !immediateFirstRun) {
       return;
     }
     if (cb) {
       const newValue = effect2.run();
-      if (deep || forceTrigger || (isMultiSource ? newValue.some((v, i) => hasChanged(v, oldValue[i])) : hasChanged(newValue, oldValue))) {
+      if (
+        deep || forceTrigger ||
+        (isMultiSource
+          ? newValue.some((v, i) => hasChanged(v, oldValue[i]))
+          : hasChanged(newValue, oldValue))
+      ) {
         if (cleanup) {
           cleanup();
         }
@@ -2114,8 +2232,12 @@ function watch(source, cb, options = EMPTY_OBJ) {
           const args = [
             newValue,
             // pass undefined as the old value when it's changed for the first time
-            oldValue === INITIAL_WATCHER_VALUE ? void 0 : isMultiSource && oldValue[0] === INITIAL_WATCHER_VALUE ? [] : oldValue,
-            boundCleanup
+            oldValue === INITIAL_WATCHER_VALUE
+              ? void 0
+              : isMultiSource && oldValue[0] === INITIAL_WATCHER_VALUE
+              ? []
+              : oldValue,
+            boundCleanup,
           ];
           call ? call(cb, 3, args) : (
             // @ts-expect-error
@@ -2221,21 +2343,28 @@ function warn$1(msg, ...args) {
       // eslint-disable-next-line no-restricted-syntax
       msg + args.map((a) => {
         var _a, _b;
-        return (_b = (_a = a.toString) == null ? void 0 : _a.call(a)) != null ? _b : JSON.stringify(a);
+        return (_b = (_a = a.toString) == null ? void 0 : _a.call(a)) != null
+          ? _b
+          : JSON.stringify(a);
       }).join(""),
       instance && instance.proxy,
       trace.map(({ vnode }) => `at <${formatComponentName(instance, vnode.type)}>`).join("\n"),
-      trace
+      trace,
     ]);
   } else {
     const warnArgs = [
       `[Vue warn]: ${msg}`,
-      ...args
+      ...args,
     ];
-    if (trace.length && // avoid spamming console during tests
-    true) {
-      warnArgs.push(`
-`, ...formatTrace(trace));
+    if (
+      trace.length && // avoid spamming console during tests
+      true
+    ) {
+      warnArgs.push(
+        `
+`,
+        ...formatTrace(trace),
+      );
     }
     console.warn(...warnArgs);
   }
@@ -2255,7 +2384,7 @@ function getComponentTrace() {
     } else {
       normalizedStack.push({
         vnode: currentVNode,
-        recurseCount: 0
+        recurseCount: 0,
       });
     }
     const parentInstance = currentVNode.component && currentVNode.component.parent;
@@ -2266,10 +2395,13 @@ function getComponentTrace() {
 function formatTrace(trace) {
   const logs = [];
   trace.forEach((entry, i) => {
-    logs.push(...i === 0 ? [] : [
-      `
-`
-    ], ...formatTraceEntry(entry));
+    logs.push(
+      ...i === 0 ? [] : [
+        `
+`,
+      ],
+      ...formatTraceEntry(entry),
+    );
   });
   return logs;
 }
@@ -2278,13 +2410,15 @@ function formatTraceEntry({ vnode, recurseCount }) {
   const isRoot = vnode.component ? vnode.component.parent == null : false;
   const open = ` at <${formatComponentName(vnode.component, vnode.type, isRoot)}`;
   const close = `>` + postfix;
-  return vnode.props ? [
-    open,
-    ...formatProps(vnode.props),
-    close
-  ] : [
-    open + close
-  ];
+  return vnode.props
+    ? [
+      open,
+      ...formatProps(vnode.props),
+      close,
+    ]
+    : [
+      open + close,
+    ];
 }
 function formatProps(props) {
   const res = [];
@@ -2301,28 +2435,28 @@ function formatProp(key, value, raw) {
   if (isString(value)) {
     value = JSON.stringify(value);
     return raw ? value : [
-      `${key}=${value}`
+      `${key}=${value}`,
     ];
   } else if (typeof value === "number" || typeof value === "boolean" || value == null) {
     return raw ? value : [
-      `${key}=${value}`
+      `${key}=${value}`,
     ];
   } else if (isRef2(value)) {
     value = formatProp(key, toRaw(value.value), true);
     return raw ? value : [
       `${key}=Ref<`,
       value,
-      `>`
+      `>`,
     ];
   } else if (isFunction(value)) {
     return [
-      `${key}=fn${value.name ? `<${value.name}>` : ``}`
+      `${key}=fn${value.name ? `<${value.name}>` : ``}`,
     ];
   } else {
     value = toRaw(value);
     return raw ? value : [
       `${key}=`,
-      value
+      value,
     ];
   }
 }
@@ -2364,7 +2498,7 @@ var ErrorCodes = {
   "COMPONENT_UPDATE": 15,
   "15": "COMPONENT_UPDATE",
   "APP_UNMOUNT_CLEANUP": 16,
-  "16": "APP_UNMOUNT_CLEANUP"
+  "16": "APP_UNMOUNT_CLEANUP",
 };
 var ErrorTypeStrings$1 = {
   ["sp"]: "serverPrefetch hook",
@@ -2397,7 +2531,7 @@ var ErrorTypeStrings$1 = {
   [13]: "async component loader",
   [14]: "scheduler flush",
   [15]: "component update",
-  [16]: "app unmount cleanup function"
+  [16]: "app unmount cleanup function",
 };
 function callWithErrorHandling(fn, instance, type, args) {
   try {
@@ -2428,11 +2562,14 @@ function callWithAsyncErrorHandling(fn, instance, type, args) {
 }
 function handleError(err, instance, type, throwInDev = true) {
   const contextVNode = instance ? instance.vnode : null;
-  const { errorHandler, throwUnhandledErrorInProduction } = instance && instance.appContext.config || EMPTY_OBJ;
+  const { errorHandler, throwUnhandledErrorInProduction } =
+    instance && instance.appContext.config || EMPTY_OBJ;
   if (instance) {
     let cur = instance.parent;
     const exposedInstance = instance.proxy;
-    const errorInfo = true ? ErrorTypeStrings$1[type] : `https://vuejs.org/error-reference/#runtime-${type}`;
+    const errorInfo = true
+      ? ErrorTypeStrings$1[type]
+      : `https://vuejs.org/error-reference/#runtime-${type}`;
     while (cur) {
       const errorCapturedHooks = cur.ec;
       if (errorCapturedHooks) {
@@ -2449,7 +2586,7 @@ function handleError(err, instance, type, throwInDev = true) {
       callWithErrorHandling(errorHandler, null, 10, [
         err,
         exposedInstance,
-        errorInfo
+        errorInfo,
       ]);
       resetTracking();
       return;
@@ -2509,8 +2646,10 @@ function queueJob(job) {
   if (!(job.flags & 1)) {
     const jobId = getId(job);
     const lastJob = queue[queue.length - 1];
-    if (!lastJob || // fast path when the job id is larger than the tail
-    !(job.flags & 2) && jobId >= getId(lastJob)) {
+    if (
+      !lastJob || // fast path when the job id is larger than the tail
+      !(job.flags & 2) && jobId >= getId(lastJob)
+    ) {
       queue.push(job);
     } else {
       queue.splice(findInsertionIndex(jobId), 0, job);
@@ -2565,7 +2704,7 @@ function flushPreFlushCbs(instance, seen2, i = flushIndex + 1) {
 function flushPostFlushCbs(seen2) {
   if (pendingPostFlushCbs.length) {
     const deduped = [
-      ...new Set(pendingPostFlushCbs)
+      ...new Set(pendingPostFlushCbs),
     ].sort((a, b) => getId(a) - getId(b));
     pendingPostFlushCbs.length = 0;
     if (activePostFlushCbs) {
@@ -2634,7 +2773,13 @@ function checkRecursiveUpdates(seen2, fn) {
   if (count > RECURSION_LIMIT) {
     const instance = fn.i;
     const componentName = instance && getComponentName(instance.type);
-    handleError(`Maximum recursive updates exceeded${componentName ? ` in component <${componentName}>` : ``}. This means you have a reactive effect that is mutating its own dependencies and thus recursively triggering itself. Possible sources include component template, render function, updated hook or watcher source function.`, null, 10);
+    handleError(
+      `Maximum recursive updates exceeded${
+        componentName ? ` in component <${componentName}>` : ``
+      }. This means you have a reactive effect that is mutating its own dependencies and thus recursively triggering itself. Possible sources include component template, render function, updated hook or watcher source function.`,
+      null,
+      10,
+    );
     return true;
   }
   seen2.set(fn, count + 1);
@@ -2646,7 +2791,7 @@ if (true) {
   getGlobalThis().__VUE_HMR_RUNTIME__ = {
     createRecord: tryWrap(createRecord),
     rerender: tryWrap(rerender),
-    reload: tryWrap(reload)
+    reload: tryWrap(reload),
   };
 }
 var map = /* @__PURE__ */ new Map();
@@ -2668,7 +2813,7 @@ function createRecord(id, initialDef) {
   }
   map.set(id, {
     initialDef: normalizeClassComponent(initialDef),
-    instances: /* @__PURE__ */ new Set()
+    instances: /* @__PURE__ */ new Set(),
   });
   return true;
 }
@@ -2682,7 +2827,7 @@ function rerender(id, newRender) {
   }
   record.initialDef.render = newRender;
   [
-    ...record.instances
+    ...record.instances,
   ].forEach((instance) => {
     if (newRender) {
       instance.render = newRender;
@@ -2700,7 +2845,7 @@ function reload(id, newComp) {
   newComp = normalizeClassComponent(newComp);
   updateComponentDef(record.initialDef, newComp);
   const instances = [
-    ...record.instances
+    ...record.instances,
   ];
   for (let i = 0; i < instances.length; i++) {
     const instance = instances[i];
@@ -2756,7 +2901,9 @@ function tryWrap(fn) {
       return fn(id, arg);
     } catch (e) {
       console.error(e);
-      console.warn(`[HMR] Something went wrong during Vue component hot-reload. Full reload required.`);
+      console.warn(
+        `[HMR] Something went wrong during Vue component hot-reload. Full reload required.`,
+      );
     }
   };
 }
@@ -2769,7 +2916,7 @@ function emit$1(event, ...args) {
   } else if (!devtoolsNotInstalled) {
     buffer.push({
       event,
-      args
+      args,
     });
   }
 }
@@ -2787,7 +2934,9 @@ function setDevtoolsHook$1(hook, target) {
     typeof window !== "undefined" && // some envs mock window but not fully
     window.HTMLElement && // also exclude jsdom
     // eslint-disable-next-line no-restricted-syntax
-    !((_b = (_a = window.navigator) == null ? void 0 : _a.userAgent) == null ? void 0 : _b.includes("jsdom"))
+    !((_b = (_a = window.navigator) == null ? void 0 : _a.userAgent) == null
+      ? void 0
+      : _b.includes("jsdom"))
   ) {
     const replay = target.__VUE_DEVTOOLS_HOOK_REPLAY__ = target.__VUE_DEVTOOLS_HOOK_REPLAY__ || [];
     replay.push((newHook) => {
@@ -2810,42 +2959,50 @@ function devtoolsInitApp(app2, version2) {
     Fragment,
     Text,
     Comment,
-    Static
+    Static,
   });
 }
 function devtoolsUnmountApp(app2) {
   emit$1("app:unmount", app2);
 }
 var devtoolsComponentAdded = /* @__PURE__ */ createDevtoolsComponentHook(
-  "component:added"
+  "component:added",
   /* COMPONENT_ADDED */
 );
 var devtoolsComponentUpdated = /* @__PURE__ */ createDevtoolsComponentHook(
-  "component:updated"
+  "component:updated",
   /* COMPONENT_UPDATED */
 );
 var _devtoolsComponentRemoved = /* @__PURE__ */ createDevtoolsComponentHook(
-  "component:removed"
+  "component:removed",
   /* COMPONENT_REMOVED */
 );
 var devtoolsComponentRemoved = (component) => {
-  if (devtools$1 && typeof devtools$1.cleanupBuffer === "function" && // remove the component if it wasn't buffered
-  !devtools$1.cleanupBuffer(component)) {
+  if (
+    devtools$1 && typeof devtools$1.cleanupBuffer === "function" && // remove the component if it wasn't buffered
+    !devtools$1.cleanupBuffer(component)
+  ) {
     _devtoolsComponentRemoved(component);
   }
 };
 // @__NO_SIDE_EFFECTS__
 function createDevtoolsComponentHook(hook) {
   return (component) => {
-    emit$1(hook, component.appContext.app, component.uid, component.parent ? component.parent.uid : void 0, component);
+    emit$1(
+      hook,
+      component.appContext.app,
+      component.uid,
+      component.parent ? component.parent.uid : void 0,
+      component,
+    );
   };
 }
 var devtoolsPerfStart = /* @__PURE__ */ createDevtoolsPerformanceHook(
-  "perf:start"
+  "perf:start",
   /* PERFORMANCE_START */
 );
 var devtoolsPerfEnd = /* @__PURE__ */ createDevtoolsPerformanceHook(
-  "perf:end"
+  "perf:end",
   /* PERFORMANCE_END */
 );
 function createDevtoolsPerformanceHook(hook) {
@@ -2918,7 +3075,7 @@ function withDirectives(vnode, directives) {
       if (isFunction(dir)) {
         dir = {
           mounted: dir,
-          updated: dir
+          updated: dir,
         };
       }
       if (dir.deep) {
@@ -2930,7 +3087,7 @@ function withDirectives(vnode, directives) {
         value,
         oldValue: void 0,
         arg,
-        modifiers
+        modifiers,
       });
     }
   }
@@ -2951,7 +3108,7 @@ function invokeDirectiveHook(vnode, prevVNode, instance, name) {
         vnode.el,
         binding,
         vnode,
-        prevVNode
+        prevVNode,
       ]);
       resetTracking();
     }
@@ -2962,17 +3119,22 @@ var isTeleport = (type) => type.__isTeleport;
 var isTeleportDisabled = (props) => props && (props.disabled || props.disabled === "");
 var isTeleportDeferred = (props) => props && (props.defer || props.defer === "");
 var isTargetSVG = (target) => typeof SVGElement !== "undefined" && target instanceof SVGElement;
-var isTargetMathML = (target) => typeof MathMLElement === "function" && target instanceof MathMLElement;
+var isTargetMathML = (target) =>
+  typeof MathMLElement === "function" && target instanceof MathMLElement;
 var resolveTarget = (props, select) => {
   const targetSelector = props && props.to;
   if (isString(targetSelector)) {
     if (!select) {
-      warn$1(`Current renderer does not support string target for Teleports. (missing querySelector renderer option)`);
+      warn$1(
+        `Current renderer does not support string target for Teleports. (missing querySelector renderer option)`,
+      );
       return null;
     } else {
       const target = select(targetSelector);
       if (!target && !isTeleportDisabled(props)) {
-        warn$1(`Failed to locate Teleport target with selector "${targetSelector}". Note the target element must exist before the component is mounted - i.e. the target cannot be rendered by the component itself, and ideally should be outside of the entire Vue component tree.`);
+        warn$1(
+          `Failed to locate Teleport target with selector "${targetSelector}". Note the target element must exist before the component is mounted - i.e. the target cannot be rendered by the component itself, and ideally should be outside of the entire Vue component tree.`,
+        );
       }
       return target;
     }
@@ -2986,8 +3148,24 @@ var resolveTarget = (props, select) => {
 var TeleportImpl = {
   name: "Teleport",
   __isTeleport: true,
-  process(n1, n2, container, anchor, parentComponent, parentSuspense, namespace, slotScopeIds, optimized, internals) {
-    const { mc: mountChildren, pc: patchChildren, pbc: patchBlockChildren, o: { insert, querySelector, createText, createComment } } = internals;
+  process(
+    n1,
+    n2,
+    container,
+    anchor,
+    parentComponent,
+    parentSuspense,
+    namespace,
+    slotScopeIds,
+    optimized,
+    internals,
+  ) {
+    const {
+      mc: mountChildren,
+      pc: patchChildren,
+      pbc: patchBlockChildren,
+      o: { insert, querySelector, createText, createComment },
+    } = internals;
     const disabled = isTeleportDisabled(n2.props);
     let { shapeFlag, children, dynamicChildren } = n2;
     if (isHmrUpdating) {
@@ -3004,7 +3182,16 @@ var TeleportImpl = {
           if (parentComponent && parentComponent.isCE) {
             parentComponent.ce._teleportTarget = container2;
           }
-          mountChildren(children, container2, anchor2, parentComponent, parentSuspense, namespace, slotScopeIds, optimized);
+          mountChildren(
+            children,
+            container2,
+            anchor2,
+            parentComponent,
+            parentSuspense,
+            namespace,
+            slotScopeIds,
+            optimized,
+          );
         }
       };
       const mountToTarget = () => {
@@ -3039,7 +3226,18 @@ var TeleportImpl = {
     } else {
       if (isTeleportDeferred(n2.props) && !n1.el.__isMounted) {
         queuePostRenderEffect(() => {
-          TeleportImpl.process(n1, n2, container, anchor, parentComponent, parentSuspense, namespace, slotScopeIds, optimized, internals);
+          TeleportImpl.process(
+            n1,
+            n2,
+            container,
+            anchor,
+            parentComponent,
+            parentSuspense,
+            namespace,
+            slotScopeIds,
+            optimized,
+            internals,
+          );
           delete n1.el.__isMounted;
         }, parentSuspense);
         return;
@@ -3058,10 +3256,28 @@ var TeleportImpl = {
         namespace = "mathml";
       }
       if (dynamicChildren) {
-        patchBlockChildren(n1.dynamicChildren, dynamicChildren, currentContainer, parentComponent, parentSuspense, namespace, slotScopeIds);
+        patchBlockChildren(
+          n1.dynamicChildren,
+          dynamicChildren,
+          currentContainer,
+          parentComponent,
+          parentSuspense,
+          namespace,
+          slotScopeIds,
+        );
         traverseStaticChildren(n1, n2, true);
       } else if (!optimized) {
-        patchChildren(n1, n2, currentContainer, currentAnchor, parentComponent, parentSuspense, namespace, slotScopeIds, false);
+        patchChildren(
+          n1,
+          n2,
+          currentContainer,
+          currentAnchor,
+          parentComponent,
+          parentSuspense,
+          namespace,
+          slotScopeIds,
+          false,
+        );
       }
       if (disabled) {
         if (!wasDisabled) {
@@ -3086,7 +3302,13 @@ var TeleportImpl = {
       updateCssVars(n2, disabled);
     }
   },
-  remove(vnode, parentComponent, parentSuspense, { um: unmount, o: { remove: hostRemove } }, doRemove) {
+  remove(
+    vnode,
+    parentComponent,
+    parentSuspense,
+    { um: unmount, o: { remove: hostRemove } },
+    doRemove,
+  ) {
     const { shapeFlag, children, anchor, targetStart, targetAnchor, target, props } = vnode;
     if (target) {
       hostRemove(targetStart);
@@ -3102,7 +3324,7 @@ var TeleportImpl = {
     }
   },
   move: moveTeleport,
-  hydrate: hydrateTeleport
+  hydrate: hydrateTeleport,
 };
 function moveTeleport(vnode, container, parentAnchor, { o: { insert }, m: move }, moveType = 2) {
   if (moveType === 0) {
@@ -3124,14 +3346,31 @@ function moveTeleport(vnode, container, parentAnchor, { o: { insert }, m: move }
     insert(anchor, container, parentAnchor);
   }
 }
-function hydrateTeleport(node, vnode, parentComponent, parentSuspense, slotScopeIds, optimized, { o: { nextSibling, parentNode, querySelector, insert, createText } }, hydrateChildren) {
+function hydrateTeleport(
+  node,
+  vnode,
+  parentComponent,
+  parentSuspense,
+  slotScopeIds,
+  optimized,
+  { o: { nextSibling, parentNode, querySelector, insert, createText } },
+  hydrateChildren,
+) {
   const target = vnode.target = resolveTarget(vnode.props, querySelector);
   if (target) {
     const disabled = isTeleportDisabled(vnode.props);
     const targetNode = target._lpa || target.firstChild;
     if (vnode.shapeFlag & 16) {
       if (disabled) {
-        vnode.anchor = hydrateChildren(nextSibling(node), vnode, parentNode(node), parentComponent, parentSuspense, slotScopeIds, optimized);
+        vnode.anchor = hydrateChildren(
+          nextSibling(node),
+          vnode,
+          parentNode(node),
+          parentComponent,
+          parentSuspense,
+          slotScopeIds,
+          optimized,
+        );
         vnode.targetStart = targetNode;
         vnode.targetAnchor = targetNode && nextSibling(targetNode);
       } else {
@@ -3152,7 +3391,15 @@ function hydrateTeleport(node, vnode, parentComponent, parentSuspense, slotScope
         if (!vnode.targetAnchor) {
           prepareAnchor(target, vnode, createText, insert);
         }
-        hydrateChildren(targetNode && nextSibling(targetNode), vnode, target, parentComponent, parentSuspense, slotScopeIds, optimized);
+        hydrateChildren(
+          targetNode && nextSibling(targetNode),
+          vnode,
+          target,
+          parentComponent,
+          parentSuspense,
+          slotScopeIds,
+          optimized,
+        );
       }
     }
     updateCssVars(vnode, disabled);
@@ -3195,7 +3442,7 @@ function useTransitionState() {
     isMounted: false,
     isLeaving: false,
     isUnmounting: false,
-    leavingVNodes: /* @__PURE__ */ new Map()
+    leavingVNodes: /* @__PURE__ */ new Map(),
   };
   onMounted(() => {
     state.isMounted = true;
@@ -3207,7 +3454,7 @@ function useTransitionState() {
 }
 var TransitionHookValidator = [
   Function,
-  Array
+  Array,
 ];
 var BaseTransitionPropsValidators = {
   mode: String,
@@ -3227,7 +3474,7 @@ var BaseTransitionPropsValidators = {
   onBeforeAppear: TransitionHookValidator,
   onAppear: TransitionHookValidator,
   onAfterAppear: TransitionHookValidator,
-  onAppearCancelled: TransitionHookValidator
+  onAppearCancelled: TransitionHookValidator,
 };
 var recursiveGetSubtree = (instance) => {
   const subTree = instance.subTree;
@@ -3263,13 +3510,17 @@ var BaseTransitionImpl = {
         state,
         instance,
         // #11061, ensure enterHooks is fresh after clone
-        (hooks) => enterHooks = hooks
+        (hooks) => enterHooks = hooks,
       );
       if (innerChild.type !== Comment) {
         setTransitionHooks(innerChild, enterHooks);
       }
       let oldInnerChild = instance.subTree && getInnerChild$1(instance.subTree);
-      if (oldInnerChild && oldInnerChild.type !== Comment && !isSameVNodeType(innerChild, oldInnerChild) && recursiveGetSubtree(instance).type !== Comment) {
+      if (
+        oldInnerChild && oldInnerChild.type !== Comment &&
+        !isSameVNodeType(innerChild, oldInnerChild) &&
+        recursiveGetSubtree(instance).type !== Comment
+      ) {
         let leavingHooks = resolveTransitionHooks(oldInnerChild, rawProps, state, instance);
         setTransitionHooks(oldInnerChild, leavingHooks);
         if (mode === "out-in" && innerChild.type !== Comment) {
@@ -3307,7 +3558,7 @@ var BaseTransitionImpl = {
       }
       return child;
     };
-  }
+  },
 };
 function findNonCommentChild(children) {
   let child = children[0];
@@ -3316,7 +3567,9 @@ function findNonCommentChild(children) {
     for (const c of children) {
       if (c.type !== Comment) {
         if (hasFound) {
-          warn$1("<transition> can only be used on a single element or component. Use <transition-group> for lists.");
+          warn$1(
+            "<transition> can only be used on a single element or component. Use <transition-group> for lists.",
+          );
           break;
         }
         child = c;
@@ -3338,7 +3591,23 @@ function getLeavingNodesForType(state, vnode) {
   return leavingVNodesCache;
 }
 function resolveTransitionHooks(vnode, props, state, instance, postClone) {
-  const { appear, mode, persisted = false, onBeforeEnter, onEnter, onAfterEnter, onEnterCancelled, onBeforeLeave, onLeave, onAfterLeave, onLeaveCancelled, onBeforeAppear, onAppear, onAfterAppear, onAppearCancelled } = props;
+  const {
+    appear,
+    mode,
+    persisted = false,
+    onBeforeEnter,
+    onEnter,
+    onAfterEnter,
+    onEnterCancelled,
+    onBeforeLeave,
+    onLeave,
+    onAfterLeave,
+    onLeaveCancelled,
+    onBeforeAppear,
+    onAppear,
+    onAfterAppear,
+    onAppearCancelled,
+  } = props;
   const key = String(vnode.key);
   const leavingVNodesCache = getLeavingNodesForType(state, vnode);
   const callHook3 = (hook, args) => {
@@ -3373,7 +3642,7 @@ function resolveTransitionHooks(vnode, props, state, instance, postClone) {
         leavingVNode.el[leaveCbKey]();
       }
       callHook3(hook, [
-        el
+        el,
       ]);
     },
     enter(el) {
@@ -3395,11 +3664,11 @@ function resolveTransitionHooks(vnode, props, state, instance, postClone) {
         called = true;
         if (cancelled) {
           callHook3(cancelHook, [
-            el
+            el,
           ]);
         } else {
           callHook3(afterHook, [
-            el
+            el,
           ]);
         }
         if (hooks.delayedLeave) {
@@ -3410,7 +3679,7 @@ function resolveTransitionHooks(vnode, props, state, instance, postClone) {
       if (hook) {
         callAsyncHook(hook, [
           el,
-          done
+          done,
         ]);
       } else {
         done();
@@ -3425,7 +3694,7 @@ function resolveTransitionHooks(vnode, props, state, instance, postClone) {
         return remove2();
       }
       callHook3(onBeforeLeave, [
-        el
+        el,
       ]);
       let called = false;
       const done = el[leaveCbKey] = (cancelled) => {
@@ -3434,11 +3703,11 @@ function resolveTransitionHooks(vnode, props, state, instance, postClone) {
         remove2();
         if (cancelled) {
           callHook3(onLeaveCancelled, [
-            el
+            el,
           ]);
         } else {
           callHook3(onAfterLeave, [
-            el
+            el,
           ]);
         }
         el[leaveCbKey] = void 0;
@@ -3450,7 +3719,7 @@ function resolveTransitionHooks(vnode, props, state, instance, postClone) {
       if (onLeave) {
         callAsyncHook(onLeave, [
           el,
-          done
+          done,
         ]);
       } else {
         done();
@@ -3460,7 +3729,7 @@ function resolveTransitionHooks(vnode, props, state, instance, postClone) {
       const hooks2 = resolveTransitionHooks(vnode2, props, state, instance, postClone);
       if (postClone) postClone(hooks2);
       return hooks2;
-    }
+    },
   };
   return hooks;
 }
@@ -3507,14 +3776,20 @@ function getTransitionRawChildren(children, keepComment = false, parentKey) {
   let keyedFragmentCount = 0;
   for (let i = 0; i < children.length; i++) {
     let child = children[i];
-    const key = parentKey == null ? child.key : String(parentKey) + String(child.key != null ? child.key : i);
+    const key = parentKey == null
+      ? child.key
+      : String(parentKey) + String(child.key != null ? child.key : i);
     if (child.type === Fragment) {
       if (child.patchFlag & 128) keyedFragmentCount++;
       ret = ret.concat(getTransitionRawChildren(child.children, keepComment, key));
     } else if (keepComment || child.type !== Comment) {
-      ret.push(key != null ? cloneVNode(child, {
-        key
-      }) : child);
+      ret.push(
+        key != null
+          ? cloneVNode(child, {
+            key,
+          })
+          : child,
+      );
     }
   }
   if (keyedFragmentCount > 1) {
@@ -3526,15 +3801,22 @@ function getTransitionRawChildren(children, keepComment = false, parentKey) {
 }
 // @__NO_SIDE_EFFECTS__
 function defineComponent(options, extraOptions) {
-  return isFunction(options) ? (
-    // #8236: extend call and options.name access are considered side-effects
-    // by Rollup, so we have to wrap it in a pure-annotated IIFE.
-    /* @__PURE__ */ (() => extend({
-      name: options.name
-    }, extraOptions, {
-      setup: options
-    }))()
-  ) : options;
+  return isFunction(options)
+    ? (
+      // #8236: extend call and options.name access are considered side-effects
+      // by Rollup, so we have to wrap it in a pure-annotated IIFE.
+      /* @__PURE__ */ (() =>
+        extend(
+          {
+            name: options.name,
+          },
+          extraOptions,
+          {
+            setup: options,
+          },
+        ))()
+    )
+    : options;
 }
 function useId() {
   const i = getCurrentInstance();
@@ -3549,7 +3831,7 @@ function markAsyncBoundary(instance) {
   instance.ids = [
     instance.ids[0] + instance.ids[2]++ + "-",
     0,
-    0
+    0,
   ];
 }
 var knownTemplateRefs = /* @__PURE__ */ new WeakSet();
@@ -3565,11 +3847,13 @@ function useTemplateRef(key) {
       Object.defineProperty(refs, key, {
         enumerable: true,
         get: () => r.value,
-        set: (val) => r.value = val
+        set: (val) => r.value = val,
       });
     }
   } else if (true) {
-    warn$1(`useTemplateRef() is called when there is no active component instance to be associated with.`);
+    warn$1(
+      `useTemplateRef() is called when there is no active component instance to be associated with.`,
+    );
   }
   const ret = true ? readonly(r) : r;
   if (true) {
@@ -3579,7 +3863,15 @@ function useTemplateRef(key) {
 }
 function setRef(rawRef, oldRawRef, parentSuspense, vnode, isUnmount = false) {
   if (isArray(rawRef)) {
-    rawRef.forEach((r, i) => setRef(r, oldRawRef && (isArray(oldRawRef) ? oldRawRef[i] : oldRawRef), parentSuspense, vnode, isUnmount));
+    rawRef.forEach((r, i) =>
+      setRef(
+        r,
+        oldRawRef && (isArray(oldRawRef) ? oldRawRef[i] : oldRawRef),
+        parentSuspense,
+        vnode,
+        isUnmount,
+      )
+    );
     return;
   }
   if (isAsyncWrapper(vnode) && !isUnmount) {
@@ -3592,7 +3884,9 @@ function setRef(rawRef, oldRawRef, parentSuspense, vnode, isUnmount = false) {
   const value = isUnmount ? null : refValue;
   const { i: owner, r: ref2 } = rawRef;
   if (!owner) {
-    warn$1(`Missing ref owner context. ref cannot be used on hoisted vnodes. A vnode with ref must be created inside the render function.`);
+    warn$1(
+      `Missing ref owner context. ref cannot be used on hoisted vnodes. A vnode with ref must be created inside the render function.`,
+    );
     return;
   }
   const oldRef = oldRawRef && oldRawRef.r;
@@ -3602,7 +3896,9 @@ function setRef(rawRef, oldRawRef, parentSuspense, vnode, isUnmount = false) {
   const canSetSetupRef = setupState === EMPTY_OBJ ? () => false : (key) => {
     if (true) {
       if (hasOwn(rawSetupState, key) && !isRef2(rawSetupState[key])) {
-        warn$1(`Template ref "${key}" used on a non-ref value. It will not work in the production build.`);
+        warn$1(
+          `Template ref "${key}" used on a non-ref value. It will not work in the production build.`,
+        );
       }
       if (knownTemplateRefs.has(rawSetupState[key])) {
         return false;
@@ -3623,7 +3919,7 @@ function setRef(rawRef, oldRawRef, parentSuspense, vnode, isUnmount = false) {
   if (isFunction(ref2)) {
     callWithErrorHandling(ref2, owner, 12, [
       value,
-      refs
+      refs,
     ]);
   } else {
     const _isString = isString(ref2);
@@ -3631,21 +3927,23 @@ function setRef(rawRef, oldRawRef, parentSuspense, vnode, isUnmount = false) {
     if (_isString || _isRef) {
       const doSet = () => {
         if (rawRef.f) {
-          const existing = _isString ? canSetSetupRef(ref2) ? setupState[ref2] : refs[ref2] : ref2.value;
+          const existing = _isString
+            ? canSetSetupRef(ref2) ? setupState[ref2] : refs[ref2]
+            : ref2.value;
           if (isUnmount) {
             isArray(existing) && remove(existing, refValue);
           } else {
             if (!isArray(existing)) {
               if (_isString) {
                 refs[ref2] = [
-                  refValue
+                  refValue,
                 ];
                 if (canSetSetupRef(ref2)) {
                   setupState[ref2] = refs[ref2];
                 }
               } else {
                 ref2.value = [
-                  refValue
+                  refValue,
                 ];
                 if (rawRef.k) refs[rawRef.k] = ref2.value;
               }
@@ -3684,7 +3982,8 @@ var logMismatchError = () => {
   console.error("Hydration completed but contains mismatches.");
   hasLoggedMismatchError = true;
 };
-var isSVGContainer = (container) => container.namespaceURI.includes("svg") && container.tagName !== "foreignObject";
+var isSVGContainer = (container) =>
+  container.namespaceURI.includes("svg") && container.tagName !== "foreignObject";
 var isMathMLContainer = (container) => container.namespaceURI.includes("MathML");
 var getContainerType = (container) => {
   if (container.nodeType !== 1) return void 0;
@@ -3694,10 +3993,24 @@ var getContainerType = (container) => {
 };
 var isComment = (node) => node.nodeType === 8;
 function createHydrationFunctions(rendererInternals) {
-  const { mt: mountComponent, p: patch, o: { patchProp: patchProp2, createText, nextSibling, parentNode, remove: remove2, insert, createComment } } = rendererInternals;
+  const {
+    mt: mountComponent,
+    p: patch,
+    o: {
+      patchProp: patchProp2,
+      createText,
+      nextSibling,
+      parentNode,
+      remove: remove2,
+      insert,
+      createComment,
+    },
+  } = rendererInternals;
   const hydrate2 = (vnode, container) => {
     if (!container.hasChildNodes()) {
-      warn$1(`Attempting to hydrate existing markup but container is empty. Performing full mount instead.`);
+      warn$1(
+        `Attempting to hydrate existing markup but container is empty. Performing full mount instead.`,
+      );
       patch(null, vnode, container);
       flushPostFlushCbs();
       container._vnode = vnode;
@@ -3707,10 +4020,18 @@ function createHydrationFunctions(rendererInternals) {
     flushPostFlushCbs();
     container._vnode = vnode;
   };
-  const hydrateNode = (node, vnode, parentComponent, parentSuspense, slotScopeIds, optimized = false) => {
+  const hydrateNode = (
+    node,
+    vnode,
+    parentComponent,
+    parentSuspense,
+    slotScopeIds,
+    optimized = false,
+  ) => {
     optimized = optimized || !!vnode.dynamicChildren;
     const isFragmentStart = isComment(node) && node.data === "[";
-    const onMismatch = () => handleMismatch(node, vnode, parentComponent, parentSuspense, slotScopeIds, isFragmentStart);
+    const onMismatch = () =>
+      handleMismatch(node, vnode, parentComponent, parentSuspense, slotScopeIds, isFragmentStart);
     const { type, ref: ref2, shapeFlag, patchFlag } = vnode;
     let domType = node.nodeType;
     vnode.el = node;
@@ -3734,9 +4055,13 @@ function createHydrationFunctions(rendererInternals) {
           }
         } else {
           if (node.data !== vnode.children) {
-            warn$1(`Hydration text mismatch in`, node.parentNode, `
+            warn$1(
+              `Hydration text mismatch in`,
+              node.parentNode,
+              `
   - rendered on server: ${JSON.stringify(node.data)}
-  - expected on client: ${JSON.stringify(vnode.children)}`);
+  - expected on client: ${JSON.stringify(vnode.children)}`,
+            );
             logMismatchError();
             node.data = vnode.children;
           }
@@ -3762,7 +4087,9 @@ function createHydrationFunctions(rendererInternals) {
           nextNode = node;
           const needToAdoptContent = !vnode.children.length;
           for (let i = 0; i < vnode.staticCount; i++) {
-            if (needToAdoptContent) vnode.children += nextNode.nodeType === 1 ? nextNode.outerHTML : nextNode.data;
+            if (needToAdoptContent) {
+              vnode.children += nextNode.nodeType === 1 ? nextNode.outerHTML : nextNode.data;
+            }
             if (i === vnode.staticCount - 1) {
               vnode.anchor = nextNode;
             }
@@ -3777,15 +4104,32 @@ function createHydrationFunctions(rendererInternals) {
         if (!isFragmentStart) {
           nextNode = onMismatch();
         } else {
-          nextNode = hydrateFragment(node, vnode, parentComponent, parentSuspense, slotScopeIds, optimized);
+          nextNode = hydrateFragment(
+            node,
+            vnode,
+            parentComponent,
+            parentSuspense,
+            slotScopeIds,
+            optimized,
+          );
         }
         break;
       default:
         if (shapeFlag & 1) {
-          if ((domType !== 1 || vnode.type.toLowerCase() !== node.tagName.toLowerCase()) && !isTemplateNode2(node)) {
+          if (
+            (domType !== 1 || vnode.type.toLowerCase() !== node.tagName.toLowerCase()) &&
+            !isTemplateNode2(node)
+          ) {
             nextNode = onMismatch();
           } else {
-            nextNode = hydrateElement(node, vnode, parentComponent, parentSuspense, slotScopeIds, optimized);
+            nextNode = hydrateElement(
+              node,
+              vnode,
+              parentComponent,
+              parentSuspense,
+              slotScopeIds,
+              optimized,
+            );
           }
         } else if (shapeFlag & 6) {
           vnode.slotScopeIds = slotScopeIds;
@@ -3797,7 +4141,15 @@ function createHydrationFunctions(rendererInternals) {
           } else {
             nextNode = nextSibling(node);
           }
-          mountComponent(vnode, container, null, parentComponent, parentSuspense, getContainerType(container), optimized);
+          mountComponent(
+            vnode,
+            container,
+            null,
+            parentComponent,
+            parentSuspense,
+            getContainerType(container),
+            optimized,
+          );
           if (isAsyncWrapper(vnode) && !vnode.type.__asyncResolved) {
             let subTree;
             if (isFragmentStart) {
@@ -3813,10 +4165,29 @@ function createHydrationFunctions(rendererInternals) {
           if (domType !== 8) {
             nextNode = onMismatch();
           } else {
-            nextNode = vnode.type.hydrate(node, vnode, parentComponent, parentSuspense, slotScopeIds, optimized, rendererInternals, hydrateChildren);
+            nextNode = vnode.type.hydrate(
+              node,
+              vnode,
+              parentComponent,
+              parentSuspense,
+              slotScopeIds,
+              optimized,
+              rendererInternals,
+              hydrateChildren,
+            );
           }
         } else if (shapeFlag & 128) {
-          nextNode = vnode.type.hydrate(node, vnode, parentComponent, parentSuspense, getContainerType(parentNode(node)), slotScopeIds, optimized, rendererInternals, hydrateNode);
+          nextNode = vnode.type.hydrate(
+            node,
+            vnode,
+            parentComponent,
+            parentSuspense,
+            getContainerType(parentNode(node)),
+            slotScopeIds,
+            optimized,
+            rendererInternals,
+            hydrateNode,
+          );
         } else if (true) {
           warn$1("Invalid HostVNode type:", type, `(${typeof type})`);
         }
@@ -3839,7 +4210,7 @@ function createHydrationFunctions(rendererInternals) {
         needCallTransitionHooks = needTransition(
           null,
           // no need check parentSuspense in hydration
-          transition
+          transition,
         ) && parentComponent && parentComponent.vnode.props && parentComponent.vnode.props.appear;
         const content = el.content.firstChild;
         if (needCallTransitionHooks) {
@@ -3848,19 +4219,35 @@ function createHydrationFunctions(rendererInternals) {
         replaceNode(content, el, parentComponent);
         vnode.el = el = content;
       }
-      if (shapeFlag & 16 && // skip if element has innerHTML / textContent
-      !(props && (props.innerHTML || props.textContent))) {
-        let next = hydrateChildren(el.firstChild, vnode, el, parentComponent, parentSuspense, slotScopeIds, optimized);
+      if (
+        shapeFlag & 16 && // skip if element has innerHTML / textContent
+        !(props && (props.innerHTML || props.textContent))
+      ) {
+        let next = hydrateChildren(
+          el.firstChild,
+          vnode,
+          el,
+          parentComponent,
+          parentSuspense,
+          slotScopeIds,
+          optimized,
+        );
         let hasWarned2 = false;
         while (next) {
-          if (!isMismatchAllowed(
-            el,
-            1
-            /* CHILDREN */
-          )) {
+          if (
+            !isMismatchAllowed(
+              el,
+              1,
+              /* CHILDREN */
+            )
+          ) {
             if (!hasWarned2) {
-              warn$1(`Hydration children mismatch on`, el, `
-Server rendered element contains more child nodes than client vdom.`);
+              warn$1(
+                `Hydration children mismatch on`,
+                el,
+                `
+Server rendered element contains more child nodes than client vdom.`,
+              );
               hasWarned2 = true;
             }
             logMismatchError();
@@ -3875,14 +4262,20 @@ Server rendered element contains more child nodes than client vdom.`);
           clientText = clientText.slice(1);
         }
         if (el.textContent !== clientText) {
-          if (!isMismatchAllowed(
-            el,
-            0
-            /* TEXT */
-          )) {
-            warn$1(`Hydration text content mismatch on`, el, `
+          if (
+            !isMismatchAllowed(
+              el,
+              0,
+              /* TEXT */
+            )
+          ) {
+            warn$1(
+              `Hydration text content mismatch on`,
+              el,
+              `
   - rendered on server: ${el.textContent}
-  - expected on client: ${vnode.children}`);
+  - expected on client: ${vnode.children}`,
+            );
             logMismatchError();
           }
           el.textContent = vnode.children;
@@ -3892,13 +4285,19 @@ Server rendered element contains more child nodes than client vdom.`);
         if (true) {
           const isCustomElement = el.tagName.includes("-");
           for (const key in props) {
-            if (// #11189 skip if this node has directives that have created hooks
-            // as it could have mutated the DOM in any possible way
-            !(dirs && dirs.some((d) => d.dir.created)) && propHasMismatch(el, key, props[key], vnode, parentComponent)) {
+            if (
+              // #11189 skip if this node has directives that have created hooks
+              // as it could have mutated the DOM in any possible way
+              !(dirs && dirs.some((d) => d.dir.created)) &&
+              propHasMismatch(el, key, props[key], vnode, parentComponent)
+            ) {
               logMismatchError();
             }
-            if (forcePatch && (key.endsWith("value") || key === "indeterminate") || isOn(key) && !isReservedProp(key) || // force hydrate v-bind with .prop modifiers
-            key[0] === "." || isCustomElement) {
+            if (
+              forcePatch && (key.endsWith("value") || key === "indeterminate") ||
+              isOn(key) && !isReservedProp(key) || // force hydrate v-bind with .prop modifiers
+              key[0] === "." || isCustomElement
+            ) {
               patchProp2(el, key, null, props[key], void 0, parentComponent);
             }
           }
@@ -3925,7 +4324,15 @@ Server rendered element contains more child nodes than client vdom.`);
     }
     return el.nextSibling;
   };
-  const hydrateChildren = (node, parentVNode, container, parentComponent, parentSuspense, slotScopeIds, optimized) => {
+  const hydrateChildren = (
+    node,
+    parentVNode,
+    container,
+    parentComponent,
+    parentSuspense,
+    slotScopeIds,
+    optimized,
+  ) => {
     optimized = optimized || !!parentVNode.dynamicChildren;
     const children = parentVNode.children;
     const l = children.length;
@@ -3936,7 +4343,11 @@ Server rendered element contains more child nodes than client vdom.`);
       if (node) {
         if (isText2 && !optimized) {
           if (i + 1 < l && normalizeVNode(children[i + 1]).type === Text) {
-            insert(createText(node.data.slice(vnode.children.length)), container, nextSibling(node));
+            insert(
+              createText(node.data.slice(vnode.children.length)),
+              container,
+              nextSibling(node),
+            );
             node.data = vnode.children;
           }
         }
@@ -3944,30 +4355,62 @@ Server rendered element contains more child nodes than client vdom.`);
       } else if (isText2 && !vnode.children) {
         insert(vnode.el = createText(""), container);
       } else {
-        if (!isMismatchAllowed(
-          container,
-          1
-          /* CHILDREN */
-        )) {
+        if (
+          !isMismatchAllowed(
+            container,
+            1,
+            /* CHILDREN */
+          )
+        ) {
           if (!hasWarned2) {
-            warn$1(`Hydration children mismatch on`, container, `
-Server rendered element contains fewer child nodes than client vdom.`);
+            warn$1(
+              `Hydration children mismatch on`,
+              container,
+              `
+Server rendered element contains fewer child nodes than client vdom.`,
+            );
             hasWarned2 = true;
           }
           logMismatchError();
         }
-        patch(null, vnode, container, null, parentComponent, parentSuspense, getContainerType(container), slotScopeIds);
+        patch(
+          null,
+          vnode,
+          container,
+          null,
+          parentComponent,
+          parentSuspense,
+          getContainerType(container),
+          slotScopeIds,
+        );
       }
     }
     return node;
   };
-  const hydrateFragment = (node, vnode, parentComponent, parentSuspense, slotScopeIds, optimized) => {
+  const hydrateFragment = (
+    node,
+    vnode,
+    parentComponent,
+    parentSuspense,
+    slotScopeIds,
+    optimized,
+  ) => {
     const { slotScopeIds: fragmentSlotScopeIds } = vnode;
     if (fragmentSlotScopeIds) {
-      slotScopeIds = slotScopeIds ? slotScopeIds.concat(fragmentSlotScopeIds) : fragmentSlotScopeIds;
+      slotScopeIds = slotScopeIds
+        ? slotScopeIds.concat(fragmentSlotScopeIds)
+        : fragmentSlotScopeIds;
     }
     const container = parentNode(node);
-    const next = hydrateChildren(nextSibling(node), vnode, container, parentComponent, parentSuspense, slotScopeIds, optimized);
+    const next = hydrateChildren(
+      nextSibling(node),
+      vnode,
+      container,
+      parentComponent,
+      parentSuspense,
+      slotScopeIds,
+      optimized,
+    );
     if (next && isComment(next) && next.data === "]") {
       return nextSibling(vnode.anchor = next);
     } else {
@@ -3976,15 +4419,34 @@ Server rendered element contains fewer child nodes than client vdom.`);
       return next;
     }
   };
-  const handleMismatch = (node, vnode, parentComponent, parentSuspense, slotScopeIds, isFragment) => {
-    if (!isMismatchAllowed(
-      node.parentElement,
-      1
-      /* CHILDREN */
-    )) {
-      warn$1(`Hydration node mismatch:
-- rendered on server:`, node, node.nodeType === 3 ? `(text)` : isComment(node) && node.data === "[" ? `(start of fragment)` : ``, `
-- expected on client:`, vnode.type);
+  const handleMismatch = (
+    node,
+    vnode,
+    parentComponent,
+    parentSuspense,
+    slotScopeIds,
+    isFragment,
+  ) => {
+    if (
+      !isMismatchAllowed(
+        node.parentElement,
+        1,
+        /* CHILDREN */
+      )
+    ) {
+      warn$1(
+        `Hydration node mismatch:
+- rendered on server:`,
+        node,
+        node.nodeType === 3
+          ? `(text)`
+          : isComment(node) && node.data === "["
+          ? `(start of fragment)`
+          : ``,
+        `
+- expected on client:`,
+        vnode.type,
+      );
       logMismatchError();
     }
     vnode.el = null;
@@ -4002,7 +4464,16 @@ Server rendered element contains fewer child nodes than client vdom.`);
     const next = nextSibling(node);
     const container = parentNode(node);
     remove2(node);
-    patch(null, vnode, container, next, parentComponent, parentSuspense, getContainerType(container), slotScopeIds);
+    patch(
+      null,
+      vnode,
+      container,
+      next,
+      parentComponent,
+      parentSuspense,
+      getContainerType(container),
+      slotScopeIds,
+    );
     if (parentComponent) {
       parentComponent.vnode.el = vnode.el;
       updateHOCHostEl(parentComponent, vnode.el);
@@ -4044,7 +4515,7 @@ Server rendered element contains fewer child nodes than client vdom.`);
   };
   return [
     hydrate2,
-    hydrateNode
+    hydrateNode,
   ];
 }
 function propHasMismatch(el, key, clientValue, vnode, instance) {
@@ -4078,7 +4549,10 @@ function propHasMismatch(el, key, clientValue, vnode, instance) {
       mismatchType = 3;
       mismatchKey = "style";
     }
-  } else if (el instanceof SVGElement && isKnownSvgAttr(key) || el instanceof HTMLElement && (isBooleanAttr(key) || isKnownHtmlAttr(key))) {
+  } else if (
+    el instanceof SVGElement && isKnownSvgAttr(key) ||
+    el instanceof HTMLElement && (isBooleanAttr(key) || isKnownHtmlAttr(key))
+  ) {
     if (isBooleanAttr(key)) {
       actual = el.hasAttribute(key);
       expected = includeBooleanAttr(clientValue);
@@ -4154,7 +4628,10 @@ function isMapEqual(a, b) {
 }
 function resolveCssVars(instance, vnode, expectedMap) {
   const root = instance.subTree;
-  if (instance.getCssVars && (vnode === root || root && root.type === Fragment && root.children.includes(vnode))) {
+  if (
+    instance.getCssVars &&
+    (vnode === root || root && root.type === Fragment && root.children.includes(vnode))
+  ) {
     const cssVars = instance.getCssVars();
     for (const key in cssVars) {
       expectedMap.set(`--${getEscapedCssVarName(key, false)}`, String(cssVars[key]));
@@ -4185,7 +4662,7 @@ var MismatchTypeString = {
   [
     4
     /* ATTRIBUTE */
-  ]: "attribute"
+  ]: "attribute",
 };
 function isMismatchAllowed(el, allowedType) {
   if (allowedType === 0 || allowedType === 1) {
@@ -4210,14 +4687,15 @@ var requestIdleCallback = getGlobalThis().requestIdleCallback || ((cb) => setTim
 var cancelIdleCallback = getGlobalThis().cancelIdleCallback || ((id) => clearTimeout(id));
 var hydrateOnIdle = (timeout = 1e4) => (hydrate2) => {
   const id = requestIdleCallback(hydrate2, {
-    timeout
+    timeout,
   });
   return () => cancelIdleCallback(id);
 };
 function elementIsVisibleInViewport(el) {
   const { top, left, bottom, right } = el.getBoundingClientRect();
   const { innerHeight, innerWidth } = window;
-  return (top > 0 && top < innerHeight || bottom > 0 && bottom < innerHeight) && (left > 0 && left < innerWidth || right > 0 && right < innerWidth);
+  return (top > 0 && top < innerHeight || bottom > 0 && bottom < innerHeight) &&
+    (left > 0 && left < innerWidth || right > 0 && right < innerWidth);
 }
 var hydrateOnVisible = (opts) => (hydrate2, forEach) => {
   const ob = new IntersectionObserver((entries) => {
@@ -4246,16 +4724,18 @@ var hydrateOnMediaQuery = (query) => (hydrate2) => {
       hydrate2();
     } else {
       mql.addEventListener("change", hydrate2, {
-        once: true
+        once: true,
       });
       return () => mql.removeEventListener("change", hydrate2);
     }
   }
 };
 var hydrateOnInteraction = (interactions = []) => (hydrate2, forEach) => {
-  if (isString(interactions)) interactions = [
-    interactions
-  ];
+  if (isString(interactions)) {
+    interactions = [
+      interactions,
+    ];
+  }
   let hasHydrated = false;
   const doHydrate = (e) => {
     if (!hasHydrated) {
@@ -4275,7 +4755,7 @@ var hydrateOnInteraction = (interactions = []) => (hydrate2, forEach) => {
   forEach((el) => {
     for (const i of interactions) {
       el.addEventListener(i, doHydrate, {
-        once: true
+        once: true,
       });
     }
   });
@@ -4309,7 +4789,7 @@ var isAsyncWrapper = (i) => !!i.type.__asyncLoader;
 function defineAsyncComponent(source) {
   if (isFunction(source)) {
     source = {
-      loader: source
+      loader: source,
     };
   }
   const {
@@ -4321,7 +4801,7 @@ function defineAsyncComponent(source) {
     timeout,
     // undefined = never times out
     suspensible = true,
-    onError: userOnError
+    onError: userOnError,
   } = source;
   let pendingRequest = null;
   let resolvedComp;
@@ -4349,7 +4829,9 @@ function defineAsyncComponent(source) {
         return pendingRequest;
       }
       if (!comp) {
-        warn$1(`Async component loader resolved to undefined. If you are using retry(), make sure to return its return value.`);
+        warn$1(
+          `Async component loader resolved to undefined. If you are using retry(), make sure to return its return value.`,
+        );
       }
       if (comp && (comp.__esModule || comp[Symbol.toStringTag] === "Module")) {
         comp = comp.default;
@@ -4365,12 +4847,14 @@ function defineAsyncComponent(source) {
     name: "AsyncComponentWrapper",
     __asyncLoader: load,
     __asyncHydrate(el, instance, hydrate2) {
-      const doHydrate = hydrateStrategy ? () => {
-        const teardown = hydrateStrategy(hydrate2, (cb) => forEachElement(el, cb));
-        if (teardown) {
-          (instance.bum || (instance.bum = [])).push(teardown);
+      const doHydrate = hydrateStrategy
+        ? () => {
+          const teardown = hydrateStrategy(hydrate2, (cb) => forEachElement(el, cb));
+          if (teardown) {
+            (instance.bum || (instance.bum = [])).push(teardown);
+          }
         }
-      } : hydrate2;
+        : hydrate2;
       if (resolvedComp) {
         doHydrate();
       } else {
@@ -4395,9 +4879,12 @@ function defineAsyncComponent(source) {
           return () => createInnerComp(comp, instance);
         }).catch((err) => {
           onError(err);
-          return () => errorComponent ? createVNode(errorComponent, {
-            error: err
-          }) : null;
+          return () =>
+            errorComponent
+              ? createVNode(errorComponent, {
+                error: err,
+              })
+              : null;
         });
       }
       const loaded = ref(false);
@@ -4431,13 +4918,13 @@ function defineAsyncComponent(source) {
           return createInnerComp(resolvedComp, instance);
         } else if (error.value && errorComponent) {
           return createVNode(errorComponent, {
-            error: error.value
+            error: error.value,
           });
         } else if (loadingComponent && !delayed.value) {
           return createVNode(loadingComponent);
         }
       };
-    }
+    },
   });
 }
 function createInnerComp(comp, parent) {
@@ -4459,17 +4946,17 @@ var KeepAliveImpl = {
     include: [
       String,
       RegExp,
-      Array
+      Array,
     ],
     exclude: [
       String,
       RegExp,
-      Array
+      Array,
     ],
     max: [
       String,
-      Number
-    ]
+      Number,
+    ],
   },
   setup(props, { slots }) {
     const instance = getCurrentInstance();
@@ -4492,7 +4979,17 @@ var KeepAliveImpl = {
     sharedContext.activate = (vnode, container, anchor, namespace, optimized) => {
       const instance2 = vnode.component;
       move(vnode, container, anchor, 0, parentSuspense);
-      patch(instance2.vnode, vnode, container, anchor, instance2, parentSuspense, namespace, vnode.slotScopeIds, optimized);
+      patch(
+        instance2.vnode,
+        vnode,
+        container,
+        anchor,
+        instance2,
+        parentSuspense,
+        namespace,
+        vnode.slotScopeIds,
+        optimized,
+      );
       queuePostRenderEffect(() => {
         instance2.isDeactivated = false;
         if (instance2.a) {
@@ -4551,7 +5048,7 @@ var KeepAliveImpl = {
     watch2(
       () => [
         props.include,
-        props.exclude
+        props.exclude,
       ],
       ([include, exclude]) => {
         include && pruneCache((name) => matches(include, name));
@@ -4560,8 +5057,8 @@ var KeepAliveImpl = {
       // prune post-render after `current` has been updated
       {
         flush: "post",
-        deep: true
-      }
+        deep: true,
+      },
     );
     let pendingCacheKey = null;
     const cacheSubtree = () => {
@@ -4613,9 +5110,13 @@ var KeepAliveImpl = {
         return vnode;
       }
       const comp = vnode.type;
-      const name = getComponentName(isAsyncWrapper(vnode) ? vnode.type.__asyncResolved || {} : comp);
+      const name = getComponentName(
+        isAsyncWrapper(vnode) ? vnode.type.__asyncResolved || {} : comp,
+      );
       const { include, exclude, max } = props;
-      if (include && (!name || !matches(include, name)) || exclude && name && matches(exclude, name)) {
+      if (
+        include && (!name || !matches(include, name)) || exclude && name && matches(exclude, name)
+      ) {
         vnode.shapeFlag &= ~256;
         current = vnode;
         return rawVNode;
@@ -4648,7 +5149,7 @@ var KeepAliveImpl = {
       current = vnode;
       return isSuspense(rawVNode.type) ? rawVNode : vnode;
     };
-  }
+  },
 };
 var KeepAlive = KeepAliveImpl;
 function matches(pattern, name) {
@@ -4722,7 +5223,9 @@ function injectHook(type, hook, target = currentInstance, prepend = false) {
     return wrappedHook;
   } else if (true) {
     const apiName = toHandlerKey(ErrorTypeStrings$1[type].replace(/ hook$/, ""));
-    warn$1(`${apiName} is called when there is no active component instance to be associated with. Lifecycle injection APIs can only be used during execution of setup(). If you are using async setup(), make sure to register lifecycle hooks before the first await statement.`);
+    warn$1(
+      `${apiName} is called when there is no active component instance to be associated with. Lifecycle injection APIs can only be used during execution of setup(). If you are using async setup(), make sure to register lifecycle hooks before the first await statement.`,
+    );
   }
 }
 var createHook = (lifecycle) => (hook, target = currentInstance) => {
@@ -4764,7 +5267,11 @@ function resolveAsset(type, name, warnMissing = true, maybeSelfReference = false
     const Component = instance.type;
     if (type === COMPONENTS) {
       const selfName = getComponentName(Component, false);
-      if (selfName && (selfName === name || selfName === camelize(name) || selfName === capitalize(camelize(name)))) {
+      if (
+        selfName &&
+        (selfName === name || selfName === camelize(name) ||
+          selfName === capitalize(camelize(name)))
+      ) {
         return Component;
       }
     }
@@ -4778,8 +5285,10 @@ function resolveAsset(type, name, warnMissing = true, maybeSelfReference = false
       return Component;
     }
     if (warnMissing && !res) {
-      const extra = type === COMPONENTS ? `
-If this is a native custom element, make sure to exclude it from component resolution via compilerOptions.isCustomElement.` : ``;
+      const extra = type === COMPONENTS
+        ? `
+If this is a native custom element, make sure to exclude it from component resolution via compilerOptions.isCustomElement.`
+        : ``;
       warn$1(`Failed to resolve ${type.slice(0, -1)}: ${name}${extra}`);
     }
     return res;
@@ -4788,7 +5297,8 @@ If this is a native custom element, make sure to exclude it from component resol
   }
 }
 function resolve(registry, name) {
-  return registry && (registry[name] || registry[camelize(name)] || registry[capitalize(camelize(name))]);
+  return registry &&
+    (registry[name] || registry[camelize(name)] || registry[capitalize(camelize(name))]);
 }
 function renderList(source, renderItem, cache, index) {
   let ret;
@@ -4803,7 +5313,12 @@ function renderList(source, renderItem, cache, index) {
     }
     ret = new Array(source.length);
     for (let i = 0, l = source.length; i < l; i++) {
-      ret[i] = renderItem(needsWrap ? toReactive(source[i]) : source[i], i, void 0, cached && cached[i]);
+      ret[i] = renderItem(
+        needsWrap ? toReactive(source[i]) : source[i],
+        i,
+        void 0,
+        cached && cached[i],
+      );
     }
   } else if (typeof source === "number") {
     if (!Number.isInteger(source)) {
@@ -4840,25 +5355,34 @@ function createSlots(slots, dynamicSlots) {
         slots[slot[j].name] = slot[j].fn;
       }
     } else if (slot) {
-      slots[slot.name] = slot.key ? (...args) => {
-        const res = slot.fn(...args);
-        if (res) res.key = slot.key;
-        return res;
-      } : slot.fn;
+      slots[slot.name] = slot.key
+        ? (...args) => {
+          const res = slot.fn(...args);
+          if (res) res.key = slot.key;
+          return res;
+        }
+        : slot.fn;
     }
   }
   return slots;
 }
 function renderSlot(slots, name, props = {}, fallback, noSlotted) {
-  if (currentRenderingInstance.ce || currentRenderingInstance.parent && isAsyncWrapper(currentRenderingInstance.parent) && currentRenderingInstance.parent.ce) {
+  if (
+    currentRenderingInstance.ce ||
+    currentRenderingInstance.parent && isAsyncWrapper(currentRenderingInstance.parent) &&
+      currentRenderingInstance.parent.ce
+  ) {
     if (name !== "default") props.name = name;
-    return openBlock(), createBlock(Fragment, null, [
-      createVNode("slot", props, fallback && fallback())
-    ], 64);
+    return openBlock(),
+      createBlock(Fragment, null, [
+        createVNode("slot", props, fallback && fallback()),
+      ], 64);
   }
   let slot = slots[name];
   if (slot && slot.length > 1) {
-    warn$1(`SSR-optimized slot function detected in a non-SSR-optimized render function. You need to mark this component with $dynamic-slots in the parent template.`);
+    warn$1(
+      `SSR-optimized slot function detected in a non-SSR-optimized render function. You need to mark this component with $dynamic-slots in the parent template.`,
+    );
     slot = () => [];
   }
   if (slot && slot._c) {
@@ -4867,15 +5391,20 @@ function renderSlot(slots, name, props = {}, fallback, noSlotted) {
   openBlock();
   const validSlotContent = slot && ensureValidVNode(slot(props));
   const slotKey = props.key || // slot content array of a dynamic conditional slot may have a branch
-  // key attached in the `createSlots` helper, respect that
-  validSlotContent && validSlotContent.key;
-  const rendered = createBlock(Fragment, {
-    key: (slotKey && !isSymbol(slotKey) ? slotKey : `_${name}`) + // #7256 force differentiate fallback content from actual content
-    (!validSlotContent && fallback ? "_fb" : "")
-  }, validSlotContent || (fallback ? fallback() : []), validSlotContent && slots._ === 1 ? 64 : -2);
+    // key attached in the `createSlots` helper, respect that
+    validSlotContent && validSlotContent.key;
+  const rendered = createBlock(
+    Fragment,
+    {
+      key: (slotKey && !isSymbol(slotKey) ? slotKey : `_${name}`) + // #7256 force differentiate fallback content from actual content
+        (!validSlotContent && fallback ? "_fb" : ""),
+    },
+    validSlotContent || (fallback ? fallback() : []),
+    validSlotContent && slots._ === 1 ? 64 : -2,
+  );
   if (!noSlotted && rendered.scopeId) {
     rendered.slotScopeIds = [
-      rendered.scopeId + "-s"
+      rendered.scopeId + "-s",
     ];
   }
   if (slot && slot._c) {
@@ -4885,11 +5414,13 @@ function renderSlot(slots, name, props = {}, fallback, noSlotted) {
 }
 function ensureValidVNode(vnodes) {
   return vnodes.some((child) => {
-    if (!isVNode(child)) return true;
-    if (child.type === Comment) return false;
-    if (child.type === Fragment && !ensureValidVNode(child.children)) return false;
-    return true;
-  }) ? vnodes : null;
+      if (!isVNode(child)) return true;
+      if (child.type === Comment) return false;
+      if (child.type === Fragment && !ensureValidVNode(child.children)) return false;
+      return true;
+    })
+    ? vnodes
+    : null;
 }
 function toHandlers(obj, preserveCaseIfNecessary) {
   const ret = {};
@@ -4923,15 +5454,17 @@ var publicPropertiesMap = (
     $host: (i) => i.ce,
     $emit: (i) => i.emit,
     $options: (i) => __VUE_OPTIONS_API__ ? resolveMergedOptions(i) : i.type,
-    $forceUpdate: (i) => i.f || (i.f = () => {
-      queueJob(i.update);
-    }),
+    $forceUpdate: (i) =>
+      i.f || (i.f = () => {
+        queueJob(i.update);
+      }),
     $nextTick: (i) => i.n || (i.n = nextTick.bind(i.proxy)),
-    $watch: (i) => __VUE_OPTIONS_API__ ? instanceWatch.bind(i) : NOOP
+    $watch: (i) => __VUE_OPTIONS_API__ ? instanceWatch.bind(i) : NOOP,
   })
 );
 var isReservedPrefix = (key) => key === "_" || key === "$";
-var hasSetupBinding = (state, key) => state !== EMPTY_OBJ && !state.__isScriptSetup && hasOwn(state, key);
+var hasSetupBinding = (state, key) =>
+  state !== EMPTY_OBJ && !state.__isScriptSetup && hasOwn(state, key);
 var PublicInstanceProxyHandlers = {
   get({ _: instance }, key) {
     if (key === "__v_skip") {
@@ -5000,13 +5533,23 @@ var PublicInstanceProxyHandlers = {
       {
         return globalProperties[key];
       }
-    } else if (currentRenderingInstance && (!isString(key) || // #1091 avoid internal isRef/isVNode checks on component instance leading
-    // to infinite warning loop
-    key.indexOf("__v") !== 0)) {
+    } else if (
+      currentRenderingInstance && (!isString(key) || // #1091 avoid internal isRef/isVNode checks on component instance leading
+        // to infinite warning loop
+        key.indexOf("__v") !== 0)
+    ) {
       if (data3 !== EMPTY_OBJ && isReservedPrefix(key[0]) && hasOwn(data3, key)) {
-        warn$1(`Property ${JSON.stringify(key)} must be accessed via $data because it starts with a reserved character ("$" or "_") and is not proxied on the render context.`);
+        warn$1(
+          `Property ${
+            JSON.stringify(key)
+          } must be accessed via $data because it starts with a reserved character ("$" or "_") and is not proxied on the render context.`,
+        );
       } else if (instance === currentRenderingInstance) {
-        warn$1(`Property ${JSON.stringify(key)} was accessed during render but is not defined on instance.`);
+        warn$1(
+          `Property ${
+            JSON.stringify(key)
+          } was accessed during render but is not defined on instance.`,
+        );
       }
     }
   },
@@ -5026,14 +5569,16 @@ var PublicInstanceProxyHandlers = {
       return false;
     }
     if (key[0] === "$" && key.slice(1) in instance) {
-      warn$1(`Attempting to mutate public property "${key}". Properties starting with $ are reserved and readonly.`);
+      warn$1(
+        `Attempting to mutate public property "${key}". Properties starting with $ are reserved and readonly.`,
+      );
       return false;
     } else {
       if (key in instance.appContext.config.globalProperties) {
         Object.defineProperty(ctx, key, {
           enumerable: true,
           configurable: true,
-          value
+          value,
         });
       } else {
         ctx[key] = value;
@@ -5043,7 +5588,10 @@ var PublicInstanceProxyHandlers = {
   },
   has({ _: { data: data3, setupState, accessCache, ctx, appContext, propsOptions } }, key) {
     let normalizedProps;
-    return !!accessCache[key] || data3 !== EMPTY_OBJ && hasOwn(data3, key) || hasSetupBinding(setupState, key) || (normalizedProps = propsOptions[0]) && hasOwn(normalizedProps, key) || hasOwn(ctx, key) || hasOwn(publicPropertiesMap, key) || hasOwn(appContext.config.globalProperties, key);
+    return !!accessCache[key] || data3 !== EMPTY_OBJ && hasOwn(data3, key) ||
+      hasSetupBinding(setupState, key) ||
+      (normalizedProps = propsOptions[0]) && hasOwn(normalizedProps, key) || hasOwn(ctx, key) ||
+      hasOwn(publicPropertiesMap, key) || hasOwn(appContext.config.globalProperties, key);
   },
   defineProperty(target, key, descriptor) {
     if (descriptor.get != null) {
@@ -5052,35 +5600,45 @@ var PublicInstanceProxyHandlers = {
       this.set(target, key, descriptor.value, null);
     }
     return Reflect.defineProperty(target, key, descriptor);
-  }
+  },
 };
 if (true) {
   PublicInstanceProxyHandlers.ownKeys = (target) => {
-    warn$1(`Avoid app logic that relies on enumerating keys on a component instance. The keys will be empty in production mode to avoid performance overhead.`);
+    warn$1(
+      `Avoid app logic that relies on enumerating keys on a component instance. The keys will be empty in production mode to avoid performance overhead.`,
+    );
     return Reflect.ownKeys(target);
   };
 }
-var RuntimeCompiledPublicInstanceProxyHandlers = /* @__PURE__ */ extend({}, PublicInstanceProxyHandlers, {
-  get(target, key) {
-    if (key === Symbol.unscopables) {
-      return;
-    }
-    return PublicInstanceProxyHandlers.get(target, key, target);
+var RuntimeCompiledPublicInstanceProxyHandlers = /* @__PURE__ */ extend(
+  {},
+  PublicInstanceProxyHandlers,
+  {
+    get(target, key) {
+      if (key === Symbol.unscopables) {
+        return;
+      }
+      return PublicInstanceProxyHandlers.get(target, key, target);
+    },
+    has(_, key) {
+      const has = key[0] !== "_" && !isGloballyAllowed(key);
+      if (!has && PublicInstanceProxyHandlers.has(_, key)) {
+        warn$1(
+          `Property ${
+            JSON.stringify(key)
+          } should not start with _ which is a reserved prefix for Vue internals.`,
+        );
+      }
+      return has;
+    },
   },
-  has(_, key) {
-    const has = key[0] !== "_" && !isGloballyAllowed(key);
-    if (!has && PublicInstanceProxyHandlers.has(_, key)) {
-      warn$1(`Property ${JSON.stringify(key)} should not start with _ which is a reserved prefix for Vue internals.`);
-    }
-    return has;
-  }
-});
+);
 function createDevRenderContext(instance) {
   const target = {};
   Object.defineProperty(target, `_`, {
     configurable: true,
     enumerable: false,
-    get: () => instance
+    get: () => instance,
   });
   Object.keys(publicPropertiesMap).forEach((key) => {
     Object.defineProperty(target, key, {
@@ -5089,7 +5647,7 @@ function createDevRenderContext(instance) {
       get: () => publicPropertiesMap[key](instance),
       // intercepted by the proxy so no need for implementation,
       // but needed to prevent set errors
-      set: NOOP
+      set: NOOP,
     });
   });
   return target;
@@ -5102,7 +5660,7 @@ function exposePropsOnRenderContext(instance) {
         enumerable: true,
         configurable: true,
         get: () => instance.props[key],
-        set: NOOP
+        set: NOOP,
       });
     });
   }
@@ -5112,19 +5670,26 @@ function exposeSetupStateOnRenderContext(instance) {
   Object.keys(toRaw(setupState)).forEach((key) => {
     if (!setupState.__isScriptSetup) {
       if (isReservedPrefix(key[0])) {
-        warn$1(`setup() return property ${JSON.stringify(key)} should not start with "$" or "_" which are reserved prefixes for Vue internals.`);
+        warn$1(
+          `setup() return property ${
+            JSON.stringify(key)
+          } should not start with "$" or "_" which are reserved prefixes for Vue internals.`,
+        );
         return;
       }
       Object.defineProperty(ctx, key, {
         enumerable: true,
         configurable: true,
         get: () => setupState[key],
-        set: NOOP
+        set: NOOP,
       });
     }
   });
 }
-var warnRuntimeUsage = (method) => warn$1(`${method}() is a compiler-hint helper that is only usable inside <script setup> of a single file component. Its arguments should be compiled away and passing it at runtime has no effect.`);
+var warnRuntimeUsage = (method) =>
+  warn$1(
+    `${method}() is a compiler-hint helper that is only usable inside <script setup> of a single file component. Its arguments should be compiled away and passing it at runtime has no effect.`,
+  );
 function defineProps() {
   if (true) {
     warnRuntimeUsage(`defineProps`);
@@ -5178,7 +5743,9 @@ function getContext() {
   return i.setupContext || (i.setupContext = createSetupContext(i));
 }
 function normalizePropsOrEmits(props) {
-  return isArray(props) ? props.reduce((normalized, p2) => (normalized[p2] = null, normalized), {}) : props;
+  return isArray(props)
+    ? props.reduce((normalized, p2) => (normalized[p2] = null, normalized), {})
+    : props;
 }
 function mergeDefaults(raw, defaults) {
   const props = normalizePropsOrEmits(raw);
@@ -5189,14 +5756,14 @@ function mergeDefaults(raw, defaults) {
       if (isArray(opt) || isFunction(opt)) {
         opt = props[key] = {
           type: opt,
-          default: defaults[key]
+          default: defaults[key],
         };
       } else {
         opt.default = defaults[key];
       }
     } else if (opt === null) {
       opt = props[key] = {
-        default: defaults[key]
+        default: defaults[key],
       };
     } else if (true) {
       warn$1(`props default key "${key}" has no corresponding declaration.`);
@@ -5218,7 +5785,7 @@ function createPropsRestProxy(props, excludedKeys) {
     if (!excludedKeys.includes(key)) {
       Object.defineProperty(ret, key, {
         enumerable: true,
-        get: () => props[key]
+        get: () => props[key],
       });
     }
   }
@@ -5239,7 +5806,7 @@ function withAsyncContext(getAwaitable) {
   }
   return [
     awaitable,
-    () => setCurrentInstance(ctx)
+    () => setCurrentInstance(ctx),
   ];
 }
 function createDuplicateChecker() {
@@ -5292,7 +5859,7 @@ function applyOptions(instance) {
     // assets
     components,
     directives,
-    filters
+    filters,
   } = options;
   const checkDuplicateProperties = true ? createDuplicateChecker() : null;
   if (true) {
@@ -5315,7 +5882,7 @@ function applyOptions(instance) {
             value: methodHandler.bind(publicThis),
             configurable: true,
             enumerable: true,
-            writable: true
+            writable: true,
           });
         } else {
           ctx[key] = methodHandler.bind(publicThis);
@@ -5324,7 +5891,9 @@ function applyOptions(instance) {
           checkDuplicateProperties("Methods", key);
         }
       } else if (true) {
-        warn$1(`Method "${key}" has type "${typeof methodHandler}" in the component definition. Did you reference the function correctly?`);
+        warn$1(
+          `Method "${key}" has type "${typeof methodHandler}" in the component definition. Did you reference the function correctly?`,
+        );
       }
     }
   }
@@ -5334,7 +5903,9 @@ function applyOptions(instance) {
     }
     const data3 = dataOptions.call(publicThis, publicThis);
     if (isPromise(data3)) {
-      warn$1(`data() returned a Promise - note data() cannot be async; If you intend to perform data fetching before component renders, use async setup() + <Suspense>.`);
+      warn$1(
+        `data() returned a Promise - note data() cannot be async; If you intend to perform data fetching before component renders, use async setup() + <Suspense>.`,
+      );
     }
     if (!isObject(data3)) {
       warn$1(`data() should return an object.`);
@@ -5348,7 +5919,7 @@ function applyOptions(instance) {
               configurable: true,
               enumerable: true,
               get: () => data3[key],
-              set: NOOP
+              set: NOOP,
             });
           }
         }
@@ -5359,22 +5930,30 @@ function applyOptions(instance) {
   if (computedOptions) {
     for (const key in computedOptions) {
       const opt = computedOptions[key];
-      const get = isFunction(opt) ? opt.bind(publicThis, publicThis) : isFunction(opt.get) ? opt.get.bind(publicThis, publicThis) : NOOP;
+      const get = isFunction(opt)
+        ? opt.bind(publicThis, publicThis)
+        : isFunction(opt.get)
+        ? opt.get.bind(publicThis, publicThis)
+        : NOOP;
       if (get === NOOP) {
         warn$1(`Computed property "${key}" has no getter.`);
       }
-      const set = !isFunction(opt) && isFunction(opt.set) ? opt.set.bind(publicThis) : true ? () => {
-        warn$1(`Write operation failed: computed property "${key}" is readonly.`);
-      } : NOOP;
+      const set = !isFunction(opt) && isFunction(opt.set)
+        ? opt.set.bind(publicThis)
+        : true
+        ? () => {
+          warn$1(`Write operation failed: computed property "${key}" is readonly.`);
+        }
+        : NOOP;
       const c = computed2({
         get,
-        set
+        set,
       });
       Object.defineProperty(ctx, key, {
         enumerable: true,
         configurable: true,
         get: () => c.value,
-        set: (v) => c.value = v
+        set: (v) => c.value = v,
       });
       if (true) {
         checkDuplicateProperties("Computed", key);
@@ -5420,7 +5999,7 @@ function applyOptions(instance) {
       expose.forEach((key) => {
         Object.defineProperty(exposed, key, {
           get: () => publicThis[key],
-          set: (val) => publicThis[key] = val
+          set: (val) => publicThis[key] = val,
         });
       });
     } else if (!instance.exposed) {
@@ -5460,7 +6039,7 @@ function resolveInjections(injectOptions, ctx, checkDuplicateProperties = NOOP) 
         enumerable: true,
         configurable: true,
         get: () => injected.value,
-        set: (v) => injected.value = v
+        set: (v) => injected.value = v,
       });
     } else {
       ctx[key] = injected;
@@ -5471,7 +6050,11 @@ function resolveInjections(injectOptions, ctx, checkDuplicateProperties = NOOP) 
   }
 }
 function callHook(hook, instance, type) {
-  callWithAsyncErrorHandling(isArray(hook) ? hook.map((h2) => h2.bind(instance.proxy)) : hook.bind(instance.proxy), instance, type);
+  callWithAsyncErrorHandling(
+    isArray(hook) ? hook.map((h2) => h2.bind(instance.proxy)) : hook.bind(instance.proxy),
+    instance,
+    type,
+  );
 }
 function createWatcher(raw, ctx, publicThis, key) {
   let getter = key.includes(".") ? createPathGetter(publicThis, key) : () => publicThis[key];
@@ -5506,7 +6089,8 @@ function createWatcher(raw, ctx, publicThis, key) {
 function resolveMergedOptions(instance) {
   const base = instance.type;
   const { mixins, extends: extendsOptions } = base;
-  const { mixins: globalMixins, optionsCache: cache, config: { optionMergeStrategies } } = instance.appContext;
+  const { mixins: globalMixins, optionsCache: cache, config: { optionMergeStrategies } } =
+    instance.appContext;
   const cached = cache.get(base);
   let resolved;
   if (cached) {
@@ -5537,7 +6121,9 @@ function mergeOptions(to, from, strats, asMixin = false) {
   }
   for (const key in from) {
     if (asMixin && key === "expose") {
-      warn$1(`"expose" option is ignored when declared in mixins or extends. It should only be declared in the base component itself.`);
+      warn$1(
+        `"expose" option is ignored when declared in mixins or extends. It should only be declared in the base component itself.`,
+      );
     } else {
       const strat = internalOptionMergeStrats[key] || strats && strats[key];
       to[key] = strat ? strat(to[key], from[key]) : from[key];
@@ -5574,7 +6160,7 @@ var internalOptionMergeStrats = {
   watch: mergeWatchOptions,
   // provide / inject
   provide: mergeDataFn,
-  inject: mergeInject
+  inject: mergeInject,
 };
 function mergeDataFn(to, from) {
   if (!from) {
@@ -5584,7 +6170,10 @@ function mergeDataFn(to, from) {
     return from;
   }
   return function mergedDataFn() {
-    return extend(isFunction(to) ? to.call(this, this) : to, isFunction(from) ? from.call(this, this) : from);
+    return extend(
+      isFunction(to) ? to.call(this, this) : to,
+      isFunction(from) ? from.call(this, this) : from,
+    );
   };
 }
 function mergeInject(to, from) {
@@ -5601,9 +6190,11 @@ function normalizeInject(raw) {
   return raw;
 }
 function mergeAsArray(to, from) {
-  return to ? [
-    ...new Set([].concat(to, from))
-  ] : from;
+  return to
+    ? [
+      ...new Set([].concat(to, from)),
+    ]
+    : from;
 }
 function mergeObjectOptions(to, from) {
   return to ? extend(/* @__PURE__ */ Object.create(null), to, from) : from;
@@ -5614,11 +6205,15 @@ function mergeEmitsOrPropsOptions(to, from) {
       return [
         .../* @__PURE__ */ new Set([
           ...to,
-          ...from
-        ])
+          ...from,
+        ]),
       ];
     }
-    return extend(/* @__PURE__ */ Object.create(null), normalizePropsOrEmits(to), normalizePropsOrEmits(from != null ? from : {}));
+    return extend(
+      /* @__PURE__ */ Object.create(null),
+      normalizePropsOrEmits(to),
+      normalizePropsOrEmits(from != null ? from : {}),
+    );
   } else {
     return from;
   }
@@ -5642,7 +6237,7 @@ function createAppContext() {
       optionMergeStrategies: {},
       errorHandler: void 0,
       warnHandler: void 0,
-      compilerOptions: {}
+      compilerOptions: {},
     },
     mixins: [],
     components: {},
@@ -5650,7 +6245,7 @@ function createAppContext() {
     provides: /* @__PURE__ */ Object.create(null),
     optionsCache: /* @__PURE__ */ new WeakMap(),
     propsCache: /* @__PURE__ */ new WeakMap(),
-    emitsCache: /* @__PURE__ */ new WeakMap()
+    emitsCache: /* @__PURE__ */ new WeakMap(),
   };
 }
 var uid$1 = 0;
@@ -5702,7 +6297,10 @@ function createAppAPI(render2, hydrate2) {
           if (!context.mixins.includes(mixin)) {
             context.mixins.push(mixin);
           } else if (true) {
-            warn$1("Mixin has already been applied to target app" + (mixin.name ? `: ${mixin.name}` : ""));
+            warn$1(
+              "Mixin has already been applied to target app" +
+                (mixin.name ? `: ${mixin.name}` : ""),
+            );
           }
         } else if (true) {
           warn$1("Mixins are only available in builds supporting Options API");
@@ -5773,7 +6371,9 @@ If you want to remount the same app, move your app creation logic into a factory
       },
       onUnmount(cleanupFn) {
         if (typeof cleanupFn !== "function") {
-          warn$1(`Expected function as first argument to app.onUnmount(), but got ${typeof cleanupFn}`);
+          warn$1(
+            `Expected function as first argument to app.onUnmount(), but got ${typeof cleanupFn}`,
+          );
         }
         pluginCleanupFns.push(cleanupFn);
       },
@@ -5792,7 +6392,11 @@ If you want to remount the same app, move your app creation logic into a factory
       },
       provide(key, value) {
         if (key in context.provides) {
-          warn$1(`App already provides property with key "${String(key)}". It will be overwritten with the new value.`);
+          warn$1(
+            `App already provides property with key "${
+              String(key)
+            }". It will be overwritten with the new value.`,
+          );
         }
         context.provides[key] = value;
         return app2;
@@ -5805,7 +6409,7 @@ If you want to remount the same app, move your app creation logic into a factory
         } finally {
           currentApp = lastApp;
         }
-      }
+      },
     };
     return app2;
   };
@@ -5828,11 +6432,19 @@ function provide(key, value) {
 function inject(key, defaultValue, treatDefaultAsFactory = false) {
   const instance = currentInstance || currentRenderingInstance;
   if (instance || currentApp) {
-    const provides = currentApp ? currentApp._context.provides : instance ? instance.parent == null ? instance.vnode.appContext && instance.vnode.appContext.provides : instance.parent.provides : void 0;
+    const provides = currentApp
+      ? currentApp._context.provides
+      : instance
+      ? instance.parent == null
+        ? instance.vnode.appContext && instance.vnode.appContext.provides
+        : instance.parent.provides
+      : void 0;
     if (provides && key in provides) {
       return provides[key];
     } else if (arguments.length > 1) {
-      return treatDefaultAsFactory && isFunction(defaultValue) ? defaultValue.call(instance && instance.proxy) : defaultValue;
+      return treatDefaultAsFactory && isFunction(defaultValue)
+        ? defaultValue.call(instance && instance.proxy)
+        : defaultValue;
     } else if (true) {
       warn$1(`injection "${String(key)}" not found.`);
     }
@@ -5903,7 +6515,14 @@ function updateProps(instance, rawProps, rawPrevProps, optimized) {
             }
           } else {
             const camelizedKey = camelize(key);
-            props[camelizedKey] = resolvePropValue(options, rawCurrentProps, camelizedKey, value, instance, false);
+            props[camelizedKey] = resolvePropValue(
+              options,
+              rawCurrentProps,
+              camelizedKey,
+              value,
+              instance,
+              false,
+            );
           }
         } else {
           if (value !== attrs[key]) {
@@ -5919,14 +6538,18 @@ function updateProps(instance, rawProps, rawPrevProps, optimized) {
     }
     let kebabKey;
     for (const key in rawCurrentProps) {
-      if (!rawProps || // for camelCase
-      !hasOwn(rawProps, key) && // it's possible the original props was passed in as kebab-case
-      // and converted to camelCase (#955)
-      ((kebabKey = hyphenate(key)) === key || !hasOwn(rawProps, kebabKey))) {
+      if (
+        !rawProps || // for camelCase
+        !hasOwn(rawProps, key) && // it's possible the original props was passed in as kebab-case
+          // and converted to camelCase (#955)
+          ((kebabKey = hyphenate(key)) === key || !hasOwn(rawProps, kebabKey))
+      ) {
         if (options) {
-          if (rawPrevProps && // for camelCase
-          (rawPrevProps[key] !== void 0 || // for kebab-case
-          rawPrevProps[kebabKey] !== void 0)) {
+          if (
+            rawPrevProps && // for camelCase
+            (rawPrevProps[key] !== void 0 || // for kebab-case
+              rawPrevProps[kebabKey] !== void 0)
+          ) {
             props[key] = resolvePropValue(options, rawCurrentProps, key, void 0, instance, true);
           }
         } else {
@@ -5980,7 +6603,14 @@ function setFullProps(instance, rawProps, props, attrs) {
     const castValues = rawCastValues || EMPTY_OBJ;
     for (let i = 0; i < needCastKeys.length; i++) {
       const key = needCastKeys[i];
-      props[key] = resolvePropValue(options, rawCurrentProps, key, castValues[key], instance, !hasOwn(castValues, key));
+      props[key] = resolvePropValue(
+        options,
+        rawCurrentProps,
+        key,
+        castValues[key],
+        instance,
+        !hasOwn(castValues, key),
+      );
     }
   }
   return hasAttrsChanged;
@@ -6007,16 +6637,20 @@ function resolvePropValue(options, props, key, value, instance, isAbsent) {
         instance.ce._setProp(key, value);
       }
     }
-    if (opt[
-      0
-      /* shouldCast */
-    ]) {
+    if (
+      opt[
+        0
+        /* shouldCast */
+      ]
+    ) {
       if (isAbsent && !hasDefault) {
         value = false;
-      } else if (opt[
-        1
-        /* shouldCastTrue */
-      ] && (value === "" || value === hyphenate(key))) {
+      } else if (
+        opt[
+          1
+          /* shouldCastTrue */
+        ] && (value === "" || value === hyphenate(key))
+      ) {
         value = true;
       }
     }
@@ -6075,9 +6709,11 @@ function normalizePropsOptions(comp, appContext, asMixin = false) {
       const normalizedKey = camelize(key);
       if (validatePropName(normalizedKey)) {
         const opt = raw[key];
-        const prop = normalized[normalizedKey] = isArray(opt) || isFunction(opt) ? {
-          type: opt
-        } : extend({}, opt);
+        const prop = normalized[normalizedKey] = isArray(opt) || isFunction(opt)
+          ? {
+            type: opt,
+          }
+          : extend({}, opt);
         const propType = prop.type;
         let shouldCast = false;
         let shouldCastTrue = true;
@@ -6111,7 +6747,7 @@ function normalizePropsOptions(comp, appContext, asMixin = false) {
   }
   const res = [
     normalized,
-    needCastKeys
+    needCastKeys,
   ];
   if (isObject(comp)) {
     cache.set(comp, res);
@@ -6145,7 +6781,13 @@ function validateProps(rawProps, props, instance) {
   for (const key in options) {
     let opt = options[key];
     if (opt == null) continue;
-    validateProp(key, resolvedValues[key], opt, true ? shallowReadonly(resolvedValues) : resolvedValues, !camelizePropsKey.includes(key));
+    validateProp(
+      key,
+      resolvedValues[key],
+      opt,
+      true ? shallowReadonly(resolvedValues) : resolvedValues,
+      !camelizePropsKey.includes(key),
+    );
   }
 }
 function validateProp(name, value, prop, props, isAbsent) {
@@ -6160,7 +6802,7 @@ function validateProp(name, value, prop, props, isAbsent) {
   if (type != null && type !== true && !skipCheck) {
     let isValid = false;
     const types = isArray(type) ? type : [
-      type
+      type,
     ];
     const expectedTypes = [];
     for (let i = 0; i < types.length && !isValid; i++) {
@@ -6198,19 +6840,24 @@ function assertType(value, type) {
   }
   return {
     valid,
-    expectedType
+    expectedType,
   };
 }
 function getInvalidTypeMessage(name, value, expectedTypes) {
   if (expectedTypes.length === 0) {
     return `Prop type [] for prop "${name}" won't match anything. Did you mean to use type Array instead?`;
   }
-  let message = `Invalid prop: type check failed for prop "${name}". Expected ${expectedTypes.map(capitalize).join(" | ")}`;
+  let message = `Invalid prop: type check failed for prop "${name}". Expected ${
+    expectedTypes.map(capitalize).join(" | ")
+  }`;
   const expectedType = expectedTypes[0];
   const receivedType = toRawType(value);
   const expectedValue = styleValue(value, expectedType);
   const receivedValue = styleValue(value, receivedType);
-  if (expectedTypes.length === 1 && isExplicable(expectedType) && !isBoolean(expectedType, receivedType)) {
+  if (
+    expectedTypes.length === 1 && isExplicable(expectedType) &&
+    !isBoolean(expectedType, receivedType)
+  ) {
     message += ` with value ${expectedValue}`;
   }
   message += `, got ${receivedType} `;
@@ -6232,7 +6879,7 @@ function isExplicable(type) {
   const explicitTypes = [
     "string",
     "number",
-    "boolean"
+    "boolean",
   ];
   return explicitTypes.some((elem) => type.toLowerCase() === elem);
 }
@@ -6240,16 +6887,19 @@ function isBoolean(...args) {
   return args.some((elem) => elem.toLowerCase() === "boolean");
 }
 var isInternalKey = (key) => key[0] === "_" || key === "$stable";
-var normalizeSlotValue = (value) => isArray(value) ? value.map(normalizeVNode) : [
-  normalizeVNode(value)
-];
+var normalizeSlotValue = (value) =>
+  isArray(value) ? value.map(normalizeVNode) : [
+    normalizeVNode(value),
+  ];
 var normalizeSlot = (key, rawSlot, ctx) => {
   if (rawSlot._n) {
     return rawSlot;
   }
   const normalized = withCtx((...args) => {
     if (currentInstance && (!ctx || ctx.root === currentInstance.root)) {
-      warn$1(`Slot "${key}" invoked outside of the render function: this will not track dependencies used in the slot. Invoke the slot function inside the render function instead.`);
+      warn$1(
+        `Slot "${key}" invoked outside of the render function: this will not track dependencies used in the slot. Invoke the slot function inside the render function instead.`,
+      );
     }
     return normalizeSlotValue(rawSlot(...args));
   }, ctx);
@@ -6265,7 +6915,9 @@ var normalizeObjectSlots = (rawSlots, slots, instance) => {
       slots[key] = normalizeSlot(key, value, ctx);
     } else if (value != null) {
       if (true) {
-        warn$1(`Non-function value encountered for slot "${key}". Prefer function slots for better performance.`);
+        warn$1(
+          `Non-function value encountered for slot "${key}". Prefer function slots for better performance.`,
+        );
       }
       const normalized = normalizeSlotValue(value);
       slots[key] = () => normalized;
@@ -6274,7 +6926,9 @@ var normalizeObjectSlots = (rawSlots, slots, instance) => {
 };
 var normalizeVNodeSlots = (instance, children) => {
   if (!isKeepAlive(instance.vnode) && true) {
-    warn$1(`Non-function value encountered for default slot. Prefer function slots for better performance.`);
+    warn$1(
+      `Non-function value encountered for default slot. Prefer function slots for better performance.`,
+    );
   }
   const normalized = normalizeSlotValue(children);
   instance.slots.default = () => normalized;
@@ -6325,7 +6979,7 @@ var updateSlots = (instance, children, optimized) => {
   } else if (children) {
     normalizeVNodeSlots(instance, children);
     deletionComparisonTarget = {
-      default: 1
+      default: 1,
     };
   }
   if (needDeletionCheck) {
@@ -6387,9 +7041,13 @@ function initFeatureFlags() {
   }
   if (needWarn.length) {
     const multi = needWarn.length > 1;
-    console.warn(`Feature flag${multi ? `s` : ``} ${needWarn.join(", ")} ${multi ? `are` : `is`} not explicitly defined. You are running the esm-bundler build of Vue, which expects these compile-time feature flags to be globally injected via the bundler config in order to get better tree-shaking in the production bundle.
+    console.warn(
+      `Feature flag${multi ? `s` : ``} ${needWarn.join(", ")} ${
+        multi ? `are` : `is`
+      } not explicitly defined. You are running the esm-bundler build of Vue, which expects these compile-time feature flags to be globally injected via the bundler config in order to get better tree-shaking in the production bundle.
 
-For more details, see https://link.vuejs.org/feature-flags.`);
+For more details, see https://link.vuejs.org/feature-flags.`,
+    );
   }
 }
 var queuePostRenderEffect = queueEffectWithSuspense;
@@ -6408,8 +7066,31 @@ function baseCreateRenderer(options, createHydrationFns) {
   if (true) {
     setDevtoolsHook$1(target.__VUE_DEVTOOLS_GLOBAL_HOOK__, target);
   }
-  const { insert: hostInsert, remove: hostRemove, patchProp: hostPatchProp, createElement: hostCreateElement, createText: hostCreateText, createComment: hostCreateComment, setText: hostSetText, setElementText: hostSetElementText, parentNode: hostParentNode, nextSibling: hostNextSibling, setScopeId: hostSetScopeId = NOOP, insertStaticContent: hostInsertStaticContent } = options;
-  const patch = (n1, n2, container, anchor = null, parentComponent = null, parentSuspense = null, namespace = void 0, slotScopeIds = null, optimized = isHmrUpdating ? false : !!n2.dynamicChildren) => {
+  const {
+    insert: hostInsert,
+    remove: hostRemove,
+    patchProp: hostPatchProp,
+    createElement: hostCreateElement,
+    createText: hostCreateText,
+    createComment: hostCreateComment,
+    setText: hostSetText,
+    setElementText: hostSetElementText,
+    parentNode: hostParentNode,
+    nextSibling: hostNextSibling,
+    setScopeId: hostSetScopeId = NOOP,
+    insertStaticContent: hostInsertStaticContent,
+  } = options;
+  const patch = (
+    n1,
+    n2,
+    container,
+    anchor = null,
+    parentComponent = null,
+    parentSuspense = null,
+    namespace = void 0,
+    slotScopeIds = null,
+    optimized = isHmrUpdating ? false : !!n2.dynamicChildren,
+  ) => {
     if (n1 === n2) {
       return;
     }
@@ -6438,17 +7119,69 @@ function baseCreateRenderer(options, createHydrationFns) {
         }
         break;
       case Fragment:
-        processFragment(n1, n2, container, anchor, parentComponent, parentSuspense, namespace, slotScopeIds, optimized);
+        processFragment(
+          n1,
+          n2,
+          container,
+          anchor,
+          parentComponent,
+          parentSuspense,
+          namespace,
+          slotScopeIds,
+          optimized,
+        );
         break;
       default:
         if (shapeFlag & 1) {
-          processElement(n1, n2, container, anchor, parentComponent, parentSuspense, namespace, slotScopeIds, optimized);
+          processElement(
+            n1,
+            n2,
+            container,
+            anchor,
+            parentComponent,
+            parentSuspense,
+            namespace,
+            slotScopeIds,
+            optimized,
+          );
         } else if (shapeFlag & 6) {
-          processComponent(n1, n2, container, anchor, parentComponent, parentSuspense, namespace, slotScopeIds, optimized);
+          processComponent(
+            n1,
+            n2,
+            container,
+            anchor,
+            parentComponent,
+            parentSuspense,
+            namespace,
+            slotScopeIds,
+            optimized,
+          );
         } else if (shapeFlag & 64) {
-          type.process(n1, n2, container, anchor, parentComponent, parentSuspense, namespace, slotScopeIds, optimized, internals);
+          type.process(
+            n1,
+            n2,
+            container,
+            anchor,
+            parentComponent,
+            parentSuspense,
+            namespace,
+            slotScopeIds,
+            optimized,
+            internals,
+          );
         } else if (shapeFlag & 128) {
-          type.process(n1, n2, container, anchor, parentComponent, parentSuspense, namespace, slotScopeIds, optimized, internals);
+          type.process(
+            n1,
+            n2,
+            container,
+            anchor,
+            parentComponent,
+            parentSuspense,
+            namespace,
+            slotScopeIds,
+            optimized,
+            internals,
+          );
         } else if (true) {
           warn$1("Invalid VNode type:", type, `(${typeof type})`);
         }
@@ -6475,7 +7208,14 @@ function baseCreateRenderer(options, createHydrationFns) {
     }
   };
   const mountStaticNode = (n2, container, anchor, namespace) => {
-    [n2.el, n2.anchor] = hostInsertStaticContent(n2.children, container, anchor, namespace, n2.el, n2.anchor);
+    [n2.el, n2.anchor] = hostInsertStaticContent(
+      n2.children,
+      container,
+      anchor,
+      namespace,
+      n2.el,
+      n2.anchor,
+    );
   };
   const patchStaticNode = (n1, n2, container, namespace) => {
     if (n2.children !== n1.children) {
@@ -6505,19 +7245,47 @@ function baseCreateRenderer(options, createHydrationFns) {
     }
     hostRemove(anchor);
   };
-  const processElement = (n1, n2, container, anchor, parentComponent, parentSuspense, namespace, slotScopeIds, optimized) => {
+  const processElement = (
+    n1,
+    n2,
+    container,
+    anchor,
+    parentComponent,
+    parentSuspense,
+    namespace,
+    slotScopeIds,
+    optimized,
+  ) => {
     if (n2.type === "svg") {
       namespace = "svg";
     } else if (n2.type === "math") {
       namespace = "mathml";
     }
     if (n1 == null) {
-      mountElement(n2, container, anchor, parentComponent, parentSuspense, namespace, slotScopeIds, optimized);
+      mountElement(
+        n2,
+        container,
+        anchor,
+        parentComponent,
+        parentSuspense,
+        namespace,
+        slotScopeIds,
+        optimized,
+      );
     } else {
       patchElement(n1, n2, parentComponent, parentSuspense, namespace, slotScopeIds, optimized);
     }
   };
-  const mountElement = (vnode, container, anchor, parentComponent, parentSuspense, namespace, slotScopeIds, optimized) => {
+  const mountElement = (
+    vnode,
+    container,
+    anchor,
+    parentComponent,
+    parentSuspense,
+    namespace,
+    slotScopeIds,
+    optimized,
+  ) => {
     let el;
     let vnodeHook;
     const { props, shapeFlag, transition, dirs } = vnode;
@@ -6525,7 +7293,16 @@ function baseCreateRenderer(options, createHydrationFns) {
     if (shapeFlag & 8) {
       hostSetElementText(el, vnode.children);
     } else if (shapeFlag & 16) {
-      mountChildren(vnode.children, el, null, parentComponent, parentSuspense, resolveChildrenNamespace(vnode, namespace), slotScopeIds, optimized);
+      mountChildren(
+        vnode.children,
+        el,
+        null,
+        parentComponent,
+        parentSuspense,
+        resolveChildrenNamespace(vnode, namespace),
+        slotScopeIds,
+        optimized,
+      );
     }
     if (dirs) {
       invokeDirectiveHook(vnode, null, parentComponent, "created");
@@ -6578,19 +7355,58 @@ function baseCreateRenderer(options, createHydrationFns) {
       if (subTree.patchFlag > 0 && subTree.patchFlag & 2048) {
         subTree = filterSingleRoot(subTree.children) || subTree;
       }
-      if (vnode === subTree || isSuspense(subTree.type) && (subTree.ssContent === vnode || subTree.ssFallback === vnode)) {
+      if (
+        vnode === subTree ||
+        isSuspense(subTree.type) && (subTree.ssContent === vnode || subTree.ssFallback === vnode)
+      ) {
         const parentVNode = parentComponent.vnode;
-        setScopeId(el, parentVNode, parentVNode.scopeId, parentVNode.slotScopeIds, parentComponent.parent);
+        setScopeId(
+          el,
+          parentVNode,
+          parentVNode.scopeId,
+          parentVNode.slotScopeIds,
+          parentComponent.parent,
+        );
       }
     }
   };
-  const mountChildren = (children, container, anchor, parentComponent, parentSuspense, namespace, slotScopeIds, optimized, start = 0) => {
+  const mountChildren = (
+    children,
+    container,
+    anchor,
+    parentComponent,
+    parentSuspense,
+    namespace,
+    slotScopeIds,
+    optimized,
+    start = 0,
+  ) => {
     for (let i = start; i < children.length; i++) {
-      const child = children[i] = optimized ? cloneIfMounted(children[i]) : normalizeVNode(children[i]);
-      patch(null, child, container, anchor, parentComponent, parentSuspense, namespace, slotScopeIds, optimized);
+      const child = children[i] = optimized
+        ? cloneIfMounted(children[i])
+        : normalizeVNode(children[i]);
+      patch(
+        null,
+        child,
+        container,
+        anchor,
+        parentComponent,
+        parentSuspense,
+        namespace,
+        slotScopeIds,
+        optimized,
+      );
     }
   };
-  const patchElement = (n1, n2, parentComponent, parentSuspense, namespace, slotScopeIds, optimized) => {
+  const patchElement = (
+    n1,
+    n2,
+    parentComponent,
+    parentSuspense,
+    namespace,
+    slotScopeIds,
+    optimized,
+  ) => {
     const el = n2.el = n1.el;
     if (true) {
       el.__vnode = n2;
@@ -6613,16 +7429,37 @@ function baseCreateRenderer(options, createHydrationFns) {
       optimized = false;
       dynamicChildren = null;
     }
-    if (oldProps.innerHTML && newProps.innerHTML == null || oldProps.textContent && newProps.textContent == null) {
+    if (
+      oldProps.innerHTML && newProps.innerHTML == null ||
+      oldProps.textContent && newProps.textContent == null
+    ) {
       hostSetElementText(el, "");
     }
     if (dynamicChildren) {
-      patchBlockChildren(n1.dynamicChildren, dynamicChildren, el, parentComponent, parentSuspense, resolveChildrenNamespace(n2, namespace), slotScopeIds);
+      patchBlockChildren(
+        n1.dynamicChildren,
+        dynamicChildren,
+        el,
+        parentComponent,
+        parentSuspense,
+        resolveChildrenNamespace(n2, namespace),
+        slotScopeIds,
+      );
       if (true) {
         traverseStaticChildren(n1, n2);
       }
     } else if (!optimized) {
-      patchChildren(n1, n2, el, null, parentComponent, parentSuspense, resolveChildrenNamespace(n2, namespace), slotScopeIds, false);
+      patchChildren(
+        n1,
+        n2,
+        el,
+        null,
+        parentComponent,
+        parentSuspense,
+        resolveChildrenNamespace(n2, namespace),
+        slotScopeIds,
+        false,
+      );
     }
     if (patchFlag > 0) {
       if (patchFlag & 16) {
@@ -6663,7 +7500,15 @@ function baseCreateRenderer(options, createHydrationFns) {
       }, parentSuspense);
     }
   };
-  const patchBlockChildren = (oldChildren, newChildren, fallbackContainer, parentComponent, parentSuspense, namespace, slotScopeIds) => {
+  const patchBlockChildren = (
+    oldChildren,
+    newChildren,
+    fallbackContainer,
+    parentComponent,
+    parentSuspense,
+    namespace,
+    slotScopeIds,
+  ) => {
     for (let i = 0; i < newChildren.length; i++) {
       const oldVNode = oldChildren[i];
       const newVNode = newChildren[i];
@@ -6671,17 +7516,29 @@ function baseCreateRenderer(options, createHydrationFns) {
         // oldVNode may be an errored async setup() component inside Suspense
         // which will not have a mounted element
         oldVNode.el && // - In the case of a Fragment, we need to provide the actual parent
-        // of the Fragment itself so it can move its children.
-        (oldVNode.type === Fragment || // - In the case of different nodes, there is going to be a replacement
-        // which also requires the correct parent container
-        !isSameVNodeType(oldVNode, newVNode) || // - In the case of a component, it could contain anything.
-        oldVNode.shapeFlag & (6 | 64)) ? hostParentNode(oldVNode.el) : (
-          // In other cases, the parent container is not actually used so we
-          // just pass the block element here to avoid a DOM parentNode call.
-          fallbackContainer
-        )
+          // of the Fragment itself so it can move its children.
+          (oldVNode.type === Fragment || // - In the case of different nodes, there is going to be a replacement
+            // which also requires the correct parent container
+            !isSameVNodeType(oldVNode, newVNode) || // - In the case of a component, it could contain anything.
+            oldVNode.shapeFlag & (6 | 64))
+          ? hostParentNode(oldVNode.el)
+          : (
+            // In other cases, the parent container is not actually used so we
+            // just pass the block element here to avoid a DOM parentNode call.
+            fallbackContainer
+          )
       );
-      patch(oldVNode, newVNode, container, null, parentComponent, parentSuspense, namespace, slotScopeIds, true);
+      patch(
+        oldVNode,
+        newVNode,
+        container,
+        null,
+        parentComponent,
+        parentSuspense,
+        namespace,
+        slotScopeIds,
+        true,
+      );
     }
   };
   const patchProps = (el, oldProps, newProps, parentComponent, namespace) => {
@@ -6706,7 +7563,17 @@ function baseCreateRenderer(options, createHydrationFns) {
       }
     }
   };
-  const processFragment = (n1, n2, container, anchor, parentComponent, parentSuspense, namespace, slotScopeIds, optimized) => {
+  const processFragment = (
+    n1,
+    n2,
+    container,
+    anchor,
+    parentComponent,
+    parentSuspense,
+    namespace,
+    slotScopeIds,
+    optimized,
+  ) => {
     const fragmentStartAnchor = n2.el = n1 ? n1.el : hostCreateText("");
     const fragmentEndAnchor = n2.anchor = n1 ? n1.anchor : hostCreateText("");
     let { patchFlag, dynamicChildren, slotScopeIds: fragmentSlotScopeIds } = n2;
@@ -6719,7 +7586,9 @@ function baseCreateRenderer(options, createHydrationFns) {
       dynamicChildren = null;
     }
     if (fragmentSlotScopeIds) {
-      slotScopeIds = slotScopeIds ? slotScopeIds.concat(fragmentSlotScopeIds) : fragmentSlotScopeIds;
+      slotScopeIds = slotScopeIds
+        ? slotScopeIds.concat(fragmentSlotScopeIds)
+        : fragmentSlotScopeIds;
     }
     if (n1 == null) {
       hostInsert(fragmentStartAnchor, container, anchor);
@@ -6736,13 +7605,23 @@ function baseCreateRenderer(options, createHydrationFns) {
         parentSuspense,
         namespace,
         slotScopeIds,
-        optimized
+        optimized,
       );
     } else {
-      if (patchFlag > 0 && patchFlag & 64 && dynamicChildren && // #2715 the previous fragment could've been a BAILed one as a result
-      // of renderSlot() with no valid children
-      n1.dynamicChildren) {
-        patchBlockChildren(n1.dynamicChildren, dynamicChildren, container, parentComponent, parentSuspense, namespace, slotScopeIds);
+      if (
+        patchFlag > 0 && patchFlag & 64 && dynamicChildren && // #2715 the previous fragment could've been a BAILed one as a result
+        // of renderSlot() with no valid children
+        n1.dynamicChildren
+      ) {
+        patchBlockChildren(
+          n1.dynamicChildren,
+          dynamicChildren,
+          container,
+          parentComponent,
+          parentSuspense,
+          namespace,
+          slotScopeIds,
+        );
         if (true) {
           traverseStaticChildren(n1, n2);
         } else if (
@@ -6755,24 +7634,64 @@ function baseCreateRenderer(options, createHydrationFns) {
           traverseStaticChildren(n1, n2, true);
         }
       } else {
-        patchChildren(n1, n2, container, fragmentEndAnchor, parentComponent, parentSuspense, namespace, slotScopeIds, optimized);
+        patchChildren(
+          n1,
+          n2,
+          container,
+          fragmentEndAnchor,
+          parentComponent,
+          parentSuspense,
+          namespace,
+          slotScopeIds,
+          optimized,
+        );
       }
     }
   };
-  const processComponent = (n1, n2, container, anchor, parentComponent, parentSuspense, namespace, slotScopeIds, optimized) => {
+  const processComponent = (
+    n1,
+    n2,
+    container,
+    anchor,
+    parentComponent,
+    parentSuspense,
+    namespace,
+    slotScopeIds,
+    optimized,
+  ) => {
     n2.slotScopeIds = slotScopeIds;
     if (n1 == null) {
       if (n2.shapeFlag & 512) {
         parentComponent.ctx.activate(n2, container, anchor, namespace, optimized);
       } else {
-        mountComponent(n2, container, anchor, parentComponent, parentSuspense, namespace, optimized);
+        mountComponent(
+          n2,
+          container,
+          anchor,
+          parentComponent,
+          parentSuspense,
+          namespace,
+          optimized,
+        );
       }
     } else {
       updateComponent(n1, n2, optimized);
     }
   };
-  const mountComponent = (initialVNode, container, anchor, parentComponent, parentSuspense, namespace, optimized) => {
-    const instance = initialVNode.component = createComponentInstance(initialVNode, parentComponent, parentSuspense);
+  const mountComponent = (
+    initialVNode,
+    container,
+    anchor,
+    parentComponent,
+    parentSuspense,
+    namespace,
+    optimized,
+  ) => {
+    const instance = initialVNode.component = createComponentInstance(
+      initialVNode,
+      parentComponent,
+      parentSuspense,
+    );
     if (instance.type.__hmrId) {
       registerHMR(instance);
     }
@@ -6800,7 +7719,15 @@ function baseCreateRenderer(options, createHydrationFns) {
         processCommentNode(null, placeholder, container, anchor);
       }
     } else {
-      setupRenderEffect(instance, initialVNode, container, anchor, parentSuspense, namespace, optimized);
+      setupRenderEffect(
+        instance,
+        initialVNode,
+        container,
+        anchor,
+        parentSuspense,
+        namespace,
+        optimized,
+      );
     }
     if (true) {
       popWarningContext();
@@ -6828,7 +7755,15 @@ function baseCreateRenderer(options, createHydrationFns) {
       instance.vnode = n2;
     }
   };
-  const setupRenderEffect = (instance, initialVNode, container, anchor, parentSuspense, namespace, optimized) => {
+  const setupRenderEffect = (
+    instance,
+    initialVNode,
+    container,
+    anchor,
+    parentSuspense,
+    namespace,
+    optimized,
+  ) => {
     const componentUpdateFn = () => {
       if (!instance.isMounted) {
         let vnodeHook;
@@ -6890,9 +7825,15 @@ function baseCreateRenderer(options, createHydrationFns) {
         }
         if (!isAsyncWrapperVNode && (vnodeHook = props && props.onVnodeMounted)) {
           const scopedInitialVNode = initialVNode;
-          queuePostRenderEffect(() => invokeVNodeHook(vnodeHook, parent, scopedInitialVNode), parentSuspense);
+          queuePostRenderEffect(
+            () => invokeVNodeHook(vnodeHook, parent, scopedInitialVNode),
+            parentSuspense,
+          );
         }
-        if (initialVNode.shapeFlag & 256 || parent && isAsyncWrapper(parent.vnode) && parent.vnode.shapeFlag & 256) {
+        if (
+          initialVNode.shapeFlag & 256 ||
+          parent && isAsyncWrapper(parent.vnode) && parent.vnode.shapeFlag & 256
+        ) {
           instance.a && queuePostRenderEffect(instance.a, parentSuspense);
         }
         instance.isMounted = true;
@@ -6957,7 +7898,7 @@ function baseCreateRenderer(options, createHydrationFns) {
           getNextHostNode(prevTree),
           instance,
           parentSuspense,
-          namespace
+          namespace,
         );
         if (true) {
           endMeasure(instance, `patch`);
@@ -6970,7 +7911,10 @@ function baseCreateRenderer(options, createHydrationFns) {
           queuePostRenderEffect(u, parentSuspense);
         }
         if (vnodeHook = next.props && next.props.onVnodeUpdated) {
-          queuePostRenderEffect(() => invokeVNodeHook(vnodeHook, parent, next, vnode), parentSuspense);
+          queuePostRenderEffect(
+            () => invokeVNodeHook(vnodeHook, parent, next, vnode),
+            parentSuspense,
+          );
         }
         if (true) {
           devtoolsComponentUpdated(instance);
@@ -7006,17 +7950,47 @@ function baseCreateRenderer(options, createHydrationFns) {
     flushPreFlushCbs(instance);
     resetTracking();
   };
-  const patchChildren = (n1, n2, container, anchor, parentComponent, parentSuspense, namespace, slotScopeIds, optimized = false) => {
+  const patchChildren = (
+    n1,
+    n2,
+    container,
+    anchor,
+    parentComponent,
+    parentSuspense,
+    namespace,
+    slotScopeIds,
+    optimized = false,
+  ) => {
     const c1 = n1 && n1.children;
     const prevShapeFlag = n1 ? n1.shapeFlag : 0;
     const c2 = n2.children;
     const { patchFlag, shapeFlag } = n2;
     if (patchFlag > 0) {
       if (patchFlag & 128) {
-        patchKeyedChildren(c1, c2, container, anchor, parentComponent, parentSuspense, namespace, slotScopeIds, optimized);
+        patchKeyedChildren(
+          c1,
+          c2,
+          container,
+          anchor,
+          parentComponent,
+          parentSuspense,
+          namespace,
+          slotScopeIds,
+          optimized,
+        );
         return;
       } else if (patchFlag & 256) {
-        patchUnkeyedChildren(c1, c2, container, anchor, parentComponent, parentSuspense, namespace, slotScopeIds, optimized);
+        patchUnkeyedChildren(
+          c1,
+          c2,
+          container,
+          anchor,
+          parentComponent,
+          parentSuspense,
+          namespace,
+          slotScopeIds,
+          optimized,
+        );
         return;
       }
     }
@@ -7030,7 +8004,17 @@ function baseCreateRenderer(options, createHydrationFns) {
     } else {
       if (prevShapeFlag & 16) {
         if (shapeFlag & 16) {
-          patchKeyedChildren(c1, c2, container, anchor, parentComponent, parentSuspense, namespace, slotScopeIds, optimized);
+          patchKeyedChildren(
+            c1,
+            c2,
+            container,
+            anchor,
+            parentComponent,
+            parentSuspense,
+            namespace,
+            slotScopeIds,
+            optimized,
+          );
         } else {
           unmountChildren(c1, parentComponent, parentSuspense, true);
         }
@@ -7039,12 +8023,31 @@ function baseCreateRenderer(options, createHydrationFns) {
           hostSetElementText(container, "");
         }
         if (shapeFlag & 16) {
-          mountChildren(c2, container, anchor, parentComponent, parentSuspense, namespace, slotScopeIds, optimized);
+          mountChildren(
+            c2,
+            container,
+            anchor,
+            parentComponent,
+            parentSuspense,
+            namespace,
+            slotScopeIds,
+            optimized,
+          );
         }
       }
     }
   };
-  const patchUnkeyedChildren = (c1, c2, container, anchor, parentComponent, parentSuspense, namespace, slotScopeIds, optimized) => {
+  const patchUnkeyedChildren = (
+    c1,
+    c2,
+    container,
+    anchor,
+    parentComponent,
+    parentSuspense,
+    namespace,
+    slotScopeIds,
+    optimized,
+  ) => {
     c1 = c1 || EMPTY_ARR;
     c2 = c2 || EMPTY_ARR;
     const oldLength = c1.length;
@@ -7053,15 +8056,45 @@ function baseCreateRenderer(options, createHydrationFns) {
     let i;
     for (i = 0; i < commonLength; i++) {
       const nextChild = c2[i] = optimized ? cloneIfMounted(c2[i]) : normalizeVNode(c2[i]);
-      patch(c1[i], nextChild, container, null, parentComponent, parentSuspense, namespace, slotScopeIds, optimized);
+      patch(
+        c1[i],
+        nextChild,
+        container,
+        null,
+        parentComponent,
+        parentSuspense,
+        namespace,
+        slotScopeIds,
+        optimized,
+      );
     }
     if (oldLength > newLength) {
       unmountChildren(c1, parentComponent, parentSuspense, true, false, commonLength);
     } else {
-      mountChildren(c2, container, anchor, parentComponent, parentSuspense, namespace, slotScopeIds, optimized, commonLength);
+      mountChildren(
+        c2,
+        container,
+        anchor,
+        parentComponent,
+        parentSuspense,
+        namespace,
+        slotScopeIds,
+        optimized,
+        commonLength,
+      );
     }
   };
-  const patchKeyedChildren = (c1, c2, container, parentAnchor, parentComponent, parentSuspense, namespace, slotScopeIds, optimized) => {
+  const patchKeyedChildren = (
+    c1,
+    c2,
+    container,
+    parentAnchor,
+    parentComponent,
+    parentSuspense,
+    namespace,
+    slotScopeIds,
+    optimized,
+  ) => {
     let i = 0;
     const l2 = c2.length;
     let e1 = c1.length - 1;
@@ -7070,7 +8103,17 @@ function baseCreateRenderer(options, createHydrationFns) {
       const n1 = c1[i];
       const n2 = c2[i] = optimized ? cloneIfMounted(c2[i]) : normalizeVNode(c2[i]);
       if (isSameVNodeType(n1, n2)) {
-        patch(n1, n2, container, null, parentComponent, parentSuspense, namespace, slotScopeIds, optimized);
+        patch(
+          n1,
+          n2,
+          container,
+          null,
+          parentComponent,
+          parentSuspense,
+          namespace,
+          slotScopeIds,
+          optimized,
+        );
       } else {
         break;
       }
@@ -7080,7 +8123,17 @@ function baseCreateRenderer(options, createHydrationFns) {
       const n1 = c1[e1];
       const n2 = c2[e2] = optimized ? cloneIfMounted(c2[e2]) : normalizeVNode(c2[e2]);
       if (isSameVNodeType(n1, n2)) {
-        patch(n1, n2, container, null, parentComponent, parentSuspense, namespace, slotScopeIds, optimized);
+        patch(
+          n1,
+          n2,
+          container,
+          null,
+          parentComponent,
+          parentSuspense,
+          namespace,
+          slotScopeIds,
+          optimized,
+        );
       } else {
         break;
       }
@@ -7092,7 +8145,17 @@ function baseCreateRenderer(options, createHydrationFns) {
         const nextPos = e2 + 1;
         const anchor = nextPos < l2 ? c2[nextPos].el : parentAnchor;
         while (i <= e2) {
-          patch(null, c2[i] = optimized ? cloneIfMounted(c2[i]) : normalizeVNode(c2[i]), container, anchor, parentComponent, parentSuspense, namespace, slotScopeIds, optimized);
+          patch(
+            null,
+            c2[i] = optimized ? cloneIfMounted(c2[i]) : normalizeVNode(c2[i]),
+            container,
+            anchor,
+            parentComponent,
+            parentSuspense,
+            namespace,
+            slotScopeIds,
+            optimized,
+          );
           i++;
         }
       }
@@ -7109,7 +8172,11 @@ function baseCreateRenderer(options, createHydrationFns) {
         const nextChild = c2[i] = optimized ? cloneIfMounted(c2[i]) : normalizeVNode(c2[i]);
         if (nextChild.key != null) {
           if (keyToNewIndexMap.has(nextChild.key)) {
-            warn$1(`Duplicate keys found during update:`, JSON.stringify(nextChild.key), `Make sure keys are unique.`);
+            warn$1(
+              `Duplicate keys found during update:`,
+              JSON.stringify(nextChild.key),
+              `Make sure keys are unique.`,
+            );
           }
           keyToNewIndexMap.set(nextChild.key, i);
         }
@@ -7147,7 +8214,17 @@ function baseCreateRenderer(options, createHydrationFns) {
           } else {
             moved = true;
           }
-          patch(prevChild, c2[newIndex], container, null, parentComponent, parentSuspense, namespace, slotScopeIds, optimized);
+          patch(
+            prevChild,
+            c2[newIndex],
+            container,
+            null,
+            parentComponent,
+            parentSuspense,
+            namespace,
+            slotScopeIds,
+            optimized,
+          );
           patched++;
         }
       }
@@ -7158,7 +8235,17 @@ function baseCreateRenderer(options, createHydrationFns) {
         const nextChild = c2[nextIndex];
         const anchor = nextIndex + 1 < l2 ? c2[nextIndex + 1].el : parentAnchor;
         if (newIndexToOldIndexMap[i] === 0) {
-          patch(null, nextChild, container, anchor, parentComponent, parentSuspense, namespace, slotScopeIds, optimized);
+          patch(
+            null,
+            nextChild,
+            container,
+            anchor,
+            parentComponent,
+            parentSuspense,
+            namespace,
+            slotScopeIds,
+            optimized,
+          );
         } else if (moved) {
           if (j < 0 || i !== increasingNewIndexSequence[j]) {
             move(nextChild, container, anchor, 2);
@@ -7221,7 +8308,17 @@ function baseCreateRenderer(options, createHydrationFns) {
     }
   };
   const unmount = (vnode, parentComponent, parentSuspense, doRemove = false, optimized = false) => {
-    const { type, props, ref: ref2, children, dynamicChildren, shapeFlag, patchFlag, dirs, cacheIndex } = vnode;
+    const {
+      type,
+      props,
+      ref: ref2,
+      children,
+      dynamicChildren,
+      shapeFlag,
+      patchFlag,
+      dirs,
+      cacheIndex,
+    } = vnode;
     if (patchFlag === -2) {
       optimized = false;
     }
@@ -7253,13 +8350,15 @@ function baseCreateRenderer(options, createHydrationFns) {
       }
       if (shapeFlag & 64) {
         vnode.type.remove(vnode, parentComponent, parentSuspense, internals, doRemove);
-      } else if (dynamicChildren && // #5154
-      // when v-once is used inside a block, setBlockTracking(-1) marks the
-      // parent block with hasOnce: true
-      // so that it doesn't take the fast path during unmount - otherwise
-      // components nested in v-once are never unmounted.
-      !dynamicChildren.hasOnce && // #1153: fast path should not be taken for non-stable (v-for) fragments
-      (type !== Fragment || patchFlag > 0 && patchFlag & 64)) {
+      } else if (
+        dynamicChildren && // #5154
+        // when v-once is used inside a block, setBlockTracking(-1) marks the
+        // parent block with hasOnce: true
+        // so that it doesn't take the fast path during unmount - otherwise
+        // components nested in v-once are never unmounted.
+        !dynamicChildren.hasOnce && // #1153: fast path should not be taken for non-stable (v-for) fragments
+        (type !== Fragment || patchFlag > 0 && patchFlag & 64)
+      ) {
         unmountChildren(dynamicChildren, parentComponent, parentSuspense, false, true);
       } else if (type === Fragment && patchFlag & (128 | 256) || !optimized && shapeFlag & 16) {
         unmountChildren(children, parentComponent, parentSuspense);
@@ -7268,7 +8367,9 @@ function baseCreateRenderer(options, createHydrationFns) {
         remove2(vnode);
       }
     }
-    if (shouldInvokeVnodeHook && (vnodeHook = props && props.onVnodeUnmounted) || shouldInvokeDirs) {
+    if (
+      shouldInvokeVnodeHook && (vnodeHook = props && props.onVnodeUnmounted) || shouldInvokeDirs
+    ) {
       queuePostRenderEffect(() => {
         vnodeHook && invokeVNodeHook(vnodeHook, parentComponent, vnode);
         shouldInvokeDirs && invokeDirectiveHook(vnode, null, parentComponent, "unmounted");
@@ -7343,7 +8444,11 @@ function baseCreateRenderer(options, createHydrationFns) {
     queuePostRenderEffect(() => {
       instance.isUnmounted = true;
     }, parentSuspense);
-    if (parentSuspense && parentSuspense.pendingBranch && !parentSuspense.isUnmounted && instance.asyncDep && !instance.asyncResolved && instance.suspenseId === parentSuspense.pendingId) {
+    if (
+      parentSuspense && parentSuspense.pendingBranch && !parentSuspense.isUnmounted &&
+      instance.asyncDep && !instance.asyncResolved &&
+      instance.suspenseId === parentSuspense.pendingId
+    ) {
       parentSuspense.deps--;
       if (parentSuspense.deps === 0) {
         parentSuspense.resolve();
@@ -7353,7 +8458,14 @@ function baseCreateRenderer(options, createHydrationFns) {
       devtoolsComponentRemoved(instance);
     }
   };
-  const unmountChildren = (children, parentComponent, parentSuspense, doRemove = false, optimized = false, start = 0) => {
+  const unmountChildren = (
+    children,
+    parentComponent,
+    parentSuspense,
+    doRemove = false,
+    optimized = false,
+    start = 0,
+  ) => {
     for (let i = start; i < children.length; i++) {
       unmount(children[i], parentComponent, parentSuspense, doRemove, optimized);
     }
@@ -7396,7 +8508,7 @@ function baseCreateRenderer(options, createHydrationFns) {
     pc: patchChildren,
     pbc: patchBlockChildren,
     n: getNextHostNode,
-    o: options
+    o: options,
   };
   let hydrate2;
   let hydrateNode;
@@ -7406,11 +8518,15 @@ function baseCreateRenderer(options, createHydrationFns) {
   return {
     render: render2,
     hydrate: hydrate2,
-    createApp: createAppAPI(render2, hydrate2)
+    createApp: createAppAPI(render2, hydrate2),
   };
 }
 function resolveChildrenNamespace({ type, props }, currentNamespace) {
-  return currentNamespace === "svg" && type === "foreignObject" || currentNamespace === "mathml" && type === "annotation-xml" && props && props.encoding && props.encoding.includes("html") ? void 0 : currentNamespace;
+  return currentNamespace === "svg" && type === "foreignObject" ||
+      currentNamespace === "mathml" && type === "annotation-xml" && props && props.encoding &&
+        props.encoding.includes("html")
+    ? void 0
+    : currentNamespace;
 }
 function toggleRecurse({ effect: effect2, job }, allowed) {
   if (allowed) {
@@ -7422,7 +8538,8 @@ function toggleRecurse({ effect: effect2, job }, allowed) {
   }
 }
 function needTransition(parentSuspense, transition) {
-  return (!parentSuspense || parentSuspense && !parentSuspense.pendingBranch) && transition && !transition.persisted;
+  return (!parentSuspense || parentSuspense && !parentSuspense.pendingBranch) && transition &&
+    !transition.persisted;
 }
 function traverseStaticChildren(n1, n2, shallow = false) {
   const ch1 = n1.children;
@@ -7450,7 +8567,7 @@ function traverseStaticChildren(n1, n2, shallow = false) {
 function getSequence(arr) {
   const p2 = arr.slice();
   const result = [
-    0
+    0,
   ];
   let i, j, u, v, c;
   const len = arr.length;
@@ -7509,7 +8626,9 @@ var useSSRContext = () => {
   {
     const ctx = inject(ssrContextKey);
     if (!ctx) {
-      warn$1(`Server rendering context not provided. Make sure to only call useSSRContext() conditionally in the server build.`);
+      warn$1(
+        `Server rendering context not provided. Make sure to only call useSSRContext() conditionally in the server build.`,
+      );
     }
     return ctx;
   }
@@ -7518,22 +8637,36 @@ function watchEffect(effect2, options) {
   return doWatch(effect2, null, options);
 }
 function watchPostEffect(effect2, options) {
-  return doWatch(effect2, null, true ? extend({}, options, {
-    flush: "post"
-  }) : {
-    flush: "post"
-  });
+  return doWatch(
+    effect2,
+    null,
+    true
+      ? extend({}, options, {
+        flush: "post",
+      })
+      : {
+        flush: "post",
+      },
+  );
 }
 function watchSyncEffect(effect2, options) {
-  return doWatch(effect2, null, true ? extend({}, options, {
-    flush: "sync"
-  }) : {
-    flush: "sync"
-  });
+  return doWatch(
+    effect2,
+    null,
+    true
+      ? extend({}, options, {
+        flush: "sync",
+      })
+      : {
+        flush: "sync",
+      },
+  );
 }
 function watch2(source, cb, options) {
   if (!isFunction(cb)) {
-    warn$1(`\`watch(fn, options?)\` signature has been moved to a separate API. Use \`watchEffect(fn, options?)\` instead. \`watch\` now only supports \`watch(source, cb, options?) signature.`);
+    warn$1(
+      `\`watch(fn, options?)\` signature has been moved to a separate API. Use \`watchEffect(fn, options?)\` instead. \`watch\` now only supports \`watch(source, cb, options?) signature.`,
+    );
   }
   return doWatch(source, cb, options);
 }
@@ -7541,13 +8674,19 @@ function doWatch(source, cb, options = EMPTY_OBJ) {
   const { immediate, deep, flush, once } = options;
   if (!cb) {
     if (immediate !== void 0) {
-      warn$1(`watch() "immediate" option is only respected when using the watch(source, callback, options?) signature.`);
+      warn$1(
+        `watch() "immediate" option is only respected when using the watch(source, callback, options?) signature.`,
+      );
     }
     if (deep !== void 0) {
-      warn$1(`watch() "deep" option is only respected when using the watch(source, callback, options?) signature.`);
+      warn$1(
+        `watch() "deep" option is only respected when using the watch(source, callback, options?) signature.`,
+      );
     }
     if (once !== void 0) {
-      warn$1(`watch() "once" option is only respected when using the watch(source, callback, options?) signature.`);
+      warn$1(
+        `watch() "once" option is only respected when using the watch(source, callback, options?) signature.`,
+      );
     }
   }
   const baseWatchOptions = extend({}, options);
@@ -7608,7 +8747,9 @@ function doWatch(source, cb, options = EMPTY_OBJ) {
 }
 function instanceWatch(source, value, options) {
   const publicThis = this.proxy;
-  const getter = isString(source) ? source.includes(".") ? createPathGetter(publicThis, source) : () => publicThis[source] : source.bind(publicThis, publicThis);
+  const getter = isString(source)
+    ? source.includes(".") ? createPathGetter(publicThis, source) : () => publicThis[source]
+    : source.bind(publicThis, publicThis);
   let cb;
   if (isFunction(value)) {
     cb = value;
@@ -7662,22 +8803,32 @@ function useModel(props, name, options = EMPTY_OBJ) {
       },
       set(value) {
         const emittedValue = options.set ? options.set(value) : value;
-        if (!hasChanged(emittedValue, localValue) && !(prevSetValue !== EMPTY_OBJ && hasChanged(value, prevSetValue))) {
+        if (
+          !hasChanged(emittedValue, localValue) &&
+          !(prevSetValue !== EMPTY_OBJ && hasChanged(value, prevSetValue))
+        ) {
           return;
         }
         const rawProps = i.vnode.props;
-        if (!(rawProps && // check if parent has passed v-model
-        (name in rawProps || camelizedName in rawProps || hyphenatedName in rawProps) && (`onUpdate:${name}` in rawProps || `onUpdate:${camelizedName}` in rawProps || `onUpdate:${hyphenatedName}` in rawProps))) {
+        if (
+          !(rawProps && // check if parent has passed v-model
+            (name in rawProps || camelizedName in rawProps || hyphenatedName in rawProps) &&
+            (`onUpdate:${name}` in rawProps || `onUpdate:${camelizedName}` in rawProps ||
+              `onUpdate:${hyphenatedName}` in rawProps))
+        ) {
           localValue = value;
           trigger2();
         }
         i.emit(`update:${name}`, emittedValue);
-        if (hasChanged(value, emittedValue) && hasChanged(value, prevSetValue) && !hasChanged(emittedValue, prevEmittedValue)) {
+        if (
+          hasChanged(value, emittedValue) && hasChanged(value, prevSetValue) &&
+          !hasChanged(emittedValue, prevEmittedValue)
+        ) {
           trigger2();
         }
         prevSetValue = value;
         prevEmittedValue = emittedValue;
-      }
+      },
     };
   });
   res[Symbol.iterator] = () => {
@@ -7687,20 +8838,23 @@ function useModel(props, name, options = EMPTY_OBJ) {
         if (i2 < 2) {
           return {
             value: i2++ ? modifiers || EMPTY_OBJ : res,
-            done: false
+            done: false,
           };
         } else {
           return {
-            done: true
+            done: true,
           };
         }
-      }
+      },
     };
   };
   return res;
 }
 var getModelModifiers = (props, modelName) => {
-  return modelName === "modelValue" || modelName === "model-value" ? props.modelModifiers : props[`${modelName}Modifiers`] || props[`${camelize(modelName)}Modifiers`] || props[`${hyphenate(modelName)}Modifiers`];
+  return modelName === "modelValue" || modelName === "model-value"
+    ? props.modelModifiers
+    : props[`${modelName}Modifiers`] || props[`${camelize(modelName)}Modifiers`] ||
+      props[`${hyphenate(modelName)}Modifiers`];
 };
 function emit(instance, event, ...rawArgs) {
   if (instance.isUnmounted) return;
@@ -7710,7 +8864,11 @@ function emit(instance, event, ...rawArgs) {
     if (emitsOptions) {
       if (!(event in emitsOptions) && true) {
         if (!propsOptions || !(toHandlerKey(camelize(event)) in propsOptions)) {
-          warn$1(`Component emitted event "${event}" but it is neither declared in the emits option nor as an "${toHandlerKey(camelize(event))}" prop.`);
+          warn$1(
+            `Component emitted event "${event}" but it is neither declared in the emits option nor as an "${
+              toHandlerKey(camelize(event))
+            }" prop.`,
+          );
         }
       } else {
         const validator = emitsOptions[event];
@@ -7740,12 +8898,18 @@ function emit(instance, event, ...rawArgs) {
   if (true) {
     const lowerCaseEvent = event.toLowerCase();
     if (lowerCaseEvent !== event && props[toHandlerKey(lowerCaseEvent)]) {
-      warn$1(`Event "${lowerCaseEvent}" is emitted in component ${formatComponentName(instance, instance.type)} but the handler is registered for "${event}". Note that HTML attributes are case-insensitive and you cannot use v-on to listen to camelCase events when using in-DOM templates. You should probably use "${hyphenate(event)}" instead of "${event}".`);
+      warn$1(
+        `Event "${lowerCaseEvent}" is emitted in component ${
+          formatComponentName(instance, instance.type)
+        } but the handler is registered for "${event}". Note that HTML attributes are case-insensitive and you cannot use v-on to listen to camelCase events when using in-DOM templates. You should probably use "${
+          hyphenate(event)
+        }" instead of "${event}".`,
+      );
     }
   }
   let handlerName;
   let handler = props[handlerName = toHandlerKey(event)] || // also try camelCase event handler (#2249)
-  props[handlerName = toHandlerKey(camelize(event))];
+    props[handlerName = toHandlerKey(camelize(event))];
   if (!handler && isModelListener2) {
     handler = props[handlerName = toHandlerKey(hyphenate(event))];
   }
@@ -7811,14 +8975,31 @@ function isEmitListener(options, key) {
     return false;
   }
   key = key.slice(2).replace(/Once$/, "");
-  return hasOwn(options, key[0].toLowerCase() + key.slice(1)) || hasOwn(options, hyphenate(key)) || hasOwn(options, key);
+  return hasOwn(options, key[0].toLowerCase() + key.slice(1)) || hasOwn(options, hyphenate(key)) ||
+    hasOwn(options, key);
 }
 var accessedAttrs = false;
 function markAttrsAccessed() {
   accessedAttrs = true;
 }
 function renderComponentRoot(instance) {
-  const { type: Component, vnode, proxy, withProxy, propsOptions: [propsOptions], slots, attrs, emit: emit2, render: render2, renderCache, props, data: data3, setupState, ctx, inheritAttrs } = instance;
+  const {
+    type: Component,
+    vnode,
+    proxy,
+    withProxy,
+    propsOptions: [propsOptions],
+    slots,
+    attrs,
+    emit: emit2,
+    render: render2,
+    renderCache,
+    props,
+    data: data3,
+    setupState,
+    ctx,
+    inheritAttrs,
+  } = instance;
   const prev = setCurrentRenderingInstance(instance);
   let result;
   let fallthroughAttrs;
@@ -7828,31 +9009,54 @@ function renderComponentRoot(instance) {
   try {
     if (vnode.shapeFlag & 4) {
       const proxyToUse = withProxy || proxy;
-      const thisProxy = setupState.__isScriptSetup ? new Proxy(proxyToUse, {
-        get(target, key, receiver) {
-          warn$1(`Property '${String(key)}' was accessed via 'this'. Avoid using 'this' in templates.`);
-          return Reflect.get(target, key, receiver);
-        }
-      }) : proxyToUse;
-      result = normalizeVNode(render2.call(thisProxy, proxyToUse, renderCache, true ? shallowReadonly(props) : props, setupState, data3, ctx));
+      const thisProxy = setupState.__isScriptSetup
+        ? new Proxy(proxyToUse, {
+          get(target, key, receiver) {
+            warn$1(
+              `Property '${String(key)}' was accessed via 'this'. Avoid using 'this' in templates.`,
+            );
+            return Reflect.get(target, key, receiver);
+          },
+        })
+        : proxyToUse;
+      result = normalizeVNode(
+        render2.call(
+          thisProxy,
+          proxyToUse,
+          renderCache,
+          true ? shallowReadonly(props) : props,
+          setupState,
+          data3,
+          ctx,
+        ),
+      );
       fallthroughAttrs = attrs;
     } else {
       const render22 = Component;
       if (attrs === props) {
         markAttrsAccessed();
       }
-      result = normalizeVNode(render22.length > 1 ? render22(true ? shallowReadonly(props) : props, true ? {
-        get attrs() {
-          markAttrsAccessed();
-          return shallowReadonly(attrs);
-        },
-        slots,
-        emit: emit2
-      } : {
-        attrs,
-        slots,
-        emit: emit2
-      }) : render22(true ? shallowReadonly(props) : props, null));
+      result = normalizeVNode(
+        render22.length > 1
+          ? render22(
+            true ? shallowReadonly(props) : props,
+            true
+              ? {
+                get attrs() {
+                  markAttrsAccessed();
+                  return shallowReadonly(attrs);
+                },
+                slots,
+                emit: emit2,
+              }
+              : {
+                attrs,
+                slots,
+                emit: emit2,
+              },
+          )
+          : render22(true ? shallowReadonly(props) : props, null),
+      );
       fallthroughAttrs = Component.props ? attrs : getFunctionalFallthrough(attrs);
     }
   } catch (err) {
@@ -7889,24 +9093,36 @@ function renderComponentRoot(instance) {
           }
         }
         if (extraAttrs.length) {
-          warn$1(`Extraneous non-props attributes (${extraAttrs.join(", ")}) were passed to component but could not be automatically inherited because component renders fragment or text or teleport root nodes.`);
+          warn$1(
+            `Extraneous non-props attributes (${
+              extraAttrs.join(", ")
+            }) were passed to component but could not be automatically inherited because component renders fragment or text or teleport root nodes.`,
+          );
         }
         if (eventAttrs.length) {
-          warn$1(`Extraneous non-emits event listeners (${eventAttrs.join(", ")}) were passed to component but could not be automatically inherited because component renders fragment or text root nodes. If the listener is intended to be a component custom event listener only, declare it using the "emits" option.`);
+          warn$1(
+            `Extraneous non-emits event listeners (${
+              eventAttrs.join(", ")
+            }) were passed to component but could not be automatically inherited because component renders fragment or text root nodes. If the listener is intended to be a component custom event listener only, declare it using the "emits" option.`,
+          );
         }
       }
     }
   }
   if (vnode.dirs) {
     if (!isElementRoot(root)) {
-      warn$1(`Runtime directive used on component with non-element root node. The directives will not function as intended.`);
+      warn$1(
+        `Runtime directive used on component with non-element root node. The directives will not function as intended.`,
+      );
     }
     root = cloneVNode(root, null, false, true);
     root.dirs = root.dirs ? root.dirs.concat(vnode.dirs) : vnode.dirs;
   }
   if (vnode.transition) {
     if (!isElementRoot(root)) {
-      warn$1(`Component inside <Transition> renders non-element root node that cannot be animated.`);
+      warn$1(
+        `Component inside <Transition> renders non-element root node that cannot be animated.`,
+      );
     }
     setTransitionHooks(root, vnode.transition);
   }
@@ -7925,7 +9141,7 @@ var getChildRoot = (vnode) => {
   if (!childRoot) {
     return [
       vnode,
-      void 0
+      void 0,
     ];
   } else if (childRoot.patchFlag > 0 && childRoot.patchFlag & 2048) {
     return getChildRoot(childRoot);
@@ -7940,14 +9156,14 @@ var getChildRoot = (vnode) => {
       } else if (updatedRoot.patchFlag > 0) {
         vnode.dynamicChildren = [
           ...dynamicChildren,
-          updatedRoot
+          updatedRoot,
         ];
       }
     }
   };
   return [
     normalizeVNode(childRoot),
-    setRoot
+    setRoot,
   ];
 };
 function filterSingleRoot(children, recurse = true) {
@@ -8075,9 +9291,30 @@ var SuspenseImpl = {
   // on a vnode's type and calls the `process` method, passing in renderer
   // internals.
   __isSuspense: true,
-  process(n1, n2, container, anchor, parentComponent, parentSuspense, namespace, slotScopeIds, optimized, rendererInternals) {
+  process(
+    n1,
+    n2,
+    container,
+    anchor,
+    parentComponent,
+    parentSuspense,
+    namespace,
+    slotScopeIds,
+    optimized,
+    rendererInternals,
+  ) {
     if (n1 == null) {
-      mountSuspense(n2, container, anchor, parentComponent, parentSuspense, namespace, slotScopeIds, optimized, rendererInternals);
+      mountSuspense(
+        n2,
+        container,
+        anchor,
+        parentComponent,
+        parentSuspense,
+        namespace,
+        slotScopeIds,
+        optimized,
+        rendererInternals,
+      );
     } else {
       if (parentSuspense && parentSuspense.deps > 0 && !n1.suspense.isInFallback) {
         n2.suspense = n1.suspense;
@@ -8085,11 +9322,21 @@ var SuspenseImpl = {
         n2.el = n1.el;
         return;
       }
-      patchSuspense(n1, n2, container, anchor, parentComponent, namespace, slotScopeIds, optimized, rendererInternals);
+      patchSuspense(
+        n1,
+        n2,
+        container,
+        anchor,
+        parentComponent,
+        namespace,
+        slotScopeIds,
+        optimized,
+        rendererInternals,
+      );
     }
   },
   hydrate: hydrateSuspense,
-  normalize: normalizeSuspenseChildren
+  normalize: normalizeSuspenseChildren,
 };
 var Suspense = SuspenseImpl;
 function triggerEvent(vnode, name) {
@@ -8098,11 +9345,41 @@ function triggerEvent(vnode, name) {
     eventListener();
   }
 }
-function mountSuspense(vnode, container, anchor, parentComponent, parentSuspense, namespace, slotScopeIds, optimized, rendererInternals) {
+function mountSuspense(
+  vnode,
+  container,
+  anchor,
+  parentComponent,
+  parentSuspense,
+  namespace,
+  slotScopeIds,
+  optimized,
+  rendererInternals,
+) {
   const { p: patch, o: { createElement } } = rendererInternals;
   const hiddenContainer = createElement("div");
-  const suspense = vnode.suspense = createSuspenseBoundary(vnode, parentSuspense, parentComponent, container, hiddenContainer, anchor, namespace, slotScopeIds, optimized, rendererInternals);
-  patch(null, suspense.pendingBranch = vnode.ssContent, hiddenContainer, null, parentComponent, suspense, namespace, slotScopeIds);
+  const suspense = vnode.suspense = createSuspenseBoundary(
+    vnode,
+    parentSuspense,
+    parentComponent,
+    container,
+    hiddenContainer,
+    anchor,
+    namespace,
+    slotScopeIds,
+    optimized,
+    rendererInternals,
+  );
+  patch(
+    null,
+    suspense.pendingBranch = vnode.ssContent,
+    hiddenContainer,
+    null,
+    parentComponent,
+    suspense,
+    namespace,
+    slotScopeIds,
+  );
   if (suspense.deps > 0) {
     triggerEvent(vnode, "onPending");
     triggerEvent(vnode, "onFallback");
@@ -8115,14 +9392,24 @@ function mountSuspense(vnode, container, anchor, parentComponent, parentSuspense
       null,
       // fallback tree will not have suspense context
       namespace,
-      slotScopeIds
+      slotScopeIds,
     );
     setActiveBranch(suspense, vnode.ssFallback);
   } else {
     suspense.resolve(false, true);
   }
 }
-function patchSuspense(n1, n2, container, anchor, parentComponent, namespace, slotScopeIds, optimized, { p: patch, um: unmount, o: { createElement } }) {
+function patchSuspense(
+  n1,
+  n2,
+  container,
+  anchor,
+  parentComponent,
+  namespace,
+  slotScopeIds,
+  optimized,
+  { p: patch, um: unmount, o: { createElement } },
+) {
   const suspense = n2.suspense = n1.suspense;
   suspense.vnode = n2;
   n2.el = n1.el;
@@ -8132,7 +9419,17 @@ function patchSuspense(n1, n2, container, anchor, parentComponent, namespace, sl
   if (pendingBranch) {
     suspense.pendingBranch = newBranch;
     if (isSameVNodeType(newBranch, pendingBranch)) {
-      patch(pendingBranch, newBranch, suspense.hiddenContainer, null, parentComponent, suspense, namespace, slotScopeIds, optimized);
+      patch(
+        pendingBranch,
+        newBranch,
+        suspense.hiddenContainer,
+        null,
+        parentComponent,
+        suspense,
+        namespace,
+        slotScopeIds,
+        optimized,
+      );
       if (suspense.deps <= 0) {
         suspense.resolve();
       } else if (isInFallback) {
@@ -8147,7 +9444,7 @@ function patchSuspense(n1, n2, container, anchor, parentComponent, namespace, sl
             // fallback tree will not have suspense context
             namespace,
             slotScopeIds,
-            optimized
+            optimized,
           );
           setActiveBranch(suspense, newFallback);
         }
@@ -8164,7 +9461,17 @@ function patchSuspense(n1, n2, container, anchor, parentComponent, namespace, sl
       suspense.effects.length = 0;
       suspense.hiddenContainer = createElement("div");
       if (isInFallback) {
-        patch(null, newBranch, suspense.hiddenContainer, null, parentComponent, suspense, namespace, slotScopeIds, optimized);
+        patch(
+          null,
+          newBranch,
+          suspense.hiddenContainer,
+          null,
+          parentComponent,
+          suspense,
+          namespace,
+          slotScopeIds,
+          optimized,
+        );
         if (suspense.deps <= 0) {
           suspense.resolve();
         } else {
@@ -8178,15 +9485,35 @@ function patchSuspense(n1, n2, container, anchor, parentComponent, namespace, sl
             // fallback tree will not have suspense context
             namespace,
             slotScopeIds,
-            optimized
+            optimized,
           );
           setActiveBranch(suspense, newFallback);
         }
       } else if (activeBranch && isSameVNodeType(newBranch, activeBranch)) {
-        patch(activeBranch, newBranch, container, anchor, parentComponent, suspense, namespace, slotScopeIds, optimized);
+        patch(
+          activeBranch,
+          newBranch,
+          container,
+          anchor,
+          parentComponent,
+          suspense,
+          namespace,
+          slotScopeIds,
+          optimized,
+        );
         suspense.resolve(true);
       } else {
-        patch(null, newBranch, suspense.hiddenContainer, null, parentComponent, suspense, namespace, slotScopeIds, optimized);
+        patch(
+          null,
+          newBranch,
+          suspense.hiddenContainer,
+          null,
+          parentComponent,
+          suspense,
+          namespace,
+          slotScopeIds,
+          optimized,
+        );
         if (suspense.deps <= 0) {
           suspense.resolve();
         }
@@ -8194,7 +9521,17 @@ function patchSuspense(n1, n2, container, anchor, parentComponent, namespace, sl
     }
   } else {
     if (activeBranch && isSameVNodeType(newBranch, activeBranch)) {
-      patch(activeBranch, newBranch, container, anchor, parentComponent, suspense, namespace, slotScopeIds, optimized);
+      patch(
+        activeBranch,
+        newBranch,
+        container,
+        anchor,
+        parentComponent,
+        suspense,
+        namespace,
+        slotScopeIds,
+        optimized,
+      );
       setActiveBranch(suspense, newBranch);
     } else {
       triggerEvent(n2, "onPending");
@@ -8204,7 +9541,17 @@ function patchSuspense(n1, n2, container, anchor, parentComponent, namespace, sl
       } else {
         suspense.pendingId = suspenseId++;
       }
-      patch(null, newBranch, suspense.hiddenContainer, null, parentComponent, suspense, namespace, slotScopeIds, optimized);
+      patch(
+        null,
+        newBranch,
+        suspense.hiddenContainer,
+        null,
+        parentComponent,
+        suspense,
+        namespace,
+        slotScopeIds,
+        optimized,
+      );
       if (suspense.deps <= 0) {
         suspense.resolve();
       } else {
@@ -8223,12 +9570,27 @@ function patchSuspense(n1, n2, container, anchor, parentComponent, namespace, sl
   }
 }
 var hasWarned = false;
-function createSuspenseBoundary(vnode, parentSuspense, parentComponent, container, hiddenContainer, anchor, namespace, slotScopeIds, optimized, rendererInternals, isHydrating = false) {
+function createSuspenseBoundary(
+  vnode,
+  parentSuspense,
+  parentComponent,
+  container,
+  hiddenContainer,
+  anchor,
+  namespace,
+  slotScopeIds,
+  optimized,
+  rendererInternals,
+  isHydrating = false,
+) {
   if (!hasWarned) {
     hasWarned = true;
-    console[console.info ? "info" : "log"](`<Suspense> is an experimental feature and its API will likely change.`);
+    console[console.info ? "info" : "log"](
+      `<Suspense> is an experimental feature and its API will likely change.`,
+    );
   }
-  const { p: patch, m: move, um: unmount, n: next, o: { parentNode, remove: remove2 } } = rendererInternals;
+  const { p: patch, m: move, um: unmount, n: next, o: { parentNode, remove: remove2 } } =
+    rendererInternals;
   let parentSuspenseId;
   const isSuspensible = isVNodeSuspensible(vnode);
   if (isSuspensible) {
@@ -8264,19 +9626,35 @@ function createSuspenseBoundary(vnode, parentSuspense, parentComponent, containe
           throw new Error(`suspense.resolve() is called without a pending branch.`);
         }
         if (suspense.isUnmounted) {
-          throw new Error(`suspense.resolve() is called on an already unmounted suspense boundary.`);
+          throw new Error(
+            `suspense.resolve() is called on an already unmounted suspense boundary.`,
+          );
         }
       }
-      const { vnode: vnode2, activeBranch, pendingBranch, pendingId, effects, parentComponent: parentComponent2, container: container2 } = suspense;
+      const {
+        vnode: vnode2,
+        activeBranch,
+        pendingBranch,
+        pendingId,
+        effects,
+        parentComponent: parentComponent2,
+        container: container2,
+      } = suspense;
       let delayEnter = false;
       if (suspense.isHydrating) {
         suspense.isHydrating = false;
       } else if (!resume) {
-        delayEnter = activeBranch && pendingBranch.transition && pendingBranch.transition.mode === "out-in";
+        delayEnter = activeBranch && pendingBranch.transition &&
+          pendingBranch.transition.mode === "out-in";
         if (delayEnter) {
           activeBranch.transition.afterLeave = () => {
             if (pendingId === suspense.pendingId) {
-              move(pendingBranch, container2, anchor === initialAnchor ? next(activeBranch) : anchor, 0);
+              move(
+                pendingBranch,
+                container2,
+                anchor === initialAnchor ? next(activeBranch) : anchor,
+                0,
+              );
               queuePostFlushCb(effects);
             }
           };
@@ -8309,7 +9687,10 @@ function createSuspenseBoundary(vnode, parentSuspense, parentComponent, containe
       }
       suspense.effects = [];
       if (isSuspensible) {
-        if (parentSuspense && parentSuspense.pendingBranch && parentSuspenseId === parentSuspense.pendingId) {
+        if (
+          parentSuspense && parentSuspense.pendingBranch &&
+          parentSuspenseId === parentSuspense.pendingId
+        ) {
           parentSuspense.deps--;
           if (parentSuspense.deps === 0 && !sync) {
             parentSuspense.resolve();
@@ -8322,7 +9703,13 @@ function createSuspenseBoundary(vnode, parentSuspense, parentComponent, containe
       if (!suspense.pendingBranch) {
         return;
       }
-      const { vnode: vnode2, activeBranch, parentComponent: parentComponent2, container: container2, namespace: namespace2 } = suspense;
+      const {
+        vnode: vnode2,
+        activeBranch,
+        parentComponent: parentComponent2,
+        container: container2,
+        namespace: namespace2,
+      } = suspense;
       triggerEvent(vnode2, "onFallback");
       const anchor2 = next(activeBranch);
       const mountFallback = () => {
@@ -8339,7 +9726,7 @@ function createSuspenseBoundary(vnode, parentSuspense, parentComponent, containe
           // fallback tree will not have suspense context
           namespace2,
           slotScopeIds,
-          optimized
+          optimized,
         );
         setActiveBranch(suspense, fallbackVNode);
       };
@@ -8353,7 +9740,7 @@ function createSuspenseBoundary(vnode, parentSuspense, parentComponent, containe
         parentComponent2,
         null,
         // no suspense so unmount hooks fire now
-        true
+        true,
       );
       if (!delayEnter) {
         mountFallback();
@@ -8375,7 +9762,9 @@ function createSuspenseBoundary(vnode, parentSuspense, parentComponent, containe
       instance.asyncDep.catch((err) => {
         handleError(err, instance, 0);
       }).then((asyncSetupResult) => {
-        if (instance.isUnmounted || suspense.isUnmounted || suspense.pendingId !== instance.suspenseId) {
+        if (
+          instance.isUnmounted || suspense.isUnmounted || suspense.pendingId !== instance.suspenseId
+        ) {
           return;
         }
         instance.asyncResolved = true;
@@ -8400,7 +9789,7 @@ function createSuspenseBoundary(vnode, parentSuspense, parentComponent, containe
           hydratedEl ? null : next(instance.subTree),
           suspense,
           namespace,
-          optimized2
+          optimized2,
         );
         if (placeholder) {
           remove2(placeholder);
@@ -8422,11 +9811,21 @@ function createSuspenseBoundary(vnode, parentSuspense, parentComponent, containe
       if (suspense.pendingBranch) {
         unmount(suspense.pendingBranch, parentComponent, parentSuspense2, doRemove);
       }
-    }
+    },
   };
   return suspense;
 }
-function hydrateSuspense(node, vnode, parentComponent, parentSuspense, namespace, slotScopeIds, optimized, rendererInternals, hydrateNode) {
+function hydrateSuspense(
+  node,
+  vnode,
+  parentComponent,
+  parentSuspense,
+  namespace,
+  slotScopeIds,
+  optimized,
+  rendererInternals,
+  hydrateNode,
+) {
   const suspense = vnode.suspense = createSuspenseBoundary(
     vnode,
     parentSuspense,
@@ -8439,9 +9838,16 @@ function hydrateSuspense(node, vnode, parentComponent, parentSuspense, namespace
     slotScopeIds,
     optimized,
     rendererInternals,
-    true
+    true,
   );
-  const result = hydrateNode(node, suspense.pendingBranch = vnode.ssContent, parentComponent, suspense, slotScopeIds, optimized);
+  const result = hydrateNode(
+    node,
+    suspense.pendingBranch = vnode.ssContent,
+    parentComponent,
+    suspense,
+    slotScopeIds,
+    optimized,
+  );
   if (suspense.deps === 0) {
     suspense.resolve(false, true);
   }
@@ -8451,7 +9857,9 @@ function normalizeSuspenseChildren(vnode) {
   const { shapeFlag, children } = vnode;
   const isSlotChildren = shapeFlag & 32;
   vnode.ssContent = normalizeSuspenseSlot(isSlotChildren ? children.default : children);
-  vnode.ssFallback = isSlotChildren ? normalizeSuspenseSlot(children.fallback) : createVNode(Comment);
+  vnode.ssFallback = isSlotChildren
+    ? normalizeSuspenseSlot(children.fallback)
+    : createVNode(Comment);
 }
 function normalizeSuspenseSlot(s) {
   let block;
@@ -8539,7 +9947,9 @@ function setupBlock(vnode) {
   return vnode;
 }
 function createElementBlock(type, props, children, patchFlag, dynamicProps, shapeFlag) {
-  return setupBlock(createBaseVNode(type, props, children, patchFlag, dynamicProps, shapeFlag, true));
+  return setupBlock(
+    createBaseVNode(type, props, children, patchFlag, dynamicProps, shapeFlag, true),
+  );
 }
 function createBlock(type, props, children, patchFlag, dynamicProps) {
   return setupBlock(createVNode(type, props, children, patchFlag, dynamicProps, true));
@@ -8563,21 +9973,36 @@ function transformVNodeArgs(transformer) {
   vnodeArgsTransformer = transformer;
 }
 var createVNodeWithArgsTransform = (...args) => {
-  return _createVNode(...vnodeArgsTransformer ? vnodeArgsTransformer(args, currentRenderingInstance) : args);
+  return _createVNode(
+    ...vnodeArgsTransformer ? vnodeArgsTransformer(args, currentRenderingInstance) : args,
+  );
 };
 var normalizeKey = ({ key }) => key != null ? key : null;
 var normalizeRef = ({ ref: ref2, ref_key, ref_for }) => {
   if (typeof ref2 === "number") {
     ref2 = "" + ref2;
   }
-  return ref2 != null ? isString(ref2) || isRef2(ref2) || isFunction(ref2) ? {
-    i: currentRenderingInstance,
-    r: ref2,
-    k: ref_key,
-    f: !!ref_for
-  } : ref2 : null;
+  return ref2 != null
+    ? isString(ref2) || isRef2(ref2) || isFunction(ref2)
+      ? {
+        i: currentRenderingInstance,
+        r: ref2,
+        k: ref_key,
+        f: !!ref_for,
+      }
+      : ref2
+    : null;
 };
-function createBaseVNode(type, props = null, children = null, patchFlag = 0, dynamicProps = null, shapeFlag = type === Fragment ? 0 : 1, isBlockNode = false, needFullChildrenNormalization = false) {
+function createBaseVNode(
+  type,
+  props = null,
+  children = null,
+  patchFlag = 0,
+  dynamicProps = null,
+  shapeFlag = type === Fragment ? 0 : 1,
+  isBlockNode = false,
+  needFullChildrenNormalization = false,
+) {
   const vnode = {
     __v_isVNode: true,
     __v_skip: true,
@@ -8605,7 +10030,7 @@ function createBaseVNode(type, props = null, children = null, patchFlag = 0, dyn
     dynamicProps,
     dynamicChildren: null,
     appContext: null,
-    ctx: currentRenderingInstance
+    ctx: currentRenderingInstance,
   };
   if (needFullChildrenNormalization) {
     normalizeChildren(vnode, children);
@@ -8618,21 +10043,30 @@ function createBaseVNode(type, props = null, children = null, patchFlag = 0, dyn
   if (vnode.key !== vnode.key) {
     warn$1(`VNode created with invalid key (NaN). VNode type:`, vnode.type);
   }
-  if (isBlockTreeEnabled > 0 && // avoid a block node from tracking itself
-  !isBlockNode && // has current parent block
-  currentBlock && // presence of a patch flag indicates this node needs patching on updates.
-  // component nodes also should always be patched, because even if the
-  // component doesn't need to update, it needs to persist the instance on to
-  // the next vnode so that it can be properly unmounted later.
-  (vnode.patchFlag > 0 || shapeFlag & 6) && // the EVENTS flag is only for hydration and if it is the only flag, the
-  // vnode should not be considered dynamic due to handler caching.
-  vnode.patchFlag !== 32) {
+  if (
+    isBlockTreeEnabled > 0 && // avoid a block node from tracking itself
+    !isBlockNode && // has current parent block
+    currentBlock && // presence of a patch flag indicates this node needs patching on updates.
+    // component nodes also should always be patched, because even if the
+    // component doesn't need to update, it needs to persist the instance on to
+    // the next vnode so that it can be properly unmounted later.
+    (vnode.patchFlag > 0 || shapeFlag & 6) && // the EVENTS flag is only for hydration and if it is the only flag, the
+    // vnode should not be considered dynamic due to handler caching.
+    vnode.patchFlag !== 32
+  ) {
     currentBlock.push(vnode);
   }
   return vnode;
 }
 var createVNode = true ? createVNodeWithArgsTransform : _createVNode;
-function _createVNode(type, props = null, children = null, patchFlag = 0, dynamicProps = null, isBlockNode = false) {
+function _createVNode(
+  type,
+  props = null,
+  children = null,
+  patchFlag = 0,
+  dynamicProps = null,
+  isBlockNode = false,
+) {
   if (!type || type === NULL_DYNAMIC_COMPONENT) {
     if (!type) {
       warn$1(`Invalid vnode type when creating vnode: ${type}.`);
@@ -8670,13 +10104,36 @@ function _createVNode(type, props = null, children = null, patchFlag = 0, dynami
       props.style = normalizeStyle(style);
     }
   }
-  const shapeFlag = isString(type) ? 1 : isSuspense(type) ? 128 : isTeleport(type) ? 64 : isObject(type) ? 4 : isFunction(type) ? 2 : 0;
+  const shapeFlag = isString(type)
+    ? 1
+    : isSuspense(type)
+    ? 128
+    : isTeleport(type)
+    ? 64
+    : isObject(type)
+    ? 4
+    : isFunction(type)
+    ? 2
+    : 0;
   if (shapeFlag & 4 && isProxy(type)) {
     type = toRaw(type);
-    warn$1(`Vue received a Component that was made a reactive object. This can lead to unnecessary performance overhead and should be avoided by marking the component with \`markRaw\` or using \`shallowRef\` instead of \`ref\`.`, `
-Component that was made reactive: `, type);
+    warn$1(
+      `Vue received a Component that was made a reactive object. This can lead to unnecessary performance overhead and should be avoided by marking the component with \`markRaw\` or using \`shallowRef\` instead of \`ref\`.`,
+      `
+Component that was made reactive: `,
+      type,
+    );
   }
-  return createBaseVNode(type, props, children, patchFlag, dynamicProps, shapeFlag, isBlockNode, true);
+  return createBaseVNode(
+    type,
+    props,
+    children,
+    patchFlag,
+    dynamicProps,
+    shapeFlag,
+    isBlockNode,
+    true,
+  );
 }
 function guardReactiveProps(props) {
   if (!props) return null;
@@ -8691,15 +10148,19 @@ function cloneVNode(vnode, extraProps, mergeRef = false, cloneTransition = false
     type: vnode.type,
     props: mergedProps,
     key: mergedProps && normalizeKey(mergedProps),
-    ref: extraProps && extraProps.ref ? (
-      // #2078 in the case of <component :is="vnode" ref="extra"/>
-      // if the vnode itself already has a ref, cloneVNode will need to merge
-      // the refs so the single vnode can be set on multiple refs
-      mergeRef && ref2 ? isArray(ref2) ? ref2.concat(normalizeRef(extraProps)) : [
-        ref2,
-        normalizeRef(extraProps)
-      ] : normalizeRef(extraProps)
-    ) : ref2,
+    ref: extraProps && extraProps.ref
+      ? (
+        // #2078 in the case of <component :is="vnode" ref="extra"/>
+        // if the vnode itself already has a ref, cloneVNode will need to merge
+        // the refs so the single vnode can be set on multiple refs
+        mergeRef && ref2
+          ? isArray(ref2) ? ref2.concat(normalizeRef(extraProps)) : [
+            ref2,
+            normalizeRef(extraProps),
+          ]
+          : normalizeRef(extraProps)
+      )
+      : ref2,
     scopeId: vnode.scopeId,
     slotScopeIds: vnode.slotScopeIds,
     children: patchFlag === -1 && isArray(children) ? children.map(deepCloneVNode) : children,
@@ -8712,7 +10173,9 @@ function cloneVNode(vnode, extraProps, mergeRef = false, cloneTransition = false
     // existing patch flag to be reliable and need to add the FULL_PROPS flag.
     // note: preserve flag for fragments since they use the flag for children
     // fast paths only.
-    patchFlag: extraProps && vnode.type !== Fragment ? patchFlag === -1 ? 16 : patchFlag | 16 : patchFlag,
+    patchFlag: extraProps && vnode.type !== Fragment
+      ? patchFlag === -1 ? 16 : patchFlag | 16
+      : patchFlag,
     dynamicProps: vnode.dynamicProps,
     dynamicChildren: vnode.dynamicChildren,
     appContext: vnode.appContext,
@@ -8729,7 +10192,7 @@ function cloneVNode(vnode, extraProps, mergeRef = false, cloneTransition = false
     el: vnode.el,
     anchor: vnode.anchor,
     ctx: vnode.ctx,
-    ce: vnode.ce
+    ce: vnode.ce,
   };
   if (transition && cloneTransition) {
     setTransitionHooks(cloned, transition.clone(cloned));
@@ -8752,7 +10215,9 @@ function createStaticVNode(content, numberOfNodes) {
   return vnode;
 }
 function createCommentVNode(text = "", asBlock = false) {
-  return asBlock ? (openBlock(), createBlock(Comment, null, text)) : createVNode(Comment, null, text);
+  return asBlock
+    ? (openBlock(), createBlock(Comment, null, text))
+    : createVNode(Comment, null, text);
 }
 function normalizeVNode(child) {
   if (child == null || typeof child === "boolean") {
@@ -8762,7 +10227,7 @@ function normalizeVNode(child) {
       Fragment,
       null,
       // #3666, avoid reference pollution when reusing vnode
-      child.slice()
+      child.slice(),
     );
   } else if (isVNode(child)) {
     return cloneIfMounted(child);
@@ -8806,7 +10271,7 @@ function normalizeChildren(vnode, children) {
   } else if (isFunction(children)) {
     children = {
       default: children,
-      _ctx: currentRenderingInstance
+      _ctx: currentRenderingInstance,
     };
     type = 32;
   } else {
@@ -8814,7 +10279,7 @@ function normalizeChildren(vnode, children) {
     if (shapeFlag & 64) {
       type = 16;
       children = [
-        createTextVNode(children)
+        createTextVNode(children),
       ];
     } else {
       type = 8;
@@ -8832,18 +10297,20 @@ function mergeProps(...args) {
         if (ret.class !== toMerge.class) {
           ret.class = normalizeClass([
             ret.class,
-            toMerge.class
+            toMerge.class,
           ]);
         }
       } else if (key === "style") {
         ret.style = normalizeStyle([
           ret.style,
-          toMerge.style
+          toMerge.style,
         ]);
       } else if (isOn(key)) {
         const existing = ret[key];
         const incoming = toMerge[key];
-        if (incoming && existing !== incoming && !(isArray(existing) && existing.includes(incoming))) {
+        if (
+          incoming && existing !== incoming && !(isArray(existing) && existing.includes(incoming))
+        ) {
           ret[key] = existing ? [].concat(existing, incoming) : incoming;
         }
       } else if (key !== "") {
@@ -8856,7 +10323,7 @@ function mergeProps(...args) {
 function invokeVNodeHook(hook, instance, vnode, prevVNode = null) {
   callWithAsyncErrorHandling(hook, instance, 7, [
     vnode,
-    prevVNode
+    prevVNode,
   ]);
 }
 var emptyAppContext = createAppContext();
@@ -8889,7 +10356,7 @@ function createComponentInstance(vnode, parent, suspense) {
     ids: parent ? parent.ids : [
       "",
       0,
-      0
+      0,
     ],
     accessCache: null,
     renderCache: [],
@@ -8939,13 +10406,13 @@ function createComponentInstance(vnode, parent, suspense) {
     rtg: null,
     rtc: null,
     ec: null,
-    sp: null
+    sp: null,
   };
   if (true) {
     instance.ctx = createDevRenderContext(instance);
   } else {
     instance.ctx = {
-      _: instance
+      _: instance,
     };
   }
   instance.root = parent ? parent.root : instance;
@@ -8970,8 +10437,14 @@ var setInSSRSetupState;
       else setters[0](v);
     };
   };
-  internalSetCurrentInstance = registerGlobalSetter(`__VUE_INSTANCE_SETTERS__`, (v) => currentInstance = v);
-  setInSSRSetupState = registerGlobalSetter(`__VUE_SSR_SETTERS__`, (v) => isInSSRComponentSetup = v);
+  internalSetCurrentInstance = registerGlobalSetter(
+    `__VUE_INSTANCE_SETTERS__`,
+    (v) => currentInstance = v,
+  );
+  setInSSRSetupState = registerGlobalSetter(
+    `__VUE_SSR_SETTERS__`,
+    (v) => isInSSRComponentSetup = v,
+  );
 }
 var setCurrentInstance = (instance) => {
   const prev = currentInstance;
@@ -9026,7 +10499,9 @@ function setupStatefulComponent(instance, isSSR) {
       }
     }
     if (Component.compilerOptions && isRuntimeOnly()) {
-      warn$1(`"compilerOptions" is only supported when using a build of Vue that includes the runtime compiler. Since you are using a runtime-only build, the options should be passed via your build tool config instead.`);
+      warn$1(
+        `"compilerOptions" is only supported when using a build of Vue that includes the runtime compiler. Since you are using a runtime-only build, the options should be passed via your build tool config instead.`,
+      );
     }
   }
   instance.accessCache = /* @__PURE__ */ Object.create(null);
@@ -9037,11 +10512,13 @@ function setupStatefulComponent(instance, isSSR) {
   const { setup } = Component;
   if (setup) {
     pauseTracking();
-    const setupContext = instance.setupContext = setup.length > 1 ? createSetupContext(instance) : null;
+    const setupContext = instance.setupContext = setup.length > 1
+      ? createSetupContext(instance)
+      : null;
     const reset2 = setCurrentInstance(instance);
     const setupResult = callWithErrorHandling(setup, instance, 0, [
       true ? shallowReadonly(instance.props) : instance.props,
-      setupContext
+      setupContext,
     ]);
     const isAsyncSetup = isPromise(setupResult);
     resetTracking();
@@ -9061,7 +10538,9 @@ function setupStatefulComponent(instance, isSSR) {
         instance.asyncDep = setupResult;
         if (!instance.suspense) {
           const name = (_a = Component.name) != null ? _a : "Anonymous";
-          warn$1(`Component <${name}>: setup function returned a promise, but no <Suspense> boundary was found in the parent component tree. A component with async setup() must be nested in a <Suspense> in order to be rendered.`);
+          warn$1(
+            `Component <${name}>: setup function returned a promise, but no <Suspense> boundary was found in the parent component tree. A component with async setup() must be nested in a <Suspense> in order to be rendered.`,
+          );
         }
       }
     } else {
@@ -9090,7 +10569,11 @@ function handleSetupResult(instance, setupResult, isSSR) {
       exposeSetupStateOnRenderContext(instance);
     }
   } else if (setupResult !== void 0) {
-    warn$1(`setup() should return an object. Received: ${setupResult === null ? "null" : typeof setupResult}`);
+    warn$1(
+      `setup() should return an object. Received: ${
+        setupResult === null ? "null" : typeof setupResult
+      }`,
+    );
   }
   finishComponentSetup(instance, isSSR);
 }
@@ -9109,17 +10592,21 @@ function finishComponentSetup(instance, isSSR, skipOptions) {
   const Component = instance.type;
   if (!instance.render) {
     if (!isSSR && compile && !Component.render) {
-      const template = Component.template || __VUE_OPTIONS_API__ && resolveMergedOptions(instance).template;
+      const template = Component.template ||
+        __VUE_OPTIONS_API__ && resolveMergedOptions(instance).template;
       if (template) {
         if (true) {
           startMeasure(instance, `compile`);
         }
         const { isCustomElement, compilerOptions } = instance.appContext.config;
         const { delimiters, compilerOptions: componentCompilerOptions } = Component;
-        const finalCompilerOptions = extend(extend({
-          isCustomElement,
-          delimiters
-        }, compilerOptions), componentCompilerOptions);
+        const finalCompilerOptions = extend(
+          extend({
+            isCustomElement,
+            delimiters,
+          }, compilerOptions),
+          componentCompilerOptions,
+        );
         Component.render = compile(template, finalCompilerOptions);
         if (true) {
           endMeasure(instance, `compile`);
@@ -9143,38 +10630,42 @@ function finishComponentSetup(instance, isSSR, skipOptions) {
   }
   if (!Component.render && instance.render === NOOP && !isSSR) {
     if (!compile && Component.template) {
-      warn$1(`Component provided template option but runtime compilation is not supported in this build of Vue. Configure your bundler to alias "vue" to "vue/dist/vue.esm-bundler.js".`);
+      warn$1(
+        `Component provided template option but runtime compilation is not supported in this build of Vue. Configure your bundler to alias "vue" to "vue/dist/vue.esm-bundler.js".`,
+      );
     } else {
       warn$1(`Component is missing template or render function: `, Component);
     }
   }
 }
-var attrsProxyHandlers = true ? {
-  get(target, key) {
-    markAttrsAccessed();
-    track(target, "get", "");
-    return target[key];
-  },
-  set() {
-    warn$1(`setupContext.attrs is readonly.`);
-    return false;
-  },
-  deleteProperty() {
-    warn$1(`setupContext.attrs is readonly.`);
-    return false;
+var attrsProxyHandlers = true
+  ? {
+    get(target, key) {
+      markAttrsAccessed();
+      track(target, "get", "");
+      return target[key];
+    },
+    set() {
+      warn$1(`setupContext.attrs is readonly.`);
+      return false;
+    },
+    deleteProperty() {
+      warn$1(`setupContext.attrs is readonly.`);
+      return false;
+    },
   }
-} : {
-  get(target, key) {
-    track(target, "get", "");
-    return target[key];
-  }
-};
+  : {
+    get(target, key) {
+      track(target, "get", "");
+      return target[key];
+    },
+  };
 function getSlotsProxy(instance) {
   return new Proxy(instance.slots, {
     get(target, key) {
       track(instance, "get", "$slots");
       return target[key];
-    }
+    },
   });
 }
 function createSetupContext(instance) {
@@ -9212,31 +10703,32 @@ function createSetupContext(instance) {
       get emit() {
         return (event, ...args) => instance.emit(event, ...args);
       },
-      expose
+      expose,
     });
   } else {
     return {
       attrs: new Proxy(instance.attrs, attrsProxyHandlers),
       slots: instance.slots,
       emit: instance.emit,
-      expose
+      expose,
     };
   }
 }
 function getComponentPublicInstance(instance) {
   if (instance.exposed) {
-    return instance.exposeProxy || (instance.exposeProxy = new Proxy(proxyRefs(markRaw(instance.exposed)), {
-      get(target, key) {
-        if (key in target) {
-          return target[key];
-        } else if (key in publicPropertiesMap) {
-          return publicPropertiesMap[key](instance);
-        }
-      },
-      has(target, key) {
-        return key in target || key in publicPropertiesMap;
-      }
-    }));
+    return instance.exposeProxy ||
+      (instance.exposeProxy = new Proxy(proxyRefs(markRaw(instance.exposed)), {
+        get(target, key) {
+          if (key in target) {
+            return target[key];
+          } else if (key in publicPropertiesMap) {
+            return publicPropertiesMap[key](instance);
+          }
+        },
+        has(target, key) {
+          return key in target || key in publicPropertiesMap;
+        },
+      }));
   } else {
     return instance.proxy;
   }
@@ -9244,7 +10736,9 @@ function getComponentPublicInstance(instance) {
 var classifyRE = /(?:^|[-_])(\w)/g;
 var classify = (str) => str.replace(classifyRE, (c) => c.toUpperCase()).replace(/[-_]/g, "");
 function getComponentName(Component, includeInferred = true) {
-  return isFunction(Component) ? Component.displayName || Component.name : Component.name || includeInferred && Component.__name;
+  return isFunction(Component)
+    ? Component.displayName || Component.name
+    : Component.name || includeInferred && Component.__name;
 }
 function formatComponentName(instance, Component, isRoot = false) {
   let name = getComponentName(Component);
@@ -9262,7 +10756,8 @@ function formatComponentName(instance, Component, isRoot = false) {
         }
       }
     };
-    name = inferFromRegistry(instance.components || instance.parent.type.components) || inferFromRegistry(instance.appContext.components);
+    name = inferFromRegistry(instance.components || instance.parent.type.components) ||
+      inferFromRegistry(instance.appContext.components);
   }
   return name ? classify(name) : isRoot ? `App` : `Anonymous`;
 }
@@ -9285,7 +10780,7 @@ function h(type, propsOrChildren, children) {
     if (isObject(propsOrChildren) && !isArray(propsOrChildren)) {
       if (isVNode(propsOrChildren)) {
         return createVNode(type, null, [
-          propsOrChildren
+          propsOrChildren,
         ]);
       }
       return createVNode(type, propsOrChildren);
@@ -9297,7 +10792,7 @@ function h(type, propsOrChildren, children) {
       children = Array.prototype.slice.call(arguments, 2);
     } else if (l === 3 && isVNode(children)) {
       children = [
-        children
+        children,
       ];
     }
     return createVNode(type, propsOrChildren, children);
@@ -9308,16 +10803,16 @@ function initCustomFormatter() {
     return;
   }
   const vueStyle = {
-    style: "color:#3ba776"
+    style: "color:#3ba776",
   };
   const numberStyle = {
-    style: "color:#1677ff"
+    style: "color:#1677ff",
   };
   const stringStyle = {
-    style: "color:#f5222d"
+    style: "color:#f5222d",
   };
   const keywordStyle = {
-    style: "color:#eb2f96"
+    style: "color:#eb2f96",
   };
   const formatter = {
     __vue_custom_formatter: true,
@@ -9329,7 +10824,7 @@ function initCustomFormatter() {
         return [
           "div",
           vueStyle,
-          `VueInstance`
+          `VueInstance`,
         ];
       } else if (isRef2(obj)) {
         return [
@@ -9338,12 +10833,12 @@ function initCustomFormatter() {
           [
             "span",
             vueStyle,
-            genRefFlag(obj)
+            genRefFlag(obj),
           ],
           "<",
           // avoid debugger accessing value affecting behavior
           formatValue("_value" in obj ? obj._value : obj),
-          `>`
+          `>`,
         ];
       } else if (isReactive(obj)) {
         return [
@@ -9352,11 +10847,11 @@ function initCustomFormatter() {
           [
             "span",
             vueStyle,
-            isShallow(obj) ? "ShallowReactive" : "Reactive"
+            isShallow(obj) ? "ShallowReactive" : "Reactive",
           ],
           "<",
           formatValue(obj),
-          `>${isReadonly(obj) ? ` (readonly)` : ``}`
+          `>${isReadonly(obj) ? ` (readonly)` : ``}`,
         ];
       } else if (isReadonly(obj)) {
         return [
@@ -9365,11 +10860,11 @@ function initCustomFormatter() {
           [
             "span",
             vueStyle,
-            isShallow(obj) ? "ShallowReadonly" : "Readonly"
+            isShallow(obj) ? "ShallowReadonly" : "Readonly",
           ],
           "<",
           formatValue(obj),
-          ">"
+          ">",
         ];
       }
       return null;
@@ -9382,10 +10877,10 @@ function initCustomFormatter() {
         return [
           "div",
           {},
-          ...formatInstance(obj.$)
+          ...formatInstance(obj.$),
         ];
       }
-    }
+    },
   };
   function formatInstance(instance) {
     const blocks = [];
@@ -9412,16 +10907,16 @@ function initCustomFormatter() {
       [
         "span",
         {
-          style: keywordStyle.style + ";opacity:0.66"
+          style: keywordStyle.style + ";opacity:0.66",
         },
-        "$ (internal): "
+        "$ (internal): ",
       ],
       [
         "object",
         {
-          object: instance
-        }
-      ]
+          object: instance,
+        },
+      ],
     ]);
     return blocks;
   }
@@ -9430,25 +10925,25 @@ function initCustomFormatter() {
     if (!Object.keys(target).length) {
       return [
         "span",
-        {}
+        {},
       ];
     }
     return [
       "div",
       {
-        style: "line-height:1.25em;margin-bottom:0.6em"
+        style: "line-height:1.25em;margin-bottom:0.6em",
       },
       [
         "div",
         {
-          style: "color:#476582"
+          style: "color:#476582",
         },
-        type
+        type,
       ],
       [
         "div",
         {
-          style: "padding-left:1.25em"
+          style: "padding-left:1.25em",
         },
         ...Object.keys(target).map((key) => {
           return [
@@ -9457,12 +10952,12 @@ function initCustomFormatter() {
             [
               "span",
               keywordStyle,
-              key + ": "
+              key + ": ",
             ],
-            formatValue(target[key], false)
+            formatValue(target[key], false),
           ];
-        })
-      ]
+        }),
+      ],
     ];
   }
   function formatValue(v, asRaw = true) {
@@ -9470,32 +10965,32 @@ function initCustomFormatter() {
       return [
         "span",
         numberStyle,
-        v
+        v,
       ];
     } else if (typeof v === "string") {
       return [
         "span",
         stringStyle,
-        JSON.stringify(v)
+        JSON.stringify(v),
       ];
     } else if (typeof v === "boolean") {
       return [
         "span",
         keywordStyle,
-        v
+        v,
       ];
     } else if (isObject(v)) {
       return [
         "object",
         {
-          object: asRaw ? toRaw(v) : v
-        }
+          object: asRaw ? toRaw(v) : v,
+        },
       ];
     } else {
       return [
         "span",
         stringStyle,
-        String(v)
+        String(v),
       ];
     }
   }
@@ -9537,7 +11032,7 @@ function initCustomFormatter() {
     window.devtoolsFormatters.push(formatter);
   } else {
     window.devtoolsFormatters = [
-      formatter
+      formatter,
     ];
   }
 }
@@ -9581,7 +11076,7 @@ var _ssrUtils = {
   getComponentPublicInstance,
   ensureValidVNode,
   pushWarningContext,
-  popWarningContext
+  popWarningContext,
 };
 var ssrUtils = _ssrUtils;
 var resolveFilter = null;
@@ -9594,7 +11089,7 @@ var tt = typeof window !== "undefined" && window.trustedTypes;
 if (tt) {
   try {
     policy = /* @__PURE__ */ tt.createPolicy("vue", {
-      createHTML: (val) => val
+      createHTML: (val) => val,
     });
   } catch (e) {
     warn2(`Error creating trusted types policy: ${e}`);
@@ -9616,9 +11111,15 @@ var nodeOps = {
     }
   },
   createElement: (tag, namespace, is, props) => {
-    const el = namespace === "svg" ? doc.createElementNS(svgNS, tag) : namespace === "mathml" ? doc.createElementNS(mathmlNS, tag) : is ? doc.createElement(tag, {
-      is
-    }) : doc.createElement(tag);
+    const el = namespace === "svg"
+      ? doc.createElementNS(svgNS, tag)
+      : namespace === "mathml"
+      ? doc.createElementNS(mathmlNS, tag)
+      : is
+      ? doc.createElement(tag, {
+        is,
+      })
+      : doc.createElement(tag);
     if (tag === "select" && props && props.multiple != null) {
       el.setAttribute("multiple", props.multiple);
     }
@@ -9650,7 +11151,13 @@ var nodeOps = {
         if (start === end || !(start = start.nextSibling)) break;
       }
     } else {
-      templateContainer.innerHTML = unsafeToTrustedHTML(namespace === "svg" ? `<svg>${content}</svg>` : namespace === "mathml" ? `<math>${content}</math>` : content);
+      templateContainer.innerHTML = unsafeToTrustedHTML(
+        namespace === "svg"
+          ? `<svg>${content}</svg>`
+          : namespace === "mathml"
+          ? `<math>${content}</math>`
+          : content,
+      );
       const template = templateContainer.content;
       if (namespace === "svg" || namespace === "mathml") {
         const wrapper = template.firstChild;
@@ -9665,9 +11172,9 @@ var nodeOps = {
       // first
       before ? before.nextSibling : parent.firstChild,
       // last
-      anchor ? anchor.previousSibling : parent.lastChild
+      anchor ? anchor.previousSibling : parent.lastChild,
     ];
-  }
+  },
 };
 var TRANSITION = "transition";
 var ANIMATION = "animation";
@@ -9677,12 +11184,12 @@ var DOMTransitionPropsValidators = {
   type: String,
   css: {
     type: Boolean,
-    default: true
+    default: true,
   },
   duration: [
     String,
     Number,
-    Object
+    Object,
   ],
   enterFromClass: String,
   enterActiveClass: String,
@@ -9692,15 +11199,21 @@ var DOMTransitionPropsValidators = {
   appearToClass: String,
   leaveFromClass: String,
   leaveActiveClass: String,
-  leaveToClass: String
+  leaveToClass: String,
 };
-var TransitionPropsValidators = /* @__PURE__ */ extend({}, BaseTransitionPropsValidators, DOMTransitionPropsValidators);
+var TransitionPropsValidators = /* @__PURE__ */ extend(
+  {},
+  BaseTransitionPropsValidators,
+  DOMTransitionPropsValidators,
+);
 var decorate$1 = (t) => {
   t.displayName = "Transition";
   t.props = TransitionPropsValidators;
   return t;
 };
-var Transition = /* @__PURE__ */ decorate$1((props, { slots }) => h(BaseTransition, resolveTransitionProps(props), slots));
+var Transition = /* @__PURE__ */ decorate$1((props, { slots }) =>
+  h(BaseTransition, resolveTransitionProps(props), slots)
+);
 var callHook2 = (hook, args = []) => {
   if (isArray(hook)) {
     hook.forEach((h2) => h2(...args));
@@ -9721,11 +11234,33 @@ function resolveTransitionProps(rawProps) {
   if (rawProps.css === false) {
     return baseProps;
   }
-  const { name = "v", type, duration, enterFromClass = `${name}-enter-from`, enterActiveClass = `${name}-enter-active`, enterToClass = `${name}-enter-to`, appearFromClass = enterFromClass, appearActiveClass = enterActiveClass, appearToClass = enterToClass, leaveFromClass = `${name}-leave-from`, leaveActiveClass = `${name}-leave-active`, leaveToClass = `${name}-leave-to` } = rawProps;
+  const {
+    name = "v",
+    type,
+    duration,
+    enterFromClass = `${name}-enter-from`,
+    enterActiveClass = `${name}-enter-active`,
+    enterToClass = `${name}-enter-to`,
+    appearFromClass = enterFromClass,
+    appearActiveClass = enterActiveClass,
+    appearToClass = enterToClass,
+    leaveFromClass = `${name}-leave-from`,
+    leaveActiveClass = `${name}-leave-active`,
+    leaveToClass = `${name}-leave-to`,
+  } = rawProps;
   const durations = normalizeDuration(duration);
   const enterDuration = durations && durations[0];
   const leaveDuration = durations && durations[1];
-  const { onBeforeEnter, onEnter, onEnterCancelled, onLeave, onLeaveCancelled, onBeforeAppear = onBeforeEnter, onAppear = onEnter, onAppearCancelled = onEnterCancelled } = baseProps;
+  const {
+    onBeforeEnter,
+    onEnter,
+    onEnterCancelled,
+    onLeave,
+    onLeaveCancelled,
+    onBeforeAppear = onBeforeEnter,
+    onAppear = onEnter,
+    onAppearCancelled = onEnterCancelled,
+  } = baseProps;
   const finishEnter = (el, isAppear, done, isCancelled) => {
     el._enterCancelled = isCancelled;
     removeTransitionClass(el, isAppear ? appearToClass : enterToClass);
@@ -9745,7 +11280,7 @@ function resolveTransitionProps(rawProps) {
       const resolve2 = () => finishEnter(el, isAppear, done);
       callHook2(hook, [
         el,
-        resolve2
+        resolve2,
       ]);
       nextFrame(() => {
         removeTransitionClass(el, isAppear ? appearFromClass : enterFromClass);
@@ -9759,14 +11294,14 @@ function resolveTransitionProps(rawProps) {
   return extend(baseProps, {
     onBeforeEnter(el) {
       callHook2(onBeforeEnter, [
-        el
+        el,
       ]);
       addTransitionClass(el, enterFromClass);
       addTransitionClass(el, enterActiveClass);
     },
     onBeforeAppear(el) {
       callHook2(onBeforeAppear, [
-        el
+        el,
       ]);
       addTransitionClass(el, appearFromClass);
       addTransitionClass(el, appearActiveClass);
@@ -9796,27 +11331,27 @@ function resolveTransitionProps(rawProps) {
       });
       callHook2(onLeave, [
         el,
-        resolve2
+        resolve2,
       ]);
     },
     onEnterCancelled(el) {
       finishEnter(el, false, void 0, true);
       callHook2(onEnterCancelled, [
-        el
+        el,
       ]);
     },
     onAppearCancelled(el) {
       finishEnter(el, true, void 0, true);
       callHook2(onAppearCancelled, [
-        el
+        el,
       ]);
     },
     onLeaveCancelled(el) {
       finishLeave(el);
       callHook2(onLeaveCancelled, [
-        el
+        el,
       ]);
-    }
+    },
   });
 }
 function normalizeDuration(duration) {
@@ -9825,13 +11360,13 @@ function normalizeDuration(duration) {
   } else if (isObject(duration)) {
     return [
       NumberOf(duration.enter),
-      NumberOf(duration.leave)
+      NumberOf(duration.leave),
     ];
   } else {
     const n = NumberOf(duration);
     return [
       n,
-      n
+      n,
     ];
   }
 }
@@ -9921,14 +11456,17 @@ function getTransitionInfo(el, expectedType) {
   } else {
     timeout = Math.max(transitionTimeout, animationTimeout);
     type = timeout > 0 ? transitionTimeout > animationTimeout ? TRANSITION : ANIMATION : null;
-    propCount = type ? type === TRANSITION ? transitionDurations.length : animationDurations.length : 0;
+    propCount = type
+      ? type === TRANSITION ? transitionDurations.length : animationDurations.length
+      : 0;
   }
-  const hasTransform = type === TRANSITION && /\b(transform|all)(,|$)/.test(getStyleProperties(`${TRANSITION}Property`).toString());
+  const hasTransform = type === TRANSITION &&
+    /\b(transform|all)(,|$)/.test(getStyleProperties(`${TRANSITION}Property`).toString());
   return {
     type,
     timeout,
     propCount,
-    hasTransform
+    hasTransform,
   };
 }
 function getTimeout(delays, durations) {
@@ -9947,12 +11485,14 @@ function forceReflow() {
 function patchClass(el, value, isSVG) {
   const transitionClasses = el[vtcKey];
   if (transitionClasses) {
-    value = (value ? [
-      value,
-      ...transitionClasses
-    ] : [
-      ...transitionClasses
-    ]).join(" ");
+    value = (value
+      ? [
+        value,
+        ...transitionClasses,
+      ]
+      : [
+        ...transitionClasses,
+      ]).join(" ");
   }
   if (value == null) {
     el.removeAttribute("class");
@@ -9996,7 +11536,7 @@ var vShow = {
   },
   beforeUnmount(el, { value }) {
     setDisplay(el, value);
-  }
+  },
 };
 if (true) {
   vShow.name = "show";
@@ -10010,8 +11550,8 @@ function initVShowForSSR() {
     if (!value) {
       return {
         style: {
-          display: "none"
-        }
+          display: "none",
+        },
       };
     }
   };
@@ -10024,7 +11564,9 @@ function useCssVars(getter) {
     return;
   }
   const updateTeleports = instance.ut = (vars = getter(instance.proxy)) => {
-    Array.from(document.querySelectorAll(`[data-v-owner="${instance.uid}"]`)).forEach((node) => setVarsOnNode(node, vars));
+    Array.from(document.querySelectorAll(`[data-v-owner="${instance.uid}"]`)).forEach((node) =>
+      setVarsOnNode(node, vars)
+    );
   };
   if (true) {
     instance.getCssVars = () => getter(instance.proxy);
@@ -10043,11 +11585,11 @@ function useCssVars(getter) {
   });
   onMounted(() => {
     watch2(setVars, NOOP, {
-      flush: "post"
+      flush: "post",
     });
     const ob = new MutationObserver(setVars);
     ob.observe(instance.subTree.el.parentNode, {
-      childList: true
+      childList: true,
     });
     onUnmounted(() => ob.disconnect());
   });
@@ -10165,7 +11707,7 @@ function setStyle(style, name, val) {
 var prefixes = [
   "Webkit",
   "Moz",
-  "ms"
+  "ms",
 ];
 var prefixCache = {};
 function autoPrefix(style, rawName) {
@@ -10210,14 +11752,18 @@ function patchDOMProp(el, key, value, parentComponent, attrName) {
     return;
   }
   const tag = el.tagName;
-  if (key === "value" && tag !== "PROGRESS" && // custom elements may use _value internally
-  !tag.includes("-")) {
+  if (
+    key === "value" && tag !== "PROGRESS" && // custom elements may use _value internally
+    !tag.includes("-")
+  ) {
     const oldValue = tag === "OPTION" ? el.getAttribute("value") || "" : el.value;
-    const newValue = value == null ? (
-      // #11647: value should be set as empty string for null and undefined,
-      // but <input type="checkbox"> should be set as 'on'.
-      el.type === "checkbox" ? "on" : ""
-    ) : String(value);
+    const newValue = value == null
+      ? (
+        // #11647: value should be set as empty string for null and undefined,
+        // but <input type="checkbox"> should be set as 'on'.
+        el.type === "checkbox" ? "on" : ""
+      )
+      : String(value);
     if (oldValue !== newValue || !("_value" in el)) {
       el.value = newValue;
     }
@@ -10244,7 +11790,10 @@ function patchDOMProp(el, key, value, parentComponent, attrName) {
     el[key] = value;
   } catch (e) {
     if (!needRemove) {
-      warn2(`Failed setting prop "${key}" on <${tag.toLowerCase()}>: value ${value} is invalid.`, e);
+      warn2(
+        `Failed setting prop "${key}" on <${tag.toLowerCase()}>: value ${value} is invalid.`,
+        e,
+      );
     }
   }
   needRemove && el.removeAttribute(attrName || key);
@@ -10264,7 +11813,10 @@ function patchEvent(el, rawName, prevValue, nextValue, instance = null) {
   } else {
     const [name, options] = parseName(rawName);
     if (nextValue) {
-      const invoker = invokers[rawName] = createInvoker(true ? sanitizeEventValue(nextValue, rawName) : nextValue, instance);
+      const invoker = invokers[rawName] = createInvoker(
+        true ? sanitizeEventValue(nextValue, rawName) : nextValue,
+        instance,
+      );
       addEventListener(el, name, invoker, options);
     } else if (existingInvoker) {
       removeEventListener(el, name, existingInvoker, options);
@@ -10286,7 +11838,7 @@ function parseName(name) {
   const event = name[2] === ":" ? name.slice(3) : hyphenate(name.slice(2));
   return [
     event,
-    options
+    options,
   ];
 }
 var cachedNow = 0;
@@ -10300,7 +11852,7 @@ function createInvoker(initialValue, instance) {
       return;
     }
     callWithAsyncErrorHandling(patchStopImmediatePropagation(e, invoker.value), instance, 5, [
-      e
+      e,
     ]);
   };
   invoker.value = initialValue;
@@ -10311,8 +11863,10 @@ function sanitizeEventValue(value, propName) {
   if (isFunction(value) || isArray(value)) {
     return value;
   }
-  warn2(`Wrong type passed as event handler to ${propName} - did you forget @ or : in front of your prop?
-Expected function or array of functions, received type ${typeof value}.`);
+  warn2(
+    `Wrong type passed as event handler to ${propName} - did you forget @ or : in front of your prop?
+Expected function or array of functions, received type ${typeof value}.`,
+  );
   return NOOP;
 }
 function patchStopImmediatePropagation(e, value) {
@@ -10327,8 +11881,9 @@ function patchStopImmediatePropagation(e, value) {
     return value;
   }
 }
-var isNativeOn = (key) => key.charCodeAt(0) === 111 && key.charCodeAt(1) === 110 && // lowercase letter
-key.charCodeAt(2) > 96 && key.charCodeAt(2) < 123;
+var isNativeOn = (key) =>
+  key.charCodeAt(0) === 111 && key.charCodeAt(1) === 110 && // lowercase letter
+  key.charCodeAt(2) > 96 && key.charCodeAt(2) < 123;
 var patchProp = (el, key, prevValue, nextValue, namespace, parentComponent) => {
   const isSVG = namespace === "svg";
   if (key === "class") {
@@ -10339,7 +11894,13 @@ var patchProp = (el, key, prevValue, nextValue, namespace, parentComponent) => {
     if (!isModelListener(key)) {
       patchEvent(el, key, prevValue, nextValue, parentComponent);
     }
-  } else if (key[0] === "." ? (key = key.slice(1), true) : key[0] === "^" ? (key = key.slice(1), false) : shouldSetAsProp(el, key, nextValue, isSVG)) {
+  } else if (
+    key[0] === "."
+      ? (key = key.slice(1), true)
+      : key[0] === "^"
+      ? (key = key.slice(1), false)
+      : shouldSetAsProp(el, key, nextValue, isSVG)
+  ) {
     patchDOMProp(el, key, nextValue);
     if (!el.tagName.includes("-") && (key === "value" || key === "checked" || key === "selected")) {
       patchAttr(el, key, nextValue, isSVG, parentComponent, key !== "value");
@@ -10428,11 +11989,13 @@ var VueElement = class _VueElement extends BaseClass {
       this._root = this.shadowRoot;
     } else {
       if (this.shadowRoot) {
-        warn2(`Custom element has pre-rendered declarative shadow root but is not defined as hydratable. Use \`defineSSRCustomElement\`.`);
+        warn2(
+          `Custom element has pre-rendered declarative shadow root but is not defined as hydratable. Use \`defineSSRCustomElement\`.`,
+        );
       }
       if (_def.shadowRoot !== false) {
         this.attachShadow({
-          mode: "open"
+          mode: "open",
         });
         this._root = this.shadowRoot;
       } else {
@@ -10508,7 +12071,7 @@ var VueElement = class _VueElement extends BaseClass {
       }
     });
     this._ob.observe(this, {
-      attributes: true
+      attributes: true,
     });
     const resolve2 = (def2, isAsync = false) => {
       this._resolved = true;
@@ -10522,7 +12085,8 @@ var VueElement = class _VueElement extends BaseClass {
             if (key in this._props) {
               this._props[key] = toNumber(this._props[key]);
             }
-            (numberProps || (numberProps = /* @__PURE__ */ Object.create(null)))[camelize(key)] = true;
+            (numberProps || (numberProps = /* @__PURE__ */ Object.create(null)))[camelize(key)] =
+              true;
           }
         }
       }
@@ -10560,7 +12124,7 @@ var VueElement = class _VueElement extends BaseClass {
       if (!hasOwn(this, key)) {
         Object.defineProperty(this, key, {
           // unwrap ref to be consistent with public instance behavior
-          get: () => unref(exposed[key])
+          get: () => unref(exposed[key]),
         });
       } else if (true) {
         warn2(`Exposed property "${key}" already exists on custom element.`);
@@ -10582,7 +12146,7 @@ var VueElement = class _VueElement extends BaseClass {
         },
         set(val) {
           this._setProp(key, val, true, true);
-        }
+        },
       });
     }
   }
@@ -10629,7 +12193,7 @@ var VueElement = class _VueElement extends BaseClass {
           this.removeAttribute(hyphenate(key));
         }
         ob && ob.observe(this, {
-          attributes: true
+          attributes: true,
         });
       }
     }
@@ -10660,11 +12224,18 @@ var VueElement = class _VueElement extends BaseClass {
           };
         }
         const dispatch = (event, args) => {
-          this.dispatchEvent(new CustomEvent(event, isPlainObject(args[0]) ? extend({
-            detail: args
-          }, args[0]) : {
-            detail: args
-          }));
+          this.dispatchEvent(
+            new CustomEvent(
+              event,
+              isPlainObject(args[0])
+                ? extend({
+                  detail: args,
+                }, args[0])
+                : {
+                  detail: args,
+                },
+            ),
+          );
         };
         instance.emit = (event, ...args) => {
           dispatch(event, args);
@@ -10780,7 +12351,9 @@ function useHost(caller) {
     if (!instance) {
       warn2(`${caller || "useHost"} called without an active component instance.`);
     } else {
-      warn2(`${caller || "useHost"} can only be used in components defined via defineCustomElement.`);
+      warn2(
+        `${caller || "useHost"} can only be used in components defined via defineCustomElement.`,
+      );
     }
   }
   return null;
@@ -10821,7 +12394,7 @@ var TransitionGroupImpl = /* @__PURE__ */ decorate({
   name: "TransitionGroup",
   props: /* @__PURE__ */ extend({}, TransitionPropsValidators, {
     tag: String,
-    moveClass: String
+    moveClass: String,
   }),
   setup(props, { slots }) {
     const instance = getCurrentInstance();
@@ -10868,7 +12441,10 @@ var TransitionGroupImpl = /* @__PURE__ */ decorate({
           const child = children[i];
           if (child.el && child.el instanceof Element) {
             prevChildren.push(child);
-            setTransitionHooks(child, resolveTransitionHooks(child, cssTransitionProps, state, instance));
+            setTransitionHooks(
+              child,
+              resolveTransitionHooks(child, cssTransitionProps, state, instance),
+            );
             positionMap.set(child, child.el.getBoundingClientRect());
           }
         }
@@ -10877,14 +12453,17 @@ var TransitionGroupImpl = /* @__PURE__ */ decorate({
       for (let i = 0; i < children.length; i++) {
         const child = children[i];
         if (child.key != null) {
-          setTransitionHooks(child, resolveTransitionHooks(child, cssTransitionProps, state, instance));
+          setTransitionHooks(
+            child,
+            resolveTransitionHooks(child, cssTransitionProps, state, instance),
+          );
         } else if (child.type !== Text) {
           warn2(`<TransitionGroup> children must be keyed.`);
         }
       }
       return createVNode(tag, null, children);
     };
-  }
+  },
 });
 var TransitionGroup = TransitionGroupImpl;
 function callPendingCbs(c) {
@@ -10975,7 +12554,9 @@ var vModelText = {
   beforeUpdate(el, { value, oldValue, modifiers: { lazy, trim, number } }, vnode) {
     el[assignKey] = getModelAssigner(vnode);
     if (el.composing) return;
-    const elValue = (number || el.type === "number") && !/^0\d/.test(el.value) ? looseToNumber(el.value) : el.value;
+    const elValue = (number || el.type === "number") && !/^0\d/.test(el.value)
+      ? looseToNumber(el.value)
+      : el.value;
     const newValue = value == null ? "" : value;
     if (elValue === newValue) {
       return;
@@ -10989,7 +12570,7 @@ var vModelText = {
       }
     }
     el.value = newValue;
-  }
+  },
 };
 var vModelCheckbox = {
   // #4096 array checkboxes need to be deep traversed
@@ -11008,7 +12589,7 @@ var vModelCheckbox = {
           assign(modelValue.concat(elementValue));
         } else if (!checked && found) {
           const filtered = [
-            ...modelValue
+            ...modelValue,
           ];
           filtered.splice(index, 1);
           assign(filtered);
@@ -11031,7 +12612,7 @@ var vModelCheckbox = {
   beforeUpdate(el, binding, vnode) {
     el[assignKey] = getModelAssigner(vnode);
     setChecked(el, binding, vnode);
-  }
+  },
 };
 function setChecked(el, { value, oldValue }, vnode) {
   el._modelValue = value;
@@ -11061,7 +12642,7 @@ var vModelRadio = {
     if (value !== oldValue) {
       el.checked = looseEqual(value, vnode.props.value);
     }
-  }
+  },
 };
 var vModelSelect = {
   // <select multiple> value need to be deep traversed
@@ -11069,7 +12650,9 @@ var vModelSelect = {
   created(el, { value, modifiers: { number } }, vnode) {
     const isSetModel = isSet(value);
     addEventListener(el, "change", () => {
-      const selectedVal = Array.prototype.filter.call(el.options, (o) => o.selected).map((o) => number ? looseToNumber(getValue(o)) : getValue(o));
+      const selectedVal = Array.prototype.filter.call(el.options, (o) => o.selected).map((o) =>
+        number ? looseToNumber(getValue(o)) : getValue(o)
+      );
       el[assignKey](el.multiple ? isSetModel ? new Set(selectedVal) : selectedVal : selectedVal[0]);
       el._assigning = true;
       nextTick(() => {
@@ -11090,13 +12673,17 @@ var vModelSelect = {
     if (!el._assigning) {
       setSelected(el, value);
     }
-  }
+  },
 };
 function setSelected(el, value) {
   const isMultiple = el.multiple;
   const isArrayValue = isArray(value);
   if (isMultiple && !isArrayValue && !isSet(value)) {
-    warn2(`<select multiple v-model> expects an Array or Set value for its binding, but got ${Object.prototype.toString.call(value).slice(8, -1)}.`);
+    warn2(
+      `<select multiple v-model> expects an Array or Set value for its binding, but got ${
+        Object.prototype.toString.call(value).slice(8, -1)
+      }.`,
+    );
     return;
   }
   for (let i = 0, l = el.options.length; i < l; i++) {
@@ -11141,7 +12728,7 @@ var vModelDynamic = {
   },
   updated(el, binding, vnode, prevVNode) {
     callModelHook(el, binding, vnode, prevVNode, "updated");
-  }
+  },
 };
 function resolveDynamicModel(tagName, type) {
   switch (tagName) {
@@ -11167,12 +12754,12 @@ function callModelHook(el, binding, vnode, prevVNode, hook) {
 }
 function initVModelForSSR() {
   vModelText.getSSRProps = ({ value }) => ({
-    value
+    value,
   });
   vModelRadio.getSSRProps = ({ value }, vnode) => {
     if (vnode.props && looseEqual(vnode.props.value, value)) {
       return {
-        checked: true
+        checked: true,
       };
     }
   };
@@ -11180,18 +12767,18 @@ function initVModelForSSR() {
     if (isArray(value)) {
       if (vnode.props && looseIndexOf(value, vnode.props.value) > -1) {
         return {
-          checked: true
+          checked: true,
         };
       }
     } else if (isSet(value)) {
       if (vnode.props && value.has(vnode.props.value)) {
         return {
-          checked: true
+          checked: true,
         };
       }
     } else if (value) {
       return {
-        checked: true
+        checked: true,
       };
     }
   };
@@ -11202,7 +12789,7 @@ function initVModelForSSR() {
     const modelToUse = resolveDynamicModel(
       // resolveDynamicModel expects an uppercase tag name, but vnode.type is lowercase
       vnode.type.toUpperCase(),
-      vnode.props && vnode.props.type
+      vnode.props && vnode.props.type,
     );
     if (modelToUse.getSSRProps) {
       return modelToUse.getSSRProps(binding, vnode);
@@ -11213,7 +12800,7 @@ var systemModifiers = [
   "ctrl",
   "shift",
   "alt",
-  "meta"
+  "meta",
 ];
 var modifierGuards = {
   stop: (e) => e.stopPropagation(),
@@ -11226,7 +12813,7 @@ var modifierGuards = {
   left: (e) => "button" in e && e.button !== 0,
   middle: (e) => "button" in e && e.button !== 1,
   right: (e) => "button" in e && e.button !== 2,
-  exact: (e, modifiers) => systemModifiers.some((m) => e[`${m}Key`] && !modifiers.includes(m))
+  exact: (e, modifiers) => systemModifiers.some((m) => e[`${m}Key`] && !modifiers.includes(m)),
 };
 var withModifiers = (fn, modifiers) => {
   const cache = fn._withMods || (fn._withMods = {});
@@ -11246,7 +12833,7 @@ var keyNames = {
   left: "arrow-left",
   right: "arrow-right",
   down: "arrow-down",
-  delete: "backspace"
+  delete: "backspace",
 };
 var withKeys = (fn, modifiers) => {
   const cache = fn._withKeys || (fn._withKeys = {});
@@ -11262,7 +12849,7 @@ var withKeys = (fn, modifiers) => {
   });
 };
 var rendererOptions = /* @__PURE__ */ extend({
-  patchProp
+  patchProp,
 }, nodeOps);
 var renderer;
 var enabledHydration = false;
@@ -11332,7 +12919,7 @@ function resolveRootNamespace(container) {
 function injectNativeTagCheck(app2) {
   Object.defineProperty(app2.config, "isNativeTag", {
     value: (tag) => isHTMLTag(tag) || isSVGTag(tag) || isMathMLTag(tag),
-    writable: false
+    writable: false,
   });
 }
 function injectCompilerOptionsCheck(app2) {
@@ -11343,11 +12930,14 @@ function injectCompilerOptionsCheck(app2) {
         return isCustomElement;
       },
       set() {
-        warn2(`The \`isCustomElement\` config option is deprecated. Use \`compilerOptions.isCustomElement\` instead.`);
-      }
+        warn2(
+          `The \`isCustomElement\` config option is deprecated. Use \`compilerOptions.isCustomElement\` instead.`,
+        );
+      },
     });
     const compilerOptions = app2.config.compilerOptions;
-    const msg = `The \`compilerOptions\` config option is only respected when using a build of Vue.js that includes the runtime compiler (aka "full build"). Since you are using the runtime-only build, \`compilerOptions\` must be passed to \`@vue/compiler-dom\` in the build setup instead.
+    const msg =
+      `The \`compilerOptions\` config option is only respected when using a build of Vue.js that includes the runtime compiler (aka "full build"). Since you are using the runtime-only build, \`compilerOptions\` must be passed to \`@vue/compiler-dom\` in the build setup instead.
 - For vue-loader: pass it via vue-loader's \`compilerOptions\` loader option.
 - For vue-cli: see https://cli.vuejs.org/guide/webpack.html#modifying-options-of-a-loader
 - For vite: pass it via @vitejs/plugin-vue options. See https://github.com/vitejs/vite-plugin-vue/tree/main/packages/plugin-vue#example-for-passing-options-to-vuecompiler-sfc`;
@@ -11358,7 +12948,7 @@ function injectCompilerOptionsCheck(app2) {
       },
       set() {
         warn2(msg);
-      }
+      },
     });
   }
 }
@@ -11463,7 +13053,7 @@ var helperNameMap = {
   [UNREF]: `unref`,
   [IS_REF]: `isRef`,
   [WITH_MEMO]: `withMemo`,
-  [IS_MEMO_SAME]: `isMemoSame`
+  [IS_MEMO_SAME]: `isMemoSame`,
 };
 function registerRuntimeHelpers(helpers) {
   Object.getOwnPropertySymbols(helpers).forEach((s) => {
@@ -11474,14 +13064,14 @@ var locStub = {
   start: {
     line: 1,
     column: 1,
-    offset: 0
+    offset: 0,
   },
   end: {
     line: 1,
     column: 1,
-    offset: 0
+    offset: 0,
   },
-  source: ""
+  source: "",
 };
 function createRoot(children, source = "") {
   return {
@@ -11496,10 +13086,22 @@ function createRoot(children, source = "") {
     cached: [],
     temps: 0,
     codegenNode: void 0,
-    loc: locStub
+    loc: locStub,
   };
 }
-function createVNodeCall(context, tag, props, children, patchFlag, dynamicProps, directives, isBlock = false, disableTracking = false, isComponent2 = false, loc = locStub) {
+function createVNodeCall(
+  context,
+  tag,
+  props,
+  children,
+  patchFlag,
+  dynamicProps,
+  directives,
+  isBlock = false,
+  disableTracking = false,
+  isComponent2 = false,
+  loc = locStub,
+) {
   if (context) {
     if (isBlock) {
       context.helper(OPEN_BLOCK);
@@ -11522,21 +13124,21 @@ function createVNodeCall(context, tag, props, children, patchFlag, dynamicProps,
     isBlock,
     disableTracking,
     isComponent: isComponent2,
-    loc
+    loc,
   };
 }
 function createArrayExpression(elements, loc = locStub) {
   return {
     type: 17,
     loc,
-    elements
+    elements,
   };
 }
 function createObjectExpression(properties, loc = locStub) {
   return {
     type: 15,
     loc,
-    properties
+    properties,
   };
 }
 function createObjectProperty(key, value) {
@@ -11544,7 +13146,7 @@ function createObjectProperty(key, value) {
     type: 16,
     loc: locStub,
     key: isString(key) ? createSimpleExpression(key, true) : key,
-    value
+    value,
   };
 }
 function createSimpleExpression(content, isStatic = false, loc = locStub, constType = 0) {
@@ -11553,14 +13155,14 @@ function createSimpleExpression(content, isStatic = false, loc = locStub, constT
     loc,
     content,
     isStatic,
-    constType: isStatic ? 3 : constType
+    constType: isStatic ? 3 : constType,
   };
 }
 function createCompoundExpression(children, loc = locStub) {
   return {
     type: 8,
     loc,
-    children
+    children,
   };
 }
 function createCallExpression(callee, args = [], loc = locStub) {
@@ -11568,17 +13170,23 @@ function createCallExpression(callee, args = [], loc = locStub) {
     type: 14,
     loc,
     callee,
-    arguments: args
+    arguments: args,
   };
 }
-function createFunctionExpression(params, returns = void 0, newline = false, isSlot = false, loc = locStub) {
+function createFunctionExpression(
+  params,
+  returns = void 0,
+  newline = false,
+  isSlot = false,
+  loc = locStub,
+) {
   return {
     type: 18,
     params,
     returns,
     newline,
     isSlot,
-    loc
+    loc,
   };
 }
 function createConditionalExpression(test, consequent, alternate, newline = true) {
@@ -11588,7 +13196,7 @@ function createConditionalExpression(test, consequent, alternate, newline = true
     consequent,
     alternate,
     newline,
-    loc: locStub
+    loc: locStub,
   };
 }
 function createCacheExpression(index, value, needPauseTracking = false, inVOnce = false) {
@@ -11599,14 +13207,14 @@ function createCacheExpression(index, value, needPauseTracking = false, inVOnce 
     needPauseTracking,
     inVOnce,
     needArraySpread: false,
-    loc: locStub
+    loc: locStub,
   };
 }
 function createBlockStatement(body) {
   return {
     type: 21,
     body,
-    loc: locStub
+    loc: locStub,
   };
 }
 function getVNodeHelper(ssr, isComponent2) {
@@ -11625,11 +13233,11 @@ function convertToBlock(node, { helper, removeHelper, inSSR }) {
 }
 var defaultDelimitersOpen = new Uint8Array([
   123,
-  123
+  123,
 ]);
 var defaultDelimitersClose = new Uint8Array([
   125,
-  125
+  125,
 ]);
 function isTagStartChar(c) {
   return c >= 97 && c <= 122 || c >= 65 && c <= 90;
@@ -11654,19 +13262,19 @@ var Sequences = {
     65,
     84,
     65,
-    91
+    91,
   ]),
   // CDATA[
   CdataEnd: new Uint8Array([
     93,
     93,
-    62
+    62,
   ]),
   // ]]>
   CommentEnd: new Uint8Array([
     45,
     45,
-    62
+    62,
   ]),
   // `-->`
   ScriptEnd: new Uint8Array([
@@ -11677,7 +13285,7 @@ var Sequences = {
     114,
     105,
     112,
-    116
+    116,
   ]),
   // `<\/script`
   StyleEnd: new Uint8Array([
@@ -11687,7 +13295,7 @@ var Sequences = {
     116,
     121,
     108,
-    101
+    101,
   ]),
   // `</style`
   TitleEnd: new Uint8Array([
@@ -11697,7 +13305,7 @@ var Sequences = {
     105,
     116,
     108,
-    101
+    101,
   ]),
   // `</title`
   TextareaEnd: new Uint8Array([
@@ -11710,8 +13318,8 @@ var Sequences = {
     97,
     114,
     101,
-    97
-  ])
+    97,
+  ]),
 };
 var Tokenizer = class {
   constructor(stack3, cbs) {
@@ -11770,7 +13378,7 @@ var Tokenizer = class {
     return {
       column,
       line,
-      offset: index
+      offset: index,
     };
   }
   peek() {
@@ -11836,13 +13444,15 @@ var Tokenizer = class {
   }
   stateSpecialStartSequence(c) {
     const isEnd = this.sequenceIndex === this.currentSequence.length;
-    const isMatch = isEnd ? (
-      // If we are at the end of the sequence, make sure the tag name has ended
-      isEndOfTagSection(c)
-    ) : (
-      // Otherwise, do a case-insensitive comparison
-      (c | 32) === this.currentSequence[this.sequenceIndex]
-    );
+    const isMatch = isEnd
+      ? (
+        // If we are at the end of the sequence, make sure the tag name has ended
+        isEndOfTagSection(c)
+      )
+      : (
+        // Otherwise, do a case-insensitive comparison
+        (c | 32) === this.currentSequence[this.sequenceIndex]
+      );
     if (!isMatch) {
       this.inRCDATA = false;
     } else if (!isEnd) {
@@ -11874,7 +13484,10 @@ var Tokenizer = class {
     if ((c | 32) === this.currentSequence[this.sequenceIndex]) {
       this.sequenceIndex += 1;
     } else if (this.sequenceIndex === 0) {
-      if (this.currentSequence === Sequences.TitleEnd || this.currentSequence === Sequences.TextareaEnd && !this.inSFCRoot) {
+      if (
+        this.currentSequence === Sequences.TitleEnd ||
+        this.currentSequence === Sequences.TextareaEnd && !this.inSFCRoot
+      ) {
         if (!this.inVPre && c === this.delimiterOpen[0]) {
           this.state = 2;
           this.delimiterIndex = 0;
@@ -12007,7 +13620,7 @@ var Tokenizer = class {
     this.stateBeforeAttrName(c);
   }
   stateBeforeClosingTagName(c) {
-    if (isWhitespace(c)) ;
+    if (isWhitespace(c));
     else if (c === 62) {
       if (true) {
         this.cbs.onerr(14, this.index);
@@ -12191,7 +13804,7 @@ var Tokenizer = class {
       this.stateBeforeAttrName(c);
     } else if (c === 34 || c === 39 || c === 60 || c === 61 || c === 96) {
       this.cbs.onerr(18, this.index);
-    } else ;
+    } else;
   }
   stateBeforeDeclaration(c) {
     if (c === 91) {
@@ -12440,7 +14053,12 @@ var Tokenizer = class {
       } else {
         this.cbs.oncomment(this.sectionStart, endIndex);
       }
-    } else if (this.state === 6 || this.state === 11 || this.state === 18 || this.state === 17 || this.state === 12 || this.state === 13 || this.state === 14 || this.state === 15 || this.state === 16 || this.state === 20 || this.state === 19 || this.state === 21 || this.state === 9) ;
+    } else if (
+      this.state === 6 || this.state === 11 || this.state === 18 || this.state === 17 ||
+      this.state === 12 || this.state === 13 || this.state === 14 || this.state === 15 ||
+      this.state === 16 || this.state === 20 || this.state === 19 || this.state === 21 ||
+      this.state === 9
+    );
     else {
       this.cbs.ontext(this.sectionStart, endIndex);
     }
@@ -12450,36 +14068,42 @@ var Tokenizer = class {
 };
 var deprecationData = {
   ["COMPILER_IS_ON_ELEMENT"]: {
-    message: `Platform-native elements with "is" prop will no longer be treated as components in Vue 3 unless the "is" value is explicitly prefixed with "vue:".`,
-    link: `https://v3-migration.vuejs.org/breaking-changes/custom-elements-interop.html`
+    message:
+      `Platform-native elements with "is" prop will no longer be treated as components in Vue 3 unless the "is" value is explicitly prefixed with "vue:".`,
+    link: `https://v3-migration.vuejs.org/breaking-changes/custom-elements-interop.html`,
   },
   ["COMPILER_V_BIND_SYNC"]: {
-    message: (key) => `.sync modifier for v-bind has been removed. Use v-model with argument instead. \`v-bind:${key}.sync\` should be changed to \`v-model:${key}\`.`,
-    link: `https://v3-migration.vuejs.org/breaking-changes/v-model.html`
+    message: (key) =>
+      `.sync modifier for v-bind has been removed. Use v-model with argument instead. \`v-bind:${key}.sync\` should be changed to \`v-model:${key}\`.`,
+    link: `https://v3-migration.vuejs.org/breaking-changes/v-model.html`,
   },
   ["COMPILER_V_BIND_OBJECT_ORDER"]: {
-    message: `v-bind="obj" usage is now order sensitive and behaves like JavaScript object spread: it will now overwrite an existing non-mergeable attribute that appears before v-bind in the case of conflict. To retain 2.x behavior, move v-bind to make it the first attribute. You can also suppress this warning if the usage is intended.`,
-    link: `https://v3-migration.vuejs.org/breaking-changes/v-bind.html`
+    message:
+      `v-bind="obj" usage is now order sensitive and behaves like JavaScript object spread: it will now overwrite an existing non-mergeable attribute that appears before v-bind in the case of conflict. To retain 2.x behavior, move v-bind to make it the first attribute. You can also suppress this warning if the usage is intended.`,
+    link: `https://v3-migration.vuejs.org/breaking-changes/v-bind.html`,
   },
   ["COMPILER_V_ON_NATIVE"]: {
     message: `.native modifier for v-on has been removed as is no longer necessary.`,
-    link: `https://v3-migration.vuejs.org/breaking-changes/v-on-native-modifier-removed.html`
+    link: `https://v3-migration.vuejs.org/breaking-changes/v-on-native-modifier-removed.html`,
   },
   ["COMPILER_V_IF_V_FOR_PRECEDENCE"]: {
-    message: `v-if / v-for precedence when used on the same element has changed in Vue 3: v-if now takes higher precedence and will no longer have access to v-for scope variables. It is best to avoid the ambiguity with <template> tags or use a computed property that filters v-for data source.`,
-    link: `https://v3-migration.vuejs.org/breaking-changes/v-if-v-for.html`
+    message:
+      `v-if / v-for precedence when used on the same element has changed in Vue 3: v-if now takes higher precedence and will no longer have access to v-for scope variables. It is best to avoid the ambiguity with <template> tags or use a computed property that filters v-for data source.`,
+    link: `https://v3-migration.vuejs.org/breaking-changes/v-if-v-for.html`,
   },
   ["COMPILER_NATIVE_TEMPLATE"]: {
-    message: `<template> with no special directives will render as a native template element instead of its inner content in Vue 3.`
+    message:
+      `<template> with no special directives will render as a native template element instead of its inner content in Vue 3.`,
   },
   ["COMPILER_INLINE_TEMPLATE"]: {
     message: `"inline-template" has been removed in Vue 3.`,
-    link: `https://v3-migration.vuejs.org/breaking-changes/inline-template-attribute.html`
+    link: `https://v3-migration.vuejs.org/breaking-changes/inline-template-attribute.html`,
   },
   ["COMPILER_FILTERS"]: {
-    message: `filters have been removed in Vue 3. The "|" symbol will be treated as native JavaScript bitwise OR operator. Use method calls or computed properties instead.`,
-    link: `https://v3-migration.vuejs.org/breaking-changes/filters.html`
-  }
+    message:
+      `filters have been removed in Vue 3. The "|" symbol will be treated as native JavaScript bitwise OR operator. Use method calls or computed properties instead.`,
+    link: `https://v3-migration.vuejs.org/breaking-changes/filters.html`,
+  },
 };
 function getCompatValue(key, { compatConfig }) {
   const value = compatConfig && compatConfig[key];
@@ -12507,8 +14131,12 @@ function warnDeprecation(key, context, loc, ...args) {
     return;
   }
   const { message, link } = deprecationData[key];
-  const msg = `(deprecation ${key}) ${typeof message === "function" ? message(...args) : message}${link ? `
-  Details: ${link}` : ``}`;
+  const msg = `(deprecation ${key}) ${typeof message === "function" ? message(...args) : message}${
+    link
+      ? `
+  Details: ${link}`
+      : ``
+  }`;
   const err = new SyntaxError(msg);
   err.code = key;
   if (loc) err.loc = loc;
@@ -12521,7 +14149,9 @@ function defaultOnWarn(msg) {
   console.warn(`[Vue warn] ${msg.message}`);
 }
 function createCompilerError(code, loc, messages, additionalMessage) {
-  const msg = true ? (messages || errorMessages)[code] + (additionalMessage || ``) : `https://vuejs.org/error-reference/#compiler-${code}`;
+  const msg = true
+    ? (messages || errorMessages)[code] + (additionalMessage || ``)
+    : `https://vuejs.org/error-reference/#compiler-${code}`;
   const error = new SyntaxError(String(msg));
   error.code = code;
   error.loc = loc;
@@ -12547,7 +14177,8 @@ var errorMessages = {
   [15]: "Whitespace was expected.",
   [16]: "Unexpected '<!--' in comment.",
   [17]: `Attribute name cannot contain U+0022 ("), U+0027 ('), and U+003C (<).`,
-  [18]: "Unquoted attribute value cannot contain U+0022 (\"), U+0027 ('), U+003C (<), U+003D (=), and U+0060 (`).",
+  [18]:
+    "Unquoted attribute value cannot contain U+0022 (\"), U+0027 ('), U+003C (<), U+003D (=), and U+0060 (`).",
   [19]: "Attribute name cannot start with '='.",
   [21]: "'<?' is allowed only in XML context.",
   [20]: `Unexpected null character.`,
@@ -12556,7 +14187,8 @@ var errorMessages = {
   [23]: "Invalid end tag.",
   [24]: "Element is missing end tag.",
   [25]: "Interpolation end sign was not found.",
-  [27]: "End bracket for dynamic directive argument was not found. Note that dynamic directive argument cannot contain spaces.",
+  [27]:
+    "End bracket for dynamic directive argument was not found. Note that dynamic directive argument cannot contain spaces.",
   [26]: "Legal directive name was expected.",
   // transform errors
   [28]: `v-if/v-else-if is missing expression.`,
@@ -12569,9 +14201,11 @@ var errorMessages = {
   [52]: `v-bind with same-name shorthand only allows static argument.`,
   [35]: `v-on is missing expression.`,
   [36]: `Unexpected custom directive on <slot> outlet.`,
-  [37]: `Mixed v-slot usage on both the component and nested <template>. When there are multiple named slots, all slots should use <template> syntax to avoid scope ambiguity.`,
+  [37]:
+    `Mixed v-slot usage on both the component and nested <template>. When there are multiple named slots, all slots should use <template> syntax to avoid scope ambiguity.`,
   [38]: `Duplicate slot names found. `,
-  [39]: `Extraneous children found when component already has explicitly named default slot. These children will be ignored.`,
+  [39]:
+    `Extraneous children found when component already has explicitly named default slot. These children will be ignored.`,
   [40]: `v-slot can only be used on components or <template> tags.`,
   [41]: `v-model is missing expression.`,
   [42]: `v-model value must be a valid JavaScript member expression.`,
@@ -12580,14 +14214,15 @@ var errorMessages = {
 Use a v-bind binding combined with a v-on listener that emits update:x event instead.`,
   [45]: `Error parsing JavaScript expression: `,
   [46]: `<KeepAlive> expects exactly one child component.`,
-  [51]: `@vnode-* hooks in templates are no longer supported. Use the vue: prefix instead. For example, @vnode-mounted should be changed to @vue:mounted. @vnode-* hooks support has been removed in 3.4.`,
+  [51]:
+    `@vnode-* hooks in templates are no longer supported. Use the vue: prefix instead. For example, @vnode-mounted should be changed to @vue:mounted. @vnode-* hooks support has been removed in 3.4.`,
   // generic errors
   [47]: `"prefixIdentifiers" option is not supported in this build of compiler.`,
   [48]: `ES module mode is not supported in this build of compiler.`,
   [49]: `"cacheHandlers" option is only supported when the "prefixIdentifiers" option is enabled.`,
   [50]: `"scopeId" option is only supported in module mode.`,
   // just to fulfill types
-  [53]: ``
+  [53]: ``,
 };
 var isStaticExp = (p2) => p2.type === 4 && p2.isStatic;
 function isCoreComponent(tag) {
@@ -12675,7 +14310,8 @@ var isMemberExpressionBrowser = (exp) => {
   return !currentOpenBracketCount && !currentOpenParensCount;
 };
 var isMemberExpression = isMemberExpressionBrowser;
-var fnExpRE = /^\s*(async\s*)?(\([^)]*?\)|[\w$_]+)\s*(:[^=]+)?=>|^\s*(async\s+)?function(?:\s+[\w$]+)?\s*\(/;
+var fnExpRE =
+  /^\s*(async\s*)?(\([^)]*?\)|[\w$_]+)\s*(:[^=]+)?=>|^\s*(async\s+)?function(?:\s+[\w$]+)?\s*\(/;
 var isFnExpressionBrowser = (exp) => fnExpRE.test(getExpSource(exp));
 var isFnExpression = isFnExpressionBrowser;
 function assert(condition, msg) {
@@ -12686,7 +14322,10 @@ function assert(condition, msg) {
 function findDir(node, name, allowEmpty = false) {
   for (let i = 0; i < node.props.length; i++) {
     const p2 = node.props[i];
-    if (p2.type === 7 && (allowEmpty || p2.exp) && (isString(name) ? p2.name === name : name.test(p2.name))) {
+    if (
+      p2.type === 7 && (allowEmpty || p2.exp) &&
+      (isString(name) ? p2.name === name : name.test(p2.name))
+    ) {
       return p2;
     }
   }
@@ -12708,9 +14347,11 @@ function isStaticArgOf(arg, name) {
   return !!(arg && isStaticExp(arg) && arg.content === name);
 }
 function hasDynamicKeyVBind(node) {
-  return node.props.some((p2) => p2.type === 7 && p2.name === "bind" && (!p2.arg || // v-bind="obj"
-  p2.arg.type !== 4 || // v-bind:[_ctx.foo]
-  !p2.arg.isStatic));
+  return node.props.some((p2) =>
+    p2.type === 7 && p2.name === "bind" && (!p2.arg || // v-bind="obj"
+      p2.arg.type !== 4 || // v-bind:[_ctx.foo]
+      !p2.arg.isStatic)
+  );
 }
 function isText$1(node) {
   return node.type === 5 || node.type === 2;
@@ -12726,7 +14367,7 @@ function isSlotOutlet(node) {
 }
 var propsHelperSet = /* @__PURE__ */ new Set([
   NORMALIZE_PROPS,
-  GUARD_REACTIVE_PROPS
+  GUARD_REACTIVE_PROPS,
 ]);
 function getUnnormalizedProps(props, callPath = []) {
   if (props && !isString(props) && props.type === 14) {
@@ -12737,7 +14378,7 @@ function getUnnormalizedProps(props, callPath = []) {
   }
   return [
     props,
-    callPath
+    callPath,
   ];
 }
 function injectProp(node, prop, context) {
@@ -12753,7 +14394,7 @@ function injectProp(node, prop, context) {
   }
   if (props == null || isString(props)) {
     propsWithInjection = createObjectExpression([
-      prop
+      prop,
     ]);
   } else if (props.type === 14) {
     const first = props.arguments[0];
@@ -12765,13 +14406,13 @@ function injectProp(node, prop, context) {
       if (props.callee === TO_HANDLERS) {
         propsWithInjection = createCallExpression(context.helper(MERGE_PROPS), [
           createObjectExpression([
-            prop
+            prop,
           ]),
-          props
+          props,
         ]);
       } else {
         props.arguments.unshift(createObjectExpression([
-          prop
+          prop,
         ]));
       }
     }
@@ -12784,9 +14425,9 @@ function injectProp(node, prop, context) {
   } else {
     propsWithInjection = createCallExpression(context.helper(MERGE_PROPS), [
       createObjectExpression([
-        prop
+        prop,
       ]),
-      props
+      props,
     ]);
     if (parentCall && parentCall.callee === GUARD_REACTIVE_PROPS) {
       parentCall = callPath[callPath.length - 2];
@@ -12815,9 +14456,11 @@ function hasProp(prop, props) {
   return result;
 }
 function toValidAssetId(name, type) {
-  return `_${type}_${name.replace(/[^\w]/g, (searchValue, replaceValue) => {
-    return searchValue === "-" ? "_" : name.charCodeAt(replaceValue).toString();
-  })}`;
+  return `_${type}_${
+    name.replace(/[^\w]/g, (searchValue, replaceValue) => {
+      return searchValue === "-" ? "_" : name.charCodeAt(replaceValue).toString();
+    })
+  }`;
 }
 function getMemoedVNodeCall(node) {
   if (node.type === 14 && node.callee === WITH_MEMO) {
@@ -12832,7 +14475,7 @@ var defaultParserOptions = {
   ns: 0,
   delimiters: [
     `{{`,
-    `}}`
+    `}}`,
   ],
   getNamespace: () => 0,
   isVoidTag: NO,
@@ -12842,7 +14485,7 @@ var defaultParserOptions = {
   onError: defaultOnError,
   onWarn: defaultOnWarn,
   comments: true,
-  prefixIdentifiers: false
+  prefixIdentifiers: false,
 };
 var currentOptions = defaultParserOptions;
 var currentRoot = null;
@@ -12885,7 +14528,7 @@ var tokenizer = new Tokenizer(stack2, {
     addNode({
       type: 5,
       content: createExp(exp, false, getLoc(innerStart, innerEnd)),
-      loc: getLoc(start, end)
+      loc: getLoc(start, end),
     });
   },
   onopentagname(start, end) {
@@ -12899,7 +14542,7 @@ var tokenizer = new Tokenizer(stack2, {
       props: [],
       children: [],
       loc: getLoc(start - 1, end),
-      codegenNode: void 0
+      codegenNode: void 0,
     };
   },
   onopentagend(end) {
@@ -12942,12 +14585,18 @@ var tokenizer = new Tokenizer(stack2, {
       name: getSlice(start, end),
       nameLoc: getLoc(start, end),
       value: void 0,
-      loc: getLoc(start)
+      loc: getLoc(start),
     };
   },
   ondirname(start, end) {
     const raw = getSlice(start, end);
-    const name = raw === "." || raw === ":" ? "bind" : raw === "@" ? "on" : raw === "#" ? "slot" : raw.slice(2);
+    const name = raw === "." || raw === ":"
+      ? "bind"
+      : raw === "@"
+      ? "on"
+      : raw === "#"
+      ? "slot"
+      : raw.slice(2);
     if (!inVPre && name === "") {
       emitError(26, start);
     }
@@ -12957,7 +14606,7 @@ var tokenizer = new Tokenizer(stack2, {
         name: raw,
         nameLoc: getLoc(start, end),
         value: void 0,
-        loc: getLoc(start)
+        loc: getLoc(start),
       };
     } else {
       currentProp = {
@@ -12966,10 +14615,12 @@ var tokenizer = new Tokenizer(stack2, {
         rawName: raw,
         exp: void 0,
         arg: void 0,
-        modifiers: raw === "." ? [
-          createSimpleExpression("prop")
-        ] : [],
-        loc: getLoc(start)
+        modifiers: raw === "."
+          ? [
+            createSimpleExpression("prop"),
+          ]
+          : [],
+        loc: getLoc(start),
       };
       if (name === "pre") {
         inVPre = tokenizer.inVPre = true;
@@ -12991,7 +14642,12 @@ var tokenizer = new Tokenizer(stack2, {
       setLocEnd(currentProp.nameLoc, end);
     } else {
       const isStatic = arg[0] !== `[`;
-      currentProp.arg = createExp(isStatic ? arg : arg.slice(1, -1), isStatic, getLoc(start, end), isStatic ? 3 : 0);
+      currentProp.arg = createExp(
+        isStatic ? arg : arg.slice(1, -1),
+        isStatic,
+        getLoc(start, end),
+        isStatic ? 3 : 0,
+      );
     }
   },
   ondirmodifier(start, end) {
@@ -13047,19 +14703,40 @@ var tokenizer = new Tokenizer(stack2, {
           currentProp.value = {
             type: 2,
             content: currentAttrValue,
-            loc: quote === 1 ? getLoc(currentAttrStartIndex, currentAttrEndIndex) : getLoc(currentAttrStartIndex - 1, currentAttrEndIndex + 1)
+            loc: quote === 1
+              ? getLoc(currentAttrStartIndex, currentAttrEndIndex)
+              : getLoc(currentAttrStartIndex - 1, currentAttrEndIndex + 1),
           };
-          if (tokenizer.inSFCRoot && currentOpenTag.tag === "template" && currentProp.name === "lang" && currentAttrValue && currentAttrValue !== "html") {
+          if (
+            tokenizer.inSFCRoot && currentOpenTag.tag === "template" &&
+            currentProp.name === "lang" && currentAttrValue && currentAttrValue !== "html"
+          ) {
             tokenizer.enterRCDATA(toCharCodes(`</template`), 0);
           }
         } else {
           let expParseMode = 0;
-          currentProp.exp = createExp(currentAttrValue, false, getLoc(currentAttrStartIndex, currentAttrEndIndex), 0, expParseMode);
+          currentProp.exp = createExp(
+            currentAttrValue,
+            false,
+            getLoc(currentAttrStartIndex, currentAttrEndIndex),
+            0,
+            expParseMode,
+          );
           if (currentProp.name === "for") {
             currentProp.forParseResult = parseForExpression(currentProp.exp);
           }
           let syncIndex = -1;
-          if (currentProp.name === "bind" && (syncIndex = currentProp.modifiers.findIndex((mod) => mod.content === "sync")) > -1 && checkCompatEnabled("COMPILER_V_BIND_SYNC", currentOptions, currentProp.loc, currentProp.rawName)) {
+          if (
+            currentProp.name === "bind" && (syncIndex = currentProp.modifiers.findIndex((mod) =>
+                mod.content === "sync"
+              )) > -1 &&
+            checkCompatEnabled(
+              "COMPILER_V_BIND_SYNC",
+              currentOptions,
+              currentProp.loc,
+              currentProp.rawName,
+            )
+          ) {
             currentProp.name = "model";
             currentProp.modifiers.splice(syncIndex, 1);
           }
@@ -13077,7 +14754,7 @@ var tokenizer = new Tokenizer(stack2, {
       addNode({
         type: 3,
         content: getSlice(start, end),
-        loc: getLoc(start - 4, end + 3)
+        loc: getLoc(start - 4, end + 3),
       });
     }
   },
@@ -13136,7 +14813,7 @@ var tokenizer = new Tokenizer(stack2, {
     if ((stack2[0] ? stack2[0].ns : currentOptions.ns) === 0) {
       emitError(21, start - 1);
     }
-  }
+  },
 });
 var forIteratorRE = /,([^,\}\]]*)(?:,([^,\}\]]*))?$/;
 var stripParensRE = /^\(|\)$/g;
@@ -13154,7 +14831,7 @@ function parseForExpression(input) {
       false,
       getLoc(start, end),
       0,
-      asParam ? 1 : 0
+      asParam ? 1 : 0,
       /* Normal */
     );
   };
@@ -13163,7 +14840,7 @@ function parseForExpression(input) {
     value: void 0,
     key: void 0,
     index: void 0,
-    finalized: false
+    finalized: false,
   };
   let valueContent = LHS.trim().replace(stripParensRE, "").trim();
   const trimmedOffset = LHS.indexOf(valueContent);
@@ -13179,7 +14856,14 @@ function parseForExpression(input) {
     if (iteratorMatch[2]) {
       const indexContent = iteratorMatch[2].trim();
       if (indexContent) {
-        result.index = createAliasExpression(indexContent, exp.indexOf(indexContent, result.key ? keyOffset + keyContent.length : trimmedOffset + valueContent.length), true);
+        result.index = createAliasExpression(
+          indexContent,
+          exp.indexOf(
+            indexContent,
+            result.key ? keyOffset + keyContent.length : trimmedOffset + valueContent.length,
+          ),
+          true,
+        );
       }
     }
   }
@@ -13226,7 +14910,7 @@ function onText(content, start, end) {
     parent.children.push({
       type: 2,
       content,
-      loc: getLoc(start, end)
+      loc: getLoc(start, end),
     });
   }
 }
@@ -13293,18 +14977,28 @@ function onCloseTag(el, end, isImplied = false) {
         }
       }
     }
-    if (!tokenizer.inSFCRoot && isCompatEnabled("COMPILER_NATIVE_TEMPLATE", currentOptions) && el.tag === "template" && !isFragmentTemplate(el)) {
+    if (
+      !tokenizer.inSFCRoot && isCompatEnabled("COMPILER_NATIVE_TEMPLATE", currentOptions) &&
+      el.tag === "template" && !isFragmentTemplate(el)
+    ) {
       warnDeprecation("COMPILER_NATIVE_TEMPLATE", currentOptions, el.loc);
       const parent = stack2[0] || currentRoot;
       const index = parent.children.indexOf(el);
       parent.children.splice(index, 1, ...el.children);
     }
     const inlineTemplateProp = props.find((p2) => p2.type === 6 && p2.name === "inline-template");
-    if (inlineTemplateProp && checkCompatEnabled("COMPILER_INLINE_TEMPLATE", currentOptions, inlineTemplateProp.loc) && el.children.length) {
+    if (
+      inlineTemplateProp &&
+      checkCompatEnabled("COMPILER_INLINE_TEMPLATE", currentOptions, inlineTemplateProp.loc) &&
+      el.children.length
+    ) {
       inlineTemplateProp.value = {
         type: 2,
-        content: getSlice(el.children[0].loc.start.offset, el.children[el.children.length - 1].loc.end.offset),
-        loc: inlineTemplateProp.loc
+        content: getSlice(
+          el.children[0].loc.start.offset,
+          el.children[el.children.length - 1].loc.end.offset,
+        ),
+        loc: inlineTemplateProp.loc,
       };
     }
   }
@@ -13324,7 +15018,7 @@ var specialTemplateDir = /* @__PURE__ */ new Set([
   "else",
   "else-if",
   "for",
-  "slot"
+  "slot",
 ]);
 function isFragmentTemplate({ tag, props }) {
   if (tag === "template") {
@@ -13340,7 +15034,11 @@ function isComponent({ tag, props }) {
   if (currentOptions.isCustomElement(tag)) {
     return false;
   }
-  if (tag === "component" || isUpperCase(tag.charCodeAt(0)) || isCoreComponent(tag) || currentOptions.isBuiltInComponent && currentOptions.isBuiltInComponent(tag) || currentOptions.isNativeTag && !currentOptions.isNativeTag(tag)) {
+  if (
+    tag === "component" || isUpperCase(tag.charCodeAt(0)) || isCoreComponent(tag) ||
+    currentOptions.isBuiltInComponent && currentOptions.isBuiltInComponent(tag) ||
+    currentOptions.isNativeTag && !currentOptions.isNativeTag(tag)
+  ) {
     return true;
   }
   for (let i = 0; i < props.length; i++) {
@@ -13353,7 +15051,10 @@ function isComponent({ tag, props }) {
           return true;
         }
       }
-    } else if (p2.name === "bind" && isStaticArgOf(p2.arg, "is") && checkCompatEnabled("COMPILER_IS_ON_ELEMENT", currentOptions, p2.loc)) {
+    } else if (
+      p2.name === "bind" && isStaticArgOf(p2.arg, "is") &&
+      checkCompatEnabled("COMPILER_IS_ON_ELEMENT", currentOptions, p2.loc)
+    ) {
       return true;
     }
   }
@@ -13373,7 +15074,12 @@ function condenseWhitespace(nodes, tag) {
         if (isAllWhitespace(node.content)) {
           const prev = nodes[i - 1] && nodes[i - 1].type;
           const next = nodes[i + 1] && nodes[i + 1].type;
-          if (!prev || !next || shouldCondense && (prev === 3 && (next === 3 || next === 1) || prev === 1 && (next === 3 || next === 1 && hasNewlineChar(node.content)))) {
+          if (
+            !prev || !next ||
+            shouldCondense &&
+              (prev === 3 && (next === 3 || next === 1) ||
+                prev === 1 && (next === 3 || next === 1 && hasNewlineChar(node.content)))
+          ) {
             removedWhitespace = true;
             nodes[i] = null;
           } else {
@@ -13431,7 +15137,7 @@ function getLoc(start, end) {
     // @ts-expect-error allow late attachment
     end: end == null ? end : tokenizer.getPos(end),
     // @ts-expect-error allow late attachment
-    source: end == null ? end : getSlice(start, end)
+    source: end == null ? end : getSlice(start, end),
   };
 }
 function cloneLoc(loc) {
@@ -13447,7 +15153,7 @@ function dirToAttr(dir) {
     name: dir.rawName,
     nameLoc: getLoc(dir.loc.start.offset, dir.loc.start.offset + dir.rawName.length),
     value: void 0,
-    loc: dir.loc
+    loc: dir.loc,
   };
   if (dir.exp) {
     const loc = dir.exp.loc;
@@ -13460,7 +15166,7 @@ function dirToAttr(dir) {
     attr.value = {
       type: 2,
       content: dir.exp.content,
-      loc
+      loc,
     };
   }
   return attr;
@@ -13498,7 +15204,11 @@ function baseParse(input, options) {
       throw new Error(`[@vue/compiler-core] decodeEntities option is required in browser builds.`);
     }
   }
-  tokenizer.mode = currentOptions.parseMode === "html" ? 1 : currentOptions.parseMode === "sfc" ? 2 : 0;
+  tokenizer.mode = currentOptions.parseMode === "html"
+    ? 1
+    : currentOptions.parseMode === "sfc"
+    ? 2
+    : 0;
   tokenizer.inXML = currentOptions.ns === 1 || currentOptions.ns === 2;
   const delimiters = options && options.delimiters;
   if (delimiters) {
@@ -13519,7 +15229,7 @@ function cacheStatic(root, context) {
     context,
     // Root node is unfortunately non-hoistable due to potential parent
     // fallthrough attributes.
-    isSingleElementRoot(root, root.children[0])
+    isSingleElementRoot(root, root.children[0]),
   );
 }
 function isSingleElementRoot(root, child) {
@@ -13543,7 +15253,10 @@ function walk(node, parent, context, doNotHoistNode = false, inFor = false) {
         const codegenNode = child.codegenNode;
         if (codegenNode.type === 13) {
           const flag = codegenNode.patchFlag;
-          if ((flag === void 0 || flag === 512 || flag === 1) && getGeneratedPropsConstantType(child, context) >= 2) {
+          if (
+            (flag === void 0 || flag === 512 || flag === 1) &&
+            getGeneratedPropsConstantType(child, context) >= 2
+          ) {
             const props = getNodeProps(child);
             if (props) {
               codegenNode.props = context.hoist(props);
@@ -13580,16 +15293,29 @@ function walk(node, parent, context, doNotHoistNode = false, inFor = false) {
   }
   let cachedAsArray = false;
   if (toCache.length === children.length && node.type === 1) {
-    if (node.tagType === 0 && node.codegenNode && node.codegenNode.type === 13 && isArray(node.codegenNode.children)) {
-      node.codegenNode.children = getCacheExpression(createArrayExpression(node.codegenNode.children));
+    if (
+      node.tagType === 0 && node.codegenNode && node.codegenNode.type === 13 &&
+      isArray(node.codegenNode.children)
+    ) {
+      node.codegenNode.children = getCacheExpression(
+        createArrayExpression(node.codegenNode.children),
+      );
       cachedAsArray = true;
-    } else if (node.tagType === 1 && node.codegenNode && node.codegenNode.type === 13 && node.codegenNode.children && !isArray(node.codegenNode.children) && node.codegenNode.children.type === 15) {
+    } else if (
+      node.tagType === 1 && node.codegenNode && node.codegenNode.type === 13 &&
+      node.codegenNode.children && !isArray(node.codegenNode.children) &&
+      node.codegenNode.children.type === 15
+    ) {
       const slot = getSlotNode(node.codegenNode, "default");
       if (slot) {
         slot.returns = getCacheExpression(createArrayExpression(slot.returns));
         cachedAsArray = true;
       }
-    } else if (node.tagType === 3 && parent && parent.type === 1 && parent.tagType === 1 && parent.codegenNode && parent.codegenNode.type === 13 && parent.codegenNode.children && !isArray(parent.codegenNode.children) && parent.codegenNode.children.type === 15) {
+    } else if (
+      node.tagType === 3 && parent && parent.type === 1 && parent.tagType === 1 &&
+      parent.codegenNode && parent.codegenNode.type === 13 && parent.codegenNode.children &&
+      !isArray(parent.codegenNode.children) && parent.codegenNode.children.type === 15
+    ) {
       const slotName = findDir(node, "slot", true);
       const slot = slotName && slotName.arg && getSlotNode(parent.codegenNode, slotName.arg);
       if (slot) {
@@ -13612,7 +15338,9 @@ function walk(node, parent, context, doNotHoistNode = false, inFor = false) {
   }
   function getSlotNode(node2, name) {
     if (node2.children && !isArray(node2.children) && node2.children.type === 15) {
-      const slot = node2.children.properties.find((p2) => p2.key === name || p2.key.content === name);
+      const slot = node2.children.properties.find((p2) =>
+        p2.key === name || p2.key.content === name
+      );
       return slot && slot.value;
     }
   }
@@ -13635,7 +15363,10 @@ function getConstantType(node, context) {
       if (codegenNode.type !== 13) {
         return 0;
       }
-      if (codegenNode.isBlock && node.tag !== "svg" && node.tag !== "foreignObject" && node.tag !== "math") {
+      if (
+        codegenNode.isBlock && node.tag !== "svg" && node.tag !== "foreignObject" &&
+        node.tag !== "math"
+      ) {
         return 0;
       }
       if (codegenNode.patchFlag === void 0) {
@@ -13722,7 +15453,7 @@ function getConstantType(node, context) {
     case 20:
       return 2;
     default:
-      if (true) ;
+      if (true);
       return 0;
   }
 }
@@ -13730,7 +15461,7 @@ var allowHoistedHelperSet = /* @__PURE__ */ new Set([
   NORMALIZE_CLASS,
   NORMALIZE_STYLE,
   NORMALIZE_PROPS,
-  GUARD_REACTIVE_PROPS
+  GUARD_REACTIVE_PROPS,
 ]);
 function getConstantTypeOfHelperCall(value, context) {
   if (value.type === 14 && !isString(value.callee) && allowHoistedHelperSet.has(value.callee)) {
@@ -13781,7 +15512,30 @@ function getNodeProps(node) {
     return codegenNode.props;
   }
 }
-function createTransformContext(root, { filename = "", prefixIdentifiers = false, hoistStatic = false, hmr = false, cacheHandlers = false, nodeTransforms = [], directiveTransforms = {}, transformHoist = null, isBuiltInComponent = NOOP, isCustomElement = NOOP, expressionPlugins = [], scopeId = null, slotted = true, ssr = false, inSSR = false, ssrCssVars = ``, bindingMetadata = EMPTY_OBJ, inline = false, isTS = false, onError = defaultOnError, onWarn = defaultOnWarn, compatConfig }) {
+function createTransformContext(root, {
+  filename = "",
+  prefixIdentifiers = false,
+  hoistStatic = false,
+  hmr = false,
+  cacheHandlers = false,
+  nodeTransforms = [],
+  directiveTransforms = {},
+  transformHoist = null,
+  isBuiltInComponent = NOOP,
+  isCustomElement = NOOP,
+  expressionPlugins = [],
+  scopeId = null,
+  slotted = true,
+  ssr = false,
+  inSSR = false,
+  ssrCssVars = ``,
+  bindingMetadata = EMPTY_OBJ,
+  inline = false,
+  isTS = false,
+  onError = defaultOnError,
+  onWarn = defaultOnWarn,
+  compatConfig,
+}) {
   const nameMatch = filename.replace(/\?.*$/, "").match(/([^/\\]+)\.\w+$/);
   const context = {
     // options
@@ -13823,7 +15577,7 @@ function createTransformContext(root, { filename = "", prefixIdentifiers = false
       vFor: 0,
       vSlot: 0,
       vPre: 0,
-      vOnce: 0
+      vOnce: 0,
     },
     parent: null,
     grandParent: null,
@@ -13866,7 +15620,11 @@ function createTransformContext(root, { filename = "", prefixIdentifiers = false
         throw new Error(`Cannot remove root node.`);
       }
       const list = context.parent.children;
-      const removalIndex = node ? list.indexOf(node) : context.currentNode ? context.childIndex : -1;
+      const removalIndex = node
+        ? list.indexOf(node)
+        : context.currentNode
+        ? context.childIndex
+        : -1;
       if (removalIndex < 0) {
         throw new Error(`node being removed is not a child of current parent`);
       }
@@ -13889,7 +15647,12 @@ function createTransformContext(root, { filename = "", prefixIdentifiers = false
     hoist(exp) {
       if (isString(exp)) exp = createSimpleExpression(exp);
       context.hoists.push(exp);
-      const identifier = createSimpleExpression(`_hoisted_${context.hoists.length}`, false, exp.loc, 2);
+      const identifier = createSimpleExpression(
+        `_hoisted_${context.hoists.length}`,
+        false,
+        exp.loc,
+        2,
+      );
       identifier.hoisted = exp;
       return identifier;
     },
@@ -13897,7 +15660,7 @@ function createTransformContext(root, { filename = "", prefixIdentifiers = false
       const cacheExp = createCacheExpression(context.cached.length, exp, isVNode2, inVOnce);
       context.cached.push(cacheExp);
       return cacheExp;
-    }
+    },
   };
   {
     context.filters = /* @__PURE__ */ new Set();
@@ -13914,13 +15677,13 @@ function transform(root, options) {
     createRootCodegen(root, context);
   }
   root.helpers = /* @__PURE__ */ new Set([
-    ...context.helpers.keys()
+    ...context.helpers.keys(),
   ]);
   root.components = [
-    ...context.components
+    ...context.components,
   ];
   root.directives = [
-    ...context.directives
+    ...context.directives,
   ];
   root.imports = context.imports;
   root.hoists = context.hoists;
@@ -13929,7 +15692,7 @@ function transform(root, options) {
   root.transformed = true;
   {
     root.filters = [
-      ...context.filters
+      ...context.filters,
     ];
   }
 }
@@ -13952,8 +15715,19 @@ function createRootCodegen(root, context) {
     if (children.filter((c) => c.type !== 3).length === 1) {
       patchFlag |= 2048;
     }
-    root.codegenNode = createVNodeCall(context, helper(FRAGMENT), void 0, root.children, patchFlag, void 0, void 0, true, void 0, false);
-  } else ;
+    root.codegenNode = createVNodeCall(
+      context,
+      helper(FRAGMENT),
+      void 0,
+      root.children,
+      patchFlag,
+      void 0,
+      void 0,
+      true,
+      void 0,
+      false,
+    );
+  } else;
 }
 function traverseChildren(parent, context) {
   let i = 0;
@@ -14043,7 +15817,20 @@ function createStructuralDirectiveTransform(name, fn) {
 }
 var PURE_ANNOTATION = `/*@__PURE__*/`;
 var aliasHelper = (s) => `${helperNameMap[s]}: _${helperNameMap[s]}`;
-function createCodegenContext(ast, { mode = "function", prefixIdentifiers = mode === "module", sourceMap = false, filename = `template.vue.html`, scopeId = null, optimizeImports = false, runtimeGlobalName = `Vue`, runtimeModuleName = `vue`, ssrRuntimeModuleName = "vue/server-renderer", ssr = false, isTS = false, inSSR = false }) {
+function createCodegenContext(ast, {
+  mode = "function",
+  prefixIdentifiers = mode === "module",
+  sourceMap = false,
+  filename = `template.vue.html`,
+  scopeId = null,
+  optimizeImports = false,
+  runtimeGlobalName = `Vue`,
+  runtimeModuleName = `vue`,
+  ssrRuntimeModuleName = "vue/server-renderer",
+  ssr = false,
+  isTS = false,
+  inSSR = false,
+}) {
   const context = {
     mode,
     prefixIdentifiers,
@@ -14083,12 +15870,12 @@ function createCodegenContext(ast, { mode = "function", prefixIdentifiers = mode
     },
     newline() {
       newline(context.indentLevel);
-    }
+    },
   };
   function newline(n) {
     context.push(
       "\n" + `  `.repeat(n),
-      0
+      0,
       /* Start */
     );
   }
@@ -14106,15 +15893,17 @@ function generate(ast, options = {}) {
     genFunctionPreamble(ast, preambleContext);
   }
   const functionName = ssr ? `ssrRender` : `render`;
-  const args = ssr ? [
-    "_ctx",
-    "_push",
-    "_parent",
-    "_attrs"
-  ] : [
-    "_ctx",
-    "_cache"
-  ];
+  const args = ssr
+    ? [
+      "_ctx",
+      "_push",
+      "_parent",
+      "_attrs",
+    ]
+    : [
+      "_ctx",
+      "_cache",
+    ];
   const signature = args.join(", ");
   {
     push(`function ${functionName}(${signature}) {`);
@@ -14127,7 +15916,7 @@ function generate(ast, options = {}) {
       push(
         `const { ${helpers.map(aliasHelper).join(", ")} } = _Vue
 `,
-        -1
+        -1,
         /* End */
       );
       newline();
@@ -14160,7 +15949,7 @@ function generate(ast, options = {}) {
     push(
       `
 `,
-      0
+      0,
       /* Start */
     );
     newline();
@@ -14183,11 +15972,19 @@ function generate(ast, options = {}) {
     ast,
     code: context.code,
     preamble: ``,
-    map: context.map ? context.map.toJSON() : void 0
+    map: context.map ? context.map.toJSON() : void 0,
   };
 }
 function genFunctionPreamble(ast, context) {
-  const { ssr, prefixIdentifiers, push, newline, runtimeModuleName, runtimeGlobalName, ssrRuntimeModuleName } = context;
+  const {
+    ssr,
+    prefixIdentifiers,
+    push,
+    newline,
+    runtimeModuleName,
+    runtimeGlobalName,
+    ssrRuntimeModuleName,
+  } = context;
   const VueBinding = runtimeGlobalName;
   const helpers = Array.from(ast.helpers);
   if (helpers.length > 0) {
@@ -14195,7 +15992,7 @@ function genFunctionPreamble(ast, context) {
       push(
         `const _Vue = ${VueBinding}
 `,
-        -1
+        -1,
         /* End */
       );
       if (ast.hoists.length) {
@@ -14204,12 +16001,12 @@ function genFunctionPreamble(ast, context) {
           CREATE_ELEMENT_VNODE,
           CREATE_COMMENT,
           CREATE_TEXT,
-          CREATE_STATIC
+          CREATE_STATIC,
         ].filter((helper) => helpers.includes(helper)).map(aliasHelper).join(", ");
         push(
           `const { ${staticHelpers} } = _Vue
 `,
-          -1
+          -1,
           /* End */
         );
       }
@@ -14220,14 +16017,24 @@ function genFunctionPreamble(ast, context) {
   push(`return `);
 }
 function genAssets(assets, type, { helper, push, newline, isTS }) {
-  const resolver = helper(type === "filter" ? RESOLVE_FILTER : type === "component" ? RESOLVE_COMPONENT : RESOLVE_DIRECTIVE);
+  const resolver = helper(
+    type === "filter"
+      ? RESOLVE_FILTER
+      : type === "component"
+      ? RESOLVE_COMPONENT
+      : RESOLVE_DIRECTIVE,
+  );
   for (let i = 0; i < assets.length; i++) {
     let id = assets[i];
     const maybeSelfReference = id.endsWith("__self");
     if (maybeSelfReference) {
       id = id.slice(0, -6);
     }
-    push(`const ${toValidAssetId(id, type)} = ${resolver}(${JSON.stringify(id)}${maybeSelfReference ? `, true` : ``})${isTS ? `!` : ``}`);
+    push(
+      `const ${toValidAssetId(id, type)} = ${resolver}(${JSON.stringify(id)}${
+        maybeSelfReference ? `, true` : ``
+      })${isTS ? `!` : ``}`,
+    );
     if (i < assets.length - 1) {
       newline();
     }
@@ -14268,7 +16075,7 @@ function genNodeList(nodes, context, multilines = false, comma = true) {
     if (isString(node)) {
       push(
         node,
-        -3
+        -3,
         /* Unknown */
       );
     } else if (isArray(node)) {
@@ -14290,7 +16097,7 @@ function genNode(node, context) {
   if (isString(node)) {
     context.push(
       node,
-      -3
+      -3,
       /* Unknown */
     );
     return;
@@ -14303,7 +16110,10 @@ function genNode(node, context) {
     case 1:
     case 9:
     case 11:
-      assert(node.codegenNode != null, `Codegen node is missing for element/if/for node. Apply appropriate transforms first.`);
+      assert(
+        node.codegenNode != null,
+        `Codegen node is missing for element/if/for node. Apply appropriate transforms first.`,
+      );
       genNode(node.codegenNode, context);
       break;
     case 2:
@@ -14390,7 +16200,7 @@ function genCompoundExpression(node, context) {
     if (isString(child)) {
       context.push(
         child,
-        -3
+        -3,
         /* Unknown */
       );
     } else {
@@ -14420,14 +16230,26 @@ function genComment(node, context) {
 }
 function genVNodeCall(node, context) {
   const { push, helper, pure } = context;
-  const { tag, props, children, patchFlag, dynamicProps, directives, isBlock, disableTracking, isComponent: isComponent2 } = node;
+  const {
+    tag,
+    props,
+    children,
+    patchFlag,
+    dynamicProps,
+    directives,
+    isBlock,
+    disableTracking,
+    isComponent: isComponent2,
+  } = node;
   let patchFlagString;
   if (patchFlag) {
     if (true) {
       if (patchFlag < 0) {
         patchFlagString = patchFlag + ` /* ${PatchFlagNames[patchFlag]} */`;
       } else {
-        const flagNames = Object.keys(PatchFlagNames).map(Number).filter((n) => n > 0 && patchFlag & n).map((n) => PatchFlagNames[n]).join(`, `);
+        const flagNames = Object.keys(PatchFlagNames).map(Number).filter((n) =>
+          n > 0 && patchFlag & n
+        ).map((n) => PatchFlagNames[n]).join(`, `);
         patchFlagString = patchFlag + ` /* ${flagNames} */`;
       }
     } else {
@@ -14443,15 +16265,20 @@ function genVNodeCall(node, context) {
   if (pure) {
     push(PURE_ANNOTATION);
   }
-  const callHelper = isBlock ? getVNodeBlockHelper(context.inSSR, isComponent2) : getVNodeHelper(context.inSSR, isComponent2);
+  const callHelper = isBlock
+    ? getVNodeBlockHelper(context.inSSR, isComponent2)
+    : getVNodeHelper(context.inSSR, isComponent2);
   push(helper(callHelper) + `(`, -2, node);
-  genNodeList(genNullableArgs([
-    tag,
-    props,
-    children,
-    patchFlagString,
-    dynamicProps
-  ]), context);
+  genNodeList(
+    genNullableArgs([
+      tag,
+      props,
+      children,
+      patchFlagString,
+      dynamicProps,
+    ]),
+    context,
+  );
   push(`)`);
   if (isBlock) {
     push(`)`);
@@ -14607,15 +16434,23 @@ function genCacheExpression(node, context) {
     push(`)]`);
   }
 }
-var prohibitedKeywordRE = new RegExp("\\b" + "arguments,await,break,case,catch,class,const,continue,debugger,default,delete,do,else,export,extends,finally,for,function,if,import,let,new,return,super,switch,throw,try,var,void,while,with,yield".split(",").join("\\b|\\b") + "\\b");
-var stripStringRE = /'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|`(?:[^`\\]|\\.)*\$\{|\}(?:[^`\\]|\\.)*`|`(?:[^`\\]|\\.)*`/g;
+var prohibitedKeywordRE = new RegExp(
+  "\\b" +
+    "arguments,await,break,case,catch,class,const,continue,debugger,default,delete,do,else,export,extends,finally,for,function,if,import,let,new,return,super,switch,throw,try,var,void,while,with,yield"
+      .split(",").join("\\b|\\b") +
+    "\\b",
+);
+var stripStringRE =
+  /'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|`(?:[^`\\]|\\.)*\$\{|\}(?:[^`\\]|\\.)*`|`(?:[^`\\]|\\.)*`/g;
 function validateBrowserExpression(node, context, asParams = false, asRawStatements = false) {
   const exp = node.content;
   if (!exp.trim()) {
     return;
   }
   try {
-    new Function(asRawStatements ? ` ${exp} ` : `return ${asParams ? `(${exp}) => {}` : `(${exp})`}`);
+    new Function(
+      asRawStatements ? ` ${exp} ` : `return ${asParams ? `(${exp}) => {}` : `(${exp})`}`,
+    );
   } catch (e) {
     let message = e.message;
     const keywordMatch = exp.replace(stripStringRE, "").match(prohibitedKeywordRE);
@@ -14635,13 +16470,15 @@ var transformExpression = (node, context) => {
       if (dir.type === 7 && dir.name !== "for") {
         const exp = dir.exp;
         const arg = dir.arg;
-        if (exp && exp.type === 4 && !(dir.name === "on" && arg) && // key has been processed in transformFor(vMemo + vFor)
-        !(memo && arg && arg.type === 4 && arg.content === "key")) {
+        if (
+          exp && exp.type === 4 && !(dir.name === "on" && arg) && // key has been processed in transformFor(vMemo + vFor)
+          !(memo && arg && arg.type === 4 && arg.content === "key")
+        ) {
           dir.exp = processExpression(
             exp,
             context,
             // slot args must be processed as function params
-            dir.name === "slot"
+            dir.name === "slot",
           );
         }
         if (arg && arg.type === 4 && !arg.isStatic) {
@@ -14651,7 +16488,13 @@ var transformExpression = (node, context) => {
     }
   }
 };
-function processExpression(node, context, asParams = false, asRawStatements = false, localVars = Object.create(context.identifiers)) {
+function processExpression(
+  node,
+  context,
+  asParams = false,
+  asRawStatements = false,
+  localVars = Object.create(context.identifiers),
+) {
   {
     if (true) {
       validateBrowserExpression(node, context, asParams, asRawStatements);
@@ -14659,27 +16502,34 @@ function processExpression(node, context, asParams = false, asRawStatements = fa
     return node;
   }
 }
-var transformIf = createStructuralDirectiveTransform(/^(if|else|else-if)$/, (node, dir, context) => {
-  return processIf(node, dir, context, (ifNode, branch, isRoot) => {
-    const siblings = context.parent.children;
-    let i = siblings.indexOf(ifNode);
-    let key = 0;
-    while (i-- >= 0) {
-      const sibling = siblings[i];
-      if (sibling && sibling.type === 9) {
-        key += sibling.branches.length;
+var transformIf = createStructuralDirectiveTransform(
+  /^(if|else|else-if)$/,
+  (node, dir, context) => {
+    return processIf(node, dir, context, (ifNode, branch, isRoot) => {
+      const siblings = context.parent.children;
+      let i = siblings.indexOf(ifNode);
+      let key = 0;
+      while (i-- >= 0) {
+        const sibling = siblings[i];
+        if (sibling && sibling.type === 9) {
+          key += sibling.branches.length;
+        }
       }
-    }
-    return () => {
-      if (isRoot) {
-        ifNode.codegenNode = createCodegenNodeForBranch(branch, key, context);
-      } else {
-        const parentCondition = getParentCondition(ifNode.codegenNode);
-        parentCondition.alternate = createCodegenNodeForBranch(branch, key + ifNode.branches.length - 1, context);
-      }
-    };
-  });
-});
+      return () => {
+        if (isRoot) {
+          ifNode.codegenNode = createCodegenNodeForBranch(branch, key, context);
+        } else {
+          const parentCondition = getParentCondition(ifNode.codegenNode);
+          parentCondition.alternate = createCodegenNodeForBranch(
+            branch,
+            key + ifNode.branches.length - 1,
+            context,
+          );
+        }
+      };
+    });
+  },
+);
 function processIf(node, dir, context, processCodegen) {
   if (dir.name !== "else" && (!dir.exp || !dir.exp.content.trim())) {
     const loc = dir.exp ? dir.exp.loc : node.loc;
@@ -14695,8 +16545,8 @@ function processIf(node, dir, context, processCodegen) {
       type: 9,
       loc: cloneLoc(node.loc),
       branches: [
-        branch
-      ]
+        branch,
+      ],
     };
     context.replaceNode(ifNode);
     if (processCodegen) {
@@ -14718,16 +16568,22 @@ function processIf(node, dir, context, processCodegen) {
         continue;
       }
       if (sibling && sibling.type === 9) {
-        if (dir.name === "else-if" && sibling.branches[sibling.branches.length - 1].condition === void 0) {
+        if (
+          dir.name === "else-if" &&
+          sibling.branches[sibling.branches.length - 1].condition === void 0
+        ) {
           context.onError(createCompilerError(30, node.loc));
         }
         context.removeNode();
         const branch = createIfBranch(node, dir);
-        if (comments.length && // #3619 ignore comments if the v-if is direct child of <transition>
-        !(context.parent && context.parent.type === 1 && (context.parent.tag === "transition" || context.parent.tag === "Transition"))) {
+        if (
+          comments.length && // #3619 ignore comments if the v-if is direct child of <transition>
+          !(context.parent && context.parent.type === 1 &&
+            (context.parent.tag === "transition" || context.parent.tag === "Transition"))
+        ) {
           branch.children = [
             ...comments,
-            ...branch.children
+            ...branch.children,
           ];
         }
         if (true) {
@@ -14759,10 +16615,10 @@ function createIfBranch(node, dir) {
     loc: node.loc,
     condition: dir.name === "else" ? void 0 : dir.exp,
     children: isTemplateIf && !findDir(node, "for") ? node.children : [
-      node
+      node,
     ],
     userKey: findProp(node, `key`),
-    isTemplateIf
+    isTemplateIf,
   };
 }
 function createCodegenNodeForBranch(branch, keyIndex, context) {
@@ -14774,8 +16630,8 @@ function createCodegenNodeForBranch(branch, keyIndex, context) {
       // closes the current block.
       createCallExpression(context.helper(CREATE_COMMENT), [
         true ? '"v-if"' : '""',
-        "true"
-      ])
+        "true",
+      ]),
     );
   } else {
     return createChildrenCodegenNode(branch, keyIndex, context);
@@ -14783,7 +16639,10 @@ function createCodegenNodeForBranch(branch, keyIndex, context) {
 }
 function createChildrenCodegenNode(branch, keyIndex, context) {
   const { helper } = context;
-  const keyProperty = createObjectProperty(`key`, createSimpleExpression(`${keyIndex}`, false, locStub, 2));
+  const keyProperty = createObjectProperty(
+    `key`,
+    createSimpleExpression(`${keyIndex}`, false, locStub, 2),
+  );
   const { children } = branch;
   const firstChild = children[0];
   const needFragmentWrapper = children.length !== 1 || firstChild.type !== 1;
@@ -14797,9 +16656,21 @@ function createChildrenCodegenNode(branch, keyIndex, context) {
       if (!branch.isTemplateIf && children.filter((c) => c.type !== 3).length === 1) {
         patchFlag |= 2048;
       }
-      return createVNodeCall(context, helper(FRAGMENT), createObjectExpression([
-        keyProperty
-      ]), children, patchFlag, void 0, void 0, true, false, false, branch.loc);
+      return createVNodeCall(
+        context,
+        helper(FRAGMENT),
+        createObjectExpression([
+          keyProperty,
+        ]),
+        children,
+        patchFlag,
+        void 0,
+        void 0,
+        true,
+        false,
+        false,
+        branch.loc,
+      );
     }
   } else {
     const ret = firstChild.codegenNode;
@@ -14825,7 +16696,9 @@ function isSameKey(a, b) {
     if (exp.type !== branchExp.type) {
       return false;
     }
-    if (exp.type !== 4 || exp.isStatic !== branchExp.isStatic || exp.content !== branchExp.content) {
+    if (
+      exp.type !== 4 || exp.isStatic !== branchExp.isStatic || exp.content !== branchExp.content
+    ) {
       return false;
     }
   }
@@ -14858,8 +16731,8 @@ var transformBind = (dir, _node, context) => {
       context.onError(createCompilerError(52, arg.loc));
       return {
         props: [
-          createObjectProperty(arg, createSimpleExpression("", true, loc))
-        ]
+          createObjectProperty(arg, createSimpleExpression("", true, loc)),
+        ],
       };
     }
     transformBindShorthand(dir);
@@ -14893,8 +16766,8 @@ var transformBind = (dir, _node, context) => {
   }
   return {
     props: [
-      createObjectProperty(arg, exp)
-    ]
+      createObjectProperty(arg, exp),
+    ],
   };
 };
 var transformBindShorthand = (dir, context) => {
@@ -14918,7 +16791,7 @@ var transformFor = createStructuralDirectiveTransform("for", (node, dir, context
   const { helper, removeHelper } = context;
   return processFor(node, dir, context, (forNode) => {
     const renderExp = createCallExpression(helper(RENDER_LIST), [
-      forNode.source
+      forNode.source,
     ]);
     const isTemplate = isTemplateNode(node);
     const memo = findDir(node, "memo");
@@ -14927,11 +16800,26 @@ var transformFor = createStructuralDirectiveTransform("for", (node, dir, context
     if (isDirKey && !keyProp.exp) {
       transformBindShorthand(keyProp);
     }
-    let keyExp = keyProp && (keyProp.type === 6 ? keyProp.value ? createSimpleExpression(keyProp.value.content, true) : void 0 : keyProp.exp);
+    let keyExp = keyProp &&
+      (keyProp.type === 6
+        ? keyProp.value ? createSimpleExpression(keyProp.value.content, true) : void 0
+        : keyProp.exp);
     const keyProperty = keyProp && keyExp ? createObjectProperty(`key`, keyExp) : null;
     const isStableFragment = forNode.source.type === 4 && forNode.source.constType > 0;
     const fragmentFlag = isStableFragment ? 64 : keyProp ? 128 : 256;
-    forNode.codegenNode = createVNodeCall(context, helper(FRAGMENT), void 0, renderExp, fragmentFlag, void 0, void 0, true, !isStableFragment, false, node.loc);
+    forNode.codegenNode = createVNodeCall(
+      context,
+      helper(FRAGMENT),
+      void 0,
+      renderExp,
+      fragmentFlag,
+      void 0,
+      void 0,
+      true,
+      !isStableFragment,
+      false,
+      node.loc,
+    );
     return () => {
       let childBlock;
       const { children } = forNode;
@@ -14947,16 +16835,33 @@ var transformFor = createStructuralDirectiveTransform("for", (node, dir, context
         });
       }
       const needFragmentWrapper = children.length !== 1 || children[0].type !== 1;
-      const slotOutlet = isSlotOutlet(node) ? node : isTemplate && node.children.length === 1 && isSlotOutlet(node.children[0]) ? node.children[0] : null;
+      const slotOutlet = isSlotOutlet(node)
+        ? node
+        : isTemplate && node.children.length === 1 && isSlotOutlet(node.children[0])
+        ? node.children[0]
+        : null;
       if (slotOutlet) {
         childBlock = slotOutlet.codegenNode;
         if (isTemplate && keyProperty) {
           injectProp(childBlock, keyProperty, context);
         }
       } else if (needFragmentWrapper) {
-        childBlock = createVNodeCall(context, helper(FRAGMENT), keyProperty ? createObjectExpression([
+        childBlock = createVNodeCall(
+          context,
+          helper(FRAGMENT),
           keyProperty
-        ]) : void 0, node.children, 64, void 0, void 0, true, void 0, false);
+            ? createObjectExpression([
+              keyProperty,
+            ])
+            : void 0,
+          node.children,
+          64,
+          void 0,
+          void 0,
+          true,
+          void 0,
+          false,
+        );
       } else {
         childBlock = children[0].codegenNode;
         if (isTemplate && keyProperty) {
@@ -14980,33 +16885,41 @@ var transformFor = createStructuralDirectiveTransform("for", (node, dir, context
       }
       if (memo) {
         const loop = createFunctionExpression(createForLoopParams(forNode.parseResult, [
-          createSimpleExpression(`_cached`)
+          createSimpleExpression(`_cached`),
         ]));
         loop.body = createBlockStatement([
           createCompoundExpression([
             `const _memo = (`,
             memo.exp,
-            `)`
+            `)`,
           ]),
           createCompoundExpression([
             `if (_cached`,
-            ...keyExp ? [
-              ` && _cached.key === `,
-              keyExp
-            ] : [],
-            ` && ${context.helperString(IS_MEMO_SAME)}(_cached, _memo)) return _cached`
+            ...keyExp
+              ? [
+                ` && _cached.key === `,
+                keyExp,
+              ]
+              : [],
+            ` && ${context.helperString(IS_MEMO_SAME)}(_cached, _memo)) return _cached`,
           ]),
           createCompoundExpression([
             `const _item = `,
-            childBlock
+            childBlock,
           ]),
           createSimpleExpression(`_item.memo = _memo`),
-          createSimpleExpression(`return _item`)
+          createSimpleExpression(`return _item`),
         ]);
-        renderExp.arguments.push(loop, createSimpleExpression(`_cache`), createSimpleExpression(String(context.cached.length)));
+        renderExp.arguments.push(
+          loop,
+          createSimpleExpression(`_cache`),
+          createSimpleExpression(String(context.cached.length)),
+        );
         context.cached.push(null);
       } else {
-        renderExp.arguments.push(createFunctionExpression(createForLoopParams(forNode.parseResult), childBlock, true));
+        renderExp.arguments.push(
+          createFunctionExpression(createForLoopParams(forNode.parseResult), childBlock, true),
+        );
       }
     };
   });
@@ -15033,8 +16946,8 @@ function processFor(node, dir, context, processCodegen) {
     objectIndexAlias: index,
     parseResult,
     children: isTemplateNode(node) ? node.children : [
-      node
-    ]
+      node,
+    ],
   };
   context.replaceNode(forNode);
   scopes.vFor++;
@@ -15065,7 +16978,7 @@ function createForLoopParams({ value, key, index }, memoArgs = []) {
     value,
     key,
     index,
-    ...memoArgs
+    ...memoArgs,
   ]);
 }
 function createParamsList(args) {
@@ -15073,7 +16986,9 @@ function createParamsList(args) {
   while (i--) {
     if (args[i]) break;
   }
-  return args.slice(0, i + 1).map((arg, i2) => arg || createSimpleExpression(`_`.repeat(i2 + 1), false));
+  return args.slice(0, i + 1).map((arg, i2) =>
+    arg || createSimpleExpression(`_`.repeat(i2 + 1), false)
+  );
 }
 var defaultFallback = createSimpleExpression(`undefined`, false);
 var trackSlotScopes = (node, context) => {
@@ -15088,7 +17003,8 @@ var trackSlotScopes = (node, context) => {
     }
   }
 };
-var buildClientSlotFn = (props, _vForExp, children, loc) => createFunctionExpression(props, children, false, true, children.length ? children[0].loc : loc);
+var buildClientSlotFn = (props, _vForExp, children, loc) =>
+  createFunctionExpression(props, children, false, true, children.length ? children[0].loc : loc);
 function buildSlots(node, context, buildSlotFn = buildClientSlotFn) {
   context.helper(WITH_CTX);
   const { children, loc } = node;
@@ -15101,7 +17017,12 @@ function buildSlots(node, context, buildSlotFn = buildClientSlotFn) {
     if (arg && !isStaticExp(arg)) {
       hasDynamicSlots = true;
     }
-    slotsProperties.push(createObjectProperty(arg || createSimpleExpression("default", true), buildSlotFn(exp, void 0, children, loc)));
+    slotsProperties.push(
+      createObjectProperty(
+        arg || createSimpleExpression("default", true),
+        buildSlotFn(exp, void 0, children, loc),
+      ),
+    );
   }
   let hasTemplateSlots = false;
   let hasNamedDefaultSlot = false;
@@ -15123,7 +17044,8 @@ function buildSlots(node, context, buildSlotFn = buildClientSlotFn) {
     }
     hasTemplateSlots = true;
     const { children: slotChildren, loc: slotLoc } = slotElement;
-    const { arg: slotName = createSimpleExpression(`default`, true), exp: slotProps, loc: dirLoc } = slotDir;
+    const { arg: slotName = createSimpleExpression(`default`, true), exp: slotProps, loc: dirLoc } =
+      slotDir;
     let staticSlotName;
     if (isStaticExp(slotName)) {
       staticSlotName = slotName ? slotName.content : `default`;
@@ -15136,7 +17058,13 @@ function buildSlots(node, context, buildSlotFn = buildClientSlotFn) {
     let vElse;
     if (vIf = findDir(slotElement, "if")) {
       hasDynamicSlots = true;
-      dynamicSlots.push(createConditionalExpression(vIf.exp, buildDynamicSlot(slotName, slotFunction, conditionalBranchIndex++), defaultFallback));
+      dynamicSlots.push(
+        createConditionalExpression(
+          vIf.exp,
+          buildDynamicSlot(slotName, slotFunction, conditionalBranchIndex++),
+          defaultFallback,
+        ),
+      );
     } else if (vElse = findDir(slotElement, /^else(-if)?$/, true)) {
       let j = i;
       let prev;
@@ -15151,7 +17079,13 @@ function buildSlots(node, context, buildSlotFn = buildClientSlotFn) {
         while (conditional.alternate.type === 19) {
           conditional = conditional.alternate;
         }
-        conditional.alternate = vElse.exp ? createConditionalExpression(vElse.exp, buildDynamicSlot(slotName, slotFunction, conditionalBranchIndex++), defaultFallback) : buildDynamicSlot(slotName, slotFunction, conditionalBranchIndex++);
+        conditional.alternate = vElse.exp
+          ? createConditionalExpression(
+            vElse.exp,
+            buildDynamicSlot(slotName, slotFunction, conditionalBranchIndex++),
+            defaultFallback,
+          )
+          : buildDynamicSlot(slotName, slotFunction, conditionalBranchIndex++);
       } else {
         context.onError(createCompilerError(30, vElse.loc));
       }
@@ -15162,7 +17096,11 @@ function buildSlots(node, context, buildSlotFn = buildClientSlotFn) {
         finalizeForParseResult(parseResult, context);
         dynamicSlots.push(createCallExpression(context.helper(RENDER_LIST), [
           parseResult.source,
-          createFunctionExpression(createForLoopParams(parseResult), buildDynamicSlot(slotName, slotFunction), true)
+          createFunctionExpression(
+            createForLoopParams(parseResult),
+            buildDynamicSlot(slotName, slotFunction),
+            true,
+          ),
         ]));
       } else {
         context.onError(createCompilerError(32, vFor.loc));
@@ -15191,10 +17129,12 @@ function buildSlots(node, context, buildSlotFn = buildClientSlotFn) {
     };
     if (!hasTemplateSlots) {
       slotsProperties.push(buildDefaultSlotProperty(void 0, children));
-    } else if (implicitDefaultChildren.length && // #3766
-    // with whitespace: 'preserve', whitespaces between slots will end up in
-    // implicitDefaultChildren. Ignore if all implicit children are whitespaces.
-    implicitDefaultChildren.some((node2) => isNonWhitespaceContent(node2))) {
+    } else if (
+      implicitDefaultChildren.length && // #3766
+      // with whitespace: 'preserve', whitespaces between slots will end up in
+      // implicitDefaultChildren. Ignore if all implicit children are whitespaces.
+      implicitDefaultChildren.some((node2) => isNonWhitespaceContent(node2))
+    ) {
       if (hasNamedDefaultSlot) {
         context.onError(createCompilerError(39, implicitDefaultChildren[0].loc));
       } else {
@@ -15203,27 +17143,30 @@ function buildSlots(node, context, buildSlotFn = buildClientSlotFn) {
     }
   }
   const slotFlag = hasDynamicSlots ? 2 : hasForwardedSlots(node.children) ? 3 : 1;
-  let slots = createObjectExpression(slotsProperties.concat(createObjectProperty(
-    `_`,
-    // 2 = compiled but dynamic = can skip normalization, but must run diff
-    // 1 = compiled and static = can skip normalization AND diff as optimized
-    createSimpleExpression(slotFlag + (true ? ` /* ${slotFlagsText[slotFlag]} */` : ``), false)
-  )), loc);
+  let slots = createObjectExpression(
+    slotsProperties.concat(createObjectProperty(
+      `_`,
+      // 2 = compiled but dynamic = can skip normalization, but must run diff
+      // 1 = compiled and static = can skip normalization AND diff as optimized
+      createSimpleExpression(slotFlag + (true ? ` /* ${slotFlagsText[slotFlag]} */` : ``), false),
+    )),
+    loc,
+  );
   if (dynamicSlots.length) {
     slots = createCallExpression(context.helper(CREATE_SLOTS), [
       slots,
-      createArrayExpression(dynamicSlots)
+      createArrayExpression(dynamicSlots),
     ]);
   }
   return {
     slots,
-    hasDynamicSlots
+    hasDynamicSlots,
   };
 }
 function buildDynamicSlot(name, fn, index) {
   const props = [
     createObjectProperty(`name`, name),
-    createObjectProperty(`fn`, fn)
+    createObjectProperty(`fn`, fn),
   ];
   if (index != null) {
     props.push(createObjectProperty(`key`, createSimpleExpression(String(index), true)));
@@ -15274,10 +17217,10 @@ var transformElement = (node, context) => {
     let shouldUseBlock = (
       // dynamic component may resolve to plain elements
       isDynamicComponent || vnodeTag === TELEPORT || vnodeTag === SUSPENSE || !isComponent2 && // <svg> and <foreignObject> must be forced into blocks so that block
-      // updates inside get proper isSVG flag at runtime. (#639, #643)
-      // This is technically web-specific, but splitting the logic out of core
-      // leads to too much unnecessary complexity.
-      (tag === "svg" || tag === "foreignObject" || tag === "math")
+        // updates inside get proper isSVG flag at runtime. (#639, #643)
+        // This is technically web-specific, but splitting the logic out of core
+        // leads to too much unnecessary complexity.
+        (tag === "svg" || tag === "foreignObject" || tag === "math")
     );
     if (props.length > 0) {
       const propsBuildResult = buildProps(node, context, void 0, isComponent2, isDynamicComponent);
@@ -15285,7 +17228,9 @@ var transformElement = (node, context) => {
       patchFlag = propsBuildResult.patchFlag;
       dynamicPropNames = propsBuildResult.dynamicPropNames;
       const directives = propsBuildResult.directives;
-      vnodeDirectives = directives && directives.length ? createArrayExpression(directives.map((dir) => buildDirectiveArgs(dir, context))) : void 0;
+      vnodeDirectives = directives && directives.length
+        ? createArrayExpression(directives.map((dir) => buildDirectiveArgs(dir, context)))
+        : void 0;
       if (propsBuildResult.shouldUseBlock) {
         shouldUseBlock = true;
       }
@@ -15298,13 +17243,13 @@ var transformElement = (node, context) => {
           context.onError(createCompilerError(46, {
             start: node.children[0].loc.start,
             end: node.children[node.children.length - 1].loc.end,
-            source: ""
+            source: "",
           }));
         }
       }
       const shouldBuildAsSlots = isComponent2 && // Teleport is not a real component and has dedicated runtime handling
-      vnodeTag !== TELEPORT && // explained above.
-      vnodeTag !== KEEP_ALIVE;
+        vnodeTag !== TELEPORT && // explained above.
+        vnodeTag !== KEEP_ALIVE;
       if (shouldBuildAsSlots) {
         const { slots, hasDynamicSlots } = buildSlots(node, context);
         vnodeChildren = slots;
@@ -15330,7 +17275,19 @@ var transformElement = (node, context) => {
     if (dynamicPropNames && dynamicPropNames.length) {
       vnodeDynamicProps = stringifyDynamicPropNames(dynamicPropNames);
     }
-    node.codegenNode = createVNodeCall(context, vnodeTag, vnodeProps, vnodeChildren, patchFlag === 0 ? void 0 : patchFlag, vnodeDynamicProps, vnodeDirectives, !!shouldUseBlock, false, isComponent2, node.loc);
+    node.codegenNode = createVNodeCall(
+      context,
+      vnodeTag,
+      vnodeProps,
+      vnodeChildren,
+      patchFlag === 0 ? void 0 : patchFlag,
+      vnodeDynamicProps,
+      vnodeDirectives,
+      !!shouldUseBlock,
+      false,
+      isComponent2,
+      node.loc,
+    );
   };
 };
 function resolveComponentType(node, context, ssr = false) {
@@ -15350,7 +17307,7 @@ function resolveComponentType(node, context, ssr = false) {
       }
       if (exp) {
         return createCallExpression(context.helper(RESOLVE_DYNAMIC_COMPONENT), [
-          exp
+          exp,
         ]);
       }
     } else if (isProp.type === 6 && isProp.value.content.startsWith("vue:")) {
@@ -15366,7 +17323,14 @@ function resolveComponentType(node, context, ssr = false) {
   context.components.add(tag);
   return toValidAssetId(tag, `component`);
 }
-function buildProps(node, context, props = node.props, isComponent2, isDynamicComponent, ssr = false) {
+function buildProps(
+  node,
+  context,
+  props = node.props,
+  isComponent2,
+  isDynamicComponent,
+  ssr = false,
+) {
   const { tag, loc: elementLoc, children } = node;
   let properties = [];
   const mergeArgs = [];
@@ -15390,18 +17354,25 @@ function buildProps(node, context, props = node.props, isComponent2, isDynamicCo
   };
   const pushRefVForMarker = () => {
     if (context.scopes.vFor > 0) {
-      properties.push(createObjectProperty(createSimpleExpression("ref_for", true), createSimpleExpression("true")));
+      properties.push(
+        createObjectProperty(
+          createSimpleExpression("ref_for", true),
+          createSimpleExpression("true"),
+        ),
+      );
     }
   };
   const analyzePatchFlag = ({ key, value }) => {
     if (isStaticExp(key)) {
       const name = key.content;
       const isEventHandler = isOn(name);
-      if (isEventHandler && (!isComponent2 || isDynamicComponent) && // omit the flag for click handlers because hydration gives click
-      // dedicated fast path.
-      name.toLowerCase() !== "onclick" && // omit v-model handlers
-      name !== "onUpdate:modelValue" && // omit onVnodeXXX hooks
-      !isReservedProp(name)) {
+      if (
+        isEventHandler && (!isComponent2 || isDynamicComponent) && // omit the flag for click handlers because hydration gives click
+        // dedicated fast path.
+        name.toLowerCase() !== "onclick" && // omit v-model handlers
+        name !== "onUpdate:modelValue" && // omit onVnodeXXX hooks
+        !isReservedProp(name)
+      ) {
         hasHydrationEventBinding = true;
       }
       if (isEventHandler && isReservedProp(name)) {
@@ -15410,7 +17381,10 @@ function buildProps(node, context, props = node.props, isComponent2, isDynamicCo
       if (isEventHandler && value.type === 14) {
         value = value.arguments[0];
       }
-      if (value.type === 20 || (value.type === 4 || value.type === 8) && getConstantType(value, context) > 0) {
+      if (
+        value.type === 20 ||
+        (value.type === 4 || value.type === 8) && getConstantType(value, context) > 0
+      ) {
         return;
       }
       if (name === "ref") {
@@ -15422,7 +17396,9 @@ function buildProps(node, context, props = node.props, isComponent2, isDynamicCo
       } else if (name !== "key" && !dynamicPropNames.includes(name)) {
         dynamicPropNames.push(name);
       }
-      if (isComponent2 && (name === "class" || name === "style") && !dynamicPropNames.includes(name)) {
+      if (
+        isComponent2 && (name === "class" || name === "style") && !dynamicPropNames.includes(name)
+      ) {
         dynamicPropNames.push(name);
       }
     } else {
@@ -15438,10 +17414,19 @@ function buildProps(node, context, props = node.props, isComponent2, isDynamicCo
         hasRef = true;
         pushRefVForMarker();
       }
-      if (name === "is" && (isComponentTag(tag) || value && value.content.startsWith("vue:") || isCompatEnabled("COMPILER_IS_ON_ELEMENT", context))) {
+      if (
+        name === "is" &&
+        (isComponentTag(tag) || value && value.content.startsWith("vue:") ||
+          isCompatEnabled("COMPILER_IS_ON_ELEMENT", context))
+      ) {
         continue;
       }
-      properties.push(createObjectProperty(createSimpleExpression(name, true, nameLoc), createSimpleExpression(value ? value.content : "", isStatic, value ? value.loc : loc)));
+      properties.push(
+        createObjectProperty(
+          createSimpleExpression(name, true, nameLoc),
+          createSimpleExpression(value ? value.content : "", isStatic, value ? value.loc : loc),
+        ),
+      );
     } else {
       const { name, arg, exp, loc, modifiers } = prop;
       const isVBind = name === "bind";
@@ -15455,7 +17440,11 @@ function buildProps(node, context, props = node.props, isComponent2, isDynamicCo
       if (name === "once" || name === "memo") {
         continue;
       }
-      if (name === "is" || isVBind && isStaticArgOf(arg, "is") && (isComponentTag(tag) || isCompatEnabled("COMPILER_IS_ON_ELEMENT", context))) {
+      if (
+        name === "is" ||
+        isVBind && isStaticArgOf(arg, "is") &&
+          (isComponentTag(tag) || isCompatEnabled("COMPILER_IS_ON_ELEMENT", context))
+      ) {
         continue;
       }
       if (isVOn && ssr) {
@@ -15486,7 +17475,8 @@ function buildProps(node, context, props = node.props, isComponent2, isDynamicCo
                       if (key.type !== 4 || !key.isStatic) {
                         return true;
                       }
-                      return key.content !== "class" && key.content !== "style" && !isOn(key.content);
+                      return key.content !== "class" && key.content !== "style" &&
+                        !isOn(key.content);
                     });
                   } else {
                     return true;
@@ -15507,12 +17497,14 @@ function buildProps(node, context, props = node.props, isComponent2, isDynamicCo
               type: 14,
               loc,
               callee: context.helper(TO_HANDLERS),
-              arguments: isComponent2 ? [
-                exp
-              ] : [
-                exp,
-                `true`
-              ]
+              arguments: isComponent2
+                ? [
+                  exp,
+                ]
+                : [
+                  exp,
+                  `true`,
+                ],
             });
           }
         } else {
@@ -15573,7 +17565,10 @@ function buildProps(node, context, props = node.props, isComponent2, isDynamicCo
       patchFlag |= 32;
     }
   }
-  if (!shouldUseBlock && (patchFlag === 0 || patchFlag === 32) && (hasRef || hasVnodeHook || runtimeDirectives.length > 0)) {
+  if (
+    !shouldUseBlock && (patchFlag === 0 || patchFlag === 32) &&
+    (hasRef || hasVnodeHook || runtimeDirectives.length > 0)
+  ) {
     patchFlag |= 512;
   }
   if (!context.inSSR && propsExpression) {
@@ -15599,21 +17594,24 @@ function buildProps(node, context, props = node.props, isComponent2, isDynamicCo
         if (!hasDynamicKey) {
           if (classProp && !isStaticExp(classProp.value)) {
             classProp.value = createCallExpression(context.helper(NORMALIZE_CLASS), [
-              classProp.value
+              classProp.value,
             ]);
           }
-          if (styleProp && // the static style is compiled into an object,
-          // so use `hasStyleBinding` to ensure that it is a dynamic style binding
-          (hasStyleBinding || styleProp.value.type === 4 && styleProp.value.content.trim()[0] === `[` || // v-bind:style and style both exist,
-          // v-bind:style with static literal object
-          styleProp.value.type === 17)) {
+          if (
+            styleProp && // the static style is compiled into an object,
+            // so use `hasStyleBinding` to ensure that it is a dynamic style binding
+            (hasStyleBinding ||
+              styleProp.value.type === 4 && styleProp.value.content.trim()[0] === `[` || // v-bind:style and style both exist,
+              // v-bind:style with static literal object
+              styleProp.value.type === 17)
+          ) {
             styleProp.value = createCallExpression(context.helper(NORMALIZE_STYLE), [
-              styleProp.value
+              styleProp.value,
             ]);
           }
         } else {
           propsExpression = createCallExpression(context.helper(NORMALIZE_PROPS), [
-            propsExpression
+            propsExpression,
           ]);
         }
         break;
@@ -15622,8 +17620,8 @@ function buildProps(node, context, props = node.props, isComponent2, isDynamicCo
       default:
         propsExpression = createCallExpression(context.helper(NORMALIZE_PROPS), [
           createCallExpression(context.helper(GUARD_REACTIVE_PROPS), [
-            propsExpression
-          ])
+            propsExpression,
+          ]),
         ]);
         break;
     }
@@ -15633,7 +17631,7 @@ function buildProps(node, context, props = node.props, isComponent2, isDynamicCo
     directives: runtimeDirectives,
     patchFlag,
     dynamicPropNames,
-    shouldUseBlock
+    shouldUseBlock,
   };
 }
 function dedupeProperties(properties) {
@@ -15664,7 +17662,7 @@ function mergeAsArray2(existing, incoming) {
   } else {
     existing.value = createArrayExpression([
       existing.value,
-      incoming.value
+      incoming.value,
     ], existing.loc);
   }
 }
@@ -15696,7 +17694,12 @@ function buildDirectiveArgs(dir, context) {
       dirArgs.push(`void 0`);
     }
     const trueExpression = createSimpleExpression(`true`, false, loc);
-    dirArgs.push(createObjectExpression(dir.modifiers.map((modifier) => createObjectProperty(modifier, trueExpression)), loc));
+    dirArgs.push(
+      createObjectExpression(
+        dir.modifiers.map((modifier) => createObjectProperty(modifier, trueExpression)),
+        loc,
+      ),
+    );
   }
   return createArrayExpression(dirArgs, dir.loc);
 }
@@ -15720,7 +17723,7 @@ var transformSlotOutlet = (node, context) => {
       slotName,
       "{}",
       "undefined",
-      "true"
+      "true",
     ];
     let expectedLen = 2;
     if (slotProps) {
@@ -15778,7 +17781,7 @@ function processSlotOutlet(node, context) {
   }
   return {
     slotName,
-    slotProps
+    slotProps,
   };
 }
 var transformOn = (dir, node, context, augmentor) => {
@@ -15796,21 +17799,24 @@ var transformOn = (dir, node, context, augmentor) => {
       if (rawName.startsWith("vue:")) {
         rawName = `vnode-${rawName.slice(4)}`;
       }
-      const eventString = node.tagType !== 0 || rawName.startsWith("vnode") || !/[A-Z]/.test(rawName) ? (
-        // for non-element and vnode lifecycle event listeners, auto convert
-        // it to camelCase. See issue #2249
-        toHandlerKey(camelize(rawName))
-      ) : (
-        // preserve case for plain element listeners that have uppercase
-        // letters, as these may be custom elements' custom events
-        `on:${rawName}`
-      );
+      const eventString =
+        node.tagType !== 0 || rawName.startsWith("vnode") || !/[A-Z]/.test(rawName)
+          ? (
+            // for non-element and vnode lifecycle event listeners, auto convert
+            // it to camelCase. See issue #2249
+            toHandlerKey(camelize(rawName))
+          )
+          : (
+            // preserve case for plain element listeners that have uppercase
+            // letters, as these may be custom elements' custom events
+            `on:${rawName}`
+          );
       eventName = createSimpleExpression(eventString, true, arg.loc);
     } else {
       eventName = createCompoundExpression([
         `${context.helperString(TO_HANDLER_KEY)}(`,
         arg,
-        `)`
+        `)`,
       ]);
     }
   } else {
@@ -15832,16 +17838,18 @@ var transformOn = (dir, node, context, augmentor) => {
     }
     if (isInlineStatement || shouldCache && isMemberExp) {
       exp = createCompoundExpression([
-        `${isInlineStatement ? `$event` : `${``}(...args)`} => ${hasMultipleStatements ? `{` : `(`}`,
+        `${isInlineStatement ? `$event` : `${``}(...args)`} => ${
+          hasMultipleStatements ? `{` : `(`
+        }`,
         exp,
-        hasMultipleStatements ? `}` : `)`
+        hasMultipleStatements ? `}` : `)`,
       ]);
     }
   }
   let ret = {
     props: [
-      createObjectProperty(eventName, exp || createSimpleExpression(`() => {}`, false, loc))
-    ]
+      createObjectProperty(eventName, exp || createSimpleExpression(`() => {}`, false, loc)),
+    ],
   };
   if (augmentor) {
     ret = augmentor(ret);
@@ -15867,7 +17875,7 @@ var transformText = (node, context) => {
             if (isText$1(next)) {
               if (!currentContainer) {
                 currentContainer = children[i] = createCompoundExpression([
-                  child
+                  child,
                 ], child.loc);
               }
               currentContainer.children.push(` + `, next);
@@ -15880,19 +17888,21 @@ var transformText = (node, context) => {
           }
         }
       }
-      if (!hasText || // if this is a plain element with a single text child, leave it
-      // as-is since the runtime has dedicated fast path for this by directly
-      // setting textContent of the element.
-      // for component root it's always normalized anyway.
-      children.length === 1 && (node.type === 0 || node.type === 1 && node.tagType === 0 && // #3756
-      // custom directives can potentially add DOM elements arbitrarily,
-      // we need to avoid setting textContent of the element at runtime
-      // to avoid accidentally overwriting the DOM elements added
-      // by the user through custom directives.
-      !node.props.find((p2) => p2.type === 7 && !context.directiveTransforms[p2.name]) && // in compat mode, <template> tags with no special directives
-      // will be rendered as a fragment so its children must be
-      // converted into vnodes.
-      !(node.tag === "template"))) {
+      if (
+        !hasText || // if this is a plain element with a single text child, leave it
+        // as-is since the runtime has dedicated fast path for this by directly
+        // setting textContent of the element.
+        // for component root it's always normalized anyway.
+        children.length === 1 && (node.type === 0 || node.type === 1 && node.tagType === 0 && // #3756
+              // custom directives can potentially add DOM elements arbitrarily,
+              // we need to avoid setting textContent of the element at runtime
+              // to avoid accidentally overwriting the DOM elements added
+              // by the user through custom directives.
+              !node.props.find((p2) => p2.type === 7 && !context.directiveTransforms[p2.name]) && // in compat mode, <template> tags with no special directives
+              // will be rendered as a fragment so its children must be
+              // converted into vnodes.
+              !(node.tag === "template"))
+      ) {
         return;
       }
       for (let i = 0; i < children.length; i++) {
@@ -15909,7 +17919,7 @@ var transformText = (node, context) => {
             type: 12,
             content: child,
             loc: child.loc,
-            codegenNode: createCallExpression(context.helper(CREATE_TEXT), callArgs)
+            codegenNode: createCallExpression(context.helper(CREATE_TEXT), callArgs),
           };
         }
       }
@@ -15953,38 +17963,49 @@ var transformModel = (dir, node, context) => {
     return createTransformProps();
   }
   const propName = arg ? arg : createSimpleExpression("modelValue", true);
-  const eventName = arg ? isStaticExp(arg) ? `onUpdate:${camelize(arg.content)}` : createCompoundExpression([
-    '"onUpdate:" + ',
-    arg
-  ]) : `onUpdate:modelValue`;
+  const eventName = arg
+    ? isStaticExp(arg) ? `onUpdate:${camelize(arg.content)}` : createCompoundExpression([
+      '"onUpdate:" + ',
+      arg,
+    ])
+    : `onUpdate:modelValue`;
   let assignmentExp;
   const eventArg = context.isTS ? `($event: any)` : `$event`;
   {
     assignmentExp = createCompoundExpression([
       `${eventArg} => ((`,
       exp,
-      `) = $event)`
+      `) = $event)`,
     ]);
   }
   const props = [
     // modelValue: foo
     createObjectProperty(propName, dir.exp),
     // "onUpdate:modelValue": $event => (foo = $event)
-    createObjectProperty(eventName, assignmentExp)
+    createObjectProperty(eventName, assignmentExp),
   ];
   if (dir.modifiers.length && node.tagType === 1) {
-    const modifiers = dir.modifiers.map((m) => m.content).map((m) => (isSimpleIdentifier(m) ? m : JSON.stringify(m)) + `: true`).join(`, `);
-    const modifiersKey = arg ? isStaticExp(arg) ? `${arg.content}Modifiers` : createCompoundExpression([
-      arg,
-      ' + "Modifiers"'
-    ]) : `modelModifiers`;
-    props.push(createObjectProperty(modifiersKey, createSimpleExpression(`{ ${modifiers} }`, false, dir.loc, 2)));
+    const modifiers = dir.modifiers.map((m) => m.content).map((m) =>
+      (isSimpleIdentifier(m) ? m : JSON.stringify(m)) + `: true`
+    ).join(`, `);
+    const modifiersKey = arg
+      ? isStaticExp(arg) ? `${arg.content}Modifiers` : createCompoundExpression([
+        arg,
+        ' + "Modifiers"',
+      ])
+      : `modelModifiers`;
+    props.push(
+      createObjectProperty(
+        modifiersKey,
+        createSimpleExpression(`{ ${modifiers} }`, false, dir.loc, 2),
+      ),
+    );
   }
   return createTransformProps(props);
 };
 function createTransformProps(props = []) {
   return {
-    props
+    props,
   };
 }
 var validDivisionCharRE = /[\w).+\-_$\]]/;
@@ -16041,8 +18062,10 @@ function parseFilter(node, context) {
       if (c === 96 && prev !== 92) inTemplateString = false;
     } else if (inRegex) {
       if (c === 47 && prev !== 92) inRegex = false;
-    } else if (c === 124 && // pipe
-    exp.charCodeAt(i + 1) !== 124 && exp.charCodeAt(i - 1) !== 124 && !curly && !square && !paren) {
+    } else if (
+      c === 124 && // pipe
+      exp.charCodeAt(i + 1) !== 124 && exp.charCodeAt(i - 1) !== 124 && !curly && !square && !paren
+    ) {
       if (expression === void 0) {
         lastFilterIndex = i + 1;
         expression = exp.slice(0, i).trim();
@@ -16149,7 +18172,7 @@ var transformMemo = (node, context) => {
           dir.exp,
           createFunctionExpression(void 0, codegenNode),
           `_cache`,
-          String(context.cached.length)
+          String(context.cached.length),
         ]);
         context.cached.push(null);
       }
@@ -16164,21 +18187,23 @@ function getBaseTransformPreset(prefixIdentifiers) {
       transformMemo,
       transformFor,
       ...[
-        transformFilter
+        transformFilter,
       ],
-      ...true ? [
-        transformExpression
-      ] : [],
+      ...true
+        ? [
+          transformExpression,
+        ]
+        : [],
       transformSlotOutlet,
       transformElement,
       trackSlotScopes,
-      transformText
+      transformText,
     ],
     {
       on: transformOn,
       bind: transformBind,
-      model: transformModel
-    }
+      model: transformModel,
+    },
   ];
 }
 function baseCompile(source, options = {}) {
@@ -16199,21 +18224,24 @@ function baseCompile(source, options = {}) {
     onError(createCompilerError(50));
   }
   const resolvedOptions = extend({}, options, {
-    prefixIdentifiers
+    prefixIdentifiers,
   });
   const ast = isString(source) ? baseParse(source, resolvedOptions) : source;
   const [nodeTransforms, directiveTransforms] = getBaseTransformPreset();
-  transform(ast, extend({}, resolvedOptions, {
-    nodeTransforms: [
-      ...nodeTransforms,
-      ...options.nodeTransforms || []
-    ],
-    directiveTransforms: extend({}, directiveTransforms, options.directiveTransforms || {})
-  }));
+  transform(
+    ast,
+    extend({}, resolvedOptions, {
+      nodeTransforms: [
+        ...nodeTransforms,
+        ...options.nodeTransforms || [],
+      ],
+      directiveTransforms: extend({}, directiveTransforms, options.directiveTransforms || {}),
+    }),
+  );
   return generate(ast, resolvedOptions);
 }
 var noopDirectiveTransform = () => ({
-  props: []
+  props: [],
 });
 
 // ../usr/local/share/deno/npm/registry.npmjs.org/@vue/compiler-dom/3.5.13/dist/compiler-dom.esm-bundler.js
@@ -16237,7 +18265,7 @@ registerRuntimeHelpers({
   [V_ON_WITH_KEYS]: `withKeys`,
   [V_SHOW]: `vShow`,
   [TRANSITION2]: `Transition`,
-  [TRANSITION_GROUP]: `TransitionGroup`
+  [TRANSITION_GROUP]: `TransitionGroup`,
 });
 var decoder;
 function decodeHtmlBrowser(raw, asAttr = false) {
@@ -16274,10 +18302,17 @@ var parserOptions = {
         if (tag === "svg") {
           return 1;
         }
-        if (parent.props.some((a) => a.type === 6 && a.name === "encoding" && a.value != null && (a.value.content === "text/html" || a.value.content === "application/xhtml+xml"))) {
+        if (
+          parent.props.some((a) =>
+            a.type === 6 && a.name === "encoding" && a.value != null &&
+            (a.value.content === "text/html" || a.value.content === "application/xhtml+xml")
+          )
+        ) {
           ns = 0;
         }
-      } else if (/^m(?:[ions]|text)$/.test(parent.tag) && tag !== "mglyph" && tag !== "malignmark") {
+      } else if (
+        /^m(?:[ions]|text)$/.test(parent.tag) && tag !== "mglyph" && tag !== "malignmark"
+      ) {
         ns = 0;
       }
     } else if (parent && ns === 1) {
@@ -16294,7 +18329,7 @@ var parserOptions = {
       }
     }
     return ns;
-  }
+  },
 };
 var transformStyle = (node) => {
   if (node.type === 1) {
@@ -16306,7 +18341,7 @@ var transformStyle = (node) => {
           arg: createSimpleExpression(`style`, true, p2.loc),
           exp: parseInlineCSS(p2.value.content, p2.loc),
           modifiers: [],
-          loc: p2.loc
+          loc: p2.loc,
         };
       }
     });
@@ -16326,11 +18361,13 @@ var DOMErrorMessages = {
   [56]: `v-text will override element children.`,
   [57]: `v-model can only be used on <input>, <textarea> and <select> elements.`,
   [58]: `v-model argument is not supported on plain elements.`,
-  [59]: `v-model cannot be used on file inputs since they are read-only. Use a v-on:change listener instead.`,
-  [60]: `Unnecessary value binding used alongside v-model. It will interfere with v-model's behavior.`,
+  [59]:
+    `v-model cannot be used on file inputs since they are read-only. Use a v-on:change listener instead.`,
+  [60]:
+    `Unnecessary value binding used alongside v-model. It will interfere with v-model's behavior.`,
   [61]: `v-show is missing expression.`,
   [62]: `<Transition> expects exactly one child element or component.`,
-  [63]: `Tags with side effect (<script> and <style>) are ignored in client component templates.`
+  [63]: `Tags with side effect (<script> and <style>) are ignored in client component templates.`,
 };
 var transformVHtml = (dir, node, context) => {
   const { exp, loc } = dir;
@@ -16343,8 +18380,11 @@ var transformVHtml = (dir, node, context) => {
   }
   return {
     props: [
-      createObjectProperty(createSimpleExpression(`innerHTML`, true, loc), exp || createSimpleExpression("", true))
-    ]
+      createObjectProperty(
+        createSimpleExpression(`innerHTML`, true, loc),
+        exp || createSimpleExpression("", true),
+      ),
+    ],
   };
 };
 var transformVText = (dir, node, context) => {
@@ -16358,10 +18398,17 @@ var transformVText = (dir, node, context) => {
   }
   return {
     props: [
-      createObjectProperty(createSimpleExpression(`textContent`, true), exp ? getConstantType(exp, context) > 0 ? exp : createCallExpression(context.helperString(TO_DISPLAY_STRING), [
+      createObjectProperty(
+        createSimpleExpression(`textContent`, true),
         exp
-      ], loc) : createSimpleExpression("", true))
-    ]
+          ? getConstantType(exp, context) > 0
+            ? exp
+            : createCallExpression(context.helperString(TO_DISPLAY_STRING), [
+              exp,
+            ], loc)
+          : createSimpleExpression("", true),
+      ),
+    ],
   };
 };
 var transformModel2 = (dir, node, context) => {
@@ -16421,13 +18468,15 @@ var transformModel2 = (dir, node, context) => {
   } else {
     context.onError(createDOMCompilerError(57, dir.loc));
   }
-  baseResult.props = baseResult.props.filter((p2) => !(p2.key.type === 4 && p2.key.content === "modelValue"));
+  baseResult.props = baseResult.props.filter((p2) =>
+    !(p2.key.type === 4 && p2.key.content === "modelValue")
+  );
   return baseResult;
 };
 var isEventOptionModifier = /* @__PURE__ */ makeMap(`passive,once,capture`);
 var isNonKeyModifier = /* @__PURE__ */ makeMap(
   // event propagation management
-  `stop,prevent,self,ctrl,shift,alt,meta,exact,middle`
+  `stop,prevent,self,ctrl,shift,alt,meta,exact,middle`,
 );
 var maybeKeyModifier = /* @__PURE__ */ makeMap("left,right");
 var isKeyboardEvent = /* @__PURE__ */ makeMap(`onkeyup,onkeydown,onkeypress`);
@@ -16465,25 +18514,34 @@ var resolveModifiers = (key, modifiers, context, loc) => {
   return {
     keyModifiers,
     nonKeyModifiers,
-    eventOptionModifiers
+    eventOptionModifiers,
   };
 };
 var transformClick = (key, event) => {
   const isStaticClick = isStaticExp(key) && key.content.toLowerCase() === "onclick";
-  return isStaticClick ? createSimpleExpression(event, true) : key.type !== 4 ? createCompoundExpression([
-    `(`,
-    key,
-    `) === "onClick" ? "${event}" : (`,
-    key,
-    `)`
-  ]) : key;
+  return isStaticClick
+    ? createSimpleExpression(event, true)
+    : key.type !== 4
+    ? createCompoundExpression([
+      `(`,
+      key,
+      `) === "onClick" ? "${event}" : (`,
+      key,
+      `)`,
+    ])
+    : key;
 };
 var transformOn2 = (dir, node, context) => {
   return transformOn(dir, node, context, (baseResult) => {
     const { modifiers } = dir;
     if (!modifiers.length) return baseResult;
     let { key, value: handlerExp } = baseResult.props[0];
-    const { keyModifiers, nonKeyModifiers, eventOptionModifiers } = resolveModifiers(key, modifiers, context, dir.loc);
+    const { keyModifiers, nonKeyModifiers, eventOptionModifiers } = resolveModifiers(
+      key,
+      modifiers,
+      context,
+      dir.loc,
+    );
     if (nonKeyModifiers.includes("right")) {
       key = transformClick(key, `onContextmenu`);
     }
@@ -16493,28 +18551,32 @@ var transformOn2 = (dir, node, context) => {
     if (nonKeyModifiers.length) {
       handlerExp = createCallExpression(context.helper(V_ON_WITH_MODIFIERS), [
         handlerExp,
-        JSON.stringify(nonKeyModifiers)
+        JSON.stringify(nonKeyModifiers),
       ]);
     }
-    if (keyModifiers.length && // if event name is dynamic, always wrap with keys guard
-    (!isStaticExp(key) || isKeyboardEvent(key.content.toLowerCase()))) {
+    if (
+      keyModifiers.length && // if event name is dynamic, always wrap with keys guard
+      (!isStaticExp(key) || isKeyboardEvent(key.content.toLowerCase()))
+    ) {
       handlerExp = createCallExpression(context.helper(V_ON_WITH_KEYS), [
         handlerExp,
-        JSON.stringify(keyModifiers)
+        JSON.stringify(keyModifiers),
       ]);
     }
     if (eventOptionModifiers.length) {
       const modifierPostfix = eventOptionModifiers.map(capitalize).join("");
-      key = isStaticExp(key) ? createSimpleExpression(`${key.content}${modifierPostfix}`, true) : createCompoundExpression([
-        `(`,
-        key,
-        `) + "${modifierPostfix}"`
-      ]);
+      key = isStaticExp(key)
+        ? createSimpleExpression(`${key.content}${modifierPostfix}`, true)
+        : createCompoundExpression([
+          `(`,
+          key,
+          `) + "${modifierPostfix}"`,
+        ]);
     }
     return {
       props: [
-        createObjectProperty(key, handlerExp)
-      ]
+        createObjectProperty(key, handlerExp),
+      ],
     };
   });
 };
@@ -16525,7 +18587,7 @@ var transformShow = (dir, node, context) => {
   }
   return {
     props: [],
-    needRuntime: context.helper(V_SHOW)
+    needRuntime: context.helper(V_SHOW),
   };
 };
 var transformTransition = (node, context) => {
@@ -16540,7 +18602,7 @@ var transformTransition = (node, context) => {
           context.onError(createDOMCompilerError(62, {
             start: node.children[0].loc.start,
             end: node.children[node.children.length - 1].loc.end,
-            source: ""
+            source: "",
           }));
         }
         const child = node.children[0];
@@ -16552,7 +18614,7 @@ var transformTransition = (node, context) => {
                 name: "persisted",
                 nameLoc: node.loc,
                 value: void 0,
-                loc: node.loc
+                loc: node.loc,
               });
             }
           }
@@ -16562,9 +18624,12 @@ var transformTransition = (node, context) => {
   }
 };
 function hasMultipleChildren(node) {
-  const children = node.children = node.children.filter((c) => c.type !== 3 && !(c.type === 2 && !c.content.trim()));
+  const children = node.children = node.children.filter((c) =>
+    c.type !== 3 && !(c.type === 2 && !c.content.trim())
+  );
   const child = children[0];
-  return children.length !== 1 || child.type === 11 || child.type === 9 && child.branches.some(hasMultipleChildren);
+  return children.length !== 1 || child.type === 11 ||
+    child.type === 9 && child.branches.some(hasMultipleChildren);
 }
 var ignoreSideEffectTags = (node, context) => {
   if (node.type === 1 && node.tagType === 0 && (node.tag === "script" || node.tag === "style")) {
@@ -16593,7 +18658,7 @@ var headings = /* @__PURE__ */ new Set([
   "h3",
   "h4",
   "h5",
-  "h6"
+  "h6",
 ]);
 var emptySet = /* @__PURE__ */ new Set([]);
 var onlyValidChildren = {
@@ -16608,15 +18673,15 @@ var onlyValidChildren = {
     "noframes",
     "style",
     "script",
-    "template"
+    "template",
   ]),
   optgroup: /* @__PURE__ */ new Set([
-    "option"
+    "option",
   ]),
   select: /* @__PURE__ */ new Set([
     "optgroup",
     "option",
-    "hr"
+    "hr",
   ]),
   // table
   table: /* @__PURE__ */ new Set([
@@ -16624,23 +18689,23 @@ var onlyValidChildren = {
     "colgroup",
     "tbody",
     "tfoot",
-    "thead"
+    "thead",
   ]),
   tr: /* @__PURE__ */ new Set([
     "td",
-    "th"
+    "th",
   ]),
   colgroup: /* @__PURE__ */ new Set([
-    "col"
+    "col",
   ]),
   tbody: /* @__PURE__ */ new Set([
-    "tr"
+    "tr",
   ]),
   thead: /* @__PURE__ */ new Set([
-    "tr"
+    "tr",
   ]),
   tfoot: /* @__PURE__ */ new Set([
-    "tr"
+    "tr",
   ]),
   // these elements can not have any children elements
   script: emptySet,
@@ -16648,67 +18713,67 @@ var onlyValidChildren = {
   option: emptySet,
   textarea: emptySet,
   style: emptySet,
-  title: emptySet
+  title: emptySet,
 };
 var onlyValidParents = {
   // sections
   html: emptySet,
   body: /* @__PURE__ */ new Set([
-    "html"
+    "html",
   ]),
   head: /* @__PURE__ */ new Set([
-    "html"
+    "html",
   ]),
   // table
   td: /* @__PURE__ */ new Set([
-    "tr"
+    "tr",
   ]),
   colgroup: /* @__PURE__ */ new Set([
-    "table"
+    "table",
   ]),
   caption: /* @__PURE__ */ new Set([
-    "table"
+    "table",
   ]),
   tbody: /* @__PURE__ */ new Set([
-    "table"
+    "table",
   ]),
   tfoot: /* @__PURE__ */ new Set([
-    "table"
+    "table",
   ]),
   col: /* @__PURE__ */ new Set([
-    "colgroup"
+    "colgroup",
   ]),
   th: /* @__PURE__ */ new Set([
-    "tr"
+    "tr",
   ]),
   thead: /* @__PURE__ */ new Set([
-    "table"
+    "table",
   ]),
   tr: /* @__PURE__ */ new Set([
     "tbody",
     "thead",
-    "tfoot"
+    "tfoot",
   ]),
   // data list
   dd: /* @__PURE__ */ new Set([
     "dl",
-    "div"
+    "div",
   ]),
   dt: /* @__PURE__ */ new Set([
     "dl",
-    "div"
+    "div",
   ]),
   // other
   figcaption: /* @__PURE__ */ new Set([
-    "figure"
+    "figure",
   ]),
   // li: new Set(["ul", "ol"]),
   summary: /* @__PURE__ */ new Set([
-    "details"
+    "details",
   ]),
   area: /* @__PURE__ */ new Set([
-    "map"
-  ])
+    "map",
+  ]),
 };
 var knownInvalidChildren = {
   p: /* @__PURE__ */ new Set([
@@ -16744,7 +18809,7 @@ var knownInvalidChildren = {
     "pre",
     "section",
     "table",
-    "ul"
+    "ul",
   ]),
   svg: /* @__PURE__ */ new Set([
     "b",
@@ -16782,50 +18847,57 @@ var knownInvalidChildren = {
     "table",
     "u",
     "ul",
-    "var"
-  ])
+    "var",
+  ]),
 };
 var knownInvalidParents = {
   a: /* @__PURE__ */ new Set([
-    "a"
+    "a",
   ]),
   button: /* @__PURE__ */ new Set([
-    "button"
+    "button",
   ]),
   dd: /* @__PURE__ */ new Set([
     "dd",
-    "dt"
+    "dt",
   ]),
   dt: /* @__PURE__ */ new Set([
     "dd",
-    "dt"
+    "dt",
   ]),
   form: /* @__PURE__ */ new Set([
-    "form"
+    "form",
   ]),
   li: /* @__PURE__ */ new Set([
-    "li"
+    "li",
   ]),
   h1: headings,
   h2: headings,
   h3: headings,
   h4: headings,
   h5: headings,
-  h6: headings
+  h6: headings,
 };
 var validateHtmlNesting = (node, context) => {
-  if (node.type === 1 && node.tagType === 0 && context.parent && context.parent.type === 1 && context.parent.tagType === 0 && !isValidHTMLNesting(context.parent.tag, node.tag)) {
-    const error = new SyntaxError(`<${node.tag}> cannot be child of <${context.parent.tag}>, according to HTML specifications. This can cause hydration errors or potentially disrupt future functionality.`);
+  if (
+    node.type === 1 && node.tagType === 0 && context.parent && context.parent.type === 1 &&
+    context.parent.tagType === 0 && !isValidHTMLNesting(context.parent.tag, node.tag)
+  ) {
+    const error = new SyntaxError(
+      `<${node.tag}> cannot be child of <${context.parent.tag}>, according to HTML specifications. This can cause hydration errors or potentially disrupt future functionality.`,
+    );
     error.loc = node.loc;
     context.onWarn(error);
   }
 };
 var DOMNodeTransforms = [
   transformStyle,
-  ...true ? [
-    transformTransition,
-    validateHtmlNesting
-  ] : []
+  ...true
+    ? [
+      transformTransition,
+      validateHtmlNesting,
+    ]
+    : [],
 ];
 var DOMDirectiveTransforms = {
   cloak: noopDirectiveTransform,
@@ -16835,21 +18907,24 @@ var DOMDirectiveTransforms = {
   // override compiler-core
   on: transformOn2,
   // override compiler-core
-  show: transformShow
+  show: transformShow,
 };
 function compile2(src, options = {}) {
-  return baseCompile(src, extend({}, parserOptions, options, {
-    nodeTransforms: [
-      // ignore <script> and <tag>
-      // this is not put inside DOMNodeTransforms because that list is used
-      // by compiler-ssr to generate vnode fallback branches
-      ignoreSideEffectTags,
-      ...DOMNodeTransforms,
-      ...options.nodeTransforms || []
-    ],
-    directiveTransforms: extend({}, DOMDirectiveTransforms, options.directiveTransforms || {}),
-    transformHoist: null
-  }));
+  return baseCompile(
+    src,
+    extend({}, parserOptions, options, {
+      nodeTransforms: [
+        // ignore <script> and <tag>
+        // this is not put inside DOMNodeTransforms because that list is used
+        // by compiler-ssr to generate vnode fallback branches
+        ignoreSideEffectTags,
+        ...DOMNodeTransforms,
+        ...options.nodeTransforms || [],
+      ],
+      directiveTransforms: extend({}, DOMDirectiveTransforms, options.directiveTransforms || {}),
+      transformHoist: null,
+    }),
+  );
 }
 
 // ../usr/local/share/deno/npm/registry.npmjs.org/vue/3.5.13/dist/vue.esm-bundler.js
@@ -16886,7 +18961,7 @@ function compileToFunction(template, options) {
   const opts = extend({
     hoistStatic: true,
     onError: true ? onError : void 0,
-    onWarn: true ? (e) => onError(e, true) : NOOP
+    onWarn: true ? (e) => onError(e, true) : NOOP,
   }, options);
   if (!opts.isCustomElement && typeof customElements !== "undefined") {
     opts.isCustomElement = (tag) => !!customElements.get(tag);
@@ -16894,9 +18969,14 @@ function compileToFunction(template, options) {
   const { code } = compile2(template, opts);
   function onError(err, asWarning = false) {
     const message = asWarning ? err.message : `Template compilation error: ${err.message}`;
-    const codeFrame = err.loc && generateCodeFrame(template, err.loc.start.offset, err.loc.end.offset);
-    warn2(codeFrame ? `${message}
-${codeFrame}` : message);
+    const codeFrame = err.loc &&
+      generateCodeFrame(template, err.loc.start.offset, err.loc.end.offset);
+    warn2(
+      codeFrame
+        ? `${message}
+${codeFrame}`
+        : message,
+    );
   }
   const render2 = new Function("Vue", code)(runtime_dom_esm_bundler_exports);
   render2._rc = true;
@@ -16935,7 +19015,7 @@ __export(mod_exports, {
   supportWarningsOf: () => supportWarningsOf,
   tryCardDef: () => tryCardDef,
   validateDeck: () => validateDeck,
-  verifyFixtureAgainstSnapshot: () => verifyFixtureAgainstSnapshot
+  verifyFixtureAgainstSnapshot: () => verifyFixtureAgainstSnapshot,
 });
 
 // data/cards.json
@@ -16945,27 +19025,31 @@ var cards_default = {
     api_base: "https://api.netrunnerdb.com/api/v3/public",
     runner_decklist_id: "4b9cf488-5bd9-4415-a57a-0864d4d0e600",
     corp_decklist_id: "382f2e2d-eabf-47c8-ae55-adb93b3df3e9",
-    runner_decklist_url: "https://api.netrunnerdb.com/api/v3/public/decklists/4b9cf488-5bd9-4415-a57a-0864d4d0e600",
-    corp_decklist_url: "https://api.netrunnerdb.com/api/v3/public/decklists/382f2e2d-eabf-47c8-ae55-adb93b3df3e9",
-    runner_cards_url: "https://api.netrunnerdb.com/api/v3/public/cards?filter[decklist_id]=4b9cf488-5bd9-4415-a57a-0864d4d0e600",
-    corp_cards_url: "https://api.netrunnerdb.com/api/v3/public/cards?filter[decklist_id]=382f2e2d-eabf-47c8-ae55-adb93b3df3e9",
+    runner_decklist_url:
+      "https://api.netrunnerdb.com/api/v3/public/decklists/4b9cf488-5bd9-4415-a57a-0864d4d0e600",
+    corp_decklist_url:
+      "https://api.netrunnerdb.com/api/v3/public/decklists/382f2e2d-eabf-47c8-ae55-adb93b3df3e9",
+    runner_cards_url:
+      "https://api.netrunnerdb.com/api/v3/public/cards?filter[decklist_id]=4b9cf488-5bd9-4415-a57a-0864d4d0e600",
+    corp_cards_url:
+      "https://api.netrunnerdb.com/api/v3/public/cards?filter[decklist_id]=382f2e2d-eabf-47c8-ae55-adb93b3df3e9",
     retrieved_at: "2026-10-24",
     api_meta: {
       runner: {
         stats: {
           total: {
-            count: 17
-          }
-        }
+            count: 17,
+          },
+        },
       },
       corp: {
         stats: {
           total: {
-            count: 17
-          }
-        }
-      }
-    }
+            count: 17,
+          },
+        },
+      },
+    },
   },
   cards: [
     {
@@ -16973,8 +19057,10 @@ var cards_default = {
       netrunnerdb_id: "carmen",
       title: "Carmen",
       stripped_title: "Carmen",
-      text: "If you made a successful run this turn, this program costs 2[credit] less to install.\nInterface \u2192 <strong>1[credit]:</strong> Break 1 <strong>sentry</strong> subroutine.\n<strong>2[credit]:</strong> +3 strength.",
-      stripped_text: "If you made a successful run this turn, this program costs 2 credits less to install. Interface -> 1 credit: Break 1 sentry subroutine. 2 credits: +3 strength.",
+      text:
+        "If you made a successful run this turn, this program costs 2[credit] less to install.\nInterface \u2192 <strong>1[credit]:</strong> Break 1 <strong>sentry</strong> subroutine.\n<strong>2[credit]:</strong> +3 strength.",
+      stripped_text:
+        "If you made a successful run this turn, this program costs 2 credits less to install. Interface -> 1 credit: Break 1 sentry subroutine. 2 credits: +3 strength.",
       card_type_id: "program",
       side_id: "runner",
       faction_id: "criminal",
@@ -16992,7 +19078,7 @@ var cards_default = {
       is_unique: false,
       card_subtype_ids: [
         "icebreaker",
-        "killer"
+        "killer",
       ],
       display_subtypes: "Icebreaker - Killer",
       date_release: "2021-03-28",
@@ -17004,16 +19090,18 @@ var cards_default = {
       num_extra_faces: 0,
       latest_printing_id: "30015",
       printing_ids: [
-        "30015"
-      ]
+        "30015",
+      ],
     },
     {
       id: "cleaver",
       netrunnerdb_id: "cleaver",
       title: "Cleaver",
       stripped_title: "Cleaver",
-      text: "Interface \u2192 <strong>1[credit]:</strong> Break up to 2 <strong>barrier</strong> subroutines.\n<strong>2[credit]:</strong> +1 strength.",
-      stripped_text: "Interface -> 1 credit: Break up to 2 barrier subroutines. 2 credits: +1 strength.",
+      text:
+        "Interface \u2192 <strong>1[credit]:</strong> Break up to 2 <strong>barrier</strong> subroutines.\n<strong>2[credit]:</strong> +1 strength.",
+      stripped_text:
+        "Interface -> 1 credit: Break up to 2 barrier subroutines. 2 credits: +1 strength.",
       card_type_id: "program",
       side_id: "runner",
       faction_id: "anarch",
@@ -17031,7 +19119,7 @@ var cards_default = {
       is_unique: false,
       card_subtype_ids: [
         "fracter",
-        "icebreaker"
+        "icebreaker",
       ],
       display_subtypes: "Icebreaker - Fracter",
       date_release: "2021-03-28",
@@ -17043,8 +19131,8 @@ var cards_default = {
       num_extra_faces: 0,
       latest_printing_id: "30006",
       printing_ids: [
-        "30006"
-      ]
+        "30006",
+      ],
     },
     {
       id: "creative_commission",
@@ -17079,8 +19167,8 @@ var cards_default = {
       num_extra_faces: 0,
       latest_printing_id: "30020",
       printing_ids: [
-        "30020"
-      ]
+        "30020",
+      ],
     },
     {
       id: "docklands_pass",
@@ -17115,16 +19203,18 @@ var cards_default = {
       num_extra_faces: 0,
       latest_printing_id: "30013",
       printing_ids: [
-        "30013"
-      ]
+        "30013",
+      ],
     },
     {
       id: "jailbreak",
       netrunnerdb_id: "jailbreak",
       title: "Jailbreak",
       stripped_title: "Jailbreak",
-      text: "Run HQ or R&D. If successful, draw 1 card and when you breach the attacked server, access 1 additional card.",
-      stripped_text: "Run HQ or R&D. If successful, draw 1 card and when you breach the attacked server, access 1 additional card.",
+      text:
+        "Run HQ or R&D. If successful, draw 1 card and when you breach the attacked server, access 1 additional card.",
+      stripped_text:
+        "Run HQ or R&D. If successful, draw 1 card and when you breach the attacked server, access 1 additional card.",
       card_type_id: "event",
       side_id: "runner",
       faction_id: "neutral_runner",
@@ -17141,7 +19231,7 @@ var cards_default = {
       trash_cost: null,
       is_unique: false,
       card_subtype_ids: [
-        "run"
+        "run",
       ],
       display_subtypes: "Run",
       date_release: "2021-03-28",
@@ -17153,16 +19243,18 @@ var cards_default = {
       num_extra_faces: 0,
       latest_printing_id: "30028",
       printing_ids: [
-        "30028"
-      ]
+        "30028",
+      ],
     },
     {
       id: "mayfly",
       netrunnerdb_id: "mayfly",
       title: "Mayfly",
       stripped_title: "Mayfly",
-      text: "Interface \u2192 <strong>1[credit]:</strong> Break 1 subroutine. When this run ends, trash this program.\n<strong>1[credit]:</strong> +1 strength.",
-      stripped_text: "Interface -> 1 credit: Break 1 subroutine. When this run ends, trash this program. 1 credit: +1 strength.",
+      text:
+        "Interface \u2192 <strong>1[credit]:</strong> Break 1 subroutine. When this run ends, trash this program.\n<strong>1[credit]:</strong> +1 strength.",
+      stripped_text:
+        "Interface -> 1 credit: Break 1 subroutine. When this run ends, trash this program. 1 credit: +1 strength.",
       card_type_id: "program",
       side_id: "runner",
       faction_id: "neutral_runner",
@@ -17180,7 +19272,7 @@ var cards_default = {
       is_unique: false,
       card_subtype_ids: [
         "ai",
-        "icebreaker"
+        "icebreaker",
       ],
       display_subtypes: "Icebreaker - AI",
       date_release: "2021-03-28",
@@ -17192,16 +19284,18 @@ var cards_default = {
       num_extra_faces: 0,
       latest_printing_id: "30032",
       printing_ids: [
-        "30032"
-      ]
+        "30032",
+      ],
     },
     {
       id: "overclock",
       netrunnerdb_id: "overclock",
       title: "Overclock",
       stripped_title: "Overclock",
-      text: "Place 5[credit] on this event, then run any server. You can spend hosted credits during that run.",
-      stripped_text: "Place 5 credits on this event, then run any server. You can spend hosted credits during that run.",
+      text:
+        "Place 5[credit] on this event, then run any server. You can spend hosted credits during that run.",
+      stripped_text:
+        "Place 5 credits on this event, then run any server. You can spend hosted credits during that run.",
       card_type_id: "event",
       side_id: "runner",
       faction_id: "neutral_runner",
@@ -17218,7 +19312,7 @@ var cards_default = {
       trash_cost: null,
       is_unique: false,
       card_subtype_ids: [
-        "run"
+        "run",
       ],
       display_subtypes: "Run",
       date_release: "2021-03-28",
@@ -17230,16 +19324,18 @@ var cards_default = {
       num_extra_faces: 0,
       latest_printing_id: "30029",
       printing_ids: [
-        "30029"
-      ]
+        "30029",
+      ],
     },
     {
       id: "pennyshaver",
       netrunnerdb_id: "pennyshaver",
       title: "Pennyshaver",
       stripped_title: "Pennyshaver",
-      text: "+1[mu]\nWhenever you make a successful run, place 1[credit] on this hardware.\n[click]<strong>:</strong> Place 1[credit] on this hardware, then take all credits from it.\nLimit 1 <strong>console</strong> per player.",
-      stripped_text: "+1 mu Whenever you make a successful run, place 1 credit on this hardware. click: Place 1 credit on this hardware, then take all credits from it. Limit 1 console per player.",
+      text:
+        "+1[mu]\nWhenever you make a successful run, place 1[credit] on this hardware.\n[click]<strong>:</strong> Place 1[credit] on this hardware, then take all credits from it.\nLimit 1 <strong>console</strong> per player.",
+      stripped_text:
+        "+1 mu Whenever you make a successful run, place 1 credit on this hardware. click: Place 1 credit on this hardware, then take all credits from it. Limit 1 console per player.",
       card_type_id: "hardware",
       side_id: "runner",
       faction_id: "criminal",
@@ -17256,7 +19352,7 @@ var cards_default = {
       trash_cost: null,
       is_unique: true,
       card_subtype_ids: [
-        "console"
+        "console",
       ],
       display_subtypes: "Console",
       date_release: "2021-03-28",
@@ -17268,16 +19364,18 @@ var cards_default = {
       num_extra_faces: 0,
       latest_printing_id: "30014",
       printing_ids: [
-        "30014"
-      ]
+        "30014",
+      ],
     },
     {
       id: "red_team",
       netrunnerdb_id: "red_team",
       title: "Red Team",
       stripped_title: "Red Team",
-      text: "When you install this resource, load 12[credit] onto it. When it is empty, trash it.\n[click]<strong>:</strong> Run a central server you have not run this turn. If successful, take 3[credit] from this resource.",
-      stripped_text: "When you install this resource, load 12 credits onto it. When it is empty, trash it. click: Run a central server you have not run this turn. If successful, take 3 credits from this resource.",
+      text:
+        "When you install this resource, load 12[credit] onto it. When it is empty, trash it.\n[click]<strong>:</strong> Run a central server you have not run this turn. If successful, take 3[credit] from this resource.",
+      stripped_text:
+        "When you install this resource, load 12 credits onto it. When it is empty, trash it. click: Run a central server you have not run this turn. If successful, take 3 credits from this resource.",
       card_type_id: "resource",
       side_id: "runner",
       faction_id: "criminal",
@@ -17294,7 +19392,7 @@ var cards_default = {
       trash_cost: null,
       is_unique: false,
       card_subtype_ids: [
-        "job"
+        "job",
       ],
       display_subtypes: "Job",
       date_release: "2021-03-28",
@@ -17306,16 +19404,18 @@ var cards_default = {
       num_extra_faces: 0,
       latest_printing_id: "30018",
       printing_ids: [
-        "30018"
-      ]
+        "30018",
+      ],
     },
     {
       id: "smartware_distributor",
       netrunnerdb_id: "smartware_distributor",
       title: "Smartware Distributor",
       stripped_title: "Smartware Distributor",
-      text: "[click]<strong>:</strong> Place 3[credit] on this resource.\nWhen your turn begins, take 1[credit] from this resource.",
-      stripped_text: "click: Place 3 credits on this resource. When your turn begins, take 1 credit from this resource.",
+      text:
+        "[click]<strong>:</strong> Place 3[credit] on this resource.\nWhen your turn begins, take 1[credit] from this resource.",
+      stripped_text:
+        "click: Place 3 credits on this resource. When your turn begins, take 1 credit from this resource.",
       card_type_id: "resource",
       side_id: "runner",
       faction_id: "neutral_runner",
@@ -17332,7 +19432,7 @@ var cards_default = {
       trash_cost: null,
       is_unique: false,
       card_subtype_ids: [
-        "connection"
+        "connection",
       ],
       display_subtypes: "Connection",
       date_release: "2021-03-28",
@@ -17344,8 +19444,8 @@ var cards_default = {
       num_extra_faces: 0,
       latest_printing_id: "30033",
       printing_ids: [
-        "30033"
-      ]
+        "30033",
+      ],
     },
     {
       id: "sure_gamble",
@@ -17383,16 +19483,18 @@ var cards_default = {
         "30030",
         "25059",
         "20056",
-        "01050"
-      ]
+        "01050",
+      ],
     },
     {
       id: "telework_contract",
       netrunnerdb_id: "telework_contract",
       title: "Telework Contract",
       stripped_title: "Telework Contract",
-      text: "When you install this resource, load 9[credit] onto it. When it is empty, trash it.\nOnce per turn \u2192 [click]<strong>:</strong> Take 3[credit] from this resource.",
-      stripped_text: "When you install this resource, load 9[credit] onto it. When it is empty, trash it. Once per turn -> click: Take 3[credit] from this resource.",
+      text:
+        "When you install this resource, load 9[credit] onto it. When it is empty, trash it.\nOnce per turn \u2192 [click]<strong>:</strong> Take 3[credit] from this resource.",
+      stripped_text:
+        "When you install this resource, load 9[credit] onto it. When it is empty, trash it. Once per turn -> click: Take 3[credit] from this resource.",
       card_type_id: "resource",
       side_id: "runner",
       faction_id: "shaper",
@@ -17409,7 +19511,7 @@ var cards_default = {
       trash_cost: null,
       is_unique: false,
       card_subtype_ids: [
-        "job"
+        "job",
       ],
       display_subtypes: "Job",
       date_release: "2021-03-28",
@@ -17421,8 +19523,8 @@ var cards_default = {
       num_extra_faces: 0,
       latest_printing_id: "30027",
       printing_ids: [
-        "30027"
-      ]
+        "30027",
+      ],
     },
     {
       id: "the_catalyst_convention_breaker",
@@ -17447,7 +19549,7 @@ var cards_default = {
       trash_cost: null,
       is_unique: false,
       card_subtype_ids: [
-        "natural"
+        "natural",
       ],
       display_subtypes: "Natural",
       date_release: "2021-03-28",
@@ -17460,16 +19562,18 @@ var cards_default = {
       num_extra_faces: 0,
       latest_printing_id: "30076",
       printing_ids: [
-        "30076"
-      ]
+        "30076",
+      ],
     },
     {
       id: "tread_lightly",
       netrunnerdb_id: "tread_lightly",
       title: "Tread Lightly",
       stripped_title: "Tread Lightly",
-      text: "Run any server. During that run, the rez cost of each piece of ice is increased by 3[credit].",
-      stripped_text: "Run any server. During that run, the rez cost of each piece of ice is increased by 3 credits.",
+      text:
+        "Run any server. During that run, the rez cost of each piece of ice is increased by 3[credit].",
+      stripped_text:
+        "Run any server. During that run, the rez cost of each piece of ice is increased by 3 credits.",
       card_type_id: "event",
       side_id: "runner",
       faction_id: "criminal",
@@ -17486,7 +19590,7 @@ var cards_default = {
       trash_cost: null,
       is_unique: false,
       card_subtype_ids: [
-        "run"
+        "run",
       ],
       display_subtypes: "Run",
       date_release: "2021-03-28",
@@ -17498,16 +19602,18 @@ var cards_default = {
       num_extra_faces: 0,
       latest_printing_id: "30012",
       printing_ids: [
-        "30012"
-      ]
+        "30012",
+      ],
     },
     {
       id: "unity",
       netrunnerdb_id: "unity",
       title: "Unity",
       stripped_title: "Unity",
-      text: "Interface \u2192 <strong>1[credit]:</strong> Break 1 <strong>code gate</strong> subroutine.\n<strong>1[credit]:</strong> +X strength. X is equal to the number of installed <strong>icebreakers</strong> <em>(including this one)</em>.",
-      stripped_text: "Interface -> 1 credit: Break 1 code gate subroutine. 1 credit: +X strength. X is equal to the number of installed icebreakers (including this one).",
+      text:
+        "Interface \u2192 <strong>1[credit]:</strong> Break 1 <strong>code gate</strong> subroutine.\n<strong>1[credit]:</strong> +X strength. X is equal to the number of installed <strong>icebreakers</strong> <em>(including this one)</em>.",
+      stripped_text:
+        "Interface -> 1 credit: Break 1 code gate subroutine. 1 credit: +X strength. X is equal to the number of installed icebreakers (including this one).",
       card_type_id: "program",
       side_id: "runner",
       faction_id: "shaper",
@@ -17525,7 +19631,7 @@ var cards_default = {
       is_unique: false,
       card_subtype_ids: [
         "decoder",
-        "icebreaker"
+        "icebreaker",
       ],
       display_subtypes: "Icebreaker - Decoder",
       date_release: "2021-03-28",
@@ -17537,16 +19643,18 @@ var cards_default = {
       num_extra_faces: 0,
       latest_printing_id: "30026",
       printing_ids: [
-        "30026"
-      ]
+        "30026",
+      ],
     },
     {
       id: "verbal_plasticity",
       netrunnerdb_id: "verbal_plasticity",
       title: "Verbal Plasticity",
       stripped_title: "Verbal Plasticity",
-      text: "The first time each turn you take the basic action to draw 1 card, instead draw 2 cards.",
-      stripped_text: "The first time each turn you take the basic action to draw 1 card, instead draw 2 cards.",
+      text:
+        "The first time each turn you take the basic action to draw 1 card, instead draw 2 cards.",
+      stripped_text:
+        "The first time each turn you take the basic action to draw 1 card, instead draw 2 cards.",
       card_type_id: "resource",
       side_id: "runner",
       faction_id: "neutral_runner",
@@ -17563,7 +19671,7 @@ var cards_default = {
       trash_cost: null,
       is_unique: true,
       card_subtype_ids: [
-        "genetics"
+        "genetics",
       ],
       display_subtypes: "Genetics",
       date_release: "2021-03-28",
@@ -17575,8 +19683,8 @@ var cards_default = {
       num_extra_faces: 0,
       latest_printing_id: "30034",
       printing_ids: [
-        "30034"
-      ]
+        "30034",
+      ],
     },
     {
       id: "vrcation",
@@ -17611,16 +19719,18 @@ var cards_default = {
       num_extra_faces: 0,
       latest_printing_id: "30021",
       printing_ids: [
-        "30021"
-      ]
+        "30021",
+      ],
     },
     {
       id: "bran_1_0",
       netrunnerdb_id: "bran_1_0",
       title: "Br\xE2n 1.0",
       stripped_title: "Bran 1.0",
-      text: "<strong>Lose [click]:</strong> Break 1 subroutine on this ice. Only the Runner can use this ability.\n[subroutine] You may install 1 piece of ice from HQ or Archives directly inward from this ice, ignoring all costs.\n[subroutine] End the run.\n[subroutine] End the run.",
-      stripped_text: "Lose click: Break 1 subroutine on this ice. Only the Runner can use this ability. Subroutine You may install 1 piece of ice from HQ or Archives directly inward from this ice, ignoring all costs. Subroutine End the run. Subroutine End the run.",
+      text:
+        "<strong>Lose [click]:</strong> Break 1 subroutine on this ice. Only the Runner can use this ability.\n[subroutine] You may install 1 piece of ice from HQ or Archives directly inward from this ice, ignoring all costs.\n[subroutine] End the run.\n[subroutine] End the run.",
+      stripped_text:
+        "Lose click: Break 1 subroutine on this ice. Only the Runner can use this ability. Subroutine You may install 1 piece of ice from HQ or Archives directly inward from this ice, ignoring all costs. Subroutine End the run. Subroutine End the run.",
       card_type_id: "ice",
       side_id: "corp",
       faction_id: "haas_bioroid",
@@ -17638,7 +19748,7 @@ var cards_default = {
       is_unique: false,
       card_subtype_ids: [
         "barrier",
-        "bioroid"
+        "bioroid",
       ],
       display_subtypes: "Barrier - Bioroid",
       date_release: "2021-03-28",
@@ -17650,16 +19760,18 @@ var cards_default = {
       num_extra_faces: 0,
       latest_printing_id: "30039",
       printing_ids: [
-        "30039"
-      ]
+        "30039",
+      ],
     },
     {
       id: "diviner",
       netrunnerdb_id: "diviner",
       title: "Diviner",
       stripped_title: "Diviner",
-      text: "[subroutine] Do 1 net damage. If you trash a card this way with a printed play or install cost that is an odd number, end the run. <em>(0 is not odd.)</em>",
-      stripped_text: "Subroutine Do 1 net damage. If you trash a card this way with a printed play or install cost that is an odd number, end the run. (0 is not odd.)",
+      text:
+        "[subroutine] Do 1 net damage. If you trash a card this way with a printed play or install cost that is an odd number, end the run. <em>(0 is not odd.)</em>",
+      stripped_text:
+        "Subroutine Do 1 net damage. If you trash a card this way with a printed play or install cost that is an odd number, end the run. (0 is not odd.)",
       card_type_id: "ice",
       side_id: "corp",
       faction_id: "jinteki",
@@ -17677,7 +19789,7 @@ var cards_default = {
       is_unique: false,
       card_subtype_ids: [
         "ap",
-        "code_gate"
+        "code_gate",
       ],
       display_subtypes: "Code Gate - AP",
       date_release: "2021-03-28",
@@ -17689,8 +19801,8 @@ var cards_default = {
       num_extra_faces: 0,
       latest_printing_id: "30046",
       printing_ids: [
-        "30046"
-      ]
+        "30046",
+      ],
     },
     {
       id: "government_subsidy",
@@ -17715,7 +19827,7 @@ var cards_default = {
       trash_cost: null,
       is_unique: false,
       card_subtype_ids: [
-        "transaction"
+        "transaction",
       ],
       display_subtypes: "Transaction",
       date_release: "2021-03-28",
@@ -17727,8 +19839,8 @@ var cards_default = {
       num_extra_faces: 0,
       latest_printing_id: "30064",
       printing_ids: [
-        "30064"
-      ]
+        "30064",
+      ],
     },
     {
       id: "hedge_fund",
@@ -17753,7 +19865,7 @@ var cards_default = {
       trash_cost: null,
       is_unique: false,
       card_subtype_ids: [
-        "transaction"
+        "transaction",
       ],
       display_subtypes: "Transaction",
       date_release: "2012-09-06",
@@ -17768,8 +19880,8 @@ var cards_default = {
         "30075",
         "25146",
         "20132",
-        "01110"
-      ]
+        "01110",
+      ],
     },
     {
       id: "karuna",
@@ -17777,7 +19889,8 @@ var cards_default = {
       title: "Karun\u0101",
       stripped_title: "Karuna",
       text: "[subroutine] Do 2 net damage. The Runner may jack out.\n[subroutine] Do 2 net damage.",
-      stripped_text: "Subroutine Do 2 net damage. The Runner may jack out. Subroutine Do 2 net damage.",
+      stripped_text:
+        "Subroutine Do 2 net damage. The Runner may jack out. Subroutine Do 2 net damage.",
       card_type_id: "ice",
       side_id: "corp",
       faction_id: "jinteki",
@@ -17795,7 +19908,7 @@ var cards_default = {
       is_unique: false,
       card_subtype_ids: [
         "ap",
-        "sentry"
+        "sentry",
       ],
       display_subtypes: "Sentry - AP",
       date_release: "2021-03-28",
@@ -17807,16 +19920,18 @@ var cards_default = {
       num_extra_faces: 0,
       latest_printing_id: "30047",
       printing_ids: [
-        "30047"
-      ]
+        "30047",
+      ],
     },
     {
       id: "manegarm_skunkworks",
       netrunnerdb_id: "manegarm_skunkworks",
       title: "Manegarm Skunkworks",
       stripped_title: "Manegarm Skunkworks",
-      text: "Whenever the Runner approaches this server, end the run unless they either spend [click][click] or pay 5[credit].",
-      stripped_text: "Whenever the Runner approaches this server, end the run unless they either spend click click or pay 5 credits.",
+      text:
+        "Whenever the Runner approaches this server, end the run unless they either spend [click][click] or pay 5[credit].",
+      stripped_text:
+        "Whenever the Runner approaches this server, end the run unless they either spend click click or pay 5 credits.",
       card_type_id: "upgrade",
       side_id: "corp",
       faction_id: "haas_bioroid",
@@ -17843,16 +19958,18 @@ var cards_default = {
       num_extra_faces: 0,
       latest_printing_id: "30042",
       printing_ids: [
-        "30042"
-      ]
+        "30042",
+      ],
     },
     {
       id: "nico_campaign",
       netrunnerdb_id: "nico_campaign",
       title: "Nico Campaign",
       stripped_title: "Nico Campaign",
-      text: "When you rez this asset, load 9[credit] onto it. When it is empty, trash it and draw 1 card.\nWhen your turn begins, take 3[credit] from this asset.",
-      stripped_text: "When you rez this asset, load 9 credits onto it. When it is empty, trash it and draw 1 card. When your turn begins, take 3 credits from this asset.",
+      text:
+        "When you rez this asset, load 9[credit] onto it. When it is empty, trash it and draw 1 card.\nWhen your turn begins, take 3[credit] from this asset.",
+      stripped_text:
+        "When you rez this asset, load 9 credits onto it. When it is empty, trash it and draw 1 card. When your turn begins, take 3 credits from this asset.",
       card_type_id: "asset",
       side_id: "corp",
       faction_id: "haas_bioroid",
@@ -17869,7 +19986,7 @@ var cards_default = {
       trash_cost: 2,
       is_unique: false,
       card_subtype_ids: [
-        "advertisement"
+        "advertisement",
       ],
       display_subtypes: "Advertisement",
       date_release: "2021-03-28",
@@ -17881,8 +19998,8 @@ var cards_default = {
       num_extra_faces: 0,
       latest_printing_id: "30037",
       printing_ids: [
-        "30037"
-      ]
+        "30037",
+      ],
     },
     {
       id: "offworld_office",
@@ -17907,7 +20024,7 @@ var cards_default = {
       trash_cost: null,
       is_unique: false,
       card_subtype_ids: [
-        "expansion"
+        "expansion",
       ],
       display_subtypes: "Expansion",
       date_release: "2021-03-28",
@@ -17919,16 +20036,18 @@ var cards_default = {
       num_extra_faces: 0,
       latest_printing_id: "30067",
       printing_ids: [
-        "30067"
-      ]
+        "30067",
+      ],
     },
     {
       id: "palisade",
       netrunnerdb_id: "palisade",
       title: "Palisade",
       stripped_title: "Palisade",
-      text: "While this ice is protecting a remote server, it gets +2 strength.\n[subroutine] End the run.",
-      stripped_text: "While this ice is protecting a remote server, it gets +2 strength. Subroutine End the run.",
+      text:
+        "While this ice is protecting a remote server, it gets +2 strength.\n[subroutine] End the run.",
+      stripped_text:
+        "While this ice is protecting a remote server, it gets +2 strength. Subroutine End the run.",
       card_type_id: "ice",
       side_id: "corp",
       faction_id: "neutral_corp",
@@ -17945,7 +20064,7 @@ var cards_default = {
       trash_cost: null,
       is_unique: false,
       card_subtype_ids: [
-        "barrier"
+        "barrier",
       ],
       display_subtypes: "Barrier",
       date_release: "2021-03-28",
@@ -17957,16 +20076,18 @@ var cards_default = {
       num_extra_faces: 0,
       latest_printing_id: "30072",
       printing_ids: [
-        "30072"
-      ]
+        "30072",
+      ],
     },
     {
       id: "regolith_mining_license",
       netrunnerdb_id: "regolith_mining_license",
       title: "Regolith Mining License",
       stripped_title: "Regolith Mining License",
-      text: "When you rez this asset, load 15[credit] onto it. When it is empty, trash it.\n[click]<strong>:</strong> Take 3[credit] from this asset.",
-      stripped_text: "When you rez this asset, load 15 credits onto it. When it is empty, trash it. click: Take 3 credits from this asset.",
+      text:
+        "When you rez this asset, load 15[credit] onto it. When it is empty, trash it.\n[click]<strong>:</strong> Take 3[credit] from this asset.",
+      stripped_text:
+        "When you rez this asset, load 15 credits onto it. When it is empty, trash it. click: Take 3 credits from this asset.",
       card_type_id: "asset",
       side_id: "corp",
       faction_id: "neutral_corp",
@@ -17993,8 +20114,8 @@ var cards_default = {
       num_extra_faces: 0,
       latest_printing_id: "30071",
       printing_ids: [
-        "30071"
-      ]
+        "30071",
+      ],
     },
     {
       id: "seamless_launch",
@@ -18002,7 +20123,8 @@ var cards_default = {
       title: "Seamless Launch",
       stripped_title: "Seamless Launch",
       text: "Place 2 advancement counters on 1 installed card that you did not install this turn.",
-      stripped_text: "Place 2 advancement counters on 1 installed card that you did not install this turn.",
+      stripped_text:
+        "Place 2 advancement counters on 1 installed card that you did not install this turn.",
       card_type_id: "operation",
       side_id: "corp",
       faction_id: "haas_bioroid",
@@ -18029,16 +20151,18 @@ var cards_default = {
       num_extra_faces: 0,
       latest_printing_id: "30040",
       printing_ids: [
-        "30040"
-      ]
+        "30040",
+      ],
     },
     {
       id: "send_a_message",
       netrunnerdb_id: "send_a_message",
       title: "Send a Message",
       stripped_title: "Send a Message",
-      text: "When this agenda is scored or stolen, you may rez 1 installed piece of ice, ignoring all costs.",
-      stripped_text: "When this agenda is scored or stolen, you may rez 1 installed piece of ice, ignoring all costs.",
+      text:
+        "When this agenda is scored or stolen, you may rez 1 installed piece of ice, ignoring all costs.",
+      stripped_text:
+        "When this agenda is scored or stolen, you may rez 1 installed piece of ice, ignoring all costs.",
       card_type_id: "agenda",
       side_id: "corp",
       faction_id: "neutral_corp",
@@ -18055,7 +20179,7 @@ var cards_default = {
       trash_cost: null,
       is_unique: false,
       card_subtype_ids: [
-        "security"
+        "security",
       ],
       display_subtypes: "Security",
       date_release: "2021-03-28",
@@ -18067,8 +20191,8 @@ var cards_default = {
       num_extra_faces: 0,
       latest_printing_id: "30069",
       printing_ids: [
-        "30069"
-      ]
+        "30069",
+      ],
     },
     {
       id: "superconducting_hub",
@@ -18076,7 +20200,8 @@ var cards_default = {
       title: "Superconducting Hub",
       stripped_title: "Superconducting Hub",
       text: "When you score this agenda, you may draw 2 cards.\nYou get +2 maximum hand size.",
-      stripped_text: "When you score this agenda, you may draw 2 cards. You get +2 maximum hand size.",
+      stripped_text:
+        "When you score this agenda, you may draw 2 cards. You get +2 maximum hand size.",
       card_type_id: "agenda",
       side_id: "corp",
       faction_id: "neutral_corp",
@@ -18093,7 +20218,7 @@ var cards_default = {
       trash_cost: null,
       is_unique: false,
       card_subtype_ids: [
-        "expansion"
+        "expansion",
       ],
       display_subtypes: "Expansion",
       date_release: "2021-03-28",
@@ -18105,8 +20230,8 @@ var cards_default = {
       num_extra_faces: 0,
       latest_printing_id: "30070",
       printing_ids: [
-        "30070"
-      ]
+        "30070",
+      ],
     },
     {
       id: "the_syndicate_profit_over_principle",
@@ -18131,7 +20256,7 @@ var cards_default = {
       trash_cost: null,
       is_unique: false,
       card_subtype_ids: [
-        "megacorp"
+        "megacorp",
       ],
       display_subtypes: "Megacorp",
       date_release: "2021-03-28",
@@ -18143,8 +20268,8 @@ var cards_default = {
       num_extra_faces: 0,
       latest_printing_id: "30077",
       printing_ids: [
-        "30077"
-      ]
+        "30077",
+      ],
     },
     {
       id: "tithe",
@@ -18170,7 +20295,7 @@ var cards_default = {
       is_unique: false,
       card_subtype_ids: [
         "ap",
-        "sentry"
+        "sentry",
       ],
       display_subtypes: "Sentry - AP",
       date_release: "2021-03-28",
@@ -18182,16 +20307,18 @@ var cards_default = {
       num_extra_faces: 0,
       latest_printing_id: "30073",
       printing_ids: [
-        "30073"
-      ]
+        "30073",
+      ],
     },
     {
       id: "urtica_cipher",
       netrunnerdb_id: "urtica_cipher",
       title: "Urtica Cipher",
       stripped_title: "Urtica Cipher",
-      text: "You can advance this asset.\nWhen the Runner accesses this asset while it is installed, do 2 net damage plus 1 net damage for each hosted advancement counter.",
-      stripped_text: "You can advance this asset. When the Runner accesses this asset while it is installed, do 2 net damage plus 1 net damage for each hosted advancement counter.",
+      text:
+        "You can advance this asset.\nWhen the Runner accesses this asset while it is installed, do 2 net damage plus 1 net damage for each hosted advancement counter.",
+      stripped_text:
+        "You can advance this asset. When the Runner accesses this asset while it is installed, do 2 net damage plus 1 net damage for each hosted advancement counter.",
       card_type_id: "asset",
       side_id: "corp",
       faction_id: "jinteki",
@@ -18208,7 +20335,7 @@ var cards_default = {
       trash_cost: 2,
       is_unique: false,
       card_subtype_ids: [
-        "ambush"
+        "ambush",
       ],
       display_subtypes: "Ambush",
       date_release: "2021-03-28",
@@ -18220,16 +20347,18 @@ var cards_default = {
       num_extra_faces: 0,
       latest_printing_id: "30045",
       printing_ids: [
-        "30045"
-      ]
+        "30045",
+      ],
     },
     {
       id: "whitespace",
       netrunnerdb_id: "whitespace",
       title: "Whitespace",
       stripped_title: "Whitespace",
-      text: "[subroutine] The Runner loses 3[credit].\n[subroutine] If the Runner has 6[credit] or less, end the run.",
-      stripped_text: "Subroutine The Runner loses 3 credits. Subroutine If the Runner has 6 credits or less, end the run.",
+      text:
+        "[subroutine] The Runner loses 3[credit].\n[subroutine] If the Runner has 6[credit] or less, end the run.",
+      stripped_text:
+        "Subroutine The Runner loses 3 credits. Subroutine If the Runner has 6 credits or less, end the run.",
       card_type_id: "ice",
       side_id: "corp",
       faction_id: "neutral_corp",
@@ -18246,7 +20375,7 @@ var cards_default = {
       trash_cost: null,
       is_unique: false,
       card_subtype_ids: [
-        "code_gate"
+        "code_gate",
       ],
       display_subtypes: "Code Gate",
       date_release: "2021-03-28",
@@ -18258,10 +20387,10 @@ var cards_default = {
       num_extra_faces: 0,
       latest_printing_id: "30074",
       printing_ids: [
-        "30074"
-      ]
-    }
-  ]
+        "30074",
+      ],
+    },
+  ],
 };
 
 // src/cards/catalogue.ts
@@ -18296,13 +20425,13 @@ function toCardDef(rawCard) {
     subtypes: rawCard.card_subtype_ids ?? [],
     displaySubtypes: rawCard.display_subtypes ?? null,
     printingIds: rawCard.printing_ids ?? [],
-    updatedAt: rawCard.updated_at ?? null
+    updatedAt: rawCard.updated_at ?? null,
   };
 }
 var data = cards_default;
 var cards = new Map(data.cards.map((c) => [
   c.id,
-  toCardDef(c)
+  toCardDef(c),
 ]));
 function cardDef(cardId) {
   const def2 = cards.get(cardId);
@@ -18325,41 +20454,41 @@ var B = [
     triggers: [
       {
         id: "identity",
-        kind: "identity"
-      }
+        kind: "identity",
+      },
     ],
-    note: "Starter game only identity; no special abilities."
+    note: "Starter game only identity; no special abilities.",
   },
   {
     cardId: "carmen",
     support: "supported",
     breakAbility: {
       breaks: [
-        "sentry"
+        "sentry",
       ],
       count: 1,
-      creditCost: 1
+      creditCost: 1,
     },
     pumpAbility: {
       creditCost: 2,
-      amount: 3
+      amount: 3,
     },
-    note: "Install discount (2 credits) when a successful run was made this turn is supported."
+    note: "Install discount (2 credits) when a successful run was made this turn is supported.",
   },
   {
     cardId: "cleaver",
     support: "supported",
     breakAbility: {
       breaks: [
-        "barrier"
+        "barrier",
       ],
       count: 2,
-      creditCost: 1
+      creditCost: 1,
     },
     pumpAbility: {
       creditCost: 2,
-      amount: 1
-    }
+      amount: 1,
+    },
   },
   {
     cardId: "mayfly",
@@ -18367,58 +20496,59 @@ var B = [
     breakAbility: {
       breaks: [],
       count: 1,
-      creditCost: 1
+      creditCost: 1,
     },
     pumpAbility: {
       creditCost: 1,
-      amount: 1
+      amount: 1,
     },
     triggers: [
       {
         id: "run-trash-program",
-        kind: "run-trash-program"
-      }
+        kind: "run-trash-program",
+      },
     ],
-    note: "Interpreted as: trashed at the end of any run while installed (see docs/rules-questions.md)."
+    note:
+      "Interpreted as: trashed at the end of any run while installed (see docs/rules-questions.md).",
   },
   {
     cardId: "unity",
     support: "supported",
     breakAbility: {
       breaks: [
-        "code_gate"
+        "code_gate",
       ],
       count: 1,
-      creditCost: 1
+      creditCost: 1,
     },
     pumpAbility: {
       creditCost: 1,
-      amount: "icebreakers-installed"
-    }
+      amount: "icebreakers-installed",
+    },
   },
   {
     cardId: "sure_gamble",
-    support: "supported"
+    support: "supported",
   },
   {
     cardId: "creative_commission",
-    support: "supported"
+    support: "supported",
   },
   {
     cardId: "vrcation",
-    support: "supported"
+    support: "supported",
   },
   {
     cardId: "jailbreak",
-    support: "supported"
+    support: "supported",
   },
   {
     cardId: "overclock",
-    support: "supported"
+    support: "supported",
   },
   {
     cardId: "tread_lightly",
-    support: "supported"
+    support: "supported",
   },
   {
     cardId: "docklands_pass",
@@ -18427,9 +20557,9 @@ var B = [
       {
         id: "first-hq-breach-extra-access",
         kind: "first-hq-breach-extra-access",
-        amount: 1
-      }
-    ]
+        amount: 1,
+      },
+    ],
   },
   {
     cardId: "pennyshaver",
@@ -18438,26 +20568,26 @@ var B = [
       {
         id: "console",
         kind: "console",
-        amount: 1
+        amount: 1,
       },
       {
         id: "successful-run-place-credit",
         kind: "successful-run-place-credit",
-        amount: 1
+        amount: 1,
       },
       {
         id: "click-place-and-take",
         kind: "runner-click-load-credits",
-        amount: 1
-      }
+        amount: 1,
+      },
     ],
     paidAbilities: [
       {
         id: "place-and-take-all",
         title: "Place 1 credit on this, then take all credits from it",
-        clickCost: 1
-      }
-    ]
+        clickCost: 1,
+      },
+    ],
   },
   {
     cardId: "red_team",
@@ -18466,26 +20596,26 @@ var B = [
       {
         id: "on-install-load-credits",
         kind: "on-install-load-credits",
-        amount: 12
+        amount: 12,
       },
       {
         id: "empty-then-trash",
-        kind: "empty-then-trash"
+        kind: "empty-then-trash",
       },
       {
         id: "successful-run-take-credits",
         kind: "successful-run-take-credits",
-        amount: 3
-      }
+        amount: 3,
+      },
     ],
     paidAbilities: [
       {
         id: "run-central",
         title: "Run a central server you have not run this turn",
         clickCost: 1,
-        needsServer: "central-not-run-this-turn"
-      }
-    ]
+        needsServer: "central-not-run-this-turn",
+      },
+    ],
   },
   {
     cardId: "smartware_distributor",
@@ -18494,21 +20624,21 @@ var B = [
       {
         id: "runner-turn-start-take-credits",
         kind: "runner-turn-start-take-credits",
-        amount: 1
+        amount: 1,
       },
       {
         id: "click-load-credits",
         kind: "runner-click-load-credits",
-        amount: 3
-      }
+        amount: 3,
+      },
     ],
     paidAbilities: [
       {
         id: "place-3",
         title: "Place 3 credits on this resource",
-        clickCost: 1
-      }
-    ]
+        clickCost: 1,
+      },
+    ],
   },
   {
     cardId: "telework_contract",
@@ -18517,21 +20647,21 @@ var B = [
       {
         id: "on-install-load-credits",
         kind: "on-install-load-credits",
-        amount: 9
+        amount: 9,
       },
       {
         id: "empty-then-trash",
-        kind: "empty-then-trash"
-      }
+        kind: "empty-then-trash",
+      },
     ],
     paidAbilities: [
       {
         id: "take-3",
         title: "Take 3 credits from this resource",
         clickCost: 1,
-        oncePerTurn: true
-      }
-    ]
+        oncePerTurn: true,
+      },
+    ],
   },
   {
     cardId: "verbal_plasticity",
@@ -18539,9 +20669,9 @@ var B = [
     triggers: [
       {
         id: "first-basic-draw-double",
-        kind: "first-basic-draw-double"
-      }
-    ]
+        kind: "first-basic-draw-double",
+      },
+    ],
   },
   // -------------------------------------------------------------------- Corp
   {
@@ -18550,23 +20680,23 @@ var B = [
     triggers: [
       {
         id: "identity",
-        kind: "identity"
-      }
+        kind: "identity",
+      },
     ],
-    note: "Starter game only identity; no special abilities."
+    note: "Starter game only identity; no special abilities.",
   },
   {
     cardId: "hedge_fund",
-    support: "supported"
+    support: "supported",
   },
   {
     cardId: "government_subsidy",
-    support: "supported"
+    support: "supported",
   },
   {
     cardId: "seamless_launch",
     support: "supported",
-    note: "Requires choosing an installed card not installed this turn (enforced)."
+    note: "Requires choosing an installed card not installed this turn (enforced).",
   },
   {
     cardId: "nico_campaign",
@@ -18575,18 +20705,18 @@ var B = [
       {
         id: "on-rez-load-credits",
         kind: "on-rez-load-credits",
-        amount: 9
+        amount: 9,
       },
       {
         id: "corp-turn-start-take-3",
         kind: "turn-start-take-credits",
-        amount: 3
+        amount: 3,
       },
       {
         id: "empty-then-trash-and-draw",
-        kind: "empty-then-trash-and-draw"
-      }
-    ]
+        kind: "empty-then-trash-and-draw",
+      },
+    ],
   },
   {
     cardId: "regolith_mining_license",
@@ -18595,25 +20725,25 @@ var B = [
       {
         id: "on-rez-load-credits",
         kind: "on-rez-load-credits",
-        amount: 15
+        amount: 15,
       },
       {
         id: "corp-click-take-credits",
         kind: "corp-click-take-credits",
-        amount: 3
+        amount: 3,
       },
       {
         id: "empty-then-trash",
-        kind: "empty-then-trash"
-      }
+        kind: "empty-then-trash",
+      },
     ],
     paidAbilities: [
       {
         id: "take-3",
         title: "Take 3 credits from this asset",
-        clickCost: 1
-      }
-    ]
+        clickCost: 1,
+      },
+    ],
   },
   {
     cardId: "urtica_cipher",
@@ -18621,9 +20751,9 @@ var B = [
     triggers: [
       {
         id: "access-damage-installed",
-        kind: "access-damage-installed"
-      }
-    ]
+        kind: "access-damage-installed",
+      },
+    ],
   },
   {
     cardId: "manegarm_skunkworks",
@@ -18631,9 +20761,9 @@ var B = [
     triggers: [
       {
         id: "approach-toll",
-        kind: "approach-toll"
-      }
-    ]
+        kind: "approach-toll",
+      },
+    ],
   },
   {
     cardId: "offworld_office",
@@ -18642,9 +20772,9 @@ var B = [
       {
         id: "score-gain-7",
         kind: "score-gain-credits",
-        amount: 7
-      }
-    ]
+        amount: 7,
+      },
+    ],
   },
   {
     cardId: "superconducting_hub",
@@ -18653,10 +20783,10 @@ var B = [
       {
         id: "score-optional-draw-2",
         kind: "score-optional-draw",
-        amount: 2
-      }
+        amount: 2,
+      },
     ],
-    note: "+2 maximum hand size while in the Corp score area is a static effect (supported)."
+    note: "+2 maximum hand size while in the Corp score area is a static effect (supported).",
   },
   {
     cardId: "send_a_message",
@@ -18665,9 +20795,9 @@ var B = [
       {
         id: "scored-or-stolen-rez-ice",
         kind: "scored-or-stolen-optional-rez-ice",
-        optional: true
-      }
-    ]
+        optional: true,
+      },
+    ],
   },
   {
     cardId: "tithe",
@@ -18676,14 +20806,14 @@ var B = [
       {
         id: "net-1",
         kind: "net-damage",
-        amount: 1
+        amount: 1,
       },
       {
         id: "gain-1",
         kind: "gain-credits",
-        amount: 1
-      }
-    ]
+        amount: 1,
+      },
+    ],
   },
   {
     cardId: "palisade",
@@ -18691,10 +20821,10 @@ var B = [
     subroutines: [
       {
         id: "etr",
-        kind: "end-run"
-      }
+        kind: "end-run",
+      },
     ],
-    note: "+2 strength while protecting a remote server (static, supported)."
+    note: "+2 strength while protecting a remote server (static, supported).",
   },
   {
     cardId: "whitespace",
@@ -18703,14 +20833,14 @@ var B = [
       {
         id: "lose-3",
         kind: "lose-credits",
-        amount: 3
+        amount: 3,
       },
       {
         id: "etr-if-6-or-less",
         kind: "lose-credits-then-conditional-end-run",
-        creditsAtMost: 6
-      }
-    ]
+        creditsAtMost: 6,
+      },
+    ],
   },
   {
     cardId: "diviner",
@@ -18718,10 +20848,10 @@ var B = [
     subroutines: [
       {
         id: "net-1-odd-etr",
-        kind: "diviner-damage"
-      }
+        kind: "diviner-damage",
+      },
     ],
-    note: "Odd printed play/install cost of the trashed card ends the run (0 is not odd)."
+    note: "Odd printed play/install cost of the trashed card ends the run (0 is not odd).",
   },
   {
     cardId: "karuna",
@@ -18730,14 +20860,14 @@ var B = [
       {
         id: "net-2-jackout",
         kind: "net-damage-then-optional-jack-out",
-        amount: 2
+        amount: 2,
       },
       {
         id: "net-2",
         kind: "net-damage",
-        amount: 2
-      }
-    ]
+        amount: 2,
+      },
+    ],
   },
   {
     cardId: "bran_1_0",
@@ -18745,29 +20875,30 @@ var B = [
     subroutines: [
       {
         id: "install-ice-inward",
-        kind: "install-ice-inward"
+        kind: "install-ice-inward",
       },
       {
         id: "etr-1",
-        kind: "end-run"
+        kind: "end-run",
       },
       {
         id: "etr-2",
-        kind: "end-run"
-      }
+        kind: "end-run",
+      },
     ],
     breakAbility: {
       breaks: [],
       count: 1,
       creditCost: 0,
-      bioroid: true
+      bioroid: true,
     },
-    note: "Runner breaks subroutines with 'lose [click]' instead of credits; no strength requirement."
-  }
+    note:
+      "Runner breaks subroutines with 'lose [click]' instead of credits; no strength requirement.",
+  },
 ];
 var behaviors = new Map(B.map((b) => [
   b.cardId,
-  b
+  b,
 ]));
 function supportStatus(cardId) {
   return behaviors.get(cardId)?.support ?? "unsupported";
@@ -18785,7 +20916,7 @@ function cardSupportReport(cardIds) {
   return {
     supported: supported2,
     partial,
-    unsupported
+    unsupported,
   };
 }
 
@@ -18798,9 +20929,9 @@ var starter_decks_default = {
       {
         name: "starter-decks-cyberclick-v1",
         runner_decklist_id: "4b9cf488-5bd9-4415-a57a-0864d4d0e600",
-        corp_decklist_id: "382f2e2d-eabf-47c8-ae55-adb93b3df3e9"
-      }
-    ]
+        corp_decklist_id: "382f2e2d-eabf-47c8-ae55-adb93b3df3e9",
+      },
+    ],
   },
   decks: {
     runner: {
@@ -18826,11 +20957,11 @@ var starter_decks_default = {
         tread_lightly: 2,
         unity: 2,
         verbal_plasticity: 1,
-        vrcation: 2
+        vrcation: 2,
       },
       num_cards: 30,
       influence_spent: 33,
-      follows_basic_deckbuilding_rules: true
+      follows_basic_deckbuilding_rules: true,
     },
     corp: {
       decklist_id: "382f2e2d-eabf-47c8-ae55-adb93b3df3e9",
@@ -18855,13 +20986,13 @@ var starter_decks_default = {
         the_syndicate_profit_over_principle: 1,
         tithe: 2,
         urtica_cipher: 2,
-        whitespace: 2
+        whitespace: 2,
       },
       num_cards: 34,
       influence_spent: 29,
-      follows_basic_deckbuilding_rules: true
-    }
-  }
+      follows_basic_deckbuilding_rules: true,
+    },
+  },
 };
 
 // src/decks/starter-decks-cyberclick-v1.ts
@@ -18870,14 +21001,16 @@ var importedCardIds = new Set(cards_default.cards.map((c) => c.id));
 function starterDeckConfigs() {
   const toConfig = (entry) => ({
     identity: entry.identity,
-    cards: Object.entries(entry.cards).filter(([cardId, count]) => count > 0 && cardId !== entry.identity).map(([cardId, count]) => ({
+    cards: Object.entries(entry.cards).filter(([cardId, count]) =>
+      count > 0 && cardId !== entry.identity
+    ).map(([cardId, count]) => ({
       cardId,
-      count
-    }))
+      count,
+    })),
   });
   return {
     corp: toConfig(data2.decks.corp),
-    runner: toConfig(data2.decks.runner)
+    runner: toConfig(data2.decks.runner),
   };
 }
 function starterPoolCardIds() {
@@ -18886,18 +21019,20 @@ function starterPoolCardIds() {
     s.runner.identity,
     s.corp.identity,
     ...s.runner.cards.map((e) => e.cardId),
-    ...s.corp.cards.map((e) => e.cardId)
+    ...s.corp.cards.map((e) => e.cardId),
   ];
   return [
-    ...new Set(ids)
+    ...new Set(ids),
   ];
 }
 function verifyFixtureAgainstSnapshot() {
   const problems = [];
-  for (const side of [
-    "runner",
-    "corp"
-  ]) {
+  for (
+    const side of [
+      "runner",
+      "corp",
+    ]
+  ) {
     const entry = data2.decks[side];
     for (const [cardId, count] of Object.entries(entry.cards)) {
       if (!importedCardIds.has(cardId)) {
@@ -18941,7 +21076,7 @@ function makeRng(seed) {
     },
     get state() {
       return s;
-    }
+    },
   };
 }
 
@@ -18955,7 +21090,7 @@ function other(side) {
 var CENTRAL_IDS = [
   "hq",
   "rd",
-  "archives"
+  "archives",
 ];
 function isCentral(id) {
   return CENTRAL_IDS.includes(id);
@@ -18979,7 +21114,7 @@ function createRemote(state) {
   const server = {
     id: nextRemoteId(state),
     root: [],
-    ice: []
+    ice: [],
   };
   state.servers.push(server);
   return server;
@@ -19000,38 +21135,48 @@ function pruneEmptyRemotes(state) {
   return gone;
 }
 function findCard(state, instanceId) {
-  for (const side of [
-    "corp",
-    "runner"
-  ]) {
+  for (
+    const side of [
+      "corp",
+      "runner",
+    ]
+  ) {
     const p2 = player(state, side);
-    if (p2.identity.id === instanceId) return {
-      card: p2.identity,
-      side
-    };
-    for (const list of [
-      p2.hand,
-      p2.deck,
-      p2.discard,
-      p2.score,
-      p2.installed
-    ]) {
-      const c = list.find((x) => x.id === instanceId);
-      if (c) return {
-        card: c,
-        side
+    if (p2.identity.id === instanceId) {
+      return {
+        card: p2.identity,
+        side,
       };
+    }
+    for (
+      const list of [
+        p2.hand,
+        p2.deck,
+        p2.discard,
+        p2.score,
+        p2.installed,
+      ]
+    ) {
+      const c = list.find((x) => x.id === instanceId);
+      if (c) {
+        return {
+          card: c,
+          side,
+        };
+      }
     }
   }
   for (const s of state.servers) {
     const c = [
       ...s.root,
-      ...s.ice
+      ...s.ice,
     ].find((x) => x.id === instanceId);
-    if (c) return {
-      card: c,
-      side: "corp"
-    };
+    if (c) {
+      return {
+        card: c,
+        side: "corp",
+      };
+    }
   }
   return null;
 }
@@ -19060,11 +21205,13 @@ function drawCards(state, side, count) {
     p2.hand.push(card);
     drawn++;
   }
-  if (drawn > 0) state.log.push({
-    type: "draw",
-    player: side,
-    count: drawn
-  });
+  if (drawn > 0) {
+    state.log.push({
+      type: "draw",
+      player: side,
+      count: drawn,
+    });
+  }
   return drawn;
 }
 function availableCredits(state, side) {
@@ -19084,7 +21231,7 @@ function spendCredits(state, side, amount) {
   state.log.push({
     type: "spend-credits",
     player: side,
-    amount
+    amount,
   });
 }
 function gainCredits(state, side, amount) {
@@ -19092,40 +21239,46 @@ function gainCredits(state, side, amount) {
   state.log.push({
     type: "gain-credits",
     player: side,
-    amount
+    amount,
   });
 }
 function loseCredits(state, side, amount) {
   const p2 = player(state, side);
   const lost = Math.min(p2.credits, amount);
   p2.credits -= lost;
-  if (lost > 0) state.log.push({
-    type: "lose-credits",
-    player: side,
-    amount: lost
-  });
+  if (lost > 0) {
+    state.log.push({
+      type: "lose-credits",
+      player: side,
+      amount: lost,
+    });
+  }
   return lost;
 }
 function spendClicks(state, side, amount) {
   const p2 = player(state, side);
   const spent = Math.min(p2.clicks, amount);
   p2.clicks -= spent;
-  if (spent > 0) state.log.push({
-    type: "spend-clicks",
-    player: side,
-    amount: spent
-  });
+  if (spent > 0) {
+    state.log.push({
+      type: "spend-clicks",
+      player: side,
+      amount: spent,
+    });
+  }
   return spent;
 }
 function detachFromPlayer(p2, card) {
   if (p2.identity.id === card.id) return;
-  for (const list of [
-    p2.hand,
-    p2.deck,
-    p2.discard,
-    p2.score,
-    p2.installed
-  ]) {
+  for (
+    const list of [
+      p2.hand,
+      p2.deck,
+      p2.discard,
+      p2.score,
+      p2.installed,
+    ]
+  ) {
     const i = list.findIndex((c) => c.id === card.id);
     if (i >= 0) list.splice(i, 1);
   }
@@ -19169,7 +21322,7 @@ function toDiscard(state, card, reason) {
   state.log.push({
     type: "trash",
     cardId: card.id,
-    from: reason
+    from: reason,
   });
 }
 function dealDamage(state, amount, kind = "net", rng) {
@@ -19177,7 +21330,7 @@ function dealDamage(state, amount, kind = "net", rng) {
   const rp = state.runner;
   if (amount > rp.hand.length) {
     const trashed2 = [
-      ...rp.hand
+      ...rp.hand,
     ];
     for (const c of trashed2) moveCardTo(state, c, "discard", "runner");
     state.log.push({
@@ -19185,10 +21338,10 @@ function dealDamage(state, amount, kind = "net", rng) {
       player: "runner",
       amount,
       kind,
-      trashed: trashed2.map((c) => c.id)
+      trashed: trashed2.map((c) => c.id),
     });
     state.log.push({
-      type: "flatline"
+      type: "flatline",
     });
     setWinner(state, "corp", "Runner was flatlined by damage");
     return trashed2.map((c) => c.id);
@@ -19209,7 +21362,7 @@ function dealDamage(state, amount, kind = "net", rng) {
     player: "runner",
     amount,
     kind,
-    trashed: trashed.map((c) => c.id)
+    trashed: trashed.map((c) => c.id),
   });
   return trashed.map((c) => c.id);
 }
@@ -19221,7 +21374,7 @@ function setWinner(state, winner, reason) {
   state.log.push({
     type: "game-end",
     winner,
-    reason
+    reason,
   });
 }
 function memoryUsed(state) {
@@ -19250,7 +21403,7 @@ function addHostedCredits(state, card, amount) {
   state.log.push({
     type: "load-credits",
     targetId: card.id,
-    amount
+    amount,
   });
 }
 function takeCreditsFrom(state, card, amount) {
@@ -19261,7 +21414,7 @@ function takeCreditsFrom(state, card, amount) {
     type: "take-credits",
     targetId: card.id,
     amount: taken,
-    player: card.owner
+    player: card.owner,
   });
   return taken;
 }
@@ -19291,7 +21444,7 @@ function rezCard(state, card, free = false) {
   card.rezzed = true;
   state.log.push({
     type: "rez",
-    cardId: card.id
+    cardId: card.id,
   });
   return true;
 }
@@ -19307,13 +21460,13 @@ function initiateRun(state, server, source) {
     successful: false,
     unsuccessful: false,
     source,
-    fundCredits: fund > 0 ? fund : void 0
+    fundCredits: fund > 0 ? fund : void 0,
   };
   state.breach = null;
   state.log.push({
     type: "run-start",
     server,
-    source
+    source,
   });
 }
 function completeInitiation(state) {
@@ -19325,7 +21478,7 @@ function completeInitiation(state) {
     run.phase = "approach-ice";
     state.log.push({
       type: "approach-ice",
-      cardId: run.currentIceId
+      cardId: run.currentIceId,
     });
     return;
   }
@@ -19349,17 +21502,19 @@ function beginEncounter(state) {
   run.awaitingChoice = false;
   state.log.push({
     type: "encounter-ice",
-    cardId: current.id
+    cardId: current.id,
   });
 }
 function passIce(state) {
   const run = state.run;
   const ice = iceAt(state, run.server);
   const current = run.position !== null ? ice[run.position] : null;
-  if (current) state.log.push({
-    type: "pass-ice",
-    cardId: current.id
-  });
+  if (current) {
+    state.log.push({
+      type: "pass-ice",
+      cardId: current.id,
+    });
+  }
   if (run.position === null || run.position === 0) {
     run.position = null;
     run.currentIceId = void 0;
@@ -19372,7 +21527,7 @@ function passIce(state) {
   run.encounterStarted = false;
   state.log.push({
     type: "approach-ice",
-    cardId: run.currentIceId
+    cardId: run.currentIceId,
   });
 }
 function declareSuccess(state) {
@@ -19381,7 +21536,7 @@ function declareSuccess(state) {
   run.phase = "success";
   state.log.push({
     type: "run-successful",
-    server: run.server
+    server: run.server,
   });
   state.runner.successfulRunThisTurn = true;
 }
@@ -19396,7 +21551,7 @@ function finishRun(state) {
   state.log.push({
     type: "run-end",
     server: run.server,
-    successful
+    successful,
   });
   state.run = null;
 }
@@ -19435,17 +21590,17 @@ function fireScore(state, card) {
             label: "Draw 2 cards",
             effect: {
               kind: "corp-draw",
-              amount: t.amount ?? 2
-            }
+              amount: t.amount ?? 2,
+            },
           },
           {
             id: "pass",
             label: "Pass",
             effect: {
-              kind: "no-op"
-            }
-          }
-        ]
+              kind: "no-op",
+            },
+          },
+        ],
       });
     }
     if (t.kind === "scored-or-stolen-optional-rez-ice") queueFreeRezPrompt(state, card);
@@ -19473,17 +21628,17 @@ function queueFreeRezPrompt(state, card) {
         targetId: c.id,
         effect: {
           kind: "rez-card-free",
-          targetId: c.id
-        }
+          targetId: c.id,
+        },
       })),
       {
         id: "pass",
         label: "Pass",
         effect: {
-          kind: "no-op"
-        }
-      }
-    ]
+          kind: "no-op",
+        },
+      },
+    ],
   });
 }
 function iceAtAllServers(state) {
@@ -19519,7 +21674,7 @@ function resolveSubroutine(state, ice, index) {
   state.log.push({
     type: "resolve-subroutine",
     cardId: ice.id,
-    subIndex: index
+    subIndex: index,
   });
   switch (sub.kind) {
     case "net-damage":
@@ -19547,17 +21702,17 @@ function resolveSubroutine(state, ice, index) {
             id: "jack-out",
             label: "Jack out",
             effect: {
-              kind: "end-run"
-            }
+              kind: "end-run",
+            },
           },
           {
             id: "pass",
             label: "Resolve remaining subroutines",
             effect: {
-              kind: "no-op"
-            }
-          }
-        ]
+              kind: "no-op",
+            },
+          },
+        ],
       });
       break;
     }
@@ -19577,7 +21732,9 @@ function resolveSubroutine(state, ice, index) {
         kind: "choose-one",
         id: state.nextPromptId++,
         player: "corp",
-        title: `${cardDef(ice.cardId).title}: install 1 piece of ice from HQ or Archives, ignoring all costs`,
+        title: `${
+          cardDef(ice.cardId).title
+        }: install 1 piece of ice from HQ or Archives, ignoring all costs`,
         options: [
           ...state.corp.hand.filter((c) => cardDef(c.cardId).type === "ice").map((c) => ({
             id: `install-${c.id}`,
@@ -19585,8 +21742,8 @@ function resolveSubroutine(state, ice, index) {
             targetId: c.id,
             effect: {
               kind: "corp-install-ice-inward",
-              iceId: ice.id
-            }
+              iceId: ice.id,
+            },
           })),
           ...state.corp.discard.filter((c) => cardDef(c.cardId).type === "ice").map((c) => ({
             id: `install-${c.id}`,
@@ -19594,17 +21751,17 @@ function resolveSubroutine(state, ice, index) {
             targetId: c.id,
             effect: {
               kind: "corp-install-ice-inward",
-              iceId: ice.id
-            }
+              iceId: ice.id,
+            },
           })),
           {
             id: "pass",
             label: "Pass",
             effect: {
-              kind: "no-op"
-            }
-          }
-        ]
+              kind: "no-op",
+            },
+          },
+        ],
       });
       break;
     }
@@ -19658,7 +21815,7 @@ function spendToll(state, credits) {
     state.log.push({
       type: "lose-credits",
       player: "runner",
-      amount: 5
+      amount: 5,
     });
   } else {
     if (state.runner.clicks < 2) return;
@@ -19666,7 +21823,7 @@ function spendToll(state, credits) {
     state.log.push({
       type: "lose-clicks",
       player: "runner",
-      amount: 2
+      amount: 2,
     });
   }
   run.tollPaid = true;
@@ -19696,25 +21853,27 @@ function installIceInward(state, targetId, fromIceId) {
     type: "install",
     cardId: card.id,
     player: "corp",
-    server
+    server,
   });
 }
 function abilityLegality(state, side, card, abilityIndex) {
   const b = behaviors.get(card.cardId);
   const ability = b?.paidAbilities?.[abilityIndex];
-  if (!ability) return {
-    ok: false,
-    reason: "No such ability",
-    title: "",
-    index: abilityIndex
-  };
+  if (!ability) {
+    return {
+      ok: false,
+      reason: "No such ability",
+      title: "",
+      index: abilityIndex,
+    };
+  }
   const onceKey = `${card.id}:${abilityIndex}`;
   if (ability.oncePerTurn && player(state, side).usedOncePerTurn.includes(onceKey)) {
     return {
       ok: false,
       reason: "Once per turn",
       title: ability.title,
-      index: abilityIndex
+      index: abilityIndex,
     };
   }
   if (ability.clickCost && player(state, side).clicks < ability.clickCost) {
@@ -19722,7 +21881,7 @@ function abilityLegality(state, side, card, abilityIndex) {
       ok: false,
       reason: "Not enough clicks",
       title: ability.title,
-      index: abilityIndex
+      index: abilityIndex,
     };
   }
   if (ability.requiresHostedCredits && (card.hostedCredits ?? 0) < ability.requiresHostedCredits) {
@@ -19730,7 +21889,7 @@ function abilityLegality(state, side, card, abilityIndex) {
       ok: false,
       reason: "No hosted credits",
       title: ability.title,
-      index: abilityIndex
+      index: abilityIndex,
     };
   }
   if (ability.needsServer === "central-not-run-this-turn") {
@@ -19740,21 +21899,21 @@ function abilityLegality(state, side, card, abilityIndex) {
         ok: false,
         reason: "No central server to run",
         title: ability.title,
-        index: abilityIndex
+        index: abilityIndex,
       };
     }
   }
   return {
     ok: true,
     title: ability.title,
-    index: abilityIndex
+    index: abilityIndex,
   };
 }
 function centralServersNotRunThisTurn(state) {
   const all = [
     "hq",
     "rd",
-    "archives"
+    "archives",
   ];
   return all.filter((s) => !state.runner.ranServersThisTurn.includes(s));
 }
@@ -19774,7 +21933,7 @@ function applyPaidAbility(state, side, card, abilityIndex, server) {
     state.log.push({
       type: "spend-clicks",
       player: side,
-      amount: ability.clickCost
+      amount: ability.clickCost,
     });
     player(state, side).clicks -= ability.clickCost;
   }
@@ -19815,13 +21974,15 @@ function checkEmpty(state, card) {
   if ((card.hostedCredits ?? 0) > 0) return;
   const b = behaviors.get(card.cardId);
   if (!b) return;
-  const trigger2 = (b.triggers ?? []).find((t) => t.kind === "empty-then-trash" || t.kind === "empty-then-trash-and-draw");
+  const trigger2 = (b.triggers ?? []).find((t) =>
+    t.kind === "empty-then-trash" || t.kind === "empty-then-trash-and-draw"
+  );
   if (!trigger2) return;
   const draw = trigger2.kind === "empty-then-trash-and-draw";
   state.log.push({
     type: "trash",
     cardId: card.id,
-    from: "emptied"
+    from: "emptied",
   });
   toDiscard(state, card, "emptied");
   if (draw) drawCards(state, "corp", 1);
@@ -19853,10 +22014,12 @@ function beginCorpTurn(state) {
   state.log.push({
     type: "turn-start",
     player: "corp",
-    turn: state.turn.number
+    turn: state.turn.number,
   });
   if (state.winner) return;
-  const nicos = state.servers.flatMap((s) => s.root).filter((c) => c.cardId === "nico_campaign" && c.rezzed);
+  const nicos = state.servers.flatMap((s) => s.root).filter((c) =>
+    c.cardId === "nico_campaign" && c.rezzed
+  );
   for (const nico of nicos) {
     const taken = Math.min(nico.hostedCredits ?? 0, 3);
     nico.hostedCredits = (nico.hostedCredits ?? 0) - taken;
@@ -19866,7 +22029,7 @@ function beginCorpTurn(state) {
         type: "take-credits",
         targetId: nico.id,
         amount: taken,
-        player: "corp"
+        player: "corp",
       });
     }
     checkEmptyAsset(state, nico, true);
@@ -19874,12 +22037,12 @@ function beginCorpTurn(state) {
   if (state.winner) return;
   state.log.push({
     type: "mandatory-draw",
-    player: "corp"
+    player: "corp",
   });
   if (state.corp.deck.length === 0) {
     state.log.push({
       type: "decked",
-      player: "corp"
+      player: "corp",
     });
     setGameOver(state, "runner", "Corp could not draw from an empty R&D");
     state.turn.phase = "game-over";
@@ -19898,11 +22061,13 @@ function beginRunnerTurn(state) {
   state.log.push({
     type: "turn-start",
     player: "runner",
-    turn: state.turn.number
+    turn: state.turn.number,
   });
-  for (const card of [
-    ...state.runner.installed
-  ]) {
+  for (
+    const card of [
+      ...state.runner.installed,
+    ]
+  ) {
     if (card.cardId !== "smartware_distributor") continue;
     const taken = Math.min(card.hostedCredits ?? 0, 1);
     card.hostedCredits = (card.hostedCredits ?? 0) - taken;
@@ -19912,7 +22077,7 @@ function beginRunnerTurn(state) {
         type: "take-credits",
         targetId: card.id,
         amount: taken,
-        player: "runner"
+        player: "runner",
       });
     }
   }
@@ -19932,7 +22097,7 @@ function enterDiscardPhase(state) {
       kind: "discard",
       id: state.nextPromptId++,
       player: side,
-      count: p2.hand.length - max
+      count: p2.hand.length - max,
     });
     return;
   }
@@ -19942,23 +22107,26 @@ function finishTurn(state) {
   if (state.winner) return;
   const side = state.turn.player;
   const leftover = player(state, side).clicks;
-  if (leftover > 0) state.log.push({
-    type: "lose-clicks",
-    player: side,
-    amount: leftover
-  });
+  if (leftover > 0) {
+    state.log.push({
+      type: "lose-clicks",
+      player: side,
+      amount: leftover,
+    });
+  }
   player(state, side).clicks = 0;
   state.log.push({
     type: "turn-end",
     player: side,
-    turn: state.turn.number
+    turn: state.turn.number,
   });
   if (side === "corp") beginRunnerTurn(state);
   else beginCorpTurn(state);
 }
 function maxHandSize(state, side) {
   const p2 = player(state, side);
-  const hubBonus = side === "corp" && state.corp.score.some((c) => c.cardId === "superconducting_hub") ? 2 : 0;
+  const hubBonus =
+    side === "corp" && state.corp.score.some((c) => c.cardId === "superconducting_hub") ? 2 : 0;
   return p2.baseHandSize + p2.maxHandSizeMod + hubBonus;
 }
 function checkEmptyAsset(state, card, drawOne) {
@@ -19966,7 +22134,7 @@ function checkEmptyAsset(state, card, drawOne) {
   state.log.push({
     type: "trash",
     cardId: card.id,
-    from: "emptied"
+    from: "emptied",
   });
   toDiscard(state, card, "emptied");
   if (drawOne) drawCards(state, "corp", 1);
@@ -19979,7 +22147,7 @@ function setGameOver(state, winner, reason) {
   state.log.push({
     type: "game-end",
     winner,
-    reason
+    reason,
   });
 }
 
@@ -19996,7 +22164,9 @@ function settle(state) {
     const gone = pruneEmptyRemotes(state);
     if (state.run && gone.includes(state.run.server)) {
       state.breach = null;
-      state.prompts = state.prompts.filter((p2) => p2.kind !== "access-decision" && p2.kind !== "rez-window");
+      state.prompts = state.prompts.filter((p2) =>
+        p2.kind !== "access-decision" && p2.kind !== "rez-window"
+      );
       finishRun(state);
       continue;
     }
@@ -20031,7 +22201,7 @@ function promptOrFinishDiscard(state) {
       kind: "discard",
       id: state.nextPromptId++,
       player: side,
-      count: p2.hand.length - max
+      count: p2.hand.length - max,
     });
     return;
   }
@@ -20041,23 +22211,26 @@ function finishTurn2(state) {
   if (state.winner) return;
   const side = state.turn.player;
   const leftover = player(state, side).clicks;
-  if (leftover > 0) state.log.push({
-    type: "lose-clicks",
-    player: side,
-    amount: leftover
-  });
+  if (leftover > 0) {
+    state.log.push({
+      type: "lose-clicks",
+      player: side,
+      amount: leftover,
+    });
+  }
   player(state, side).clicks = 0;
   state.log.push({
     type: "turn-end",
     player: side,
-    turn: state.turn.number
+    turn: state.turn.number,
   });
   if (side === "corp") beginRunnerTurn(state);
   else beginCorpTurn(state);
 }
 function maxHandSize2(state, side) {
   const p2 = player(state, side);
-  const hubBonus = side === "corp" && state.corp.score.some((c) => c.cardId === "superconducting_hub") ? 2 : 0;
+  const hubBonus =
+    side === "corp" && state.corp.score.some((c) => c.cardId === "superconducting_hub") ? 2 : 0;
   return p2.baseHandSize + p2.maxHandSizeMod + hubBonus;
 }
 function stepRun(state) {
@@ -20097,7 +22270,7 @@ function approachIceStep(state) {
       kind: "rez-window",
       id: state.nextPromptId++,
       player: "corp",
-      options
+      options,
     });
     return true;
   }
@@ -20121,7 +22294,7 @@ function corpRezOptions(state) {
       id: `rez-${ice.id}`,
       label: `Rez ${cardDef(ice.cardId).title} (${rezSafeCost(state, ice)}[credit])`,
       targetId: ice.id,
-      creditCost: rezSafeCost(state, ice)
+      creditCost: rezSafeCost(state, ice),
     });
   }
   for (const c of corpRootCards(state, run.server)) {
@@ -20132,7 +22305,7 @@ function corpRezOptions(state) {
       id: `rez-${c.id}`,
       label: `Rez ${def2.title} (${rezSafeCost(state, c)}[credit])`,
       targetId: c.id,
-      creditCost: rezSafeCost(state, c)
+      creditCost: rezSafeCost(state, c),
     });
   }
   return options;
@@ -20154,7 +22327,7 @@ function encounterStep(state) {
   }
   const total = subroutineCount(ice);
   const allHandled = Array.from({
-    length: total
+    length: total,
   }, (_, i) => i).every((i) => run.resolved.includes(i) || run.broken.includes(i));
   if (allHandled) {
     run.currentIceId = void 0;
@@ -20188,7 +22361,9 @@ function movementStep(state) {
 function approachToll(state) {
   const run = state.run;
   if (run.tollPaid) return false;
-  const manegarm = corpRootCards(state, run.server).find((c) => c.cardId === "manegarm_skunkworks" && c.rezzed === true);
+  const manegarm = corpRootCards(state, run.server).find((c) =>
+    c.cardId === "manegarm_skunkworks" && c.rezzed === true
+  );
   if (!manegarm) return false;
   state.prompts.push({
     kind: "choose-one",
@@ -20201,25 +22376,25 @@ function approachToll(state) {
         label: "Pay 5 credits",
         creditCost: 5,
         effect: {
-          kind: "pay-toll-credits"
-        }
+          kind: "pay-toll-credits",
+        },
       },
       {
         id: "toll-clicks",
         label: "Spend [click][click]",
         clickCost: 2,
         effect: {
-          kind: "pay-toll-clicks"
-        }
+          kind: "pay-toll-clicks",
+        },
       },
       {
         id: "toll-end",
         label: "End the run",
         effect: {
-          kind: "end-run"
-        }
-      }
-    ]
+          kind: "end-run",
+        },
+      },
+    ],
   });
   return true;
 }
@@ -20242,11 +22417,11 @@ function beginBreach(state, server) {
     server,
     randomAccessLimit: limit,
     randomAccessesUsed: 0,
-    chosen: []
+    chosen: [],
   };
   state.log.push({
     type: "breach",
-    server
+    server,
   });
 }
 function stepBreach(state) {
@@ -20273,7 +22448,7 @@ function candidatesForBreach(state) {
     if (breach.chosen.includes(c.id)) return;
     result.push({
       instanceId: c.id,
-      random
+      random,
     });
   };
   for (const c of corpRootCards(state, server)) push(c, false);
@@ -20318,7 +22493,9 @@ function randomAccessCandidateCount(state) {
 }
 function chooseRandomAccess(state) {
   const breach = state.breach;
-  const random = candidatesForBreach(state).filter((c) => c.random && !breach.chosen.includes(c.instanceId));
+  const random = candidatesForBreach(state).filter((c) =>
+    c.random && !breach.chosen.includes(c.instanceId)
+  );
   if (random.length === 0) return null;
   const idx = Math.floor(rngNext(state) * random.length);
   return random[idx].instanceId;
@@ -20333,7 +22510,7 @@ function doAccessChoice(state, instanceId) {
   state.log.push({
     type: "access",
     cardId: instanceId,
-    server: breach.server
+    server: breach.server,
   });
   fireAccessBegin(state, found.card);
   if (state.winner) return;
@@ -20341,7 +22518,7 @@ function doAccessChoice(state, instanceId) {
     kind: "access-decision",
     id: state.nextPromptId++,
     player: "runner",
-    cardId: instanceId
+    cardId: instanceId,
   });
 }
 function finishAccess(state, trashed) {
@@ -20383,11 +22560,13 @@ function stealAgendaInstance(state, cardId) {
     const j = s.ice.findIndex((c) => c.id === cardId);
     if (j >= 0) s.ice.splice(j, 1);
   }
-  for (const list of [
-    state.corp.hand,
-    state.corp.discard,
-    state.corp.deck
-  ]) {
+  for (
+    const list of [
+      state.corp.hand,
+      state.corp.discard,
+      state.corp.deck,
+    ]
+  ) {
     const i = list.findIndex((c) => c.id === cardId);
     if (i >= 0) list.splice(i, 1);
   }
@@ -20396,7 +22575,7 @@ function stealAgendaInstance(state, cardId) {
   state.log.push({
     type: "steal",
     cardId: card.id,
-    points: def2.agendaPoints ?? 0
+    points: def2.agendaPoints ?? 0,
   });
   checkVictory(state);
 }
@@ -20416,11 +22595,13 @@ function scoreAgenda(state, cardId) {
     const j = s.ice.findIndex((c) => c.id === cardId);
     if (j >= 0) s.ice.splice(j, 1);
   }
-  for (const list of [
-    state.corp.hand,
-    state.corp.discard,
-    state.corp.deck
-  ]) {
+  for (
+    const list of [
+      state.corp.hand,
+      state.corp.discard,
+      state.corp.deck,
+    ]
+  ) {
     const i = list.findIndex((c) => c.id === cardId);
     if (i >= 0) list.splice(i, 1);
   }
@@ -20429,7 +22610,7 @@ function scoreAgenda(state, cardId) {
   state.log.push({
     type: "score",
     cardId: card.id,
-    points: def2.agendaPoints ?? 0
+    points: def2.agendaPoints ?? 0,
   });
   checkVictory(state);
   fireScore(state, card);
@@ -20468,11 +22649,13 @@ function takeMulligan(state) {
     p2.hand.push(card);
     drawn++;
   }
-  if (drawn > 0) state.log.push({
-    type: "draw",
-    player: p2.side,
-    count: drawn
-  });
+  if (drawn > 0) {
+    state.log.push({
+      type: "draw",
+      player: p2.side,
+      count: drawn,
+    });
+  }
 }
 function pendingMulliganPlayer(state) {
   return state.prompts.find((p2) => p2.kind === "mulligan")?.player ?? "corp";
@@ -20488,11 +22671,11 @@ function getLegalMoves(state, playerSide) {
     if (prompt2 && prompt2.player === playerSide) {
       moves.push({
         kind: "mulligan.take",
-        player: playerSide
+        player: playerSide,
       });
       moves.push({
         kind: "mulligan.decline",
-        player: playerSide
+        player: playerSide,
       });
     }
     return moves;
@@ -20507,7 +22690,7 @@ function getLegalMoves(state, playerSide) {
         moves.push({
           kind: "discard",
           player: playerSide,
-          cardInstanceIds: combo
+          cardInstanceIds: combo,
         });
       }
       return moves;
@@ -20536,12 +22719,12 @@ function movesForPrompt(state, playerSide, prompt) {
       return [
         {
           kind: "mulligan.take",
-          player: playerSide
+          player: playerSide,
         },
         {
           kind: "mulligan.decline",
-          player: playerSide
-        }
+          player: playerSide,
+        },
       ];
     case "discard": {
       const cards2 = player(state, playerSide).hand;
@@ -20549,7 +22732,7 @@ function movesForPrompt(state, playerSide, prompt) {
       return combinations(cards2.map((c) => c.id), count).map((combo) => ({
         kind: "discard",
         player: playerSide,
-        cardInstanceIds: combo
+        cardInstanceIds: combo,
       }));
     }
     case "choose-one": {
@@ -20569,7 +22752,7 @@ function movesForPrompt(state, playerSide, prompt) {
           kind: "prompt.answer",
           player: playerSide,
           promptId: prompt.id,
-          optionId: option.id
+          optionId: option.id,
         });
       }
       return moves;
@@ -20582,33 +22765,35 @@ function movesForPrompt(state, playerSide, prompt) {
           kind: "prompt.answer",
           player: "corp",
           promptId: prompt.id,
-          optionId: option.id
+          optionId: option.id,
         });
       }
       moves.push({
         kind: "prompt.answer",
         player: "corp",
         promptId: prompt.id,
-        optionId: "pass"
+        optionId: "pass",
       });
       return moves;
     }
     case "access-decision": {
       const found = findCard(state, prompt.cardId);
-      if (!found) return [
-        {
-          kind: "runner.finishAccess"
-        }
-      ];
+      if (!found) {
+        return [
+          {
+            kind: "runner.finishAccess",
+          },
+        ];
+      }
       const moves = [
         {
-          kind: "runner.finishAccess"
-        }
+          kind: "runner.finishAccess",
+        },
       ];
       const trashCost = cardDef(found.card.cardId).trashCost;
       if (trashCost !== null && trashCost > 0 && state.runner.credits >= trashCost) {
         moves.push({
-          kind: "runner.trashAccessed"
+          kind: "runner.trashAccessed",
         });
       }
       return moves;
@@ -20620,11 +22805,13 @@ function corpActionMoves(state) {
   const corp = state.corp;
   if (corp.clicks <= 0) return moves;
   moves.push({
-    kind: "corp.gainCredits"
+    kind: "corp.gainCredits",
   });
-  if (corp.deck.length > 0) moves.push({
-    kind: "corp.draw"
-  });
+  if (corp.deck.length > 0) {
+    moves.push({
+      kind: "corp.draw",
+    });
+  }
   for (const card of corp.hand) {
     const def2 = cardDef(card.cardId);
     const servers = installServersFor(state, card);
@@ -20635,7 +22822,7 @@ function corpActionMoves(state) {
           moves.push({
             kind: "corp.install",
             cardId: card.cardId,
-            server
+            server,
           });
           continue;
         }
@@ -20644,7 +22831,7 @@ function corpActionMoves(state) {
           moves.push({
             kind: "corp.install",
             cardId: card.cardId,
-            server
+            server,
           });
         }
       }
@@ -20653,7 +22840,7 @@ function corpActionMoves(state) {
         moves.push({
           kind: "corp.install",
           cardId: card.cardId,
-          server
+          server,
         });
       }
     }
@@ -20664,7 +22851,7 @@ function corpActionMoves(state) {
     if (def2.cost !== null && def2.cost > state.corp.credits) continue;
     moves.push({
       kind: "corp.playOperation",
-      cardId: card.cardId
+      cardId: card.cardId,
     });
   }
   for (const card of corpInstalledCardsLocal(state)) {
@@ -20672,15 +22859,17 @@ function corpActionMoves(state) {
     if (def2.advancementRequirement === null && def2.type !== "ice") continue;
     moves.push({
       kind: "corp.advance",
-      targetId: card.id
+      targetId: card.id,
     });
     if (def2.type === "agenda") {
       const adv = card.advancement ?? 0;
       const requirement = def2.advancementRequirement ?? 0;
-      if (adv >= requirement) moves.push({
-        kind: "corp.score",
-        targetId: card.id
-      });
+      if (adv >= requirement) {
+        moves.push({
+          kind: "corp.score",
+          targetId: card.id,
+        });
+      }
     }
   }
   for (const card of corpInstalledCardsLocal(state)) {
@@ -20690,7 +22879,7 @@ function corpActionMoves(state) {
     if (rezCostFor(state, card) <= state.corp.credits) {
       moves.push({
         kind: "corp.rez",
-        targetId: card.id
+        targetId: card.id,
       });
     }
   }
@@ -20702,16 +22891,18 @@ function installServersFor(state, card) {
   if (def2.type === "ice") {
     return [
       ...allServers(state),
-      "new-remote"
+      "new-remote",
     ];
   }
   if (def2.type === "agenda" || def2.type === "asset") {
     return [
-      ...state.servers.filter((s) => !isCentral(s.id) && !s.root.some((c) => {
-        const t = cardDef(c.cardId).type;
-        return t === "asset" || t === "agenda";
-      })).map((s) => s.id),
-      "new-remote"
+      ...state.servers.filter((s) =>
+        !isCentral(s.id) && !s.root.some((c) => {
+          const t = cardDef(c.cardId).type;
+          return t === "asset" || t === "agenda";
+        })
+      ).map((s) => s.id),
+      "new-remote",
     ];
   }
   if (def2.type === "upgrade") {
@@ -20724,22 +22915,26 @@ function runnerActionMoves(state) {
   const runner = state.runner;
   if (runner.clicks <= 0) return moves;
   moves.push({
-    kind: "runner.gainCredits"
+    kind: "runner.gainCredits",
   });
-  if (runner.deck.length > 0) moves.push({
-    kind: "runner.draw"
-  });
+  if (runner.deck.length > 0) {
+    moves.push({
+      kind: "runner.draw",
+    });
+  }
   for (const card of runner.hand) {
     const def2 = cardDef(card.cardId);
     if (def2.type !== "program" && def2.type !== "hardware" && def2.type !== "resource") continue;
     const cost = def2.cost ?? 0;
     if (cost > runner.credits) continue;
-    if (def2.type === "program" && memoryUsed(state) + (def2.memoryCost ?? 0) > memoryLimit(state)) {
+    if (
+      def2.type === "program" && memoryUsed(state) + (def2.memoryCost ?? 0) > memoryLimit(state)
+    ) {
       continue;
     }
     moves.push({
       kind: "runner.install",
-      cardId: card.cardId
+      cardId: card.cardId,
     });
   }
   for (const card of runner.hand) {
@@ -20748,20 +22943,22 @@ function runnerActionMoves(state) {
     if (def2.cost !== null && def2.cost > runner.credits) continue;
     if (def2.minimumDeckSize !== null) continue;
     if (card.cardId === "jailbreak" || card.cardId === "overclock") {
-      for (const server of [
-        "hq",
-        "rd"
-      ]) {
+      for (
+        const server of [
+          "hq",
+          "rd",
+        ]
+      ) {
         moves.push({
           kind: "runner.playEvent",
           cardId: card.cardId,
-          server
+          server,
         });
       }
     } else {
       moves.push({
         kind: "runner.playEvent",
-        cardId: card.cardId
+        cardId: card.cardId,
       });
     }
   }
@@ -20769,7 +22966,7 @@ function runnerActionMoves(state) {
     if (cardRestrictsRun(state, server)) continue;
     moves.push({
       kind: "runner.run",
-      server
+      server,
     });
   }
   addAbilityMoves(state, "runner", runner.installed, moves);
@@ -20793,13 +22990,13 @@ function runMoves(state, playerSide) {
       addBreakMoves(state, ice, moves);
     }
     moves.push({
-      kind: "runner.resolveSubroutines"
+      kind: "runner.resolveSubroutines",
     });
     return moves;
   }
   if (run.phase === "movement") {
     moves.push({
-      kind: "runner.jackOut"
+      kind: "runner.jackOut",
     });
     return moves;
   }
@@ -20822,7 +23019,7 @@ function addBreakMoves(state, ice, moves) {
           moves.push({
             kind: "runner.breakSubroutine",
             programId: program.id,
-            subIndex
+            subIndex,
           });
         }
         continue;
@@ -20837,7 +23034,7 @@ function addBreakMoves(state, ice, moves) {
           moves.push({
             kind: "runner.breakSubroutine",
             programId: program.id,
-            subIndex
+            subIndex,
           });
         }
       }
@@ -20846,7 +23043,7 @@ function addBreakMoves(state, ice, moves) {
     if (pumpDef && availableCredits(state, "runner") >= pumpDef.creditCost) {
       moves.push({
         kind: "runner.pumpIcebreaker",
-        programId: program.id
+        programId: program.id,
       });
     }
   }
@@ -20878,12 +23075,12 @@ function breachMoves(state, playerSide) {
   for (const id of specific) {
     moveList.push({
       kind: "runner.accessCard",
-      targetId: id
+      targetId: id,
     });
   }
   if (randomCount > 0) {
     moveList.push({
-      kind: "runner.accessRandom"
+      kind: "runner.accessRandom",
     });
   }
   return moveList;
@@ -20902,14 +23099,14 @@ function addAbilityMoves(state, side, cards2, moves) {
             kind: `${side}.ability`,
             targetId: card.id,
             abilityIndex: i,
-            server
+            server,
           });
         }
       } else {
         moves.push({
           kind: `${side}.ability`,
           targetId: card.id,
-          abilityIndex: i
+          abilityIndex: i,
         });
       }
     }
@@ -20918,22 +23115,24 @@ function addAbilityMoves(state, side, cards2, moves) {
 function corpInstalledCardsLocal(state) {
   return state.servers.flatMap((s) => [
     ...s.root,
-    ...s.ice
+    ...s.ice,
   ]);
 }
 function combinations(ids, size) {
-  if (size <= 0) return [
-    []
-  ];
+  if (size <= 0) {
+    return [
+      [],
+    ];
+  }
   if (size > ids.length) return [];
   const result = [];
   const list = [
-    ...ids
+    ...ids,
   ].sort();
   const walk2 = (start, chosen) => {
     if (chosen.length === size) {
       result.push([
-        ...chosen
+        ...chosen,
       ]);
       return;
     }
@@ -20958,7 +23157,7 @@ function applyMove(state, playerSide, move, opts = {}) {
     return {
       kind: "illegal-move",
       reason: explainIllegal(state, playerSide, move),
-      move
+      move,
     };
   }
   const next = opts.mutate ? state : copyState(state);
@@ -20970,12 +23169,12 @@ function applyMove(state, playerSide, move, opts = {}) {
     kind: "applied",
     state: next,
     events,
-    warnings: supportWarnings(next)
+    warnings: supportWarnings(next),
   };
 }
 function supportWarnings(state) {
   return [
-    ...state.supportWarnings
+    ...state.supportWarnings,
   ];
 }
 function sameMove(a, b) {
@@ -21043,7 +23242,7 @@ function applyResolvedMove(state, playerSide, move) {
         state.log.push({
           type: "discard",
           cardId: id,
-          player: playerSide
+          player: playerSide,
         });
       }
       if (prompt && prompt.kind === "discard" && state.prompts[0]?.id === prompt.id) {
@@ -21055,7 +23254,7 @@ function applyResolvedMove(state, playerSide, move) {
           kind: "discard",
           id: state.nextPromptId++,
           player: playerSide,
-          count: remaining
+          count: remaining,
         });
         return;
       }
@@ -21076,7 +23275,7 @@ function applyResolvedMove(state, playerSide, move) {
         state.log.push({
           type: "game-end",
           winner: "runner",
-          reason: state.winReason
+          reason: state.winReason,
         });
         return;
       }
@@ -21131,7 +23330,7 @@ function applyResolvedMove(state, playerSide, move) {
         state.log.push({
           type: "game-end",
           winner: "corp",
-          reason: state.winReason
+          reason: state.winReason,
         });
         return;
       }
@@ -21299,7 +23498,7 @@ function installCorpCard(state, cardId, server) {
     type: "install",
     cardId: card.id,
     player: "corp",
-    server: resolved
+    server: resolved,
   });
 }
 function installRunnerCard(state, cardId) {
@@ -21318,7 +23517,7 @@ function installRunnerCard(state, cardId) {
   state.log.push({
     type: "install",
     cardId: card.id,
-    player: "runner"
+    player: "runner",
   });
   fireInstall(state, card);
   if (memoryUsed(state) > memoryLimit(state)) {
@@ -21337,7 +23536,7 @@ function playCorpOperation(state, cardId) {
   state.log.push({
     type: "play",
     cardId: card.id,
-    player: "corp"
+    player: "corp",
   });
   resolveCorpOperation(state, cardId, card);
   pruneEmptyRemotes(state);
@@ -21351,13 +23550,17 @@ function resolveCorpOperation(state, cardId, card) {
       gainCredits(state, "corp", 10);
       break;
     case "seamless_launch": {
-      const candidates = corpInstalledCards(state).filter((c) => !state.corp.installedThisTurn.includes(c.id));
+      const candidates = corpInstalledCards(state).filter((c) =>
+        !state.corp.installedThisTurn.includes(c.id)
+      );
       const targets = candidates.filter((c) => {
         const d = cardDef(c.cardId);
         return d.type === "agenda" || d.type === "asset" || d.type === "ice";
       });
       if (targets.length === 0) {
-        state.supportWarnings.push("Seamless Launch found no legal target; it resolves without placing counters");
+        state.supportWarnings.push(
+          "Seamless Launch found no legal target; it resolves without placing counters",
+        );
         break;
       }
       if (targets.length === 1) {
@@ -21374,9 +23577,9 @@ function resolveCorpOperation(state, cardId, card) {
           label: `Place 2 on ${cardDef(c.cardId).title}`,
           targetId: c.id,
           effect: {
-            kind: "no-op"
-          }
-        }))
+            kind: "no-op",
+          },
+        })),
       });
       break;
     }
@@ -21397,7 +23600,7 @@ function playRunnerEvent(state, cardId, server) {
   state.log.push({
     type: "play",
     cardId: card.id,
-    player: "runner"
+    player: "runner",
   });
   switch (cardId) {
     case "sure_gamble":
@@ -21409,7 +23612,7 @@ function playRunnerEvent(state, cardId, server) {
       state.log.push({
         type: "lose-clicks",
         player: "runner",
-        amount: 1
+        amount: 1,
       });
       break;
     }
@@ -21423,7 +23626,7 @@ function playRunnerEvent(state, cardId, server) {
             kind: "discard",
             id: state.nextPromptId++,
             player: "runner",
-            count: 1
+            count: 1,
           });
         }
       } else {
@@ -21467,7 +23670,7 @@ function breakSubroutine(state, programId, subIndex) {
     state.log.push({
       type: "break-subroutine",
       cardId: ice.id,
-      subIndex
+      subIndex,
     });
     return;
   }
@@ -21480,7 +23683,7 @@ function breakSubroutine(state, programId, subIndex) {
   state.log.push({
     type: "break-subroutine",
     cardId: ice.id,
-    subIndex
+    subIndex,
   });
 }
 function pumpIcebreaker(state, programId) {
@@ -21499,7 +23702,7 @@ function pumpIcebreaker(state, programId) {
   state.log.push({
     type: "pump-strength",
     cardId: program.id,
-    amount
+    amount,
   });
 }
 function resolveEncounter(state) {
@@ -21534,7 +23737,7 @@ function addTwoAdvancement(state, card) {
   state.log.push({
     type: "advance",
     cardId: card.id,
-    amount: 2
+    amount: 2,
   });
 }
 function addAdvancementCounter(state, card) {
@@ -21542,7 +23745,7 @@ function addAdvancementCounter(state, card) {
   state.log.push({
     type: "advance",
     cardId: card.id,
-    amount: 1
+    amount: 1,
   });
 }
 function discardSpecific(state, side, instanceId) {
@@ -21552,7 +23755,7 @@ function discardSpecific(state, side, instanceId) {
   state.log.push({
     type: "discard",
     cardId: instanceId,
-    player: side
+    player: side,
   });
 }
 function enterEndOfTurn(state) {
@@ -21565,7 +23768,7 @@ function startFirstTurn(state) {
 function corpInstalledCards(state) {
   return state.servers.flatMap((s) => [
     ...s.root,
-    ...s.ice
+    ...s.ice,
   ]);
 }
 
@@ -21574,7 +23777,7 @@ function fastCloneState(state) {
   return {
     ...state,
     turn: {
-      ...state.turn
+      ...state.turn,
     },
     corp: clonePlayer(state.corp),
     runner: clonePlayer(state.runner),
@@ -21584,8 +23787,8 @@ function fastCloneState(state) {
     prompts: state.prompts.map(clonePrompt),
     log: state.log.map(cloneEvent),
     supportWarnings: [
-      ...state.supportWarnings
-    ]
+      ...state.supportWarnings,
+    ],
   };
 }
 function clonePlayer(p2) {
@@ -21598,76 +23801,80 @@ function clonePlayer(p2) {
     score: p2.score.map(cloneCard),
     installed: p2.installed.map(cloneCard),
     installedThisTurn: [
-      ...p2.installedThisTurn
+      ...p2.installedThisTurn,
     ],
     ranServersThisTurn: [
-      ...p2.ranServersThisTurn
+      ...p2.ranServersThisTurn,
     ],
     usedOncePerTurn: [
-      ...p2.usedOncePerTurn
-    ]
+      ...p2.usedOncePerTurn,
+    ],
   };
 }
 function cloneCard(c) {
   return {
-    ...c
+    ...c,
   };
 }
 function cloneServer(s) {
   return {
     ...s,
     root: s.root.map(cloneCard),
-    ice: s.ice.map(cloneCard)
+    ice: s.ice.map(cloneCard),
   };
 }
 function cloneRun(r) {
   return {
     ...r,
     broken: [
-      ...r.broken
+      ...r.broken,
     ],
     resolved: [
-      ...r.resolved
-    ]
+      ...r.resolved,
+    ],
   };
 }
 function cloneBreach(b) {
   return {
     ...b,
     chosen: [
-      ...b.chosen
-    ]
+      ...b.chosen,
+    ],
   };
 }
 function clonePrompt(p2) {
   if (p2.kind === "rez-window" || p2.kind === "choose-one") {
     return {
       ...p2,
-      options: p2.options.map(cloneOption)
+      options: p2.options.map(cloneOption),
     };
   }
   return {
-    ...p2
+    ...p2,
   };
 }
 function cloneOption(o) {
   const out = {
-    ...o
+    ...o,
   };
-  if (o.effect !== void 0) out.effect = {
-    ...o.effect
-  };
+  if (o.effect !== void 0) {
+    out.effect = {
+      ...o.effect,
+    };
+  }
   return out;
 }
 function cloneEvent(e) {
-  return e.type === "damage" ? {
-    ...e,
-    trashed: [
-      ...e.trashed
-    ]
-  } : {
-    ...e
-  };
+  return e.type === "damage"
+    ? {
+      ...e,
+      trashed: [
+        ...e.trashed,
+      ],
+    }
+    : {
+      ...e,
+    };
 }
 
 // src/engine/determinize.ts
@@ -21698,7 +23905,9 @@ var CardPool = class {
       }
     }
     if (total === 0) {
-      throw new Error(`determinize: no card in the hidden pool matches ${what}; AIDecisionContext is inconsistent with the view`);
+      throw new Error(
+        `determinize: no card in the hidden pool matches ${what}; AIDecisionContext is inconsistent with the view`,
+      );
     }
     let roll = Math.floor(rng.next() * total);
     let id;
@@ -21722,7 +23931,7 @@ function instanceOf(view, cardId) {
     id: view.id,
     cardId,
     owner: view.owner,
-    zone: view.zone
+    zone: view.zone,
   };
   if (view.rezzed !== void 0) card.rezzed = view.rezzed;
   if (view.advancement !== void 0) card.advancement = view.advancement;
@@ -21737,7 +23946,7 @@ function hiddenInstance(id, cardId, side, zone) {
     id,
     cardId,
     owner: side,
-    zone
+    zone,
   };
   const def2 = cardDef(cardId);
   if (isIce(def2) || def2.type === "agenda") card.advancement = 0;
@@ -21745,7 +23954,8 @@ function hiddenInstance(id, cardId, side, zone) {
 }
 function basePlayerState(view, side) {
   const section = view[side];
-  const hubBonus = side === "corp" && view.corp.score.some((c) => c.cardId === "superconducting_hub") ? 2 : 0;
+  const hubBonus =
+    side === "corp" && view.corp.score.some((c) => c.cardId === "superconducting_hub") ? 2 : 0;
   return {
     side,
     identity: instanceOf(section.identity, section.identity.cardId),
@@ -21762,18 +23972,18 @@ function basePlayerState(view, side) {
     tags: section.tags,
     agendaPoints: section.agendaPoints,
     installedThisTurn: [
-      ...section.turnState.installedThisTurn
+      ...section.turnState.installedThisTurn,
     ],
     basicDrawThisTurn: section.turnState.basicDrawThisTurn,
     successfulRunThisTurn: section.turnState.successfulRunThisTurn,
     ranServersThisTurn: [
-      ...section.turnState.ranServersThisTurn
+      ...section.turnState.ranServersThisTurn,
     ],
     hqBreachesThisTurn: section.turnState.hqBreachesThisTurn,
     usedOncePerTurn: [
-      ...section.turnState.usedOncePerTurn
+      ...section.turnState.usedOncePerTurn,
     ],
-    pendingRunFund: section.turnState.pendingRunFund
+    pendingRunFund: section.turnState.pendingRunFund,
   };
 }
 function promptFromStub(stub) {
@@ -21782,21 +23992,21 @@ function promptFromStub(stub) {
       return {
         kind: "mulligan",
         id: stub.id,
-        player: stub.player
+        player: stub.player,
       };
     case "discard":
       return {
         kind: "discard",
         id: stub.id,
         player: stub.player,
-        count: 0
+        count: 0,
       };
     case "rez-window":
       return {
         kind: "rez-window",
         id: stub.id,
         player: "corp",
-        options: []
+        options: [],
       };
     case "choose-one":
       return {
@@ -21804,14 +24014,14 @@ function promptFromStub(stub) {
         id: stub.id,
         player: stub.player,
         title: "",
-        options: []
+        options: [],
       };
     case "access-decision":
       return {
         kind: "access-decision",
         id: stub.id,
         player: "runner",
-        cardId: ""
+        cardId: "",
       };
   }
 }
@@ -21825,7 +24035,7 @@ function determinize(view, ctx, rng) {
   const runner = basePlayerState(view, "runner");
   const players = {
     corp,
-    runner
+    runner,
   };
   const accessed = view.breach?.accessing;
   const isHidden = (v) => v.cardId === HIDDEN;
@@ -21833,23 +24043,29 @@ function determinize(view, ctx, rng) {
   const pool = new CardPool(ctx.unseen);
   const orphans = collectOrphans(view);
   const ownDeckPins = orphans.ownDeck;
-  const oppHandPins = accessed && accessed.owner === opponent && accessed.zone === "hand" ? [
-    accessed.id,
-    ...orphans.oppHand
-  ] : [
-    ...orphans.oppHand
-  ];
-  const oppDeckPins = accessed && accessed.owner === opponent && accessed.zone === "deck" ? [
-    accessed.id,
-    ...orphans.oppDeck
-  ] : [
-    ...orphans.oppDeck
-  ];
+  const oppHandPins = accessed && accessed.owner === opponent && accessed.zone === "hand"
+    ? [
+      accessed.id,
+      ...orphans.oppHand,
+    ]
+    : [
+      ...orphans.oppHand,
+    ];
+  const oppDeckPins = accessed && accessed.owner === opponent && accessed.zone === "deck"
+    ? [
+      accessed.id,
+      ...orphans.oppDeck,
+    ]
+    : [
+      ...orphans.oppDeck,
+    ];
   const servers = buildServers(view, pool, rng, pinnedId);
-  for (const side of [
-    "corp",
-    "runner"
-  ]) {
+  for (
+    const side of [
+      "corp",
+      "runner",
+    ]
+  ) {
     const section = view[side];
     players[side].hand = section.hand.map((c) => instanceOf(c, c.cardId));
     players[side].discard = section.discard.map((c) => {
@@ -21862,7 +24078,9 @@ function determinize(view, ctx, rng) {
   }
   players.runner.installed = view.runner.installed.map((c) => instanceOf(c, c.cardId));
   const ownDeckPool = new CardPool(ctx.ownDeck);
-  const ownPinned = accessed && accessed.owner === viewer && accessed.zone === "deck" ? accessed : void 0;
+  const ownPinned = accessed && accessed.owner === viewer && accessed.zone === "deck"
+    ? accessed
+    : void 0;
   if (ownPinned) ownDeckPool.remove(ownPinned.cardId);
   const deckCount = view[viewer].deckCount;
   assertSize(ctx.ownDeck.length, deckCount, "ctx.ownDeck", `own deck count (${viewer} deck)`);
@@ -21872,10 +24090,19 @@ function determinize(view, ctx, rng) {
   }
   for (const id of ownDeckPins) {
     if (ownDeck.some((c) => c.id === id)) continue;
-    ownDeck.push(hiddenInstance(id, ownDeckPool.draw(rng, () => true, "own deck pin"), viewer, "deck"));
+    ownDeck.push(
+      hiddenInstance(id, ownDeckPool.draw(rng, () => true, "own deck pin"), viewer, "deck"),
+    );
   }
   for (let i = ownDeck.length; i < deckCount; i++) {
-    ownDeck.push(hiddenInstance(`${viewer}-deck-${i}`, ownDeckPool.draw(rng, () => true, "own deck"), viewer, "deck"));
+    ownDeck.push(
+      hiddenInstance(
+        `${viewer}-deck-${i}`,
+        ownDeckPool.draw(rng, () => true, "own deck"),
+        viewer,
+        "deck",
+      ),
+    );
   }
   shuffleArray(rng, ownDeck);
   players[viewer].deck = ownDeck;
@@ -21887,10 +24114,24 @@ function determinize(view, ctx, rng) {
       oppHand.push(hiddenInstance(id, accessed.cardId, opponent, "hand"));
       continue;
     }
-    oppHand.push(hiddenInstance(id, pool.draw(rng, (cid) => cardDef(cid).side === opponent, "opponent hand pin"), opponent, "hand"));
+    oppHand.push(
+      hiddenInstance(
+        id,
+        pool.draw(rng, (cid) => cardDef(cid).side === opponent, "opponent hand pin"),
+        opponent,
+        "hand",
+      ),
+    );
   }
   for (let i = oppHand.length; i < oppSection.handCount; i++) {
-    oppHand.push(hiddenInstance(`${opponent}-hand-${i}`, pool.draw(rng, (id) => cardDef(id).side === opponent, "opponent hand"), opponent, "hand"));
+    oppHand.push(
+      hiddenInstance(
+        `${opponent}-hand-${i}`,
+        pool.draw(rng, (id) => cardDef(id).side === opponent, "opponent hand"),
+        opponent,
+        "hand",
+      ),
+    );
   }
   players[opponent].hand = oppHand;
   const oppDeck = [];
@@ -21900,49 +24141,67 @@ function determinize(view, ctx, rng) {
       oppDeck.push(hiddenInstance(id, accessed.cardId, opponent, "deck"));
       continue;
     }
-    oppDeck.push(hiddenInstance(id, pool.draw(rng, (cid) => cardDef(cid).side === opponent, "opponent deck pin"), opponent, "deck"));
+    oppDeck.push(
+      hiddenInstance(
+        id,
+        pool.draw(rng, (cid) => cardDef(cid).side === opponent, "opponent deck pin"),
+        opponent,
+        "deck",
+      ),
+    );
   }
   for (let i = oppDeck.length; i < oppSection.deckCount; i++) {
-    oppDeck.push(hiddenInstance(`${opponent}-deck-${i}`, pool.draw(rng, (id) => cardDef(id).side === opponent, "opponent deck"), opponent, "deck"));
+    oppDeck.push(
+      hiddenInstance(
+        `${opponent}-deck-${i}`,
+        pool.draw(rng, (id) => cardDef(id).side === opponent, "opponent deck"),
+        opponent,
+        "deck",
+      ),
+    );
   }
   shuffleArray(rng, oppDeck);
   players[opponent].deck = oppDeck;
   const prompts = view.prompts.map((p2) => p2.player === viewer ? p2 : promptFromStub(p2));
   const nextPromptId = prompts.reduce((max, p2) => Math.max(max, p2.id), 0) + 1;
-  const run = view.run ? {
-    server: view.run.server,
-    position: view.run.position,
-    phase: view.run.phase,
-    currentIceId: view.run.currentIce?.id,
-    broken: [
-      ...view.run.broken
-    ],
-    resolved: [
-      ...view.run.resolved
-    ],
-    successful: view.run.phase === "success",
-    unsuccessful: false,
-    jackOutOffered: false,
-    source: view.run.source,
-    fundCredits: view.run.fundCredits,
-    rezCostIncrease: view.run.rezCostIncrease,
-    tollPaid: view.run.tollPaid,
-    awaitingChoice: false,
-    encounterStarted: view.run.phase === "encounter-ice"
-  } : null;
-  const breach = view.breach ? {
-    server: view.breach.server,
-    randomAccessLimit: view.breach.randomAccessLimit,
-    randomAccessesUsed: view.breach.randomAccessLimit - view.breach.remaining,
-    chosen: [
-      ...view.breach.chosen
-    ],
-    accessing: view.breach.accessing?.id
-  } : null;
+  const run = view.run
+    ? {
+      server: view.run.server,
+      position: view.run.position,
+      phase: view.run.phase,
+      currentIceId: view.run.currentIce?.id,
+      broken: [
+        ...view.run.broken,
+      ],
+      resolved: [
+        ...view.run.resolved,
+      ],
+      successful: view.run.phase === "success",
+      unsuccessful: false,
+      jackOutOffered: false,
+      source: view.run.source,
+      fundCredits: view.run.fundCredits,
+      rezCostIncrease: view.run.rezCostIncrease,
+      tollPaid: view.run.tollPaid,
+      awaitingChoice: false,
+      encounterStarted: view.run.phase === "encounter-ice",
+    }
+    : null;
+  const breach = view.breach
+    ? {
+      server: view.breach.server,
+      randomAccessLimit: view.breach.randomAccessLimit,
+      randomAccessesUsed: view.breach.randomAccessLimit - view.breach.remaining,
+      chosen: [
+        ...view.breach.chosen,
+      ],
+      accessing: view.breach.accessing?.id,
+    }
+    : null;
   const skeleton = {
     nextPromptId,
     turn: {
-      ...view.turn
+      ...view.turn,
     },
     corp,
     runner,
@@ -21953,7 +24212,7 @@ function determinize(view, ctx, rng) {
     // The log is output-only; restore the view's redacted events. The engine
     // never reads the log for logic, and re-redacting is idempotent.
     log: view.events.map((e) => ({
-      ...e
+      ...e,
     })),
     rngState: rng.state,
     drawMode: "random",
@@ -21962,24 +24221,28 @@ function determinize(view, ctx, rng) {
     winReason: view.winReason,
     mode: view.mode,
     supportWarnings: [
-      ...view.warnings
-    ]
+      ...view.warnings,
+    ],
   };
   return fastCloneState(skeleton);
 }
 function collectOrphans(view) {
   const listed = /* @__PURE__ */ new Set();
-  for (const section of [
-    view.corp,
-    view.runner
-  ]) {
-    for (const v of [
-      section.identity,
-      ...section.score,
-      ...section.hand,
-      ...section.discard,
-      ...section.installed
-    ]) {
+  for (
+    const section of [
+      view.corp,
+      view.runner,
+    ]
+  ) {
+    for (
+      const v of [
+        section.identity,
+        ...section.score,
+        ...section.hand,
+        ...section.discard,
+        ...section.installed,
+      ]
+    ) {
       listed.add(v.id);
     }
   }
@@ -21997,12 +24260,14 @@ function collectOrphans(view) {
   const breach = view.breach;
   const breachRefs = /* @__PURE__ */ new Set([
     ...breach?.chosen ?? [],
-    ...breach?.accessing ? [
-      breach.accessing.id
-    ] : []
+    ...breach?.accessing
+      ? [
+        breach.accessing.id,
+      ]
+      : [],
   ]);
   const orphans = [
-    ...referenced
+    ...referenced,
   ].filter((id) => typeof id === "string" && id !== HIDDEN && !listed.has(id));
   const ownDeck = [];
   const oppHand = [];
@@ -22018,7 +24283,7 @@ function collectOrphans(view) {
   return {
     ownDeck,
     oppHand,
-    oppDeck
+    oppDeck,
   };
 }
 function breachViewerDeck(view, _id, ownDeck, oppDeck) {
@@ -22030,11 +24295,11 @@ function eventCardIds(event) {
     case "load-credits":
     case "take-credits":
       return [
-        event.targetId
+        event.targetId,
       ];
     case "damage":
       return [
-        ...event.trashed
+        ...event.trashed,
       ];
     case "install":
     case "play":
@@ -22053,7 +24318,7 @@ function eventCardIds(event) {
     case "access":
     case "pump-strength":
       return [
-        event.cardId
+        event.cardId,
       ];
     default:
       return [];
@@ -22080,21 +24345,23 @@ function buildServers(view, pool, rng, pinnedId) {
   const order = [
     "hq",
     "rd",
-    "archives"
+    "archives",
   ];
   const servers = /* @__PURE__ */ new Map();
-  for (const id of order) servers.set(id, {
-    id,
-    root: [],
-    ice: []
-  });
+  for (const id of order) {
+    servers.set(id, {
+      id,
+      root: [],
+      ice: [],
+    });
+  }
   const ensure = (id) => {
     let s = servers.get(id);
     if (!s) {
       s = {
         id,
         root: [],
-        ice: []
+        ice: [],
       };
       servers.set(id, s);
       order.push(id);
@@ -22108,15 +24375,18 @@ function buildServers(view, pool, rng, pinnedId) {
       cardId = v.cardId;
     } else {
       const pinned = pinnedId(v);
-      cardId = pinned ?? (v.position === "ice" ? pool.draw(rng, (id) => isIce(cardDef(id)), `an unrezzed ice (${v.id})`) : pool.draw(
-        rng,
-        // upgrades (operations/events can never be installed there).
-        (id) => {
-          const type = cardDef(id).type;
-          return type === "asset" || type === "agenda" || type === "upgrade";
-        },
-        `an unrezzed server-root card (${v.id})`
-      ));
+      cardId = pinned ??
+        (v.position === "ice"
+          ? pool.draw(rng, (id) => isIce(cardDef(id)), `an unrezzed ice (${v.id})`)
+          : pool.draw(
+            rng,
+            // upgrades (operations/events can never be installed there).
+            (id) => {
+              const type = cardDef(id).type;
+              return type === "asset" || type === "agenda" || type === "upgrade";
+            },
+            `an unrezzed server-root card (${v.id})`,
+          ));
     }
     const card = instanceOf(v, cardId);
     if (v.position === "ice") server.ice.push(card);
@@ -22134,7 +24404,9 @@ function shuffleArray(rng, list) {
 }
 function assertSize(actual, expected, what, expectedDesc) {
   if (actual !== expected) {
-    throw new Error(`determinize: ${what} has ${actual} cards but the view's ${expectedDesc} is ${expected}; AIDecisionContext is inconsistent with the view`);
+    throw new Error(
+      `determinize: ${what} has ${actual} cards but the view's ${expectedDesc} is ${expected}; AIDecisionContext is inconsistent with the view`,
+    );
   }
 }
 
@@ -22153,14 +24425,14 @@ function viewCard(card, hidden, position) {
     iceIndex: card.iceIndex,
     position,
     zone: card.zone,
-    server: card.server
+    server: card.server,
   };
 }
 function installedCards(state, side) {
   if (side === "runner") return state.runner.installed;
   return state.servers.flatMap((s) => [
     ...s.root,
-    ...s.ice
+    ...s.ice,
   ]);
 }
 function publicPlayer(state, side, viewer) {
@@ -22178,7 +24450,9 @@ function publicPlayer(state, side, viewer) {
     discardCount: p2.discard.length,
     identity: viewCard(p2.identity, false),
     score: p2.score.map((c) => viewCard(c, false)),
-    installed: installedCards(state, side).map((c) => viewCard(c, hideInstalled && c.rezzed !== true))
+    installed: installedCards(state, side).map((c) =>
+      viewCard(c, hideInstalled && c.rezzed !== true)
+    ),
   };
 }
 function serverStatus(state, id, hideInstalled) {
@@ -22188,7 +24462,7 @@ function serverStatus(state, id, hideInstalled) {
     id,
     root: s.root.map((c) => viewCard(c, hideInstalled && c.rezzed !== true, "root")),
     ice: iceVisible.map((c) => viewCard(c, false, "ice")),
-    unrezzedIceCount: s.ice.length - iceVisible.length
+    unrezzedIceCount: s.ice.length - iceVisible.length,
   };
 }
 function publicServers(state, hideInstalled) {
@@ -22209,8 +24483,8 @@ function publicRun(state, hideCorpInstalled) {
     position: run.position,
     currentIce: currentIce2,
     brokenSubroutines: [
-      ...run.broken
-    ]
+      ...run.broken,
+    ],
   };
 }
 function publicBreach(state) {
@@ -22220,7 +24494,7 @@ function publicBreach(state) {
     server: breach.server,
     randomAccessLimit: breach.randomAccessLimit,
     randomAccessesUsed: breach.randomAccessesUsed,
-    accessing: breach.accessing !== void 0
+    accessing: breach.accessing !== void 0,
   };
 }
 function getPublicGameStatus(state) {
@@ -22232,14 +24506,14 @@ function getPublicGameStatusFor(state, viewer) {
 function publicStatus(state, hideCorpInstalled) {
   return {
     turn: {
-      ...state.turn
+      ...state.turn,
     },
     winner: state.winner,
     winReason: state.winReason,
     agendaPointTarget: state.agendaPointTarget,
     players: {
       corp: publicPlayer(state, "corp", hideCorpInstalled ? "runner" : "corp"),
-      runner: publicPlayer(state, "runner", "runner")
+      runner: publicPlayer(state, "runner", "runner"),
     },
     servers: publicServers(state, hideCorpInstalled),
     run: publicRun(state, hideCorpInstalled),
@@ -22249,15 +24523,15 @@ function publicStatus(state, hideCorpInstalled) {
     // (rules 10.2.2, 1.21.3).
     prompts: state.prompts.map(promptStub),
     warnings: [
-      ...state.supportWarnings
-    ]
+      ...state.supportWarnings,
+    ],
   };
 }
 function promptStub(prompt) {
   return {
     kind: prompt.kind,
     id: prompt.id,
-    player: prompt.player
+    player: prompt.player,
   };
 }
 
@@ -22267,7 +24541,7 @@ function issue(code, message, cardId) {
   return {
     code,
     message,
-    cardId
+    cardId,
   };
 }
 function validateDeck(deck, side, mode = "open-play") {
@@ -22275,29 +24549,58 @@ function validateDeck(deck, side, mode = "open-play") {
   const pool = mode === "starter-decks" ? new Set(starterPoolCardIds()) : null;
   const identity = tryCardDef(deck.identity);
   if (!identity) {
-    issues.push(issue("unknown-identity", `Unknown identity card '${deck.identity}'`, deck.identity));
+    issues.push(
+      issue("unknown-identity", `Unknown identity card '${deck.identity}'`, deck.identity),
+    );
   } else {
     const expectedType = side === "corp" ? "corp_identity" : "runner_identity";
     if (identity.type !== expectedType) {
-      issues.push(issue("identity-side-mismatch", `Identity '${identity.title}' is a ${identity.type}, not a ${side} identity`, deck.identity));
+      issues.push(
+        issue(
+          "identity-side-mismatch",
+          `Identity '${identity.title}' is a ${identity.type}, not a ${side} identity`,
+          deck.identity,
+        ),
+      );
     }
   }
   let total = 0;
   const seen2 = /* @__PURE__ */ new Set();
-  const identityCount = deck.cards.filter((e) => e.cardId === deck.identity).reduce((a, b) => a + b.count, 0);
+  const identityCount = deck.cards.filter((e) => e.cardId === deck.identity).reduce(
+    (a, b) => a + b.count,
+    0,
+  );
   if (identityCount > 0) {
-    issues.push(issue("identity-count", "The identity card must not be included in the card list", deck.identity));
+    issues.push(
+      issue(
+        "identity-count",
+        "The identity card must not be included in the card list",
+        deck.identity,
+      ),
+    );
   }
   let influence = 0;
   for (const entry of deck.cards) {
     if (entry.count < 0 || !Number.isInteger(entry.count)) {
-      issues.push(issue("invalid-count", `Card '${entry.cardId}' has invalid count ${entry.count}`, entry.cardId));
+      issues.push(
+        issue(
+          "invalid-count",
+          `Card '${entry.cardId}' has invalid count ${entry.count}`,
+          entry.cardId,
+        ),
+      );
       continue;
     }
     if (entry.count === 0) continue;
     total += entry.count;
     if (seen2.has(entry.cardId)) {
-      issues.push(issue("invalid-count", `Card '${entry.cardId}' appears more than once in deck entries`, entry.cardId));
+      issues.push(
+        issue(
+          "invalid-count",
+          `Card '${entry.cardId}' appears more than once in deck entries`,
+          entry.cardId,
+        ),
+      );
     }
     seen2.add(entry.cardId);
     const def2 = tryCardDef(entry.cardId);
@@ -22306,13 +24609,31 @@ function validateDeck(deck, side, mode = "open-play") {
       continue;
     }
     if (def2.side !== side) {
-      issues.push(issue("not-in-supported-cards", `Card '${def2.title}' is a ${def2.side} card, not a ${side} card`, entry.cardId));
+      issues.push(
+        issue(
+          "not-in-supported-cards",
+          `Card '${def2.title}' is a ${def2.side} card, not a ${side} card`,
+          entry.cardId,
+        ),
+      );
     }
     if (mode === "starter-decks" && !pool.has(entry.cardId)) {
-      issues.push(issue("not-in-supported-cards", `Card '${entry.cardId}' is not in the supported starter-deck card pool`, entry.cardId));
+      issues.push(
+        issue(
+          "not-in-supported-cards",
+          `Card '${entry.cardId}' is not in the supported starter-deck card pool`,
+          entry.cardId,
+        ),
+      );
     }
     if (def2.deckLimit !== null && entry.count > def2.deckLimit) {
-      issues.push(issue("over-deck-limit", `Card '${def2.title}' exceeds its deck limit of ${def2.deckLimit} (has ${entry.count})`, entry.cardId));
+      issues.push(
+        issue(
+          "over-deck-limit",
+          `Card '${def2.title}' exceeds its deck limit of ${def2.deckLimit} (has ${entry.count})`,
+          entry.cardId,
+        ),
+      );
     }
     if (def2.influenceCost !== null && def2.influenceCost > 0 && identity) {
       influence += def2.influenceCost * entry.count;
@@ -22322,11 +24643,18 @@ function validateDeck(deck, side, mode = "open-play") {
   if (mode === "open-play") {
     const minSize = identity?.minimumDeckSize ?? 30;
     if (total < minSize) {
-      issues.push(issue("under-minimum-deck-size", `Deck has ${total} cards; needs at least ${minSize}`));
+      issues.push(
+        issue("under-minimum-deck-size", `Deck has ${total} cards; needs at least ${minSize}`),
+      );
     }
     const influenceLimit = identity?.influenceLimit ?? INFLUENCE_LIMIT_DEFAULT;
     if (influence > influenceLimit) {
-      issues.push(issue("over-influence-limit", `Deck spends ${influence} influence; limit is ${influenceLimit}`));
+      issues.push(
+        issue(
+          "over-influence-limit",
+          `Deck spends ${influence} influence; limit is ${influenceLimit}`,
+        ),
+      );
     }
   }
   if (deck.orderedCards) {
@@ -22339,15 +24667,22 @@ function validateDeck(deck, side, mode = "open-play") {
     };
     const a = counts(flat);
     const b = counts(deck.orderedCards);
-    if (a.size !== b.size || [
-      ...a
-    ].some(([id, n]) => b.get(id) !== n)) {
-      issues.push(issue("ordered-deck-mismatch", "orderedCards does not match the multiset of card entries (top-to-bottom order must contain exactly the same cards)"));
+    if (
+      a.size !== b.size || [
+        ...a,
+      ].some(([id, n]) => b.get(id) !== n)
+    ) {
+      issues.push(
+        issue(
+          "ordered-deck-mismatch",
+          "orderedCards does not match the multiset of card entries (top-to-bottom order must contain exactly the same cards)",
+        ),
+      );
     }
   }
   return {
     valid: issues.length === 0,
-    issues
+    issues,
   };
 }
 function makeInstance(side, cardId, index) {
@@ -22356,7 +24691,7 @@ function makeInstance(side, cardId, index) {
     id: `${side}-${index}`,
     cardId,
     owner: side,
-    zone: "deck"
+    zone: "deck",
   };
   if (def2.type === "ice" || def2.type === "agenda") instance.advancement = 0;
   return instance;
@@ -22388,14 +24723,16 @@ function freshPlayer(side, identityId, index) {
       ranServersThisTurn: [],
       hqBreachesThisTurn: 0,
       usedOncePerTurn: [],
-      pendingRunFund: 0
-    }
+      pendingRunFund: 0,
+    },
   };
 }
 function buildDeckInstances(side, deck, startIndex, state) {
-  const ordered = deck.orderedCards ? [
-    ...deck.orderedCards
-  ] : deck.cards.flatMap((e) => Array(e.count).fill(e.cardId));
+  const ordered = deck.orderedCards
+    ? [
+      ...deck.orderedCards,
+    ]
+    : deck.cards.flatMap((e) => Array(e.count).fill(e.cardId));
   if (!deck.orderedCards) shuffle(state, ordered);
   return ordered.map((cardId, i) => makeInstance(side, cardId, startIndex + i));
 }
@@ -22406,7 +24743,7 @@ function startGame(config) {
     turn: {
       number: 0,
       player: "corp",
-      phase: "mulligans"
+      phase: "mulligans",
     },
     corp: null,
     runner: null,
@@ -22415,18 +24752,18 @@ function startGame(config) {
       {
         id: "hq",
         root: [],
-        ice: []
+        ice: [],
       },
       {
         id: "rd",
         root: [],
-        ice: []
+        ice: [],
       },
       {
         id: "archives",
         root: [],
-        ice: []
-      }
+        ice: [],
+      },
     ],
     run: null,
     breach: null,
@@ -22438,7 +24775,7 @@ function startGame(config) {
     winner: null,
     winReason: null,
     mode: config.mode,
-    supportWarnings: []
+    supportWarnings: [],
   };
   const corpIdentity = config.corp.identity;
   const runnerIdentity = config.runner.identity;
@@ -22450,27 +24787,29 @@ function startGame(config) {
   const runnerDeck = buildDeckInstances("runner", config.runner, 2001, state);
   state.corp.deck.push(...corpDeck);
   state.runner.deck.push(...runnerDeck);
-  for (const side of [
-    "corp",
-    "runner"
-  ]) {
+  for (
+    const side of [
+      "corp",
+      "runner",
+    ]
+  ) {
     const p2 = player(state, side);
     p2.credits = 5;
     drawInitial(state, side, 5);
   }
   state.log.push({
-    type: "game-started"
+    type: "game-started",
   });
   if (config.allowMulligan) {
     state.prompts.push({
       kind: "mulligan",
       id: state.nextPromptId++,
-      player: "corp"
+      player: "corp",
     });
     state.prompts.push({
       kind: "mulligan",
       id: state.nextPromptId++,
-      player: "runner"
+      player: "runner",
     });
   } else {
     beginCorpTurn(state);
@@ -22487,11 +24826,13 @@ function drawInitial(state, side, count) {
     p2.hand.push(card);
     drawn++;
   }
-  if (drawn > 0) state.log.push({
-    type: "draw",
-    player: side,
-    count: drawn
-  });
+  if (drawn > 0) {
+    state.log.push({
+      type: "draw",
+      player: side,
+      count: drawn,
+    });
+  }
 }
 
 // src/ai/context.ts
@@ -22505,10 +24846,12 @@ function makeAIDecisionContext(state, side, seed) {
   for (const card of opp.deck) if (card.id !== accessedId) unseen.push(card.cardId);
   if (side === "runner") {
     for (const server of state.servers) {
-      for (const card of [
-        ...server.root,
-        ...server.ice
-      ]) {
+      for (
+        const card of [
+          ...server.root,
+          ...server.ice,
+        ]
+      ) {
         if (card.id === accessedId) continue;
         if (card.rezzed !== true) unseen.push(card.cardId);
       }
@@ -22522,7 +24865,7 @@ function makeAIDecisionContext(state, side, seed) {
     side,
     ownDeck: ownDeck.sort(),
     unseen: unseen.sort(),
-    seed
+    seed,
   };
 }
 function infoSetKey(view) {
@@ -22572,14 +24915,22 @@ function playGame(config) {
     const ai = side === "corp" ? corp : runner;
     const legal = engine.getLegalMoves(state, side);
     if (legal.length === 0) {
-      throw new AiGameError(`no legal moves for ${side} on turn ${state.turn.number} (${state.turn.phase})`, side, null);
+      throw new AiGameError(
+        `no legal moves for ${side} on turn ${state.turn.number} (${state.turn.phase})`,
+        side,
+        null,
+      );
     }
     const view = engine.getPlayerView(state, side);
     const ctx = makeAIDecisionContext(state, side, decisionSeedFor(view));
     const move = ai.chooseMove(view, legal, ctx);
     const result = engine.applyMove(state, side, move);
     if (result.kind === "illegal-move") {
-      throw new AiGameError(`${ai.name} (${side}) played an illegal move: ${result.reason}`, side, move);
+      throw new AiGameError(
+        `${ai.name} (${side}) played an illegal move: ${result.reason}`,
+        side,
+        move,
+      );
     }
     state = result.state;
     moves++;
@@ -22589,7 +24940,7 @@ function playGame(config) {
     winner: state.winner,
     winReason: state.winReason,
     moves,
-    timedOut: state.winner === null
+    timedOut: state.winner === null,
   };
 }
 
@@ -22620,20 +24971,24 @@ function viewCard2(card, opts = {}) {
     iceIndex: card.iceIndex,
     position: opts.position,
     zone: card.zone,
-    server: card.server
+    server: card.server,
   };
 }
 function corpInstalledView(state, viewer) {
   const hide = viewer !== "corp";
   return state.servers.flatMap((s) => [
-    ...s.root.map((c) => viewCard2(c, {
-      hidden: hide && c.rezzed !== true,
-      position: "root"
-    })),
-    ...s.ice.map((c) => viewCard2(c, {
-      hidden: hide && c.rezzed !== true,
-      position: "ice"
-    }))
+    ...s.root.map((c) =>
+      viewCard2(c, {
+        hidden: hide && c.rezzed !== true,
+        position: "root",
+      })
+    ),
+    ...s.ice.map((c) =>
+      viewCard2(c, {
+        hidden: hide && c.rezzed !== true,
+        position: "ice",
+      })
+    ),
   ]);
 }
 function sideCards(state, side) {
@@ -22645,25 +25000,25 @@ function sideCards(state, side) {
     discardCount: p2.discard.length,
     installed: p2.installed,
     identity: p2.identity,
-    score: p2.score
+    score: p2.score,
   };
 }
 function turnStateOf(state, side) {
   const p2 = player(state, side);
   return {
     installedThisTurn: [
-      ...p2.installedThisTurn
+      ...p2.installedThisTurn,
     ],
     basicDrawThisTurn: p2.basicDrawThisTurn,
     successfulRunThisTurn: p2.successfulRunThisTurn,
     ranServersThisTurn: [
-      ...p2.ranServersThisTurn
+      ...p2.ranServersThisTurn,
     ],
     hqBreachesThisTurn: p2.hqBreachesThisTurn,
     usedOncePerTurn: [
-      ...p2.usedOncePerTurn
+      ...p2.usedOncePerTurn,
     ],
-    pendingRunFund: p2.pendingRunFund
+    pendingRunFund: p2.pendingRunFund,
   };
 }
 function handView(state, side, viewer) {
@@ -22672,9 +25027,11 @@ function handView(state, side, viewer) {
 function discardView(state, side, viewer) {
   const p2 = player(state, side);
   if (side === "runner" || side === viewer) return p2.discard.map((c) => viewCard2(c));
-  return p2.discard.map((c) => viewCard2(c, {
-    hidden: true
-  }));
+  return p2.discard.map((c) =>
+    viewCard2(c, {
+      hidden: true,
+    })
+  );
 }
 function getPlayerView(state, viewer) {
   const corpSide = sideCards(state, "corp");
@@ -22682,7 +25039,7 @@ function getPlayerView(state, viewer) {
   return {
     viewer,
     turn: {
-      ...state.turn
+      ...state.turn,
     },
     winner: state.winner,
     winReason: state.winReason,
@@ -22702,7 +25059,7 @@ function getPlayerView(state, viewer) {
       installed: corpInstalledView(state, viewer),
       hand: handView(state, "corp", viewer),
       discard: discardView(state, "corp", viewer),
-      turnState: turnStateOf(state, "corp")
+      turnState: turnStateOf(state, "corp"),
     },
     runner: {
       credits: state.runner.credits,
@@ -22718,43 +25075,52 @@ function getPlayerView(state, viewer) {
       hand: handView(state, "runner", viewer),
       discard: discardView(state, "runner", viewer),
       tags: state.runner.tags,
-      turnState: turnStateOf(state, "runner")
+      turnState: turnStateOf(state, "runner"),
     },
-    run: state.run ? {
-      server: state.run.server,
-      phase: state.run.phase,
-      position: state.run.position,
-      currentIce: state.run.currentIceId ? viewCard2(findCard(state, state.run.currentIceId)?.card ?? state.corp.identity, {
-        // The ice being approached is public once rezzed (rules 1.21.1a,
-        // 4.6.3): every player reads Rezzed ice off the table.
-        hidden: viewer !== "corp" && findCard(state, state.run.currentIceId)?.card.rezzed !== true,
-        position: "ice"
-      }) : void 0,
-      broken: [
-        ...state.run.broken
-      ],
-      resolved: [
-        ...state.run.resolved
-      ],
-      source: state.run.source,
-      fundCredits: state.run.fundCredits,
-      rezCostIncrease: state.run.rezCostIncrease,
-      tollPaid: state.run.tollPaid
-    } : null,
-    breach: state.breach ? {
-      server: state.breach.server,
-      randomAccessLimit: state.breach.randomAccessLimit,
-      remaining: Math.max(0, state.breach.randomAccessLimit - state.breach.randomAccessesUsed),
-      chosen: [
-        ...state.breach.chosen
-      ],
-      accessing: state.breach.accessing ? viewCard2(findCard(state, state.breach.accessing)?.card ?? state.corp.identity) : void 0
-    } : null,
+    run: state.run
+      ? {
+        server: state.run.server,
+        phase: state.run.phase,
+        position: state.run.position,
+        currentIce: state.run.currentIceId
+          ? viewCard2(findCard(state, state.run.currentIceId)?.card ?? state.corp.identity, {
+            // The ice being approached is public once rezzed (rules 1.21.1a,
+            // 4.6.3): every player reads Rezzed ice off the table.
+            hidden: viewer !== "corp" &&
+              findCard(state, state.run.currentIceId)?.card.rezzed !== true,
+            position: "ice",
+          })
+          : void 0,
+        broken: [
+          ...state.run.broken,
+        ],
+        resolved: [
+          ...state.run.resolved,
+        ],
+        source: state.run.source,
+        fundCredits: state.run.fundCredits,
+        rezCostIncrease: state.run.rezCostIncrease,
+        tollPaid: state.run.tollPaid,
+      }
+      : null,
+    breach: state.breach
+      ? {
+        server: state.breach.server,
+        randomAccessLimit: state.breach.randomAccessLimit,
+        remaining: Math.max(0, state.breach.randomAccessLimit - state.breach.randomAccessesUsed),
+        chosen: [
+          ...state.breach.chosen,
+        ],
+        accessing: state.breach.accessing
+          ? viewCard2(findCard(state, state.breach.accessing)?.card ?? state.corp.identity)
+          : void 0,
+      }
+      : null,
     prompts: state.prompts.map((p2) => visiblePrompt(p2, viewer)),
     events: state.log.map((e) => visibleEvent(state, e, viewer)),
     warnings: [
-      ...state.supportWarnings
-    ]
+      ...state.supportWarnings,
+    ],
   };
 }
 function visiblePrompt(prompt, viewer) {
@@ -22762,7 +25128,7 @@ function visiblePrompt(prompt, viewer) {
   return {
     kind: prompt.kind,
     id: prompt.id,
-    player: prompt.player
+    player: prompt.player,
   };
 }
 function visibleEvent(state, event, viewer) {
@@ -22772,7 +25138,7 @@ function visibleEvent(state, event, viewer) {
     case "take-credits":
       return {
         ...event,
-        targetId: vis(event.targetId)
+        targetId: vis(event.targetId),
       };
     case "install":
     case "play":
@@ -22792,12 +25158,12 @@ function visibleEvent(state, event, viewer) {
     case "pump-strength":
       return {
         ...event,
-        cardId: vis(event.cardId)
+        cardId: vis(event.cardId),
       };
     case "damage":
       return {
         ...event,
-        trashed: event.trashed.map(vis)
+        trashed: event.trashed.map(vis),
       };
     default:
       return event;
@@ -22808,32 +25174,34 @@ function starterDeckCardIds() {
   return {
     runner: [
       s.runner.identity,
-      ...s.runner.cards.map((e) => e.cardId)
+      ...s.runner.cards.map((e) => e.cardId),
     ],
     corp: [
       s.corp.identity,
-      ...s.corp.cards.map((e) => e.cardId)
-    ]
+      ...s.corp.cards.map((e) => e.cardId),
+    ],
   };
 }
 function cardSupport(cardId) {
   const status = supportStatus(cardId);
   const note = behaviors.get(cardId)?.note;
-  return status === "supported" ? {
-    supported: true,
-    status
-  } : {
-    supported: false,
-    status,
-    note
-  };
+  return status === "supported"
+    ? {
+      supported: true,
+      status,
+    }
+    : {
+      supported: false,
+      status,
+      note,
+    };
 }
 function starterDeckSupport() {
   const ids = starterPoolCardIds();
   const report = cardSupportReport(ids);
   return {
     ...report,
-    all: ids
+    all: ids,
   };
 }
 var engine = {
@@ -22865,10 +25233,10 @@ var engine = {
   },
   getPlayerView(state, player2) {
     return getPlayerView(state, player2);
-  }
+  },
 };
 var supportWarningsOf = (state) => [
-  ...state.supportWarnings
+  ...state.supportWarnings,
 ];
 
 // src/web/ui/util.ts
@@ -22883,7 +25251,7 @@ function handOf(state, side) {
 function findCardIn(state, id) {
   const sides = [
     "corp",
-    "runner"
+    "runner",
   ];
   for (const side of sides) {
     const p2 = side === "corp" ? state.corp : state.runner;
@@ -22894,18 +25262,20 @@ function findCardIn(state, id) {
       p2.installed,
       p2.score,
       [
-        p2.identity
-      ]
+        p2.identity,
+      ],
     ];
     for (const list of lists) {
       for (const c of list) if (c.id === id) return c;
     }
   }
   for (const s of state.servers) {
-    for (const c of [
-      ...s.root,
-      ...s.ice
-    ]) if (c.id === id) return c;
+    for (
+      const c of [
+        ...s.root,
+        ...s.ice,
+      ]
+    ) if (c.id === id) return c;
   }
   return null;
 }
@@ -22938,7 +25308,8 @@ function serverLabel(server) {
 }
 function formatEvent(state, e, viewer) {
   const side = (p2) => p2 === "corp" ? "Corp" : "Runner";
-  const visible = (id) => cardVisibleTo2(state, id, viewer) ? cardTitle(cardIdOfInstance(state, id)) : "a card";
+  const visible = (id) =>
+    cardVisibleTo2(state, id, viewer) ? cardTitle(cardIdOfInstance(state, id)) : "a card";
   switch (e.type) {
     case "game-started":
       return "Game started";
@@ -23007,7 +25378,9 @@ function formatEvent(state, e, viewer) {
     case "breach":
       return `Runner breaches ${serverLabel(e.server)}`;
     case "damage": {
-      const cards2 = e.trashed.length ? ` (trashes ${e.trashed.length} card${e.trashed.length > 1 ? "s" : ""})` : "";
+      const cards2 = e.trashed.length
+        ? ` (trashes ${e.trashed.length} card${e.trashed.length > 1 ? "s" : ""})`
+        : "";
       return `${side(e.player)} takes ${e.amount} ${e.kind} damage${cards2}`;
     }
     case "flatline":
@@ -23085,7 +25458,9 @@ function describeMove(state, move) {
     case "runner.jackOut":
       return "Jack out";
     case "runner.breakSubroutine":
-      return `Break subroutine ${move.subIndex + 1} with ${cardTitle(findCardIn(state, move.programId)?.cardId ?? "")}`;
+      return `Break subroutine ${move.subIndex + 1} with ${
+        cardTitle(findCardIn(state, move.programId)?.cardId ?? "")
+      }`;
     case "runner.pumpIcebreaker":
       return `Pump strength \u2014 ${cardTitle(findCardIn(state, move.programId)?.cardId ?? "")}`;
     case "runner.bioroidBreak":
@@ -23107,7 +25482,9 @@ function describeMove(state, move) {
       return move.method === "credits" ? "Pay the toll (credits)" : "Pay the toll (click)";
     case "prompt.answer": {
       const prompt = state.prompts.find((p2) => p2.id === move.promptId);
-      const option = prompt && "options" in prompt ? prompt.options.find((o) => o.id === move.optionId) : void 0;
+      const option = prompt && "options" in prompt
+        ? prompt.options.find((o) => o.id === move.optionId)
+        : void 0;
       if (option) {
         const costs = [];
         if (option.creditCost) costs.push(`${option.creditCost} [credit]`);
@@ -23131,40 +25508,40 @@ var card_tile_default = defineComponent({
   props: {
     card: {
       type: Object,
-      default: null
+      default: null,
     },
     facedown: {
       type: Boolean,
-      default: false
+      default: false,
     },
     ice: {
       type: Boolean,
-      default: false
+      default: false,
     },
     highlight: {
       type: Boolean,
-      default: false
+      default: false,
     },
     badge: {
       type: String,
-      default: ""
+      default: "",
     },
     small: {
       type: Boolean,
-      default: false
+      default: false,
     },
     clickable: {
       type: Boolean,
-      default: false
+      default: false,
     },
     // Facedown tiles show the corp card back instead of the runner's.
     corp: {
       type: Boolean,
-      default: false
-    }
+      default: false,
+    },
   },
   emits: [
-    "zoom"
+    "zoom",
   ],
   setup(props) {
     const def2 = computed2(() => {
@@ -23181,7 +25558,7 @@ var card_tile_default = defineComponent({
       def: def2,
       img,
       typeTag,
-      isAgenda
+      isAgenda,
     };
   },
   template: `
@@ -23210,7 +25587,7 @@ var card_tile_default = defineComponent({
       <div v-if="card && card.rezzed === false && !facedown" class="unrezzed-flag">D</div>
       <div v-if="facedown && !corp" class="facedown-label">?</div>
     </div>
-  `
+  `,
 });
 
 // src/web/ui/card-zoom.ts
@@ -23219,17 +25596,17 @@ var card_zoom_default = defineComponent({
   props: {
     cardId: {
       type: String,
-      default: null
+      default: null,
     },
     /** Optional buttons shown under the card text (e.g. access decisions). */
     actions: {
       type: Array,
-      default: () => []
-    }
+      default: () => [],
+    },
   },
   emits: [
     "close",
-    "move"
+    "move",
   ],
   setup(props, { emit: emit2 }) {
     const def2 = computed2(() => props.cardId ? cardOf(props.cardId) : null);
@@ -23239,7 +25616,7 @@ var card_zoom_default = defineComponent({
       def: def2,
       img,
       text,
-      onClose: () => emit2("close")
+      onClose: () => emit2("close"),
     };
   },
   template: `
@@ -23300,21 +25677,21 @@ var card_zoom_default = defineComponent({
         </div>
       </div>
     </transition>
-  `
+  `,
 });
 
 // src/web/ui/game.ts
 var SERVER_GLYPH = {
   hq: "assets/svg/hq.svg",
   rd: "assets/svg/rd.svg",
-  archives: "assets/svg/archives.svg"
+  archives: "assets/svg/archives.svg",
 };
 var PROMPT_TITLES = {
   mulligan: "Mulligan?",
   discard: "Discard phase",
   "rez-window": "Rez window",
   "choose-one": "Choose one",
-  "access-decision": "Accessed card"
+  "access-decision": "Accessed card",
 };
 function moveKey(m) {
   return JSON.stringify(m);
@@ -23323,29 +25700,29 @@ var game_default = defineComponent({
   name: "GameScreen",
   components: {
     CardTile: card_tile_default,
-    CardZoom: card_zoom_default
+    CardZoom: card_zoom_default,
   },
   props: {
     state: {
       type: Object,
-      required: true
+      required: true,
     },
     humanSide: {
       type: String,
-      required: true
+      required: true,
     },
     thinking: {
       type: Boolean,
-      default: false
+      default: false,
     },
     lastWarning: {
       type: String,
-      default: ""
-    }
+      default: "",
+    },
   },
   emits: [
     "move",
-    "new-game"
+    "new-game",
   ],
   setup(props, { emit: emit2 }) {
     const discardSelected = ref([]);
@@ -23358,19 +25735,27 @@ var game_default = defineComponent({
     const corp = computed2(() => status.value.players.corp);
     const runner = computed2(() => status.value.players.runner);
     const prompt = computed2(() => promptFor(props.state, props.humanSide));
-    const legal = computed2(() => isHumanTurn.value ? engine.getLegalMoves(props.state, props.humanSide) : []);
+    const legal = computed2(() =>
+      isHumanTurn.value ? engine.getLegalMoves(props.state, props.humanSide) : []
+    );
     const hand = computed2(() => handOf(props.state, props.humanSide));
-    const discardCount = computed2(() => prompt.value && prompt.value.kind === "discard" ? prompt.value.count : 0);
-    const selectedKey = computed2(() => [
-      ...discardSelected.value
-    ].sort().join(","));
+    const discardCount = computed2(() =>
+      prompt.value && prompt.value.kind === "discard" ? prompt.value.count : 0
+    );
+    const selectedKey = computed2(() =>
+      [
+        ...discardSelected.value,
+      ].sort().join(",")
+    );
     const canDiscard = computed2(() => {
       if (!discardCount.value || discardSelected.value.length !== discardCount.value) {
         return false;
       }
-      return legal.value.some((m) => m.kind === "discard" && [
-        ...m.cardInstanceIds
-      ].sort().join(",") === selectedKey.value);
+      return legal.value.some((m) =>
+        m.kind === "discard" && [
+            ...m.cardInstanceIds,
+          ].sort().join(",") === selectedKey.value
+      );
     });
     const events = computed2(() => {
       const lines = props.state.log.map((e) => formatEvent(props.state, e, props.humanSide));
@@ -23395,15 +25780,15 @@ var game_default = defineComponent({
           actions.push({
             label: `Trash (${trashCost} [credit])`,
             move: {
-              kind: "runner.trashAccessed"
-            }
+              kind: "runner.trashAccessed",
+            },
           });
         }
         actions.push({
           label: "Finish access",
           move: {
-            kind: "runner.finishAccess"
-          }
+            kind: "runner.finishAccess",
+          },
         });
         break;
       }
@@ -23428,15 +25813,17 @@ var game_default = defineComponent({
       } else if (discardSelected.value.length < discardCount.value) {
         discardSelected.value = [
           ...discardSelected.value,
-          id
+          id,
         ];
       }
     }
     function submitDiscard() {
       if (!canDiscard.value) return;
-      const option = legal.value.find((m) => m.kind === "discard" && [
-        ...m.cardInstanceIds
-      ].sort().join(",") === selectedKey.value);
+      const option = legal.value.find((m) =>
+        m.kind === "discard" && [
+            ...m.cardInstanceIds,
+          ].sort().join(",") === selectedKey.value
+      );
       if (option) emit2("move", option);
     }
     function play(move) {
@@ -23460,7 +25847,8 @@ var game_default = defineComponent({
       return legal.value.find((m) => m.kind === "runner.run" && m.server === server);
     }
     function isCardMove(m) {
-      return m.kind === "runner.install" || m.kind === "runner.playEvent" || m.kind === "corp.install" || m.kind === "corp.playOperation";
+      return m.kind === "runner.install" || m.kind === "runner.playEvent" ||
+        m.kind === "corp.install" || m.kind === "corp.playOperation";
     }
     const generalMoves = computed2(() => legal.value.filter((m) => !isCardMove(m)));
     function handActionsFor(c) {
@@ -23533,7 +25921,7 @@ var game_default = defineComponent({
       runMove,
       promptTitle,
       handActionsFor,
-      shortActionLabel
+      shortActionLabel,
     };
   },
   template: `
@@ -23783,7 +26171,7 @@ var game_default = defineComponent({
         @move="play"
       />
     </div>
-  `
+  `,
 });
 
 // src/web/app.ts
@@ -23791,23 +26179,23 @@ var PRESETS = [
   {
     name: "Casual",
     iterations: 30,
-    timeBudgetMs: 600
+    timeBudgetMs: 600,
   },
   {
     name: "Normal",
     iterations: 60,
-    timeBudgetMs: 1200
+    timeBudgetMs: 1200,
   },
   {
     name: "Strong",
     iterations: 140,
-    timeBudgetMs: 2500
-  }
+    timeBudgetMs: 2500,
+  },
 ];
 var app_default = defineComponent({
   name: "NetrunnerApp",
   components: {
-    GameScreen: game_default
+    GameScreen: game_default,
   },
   setup() {
     const state = shallowRef(null);
@@ -23830,7 +26218,7 @@ var app_default = defineComponent({
         corp: decks.corp,
         runner: decks.runner,
         mode: "starter-decks",
-        seed: gameSeed
+        seed: gameSeed,
       });
       state.value = markRaw(fresh);
       planAiTurn();
@@ -23867,7 +26255,7 @@ var app_default = defineComponent({
           return;
         }
         apply2(actor, move, {
-          fromAi: true
+          fromAi: true,
         });
       }, 60);
     }
@@ -23898,7 +26286,7 @@ var app_default = defineComponent({
       presets: PRESETS,
       started: () => state.value !== null,
       start,
-      onMove
+      onMove,
     };
   },
   template: `
@@ -23964,7 +26352,7 @@ var app_default = defineComponent({
         </button>
       </section>
     </div>
-  `
+  `,
 });
 
 // src/web/entry.ts
@@ -23977,41 +26365,41 @@ app.mount("#app");
 var g = globalThis;
 g.__netrunner = {
   ...mod_exports,
-  app
+  app,
 };
 /**
-* @vue/shared v3.5.13
-* (c) 2018-present Yuxi (Evan) You and Vue contributors
-* @license MIT
-**/
+ * @vue/shared v3.5.13
+ * (c) 2018-present Yuxi (Evan) You and Vue contributors
+ * @license MIT
+ */
 /*! #__NO_SIDE_EFFECTS__ */
 /**
-* @vue/reactivity v3.5.13
-* (c) 2018-present Yuxi (Evan) You and Vue contributors
-* @license MIT
-**/
+ * @vue/reactivity v3.5.13
+ * (c) 2018-present Yuxi (Evan) You and Vue contributors
+ * @license MIT
+ */
 /**
-* @vue/runtime-core v3.5.13
-* (c) 2018-present Yuxi (Evan) You and Vue contributors
-* @license MIT
-**/
+ * @vue/runtime-core v3.5.13
+ * (c) 2018-present Yuxi (Evan) You and Vue contributors
+ * @license MIT
+ */
 /**
-* @vue/runtime-dom v3.5.13
-* (c) 2018-present Yuxi (Evan) You and Vue contributors
-* @license MIT
-**/
+ * @vue/runtime-dom v3.5.13
+ * (c) 2018-present Yuxi (Evan) You and Vue contributors
+ * @license MIT
+ */
 /**
-* @vue/compiler-core v3.5.13
-* (c) 2018-present Yuxi (Evan) You and Vue contributors
-* @license MIT
-**/
+ * @vue/compiler-core v3.5.13
+ * (c) 2018-present Yuxi (Evan) You and Vue contributors
+ * @license MIT
+ */
 /**
-* @vue/compiler-dom v3.5.13
-* (c) 2018-present Yuxi (Evan) You and Vue contributors
-* @license MIT
-**/
+ * @vue/compiler-dom v3.5.13
+ * (c) 2018-present Yuxi (Evan) You and Vue contributors
+ * @license MIT
+ */
 /**
-* vue v3.5.13
-* (c) 2018-present Yuxi (Evan) You and Vue contributors
-* @license MIT
-**/
+ * vue v3.5.13
+ * (c) 2018-present Yuxi (Evan) You and Vue contributors
+ * @license MIT
+ */

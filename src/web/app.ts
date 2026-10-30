@@ -16,8 +16,8 @@ import type { Ref } from "npm:vue@3.5.13/dist/vue.esm-bundler.js";
 import {
   decisionSeedFor,
   engine,
+  EvalAI,
   makeAIDecisionContext,
-  RandomAI,
   starterDeckConfigs,
 } from "../mod.ts";
 import type { GameAI, GameState, Move, PlayerSide } from "../types.ts";
@@ -29,13 +29,20 @@ interface StrengthPreset {
   timeBudgetMs: number;
 }
 
-// SWAP POINT (next phase): these presets configure the evaluation AI. Until
-// then the placeholder RandomAI ignores them and the boundary stays identical.
+// The presets configure the evaluation AI: `iterations` maps to the number of
+// determinized worlds sampled per decision (measured: a 32-world, 1-ply
+// decision lands ~100-150ms on a mid-game position in this codebase, so the
+// presets stay comfortably inside their old time budgets).
 const PRESETS: StrengthPreset[] = [
-  { name: "Casual", iterations: 30, timeBudgetMs: 600 },
-  { name: "Normal", iterations: 60, timeBudgetMs: 1200 },
-  { name: "Strong", iterations: 140, timeBudgetMs: 2500 },
+  { name: "Casual", iterations: 12, timeBudgetMs: 600 },
+  { name: "Normal", iterations: 24, timeBudgetMs: 1200 },
+  { name: "Strong", iterations: 48, timeBudgetMs: 2500 },
 ];
+
+/** Clamped samples passed to EvalAI (bounds keep decisions snappy). */
+function clampSamples(iterations: number): number {
+  return Math.min(64, Math.max(6, Math.round(iterations)));
+}
 
 export default defineComponent({
   name: "NetrunnerApp",
@@ -55,11 +62,12 @@ export default defineComponent({
     let ai: GameAI | null = null;
     let aiDecisions = 0;
 
-    function start(side: PlayerSide, gameSeed: number, _preset: StrengthPreset) {
+    function start(side: PlayerSide, gameSeed: number, preset: StrengthPreset) {
       const decks = starterDeckConfigs();
-      // Placeholder AI: RandomAI. The evaluation AI (next phase) will be
-      // constructed here from `_preset` and use `determinize` internally.
-      ai = new RandomAI();
+      // The evaluation AI: determinized 1-ply eval + softmax root selection
+      // (see src/ai/eval.ts). Worlds scale with the strength preset; the
+      // temperature stays the tuned default for all presets.
+      ai = new EvalAI({ samples: clampSamples(preset.iterations) });
       aiDecisions = 0;
       humanSide.value = side;
       seed.value = gameSeed;
