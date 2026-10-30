@@ -1,11 +1,5 @@
 /** Play seed 42 with the AI; verify every installed card lands in a server. */
-import {
-  cardDef,
-  engine,
-  makeAIDecisionContext,
-  RandomAI,
-  starterDeckConfigs,
-} from "../src/mod.ts";
+import { engine, makeAIDecisionContext, RandomAI, starterDeckConfigs } from "../src/mod.ts";
 import type { CardInstance, GameState, Move, PlayerSide } from "../src/types.ts";
 
 const ai = new RandomAI();

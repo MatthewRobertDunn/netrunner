@@ -8,7 +8,7 @@
  */
 
 import { engine, RandomAI, starterDeckConfigs } from "../src/mod.ts";
-import type { GameState, Move, PlayerSide } from "../src/types.ts";
+import type { GameState, PlayerSide } from "../src/types.ts";
 import { decide } from "./helpers/boundary.ts";
 import { assert } from "./helpers/assert.ts";
 

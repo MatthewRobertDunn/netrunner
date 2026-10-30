@@ -7,14 +7,15 @@
  *
  *   deno run --allow-read --allow-write --allow-net --allow-run scripts/build-web.ts
  *
- * (`--allow-net` etc. are needed because the bundle step resolves `npm:vue`.)
+ * (`--allow-net` etc. are needed because the bundle step resolves `vue` from the
+ * import map in deno.json, i.e. the npm registry.)
  */
 
 const entry = "src/web/entry.ts";
 const outfile = "public/dist/app.js";
 
-// 1. Bundle with Deno's own bundler (handles `with { type: "json" }` and
-//    `npm:` specifiers natively).
+// 1. Bundle with Deno's own bundler (handles `with { type: "json" }` and the
+//    `vue` import-map entry in deno.json natively).
 const bundle = new Deno.Command(Deno.execPath(), {
   args: ["bundle", "--platform=browser", "-o", outfile, entry],
   stdout: "inherit",

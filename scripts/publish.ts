@@ -22,7 +22,6 @@ for (let i = 0; i < args.length; i++) {
 }
 const HOST = "matty@192.168.0.2";
 const SSH_KEY = "./orange"; // gitignored; passed via -i, never installed
-const TARBALL = `./release/netrunner-${ARCH}.tar`;
 const REMOTE_DIR = "/home/matty/code/denorunner/release";
 const REMOTE_TARBALL = `${REMOTE_DIR}/netrunner-${ARCH}.tar`;
 

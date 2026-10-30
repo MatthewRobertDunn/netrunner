@@ -23,7 +23,7 @@ import {
 import { RandomAI } from "../src/ai/random.ts";
 import { playGame } from "../src/ai/play.ts";
 import { evaluate, softmaxIndex } from "../src/ai/eval.ts";
-import type { AIDecisionContext, GameState, Move, PlayerSide, PlayerView } from "../src/types.ts";
+import type { AIDecisionContext, GameState, PlayerSide, PlayerView } from "../src/types.ts";
 import {
   endCorpTurn,
   newGameWithCorpHand,
@@ -181,8 +181,8 @@ Deno.test("EvalAI ignores the order of every hidden zone", () => {
     const d2 = determinize(engine.getPlayerView(shuffled, side), ctx, makeRng(ctx.seed));
     assertEquals(d2, d1, `seed ${seed}: determinize depended on hidden order`);
     assertEquals(
-      decide(new EvalAI(), shuffled, side, legal, decisionSeedFor(view)),
-      decide(new EvalAI(), state, side, legal, decisionSeedFor(view)),
+      decide(ai, shuffled, side, legal, decisionSeedFor(view)),
+      decide(ai, state, side, legal, decisionSeedFor(view)),
       `seed ${seed}: the pick changed when hidden order changed`,
     );
   }
@@ -247,7 +247,7 @@ function gameWinningAgendaState(agendaId: string): GameState {
     (m) => m.kind === "corp.install" && m.cardId === agendaId && m.server === "new-remote",
   );
   assertDefined(install, `the corp cannot install ${agendaId} in a new remote`);
-  let s = play(state, "corp", install!).state;
+  const s = play(state, "corp", install!).state;
   const server = s.servers.find((x) => x.id === "remote-1")!;
   const agenda = assertDefined(
     server.root.find((c) => c.cardId === agendaId),

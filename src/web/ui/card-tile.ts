@@ -7,8 +7,8 @@
  * Options API's `this` is untyped in plain object literals.
  */
 
-import { computed, defineComponent } from "npm:vue@3.5.13/dist/vue.esm-bundler.js";
-import type { PropType } from "npm:vue@3.5.13/dist/vue.esm-bundler.js";
+import { computed, defineComponent } from "vue";
+import type { PropType } from "vue";
 import { cardOf, imageFor } from "./util.ts";
 
 interface CardInfo {

@@ -10,8 +10,8 @@
  * middle, action panel + log, Runner (hand) at the bottom.
  */
 
-import { computed, defineComponent, ref, watch } from "npm:vue@3.5.13/dist/vue.esm-bundler.js";
-import type { PropType } from "npm:vue@3.5.13/dist/vue.esm-bundler.js";
+import { computed, defineComponent, ref, watch } from "vue";
+import type { PropType } from "vue";
 import CardTile from "./card-tile.ts";
 import CardZoom from "./card-zoom.ts";
 import { cardDef } from "../../cards/catalogue.ts";

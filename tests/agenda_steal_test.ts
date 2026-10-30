@@ -109,16 +109,9 @@ Deno.test("access: an agenda cannot be trashed during access (no trash cost)", (
     console.log("no seed has an agenda in the Corp's opening hand — skip");
     return;
   }
-  const { seed, agendaId } = found;
-
-  const state = engine.startGame({
-    corp: starterDeckConfigs().corp,
-    runner: starterDeckConfigs().runner,
-    mode: "starter-decks",
-    seed,
-  });
+  const { agendaId } = found;
 
   // An agenda in the starter pool has no trash cost, so the basic trash
-  // ability is not available during its access (rule 7.1.5a).
+  // ability is never offered during its access (rule 7.1.5a).
   assert(cardDef(agendaId).trashCost === null, `${agendaId} has no trash cost`);
 });

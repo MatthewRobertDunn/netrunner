@@ -72,7 +72,6 @@ import type {
   Prompt,
   PromptStub,
   PublicGameStatus,
-  ServerId,
   ViewCard,
 } from "./types.ts";
 import type { Rng } from "./engine/rng.ts";

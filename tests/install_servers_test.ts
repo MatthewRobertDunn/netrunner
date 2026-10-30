@@ -93,7 +93,7 @@ Deno.test("install: an upgrade may be installed in the root of any server", () =
   });
   for (const server of ["hq", "rd", "archives"] as const) {
     const moves = engine.getLegalMoves(state, "corp").filter((m) =>
-      m.kind === "corp.install" && m.server === server &&
+      m.kind === "corp.install" && m.server === server && m.cardId === upgradeId &&
       cardDef(m.cardId).type === "upgrade"
     );
     assert(moves.length > 0, `an upgrade can be installed in ${server}`);

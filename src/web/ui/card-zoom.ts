@@ -11,8 +11,8 @@
  * Uses `setup()` (Composition API) so `deno check` gets full typing.
  */
 
-import { computed, defineComponent } from "npm:vue@3.5.13/dist/vue.esm-bundler.js";
-import type { PropType } from "npm:vue@3.5.13/dist/vue.esm-bundler.js";
+import { computed, defineComponent } from "vue";
+import type { PropType } from "vue";
 import { cardOf, imageFor, plainCardText } from "./util.ts";
 
 export default defineComponent({

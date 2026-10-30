@@ -7,7 +7,7 @@
  * Playwright — useful for automated front-end tests.
  */
 
-import { createApp } from "npm:vue@3.5.13/dist/vue.esm-bundler.js";
+import { createApp } from "vue";
 import App from "./app.ts";
 import * as engineApi from "../mod.ts";
 

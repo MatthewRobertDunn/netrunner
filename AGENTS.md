@@ -8,9 +8,11 @@ the build/verify loop plus the mistakes I keep repeating.
 ```sh
 # Type-check (prints nothing and exits 0 on success)
 /usr/local/bin/deno check src/mod.ts
+/usr/local/bin/deno check src/web/entry.ts   # the Vue UI; src/mod.ts does not import it
 
-# Format
+# Format and lint (both should be completely clean)
 deno fmt
+deno task lint
 
 # Test suite (107 tests, ~11s)
 deno task test
@@ -36,8 +38,16 @@ deno task publish
 - `deno` is at `/usr/local/bin/deno` (2.9.8, Debian/glibc aarch64). `deno
   check src/mod.ts` prints
   nothing and exits 0 on success.
-- 9 pre-existing `no-import-prefix` lint errors from `npm:vue` imports are baseline — do not fix
-  them.
+- Vue is imported as the bare specifier `vue`, mapped once in `deno.json`
+  (`"imports": { "vue": "npm:vue@3.5.13/dist/vue.esm-bundler.js" }`). Never inline an `npm:`
+  specifier in a source file — `no-import-prefix` fails the lint and the import map keeps the
+  version in one place. `deno bundle` (scripts/build-web.ts) resolves the map too.
+- `deno lint` with no arguments used to flag the generated `public/dist/app.js` (~950 errors, none
+  of them real). `deno.json` now excludes it from both `lint` and `fmt`; the bundle is build output,
+  never hand-edited.
+- Lint is part of the loop, not decoration: it had been silently rotting (`deno task lint` was
+  already failing on 10 unused-variable/prefer-const errors) because nothing ran it. Run it before
+  claiming green.
 - Publish needs `ssh` (openssh-client) and `crane` in the sandbox; install via
   `apt-get install -y openssh-client` and the crane release tarball if missing.
 

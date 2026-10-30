@@ -11,8 +11,8 @@
  * `AIDecisionContext`; `chooseMove` never receives the `GameState`.
  */
 
-import { defineComponent, markRaw, shallowRef } from "npm:vue@3.5.13/dist/vue.esm-bundler.js";
-import type { Ref } from "npm:vue@3.5.13/dist/vue.esm-bundler.js";
+import { defineComponent, markRaw, shallowRef } from "vue";
+import type { Ref } from "vue";
 import {
   decisionSeedFor,
   engine,
@@ -60,7 +60,6 @@ export default defineComponent({
     const thinking = shallowRef(false);
     const lastWarning = shallowRef("");
     let ai: GameAI | null = null;
-    let aiDecisions = 0;
 
     function start(side: PlayerSide, gameSeed: number, preset: StrengthPreset) {
       const decks = starterDeckConfigs();
@@ -68,7 +67,6 @@ export default defineComponent({
       // (see src/ai/eval.ts). Worlds scale with the strength preset; the
       // temperature stays the tuned default for all presets.
       ai = new EvalAI({ samples: clampSamples(preset.iterations) });
-      aiDecisions = 0;
       humanSide.value = side;
       seed.value = gameSeed;
       thinking.value = false;
