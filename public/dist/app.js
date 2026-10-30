@@ -21937,6 +21937,113 @@ var RandomAI = class {
 };
 var randomAI = new RandomAI();
 
+// src/ai/fast-clone.ts
+function fastCloneState(state) {
+  return {
+    ...state,
+    turn: {
+      ...state.turn
+    },
+    corp: clonePlayer(state.corp),
+    runner: clonePlayer(state.runner),
+    servers: state.servers.map(cloneServer),
+    run: state.run ? cloneRun(state.run) : null,
+    breach: state.breach ? cloneBreach(state.breach) : null,
+    prompts: state.prompts.map(clonePrompt),
+    log: state.log.map(cloneEvent),
+    supportWarnings: [
+      ...state.supportWarnings
+    ]
+  };
+}
+function clonePlayer(p2) {
+  return {
+    ...p2,
+    identity: cloneCard(p2.identity),
+    hand: p2.hand.map(cloneCard),
+    deck: p2.deck.map(cloneCard),
+    discard: p2.discard.map(cloneCard),
+    score: p2.score.map(cloneCard),
+    installed: p2.installed.map(cloneCard),
+    installedThisTurn: [
+      ...p2.installedThisTurn
+    ],
+    ranServersThisTurn: [
+      ...p2.ranServersThisTurn
+    ],
+    usedOncePerTurn: [
+      ...p2.usedOncePerTurn
+    ]
+  };
+}
+function cloneCard(c) {
+  const out = {
+    ...c
+  };
+  if (c.brokenSubroutines !== void 0) {
+    out.brokenSubroutines = [
+      ...c.brokenSubroutines
+    ];
+  }
+  return out;
+}
+function cloneServer(s) {
+  return {
+    ...s,
+    root: s.root.map(cloneCard),
+    ice: s.ice.map(cloneCard)
+  };
+}
+function cloneRun(r) {
+  return {
+    ...r,
+    broken: [
+      ...r.broken
+    ],
+    resolved: [
+      ...r.resolved
+    ]
+  };
+}
+function cloneBreach(b) {
+  return {
+    ...b,
+    chosen: [
+      ...b.chosen
+    ]
+  };
+}
+function clonePrompt(p2) {
+  if (p2.kind === "rez-window" || p2.kind === "choose-one") {
+    return {
+      ...p2,
+      options: p2.options.map(cloneOption)
+    };
+  }
+  return {
+    ...p2
+  };
+}
+function cloneOption(o) {
+  const out = {
+    ...o
+  };
+  if (o.effect !== void 0) out.effect = {
+    ...o.effect
+  };
+  return out;
+}
+function cloneEvent(e) {
+  return e.type === "damage" ? {
+    ...e,
+    trashed: [
+      ...e.trashed
+    ]
+  } : {
+    ...e
+  };
+}
+
 // src/ai/uct.ts
 var UctAI = class {
   name = "uct";
@@ -21952,7 +22059,7 @@ var UctAI = class {
   }
   chooseMove(state, side, legal) {
     if (legal.length === 1) return legal[0];
-    const rootState = structuredClone({
+    const rootState = fastCloneState({
       ...state,
       log: []
     });
@@ -21966,7 +22073,7 @@ var UctAI = class {
     };
     const deadline = Date.now() + this.timeBudgetMs;
     for (let i = 0; i < this.iterations && Date.now() < deadline; i++) {
-      const sim = structuredClone(rootState);
+      const sim = fastCloneState(rootState);
       this.iterate(sim, root, side);
     }
     let best = -1;
