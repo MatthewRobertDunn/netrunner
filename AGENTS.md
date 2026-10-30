@@ -12,8 +12,12 @@ usage; this file is the build/verify loop plus the mistakes I keep repeating.
 # Format
 deno fmt
 
-# Test suite (53 tests, ~40s)
+# Test suite (67 tests, ~10s)
 deno task test
+
+# CPU profile the UCT AI (writes uct.cpuprofile + uct.md; md has top-10 + call tree)
+deno run --allow-read --cpu-prof --cpu-prof-dir . --cpu-prof-name uct.cpuprofile \
+  --cpu-prof-md scripts/prof-uct.ts
 
 # Rebuild the web bundle (committed to git; the Docker image ships it as-is)
 deno run --allow-all scripts/build-web.ts
@@ -29,11 +33,13 @@ deno task publish
 
 - Local git branch is `master`; the remote is `main`. Push with
   `git push origin master:main`.
-- `deno` is at `/usr/local/bin/deno` (2.7.4 musl). BusyBox grep has no
-  `-r --include`; use the `grep` tool or plain `grep -rn`.
+- `deno` is at `/usr/local/bin/deno` (2.9.8, Debian/glibc aarch64). `deno
+  check src/mod.ts` prints nothing and exits 0 on success.
 - 9 pre-existing `no-import-prefix` lint errors from `npm:vue` imports are
   baseline — do not fix them.
-- `deno check src/mod.ts` prints nothing and exits 0 on success.
+- Publish needs `ssh` (openssh-client) and `crane` in the sandbox; install
+  via `apt-get install -y openssh-client` and the crane release tarball if
+  missing.
 
 ## Secrets
 

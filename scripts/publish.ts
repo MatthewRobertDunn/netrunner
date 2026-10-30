@@ -36,10 +36,14 @@ function cmd(name: string, args: string[]): Deno.Command {
 
 function sshCmd(remoteArgs: string[]): Deno.Command {
   return cmd("ssh", [
-    "-i", SSH_KEY,
-    "-o", "StrictHostKeyChecking=accept-new",
-    "-o", "ConnectTimeout=10",
-    "-o", "BatchMode=yes",
+    "-i",
+    SSH_KEY,
+    "-o",
+    "StrictHostKeyChecking=accept-new",
+    "-o",
+    "ConnectTimeout=10",
+    "-o",
+    "BatchMode=yes",
     HOST,
     ...remoteArgs,
   ]);
@@ -58,10 +62,14 @@ function run(c: Deno.Command, label: string): void {
 function sshCapture(remoteArgs: string[]): string {
   const r = new Deno.Command("ssh", {
     args: [
-      "-i", SSH_KEY,
-      "-o", "StrictHostKeyChecking=accept-new",
-      "-o", "ConnectTimeout=10",
-      "-o", "BatchMode=yes",
+      "-i",
+      SSH_KEY,
+      "-o",
+      "StrictHostKeyChecking=accept-new",
+      "-o",
+      "ConnectTimeout=10",
+      "-o",
+      "BatchMode=yes",
       HOST,
       ...remoteArgs,
     ],
@@ -77,10 +85,17 @@ console.log(`==> publishing netrunner:${ARCH} to ${HOST}`);
 
 // 1. Rebuild the web bundle so the shipped assets are current.
 console.log("==> 1/5 rebuild web bundle");
-run(cmd(Deno.execPath(), [
-  "run", "--allow-read", "--allow-write", "--allow-net", "--allow-run",
-  "scripts/build-web.ts",
-]), "build-web");
+run(
+  cmd(Deno.execPath(), [
+    "run",
+    "--allow-read",
+    "--allow-write",
+    "--allow-net",
+    "--allow-run",
+    "scripts/build-web.ts",
+  ]),
+  "build-web",
+);
 
 // 2. Export the docker image tarball.
 console.log(`==> 2/5 export docker images`);
@@ -114,12 +129,22 @@ let code = "000";
 for (let attempt = 0; attempt < 15; attempt++) {
   const check = new Deno.Command("ssh", {
     args: [
-      "-i", SSH_KEY,
-      "-o", "StrictHostKeyChecking=accept-new",
-      "-o", "ConnectTimeout=10",
-      "-o", "BatchMode=yes",
+      "-i",
+      SSH_KEY,
+      "-o",
+      "StrictHostKeyChecking=accept-new",
+      "-o",
+      "ConnectTimeout=10",
+      "-o",
+      "BatchMode=yes",
       HOST,
-      "curl", "-s", "-o", "/dev/null", "-w", "%{http_code}", "http://127.0.0.1:8000/",
+      "curl",
+      "-s",
+      "-o",
+      "/dev/null",
+      "-w",
+      "%{http_code}",
+      "http://127.0.0.1:8000/",
     ],
   });
   const r = check.outputSync();

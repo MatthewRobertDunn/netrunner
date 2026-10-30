@@ -15,6 +15,7 @@
 
 import { rngInt } from "../engine/rng.ts";
 import { engine } from "../mod.ts";
+import { fastCloneState } from "./fast-clone.ts";
 import type { GameState, Move, PlayerSide } from "../types.ts";
 import type { GameAI } from "./types.ts";
 
@@ -62,10 +63,12 @@ export class UctAI implements GameAI {
   chooseMove(state: GameState, side: PlayerSide, legal: Move[]): Move {
     if (legal.length === 1) return legal[0]!;
 
-    // Working copy: MCTS mutates its simulation states freely.
-    // The event log is output-only (nothing in the engine reads it for logic),
-    // so clear it before cloning — each per-iteration clone is ~35% cheaper.
-    const rootState = structuredClone({ ...state, log: [] });
+    // Working copy: MCTS mutates its simulation states freely. fastCloneState
+    // is a hand-rolled clone (see fast-clone.ts) — ~16x faster than
+    // structuredClone, guarded against GameState drift by fast_clone_test.
+    // The event log is output-only (nothing in the engine reads it for
+    // logic), so drop it — each per-iteration clone is ~35% cheaper.
+    const rootState = fastCloneState({ ...state, log: [] });
     // Deck order is hidden information (rule 1.10). The AI must not be able to
     // plan around a specific draw order, so simulations draw a random card
     // from the remaining deck instead of the top one.
@@ -80,7 +83,7 @@ export class UctAI implements GameAI {
 
     const deadline = Date.now() + this.timeBudgetMs;
     for (let i = 0; i < this.iterations && Date.now() < deadline; i++) {
-      const sim = structuredClone(rootState);
+      const sim = fastCloneState(rootState);
       this.iterate(sim, root, side);
     }
 
