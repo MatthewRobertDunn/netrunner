@@ -137,20 +137,71 @@ Deno.test("visibility: an unrezzed card's strength is hidden along with its id",
   assertEquals(own.strength, cardDef("tithe").strength);
 });
 
-Deno.test("visibility: Runner's hand count is hidden from the Corp", () => {
+Deno.test("visibility: hand counts are open, card identities are not", () => {
   const state = newStarterGame(1);
-  const view = engine.getPlayerView(state, "corp");
-  // The number of cards in a hand is open information (rule 4.3.4), but the
-  // Corp should not see individual card identities (rule 4.3.2).
-  assert(view.runner.handCount >= 0);
-  assert(view.runner.deckCount >= 0);
+  const corpView = engine.getPlayerView(state, "corp");
+  const runnerView = engine.getPlayerView(state, "runner");
+
+  // The number of cards in a hand is open information (rule 4.3.4).
+  assert(corpView.runner.handCount >= 0);
+  assert(corpView.runner.deckCount >= 0);
+  assert(runnerView.corp.handCount >= 0);
+  assert(runnerView.corp.deckCount >= 0);
+
+  // Rule 4.3.2: the Runner's own hand is visible to the Runner and not to the
+  // Corp; the Corp's own hand is visible to the Corp and not to the Runner.
+  assert(runnerView.runner.hand.length > 0, "the runner sees its own hand");
+  assert(
+    runnerView.runner.hand.every((c) => c.cardId !== "hidden"),
+    "own hand cards carry real ids",
+  );
+  assertEquals(corpView.runner.hand, [], "the corp must not see the runner's hand");
+  assert(corpView.corp.hand.length > 0, "the corp sees its own hand");
+  assert(
+    corpView.corp.hand.every((c) => c.cardId !== "hidden"),
+    "own hand cards carry real ids",
+  );
+  assertEquals(runnerView.corp.hand, [], "the runner must not see the corp's hand");
 });
 
-Deno.test("visibility: Corp's hand count is hidden from the Runner", () => {
+Deno.test("visibility: the runner's heap is open information, Archives is not", () => {
+  // Put a card in each discard: the runner trashes from grip via damage is
+  // hard to script, so use the discard phase — simply assert on whatever is
+  // present, and separately on a state with a known corp discard.
   const state = newStarterGame(1);
-  const view = engine.getPlayerView(state, "runner");
-  assert(view.corp.handCount >= 0);
-  assert(view.corp.deckCount >= 0);
+  const corpView = engine.getPlayerView(state, "corp");
+  const runnerView = engine.getPlayerView(state, "runner");
+
+  // Rule 4.4.7b: the heap (runner discard) is public to every viewer — the
+  // ids are real for both, even before anything is discarded.
+  assertEquals(
+    corpView.runner.discard.map((c) => c.cardId),
+    state.runner.discard.map((c) => c.cardId),
+    "the corp sees the runner's heap",
+  );
+  assertEquals(
+    runnerView.runner.discard.map((c) => c.cardId),
+    state.runner.discard.map((c) => c.cardId),
+    "the runner sees its own heap",
+  );
+
+  // Rule 4.4.6c/1.21.2a: the corp examines its own facedown Archives; the
+  // engine does not yet model the faceup/facedown split, so the runner
+  // conservatively sees only "hidden" entries.
+  const withDiscard = endCorpTurn(newStarterGame(3));
+  const forCorp = engine.getPlayerView(withDiscard, "corp");
+  const forRunner = engine.getPlayerView(withDiscard, "runner");
+  assertEquals(
+    forCorp.corp.discard.map((c) => c.cardId),
+    withDiscard.corp.discard.map((c) => c.cardId),
+    "the corp sees its own Archives",
+  );
+  assertEquals(
+    forRunner.corp.discard.map((c) => c.cardId),
+    withDiscard.corp.discard.map(() => "hidden"),
+    "the runner cannot read facedown Archives (conservative deviation)",
+  );
+  assertEquals(forRunner.corp.discard.length, withDiscard.corp.discard.length);
 });
 
 Deno.test("visibility: rezzed Corp cards are visible to the Runner", () => {

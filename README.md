@@ -21,10 +21,11 @@ CyberClick NetrunnerDB starter decks (Runner `4b9cf488-5bd9-4415-a57a-0864d4d0e6
   `unsupported` per card.
 - **Tested.** `deno test` runs 53 tests across setup, cards, runs, visibility, determinism,
   public-status, AI playthrough, and UCT-vs-random strength suites.
-- **AI players.** `src/ai/mod.ts` exposes a `GameAI` interface (`name`, `chooseMove(state, side, legal)`),
-  a `RandomAI` (uniform pick using the state's own seeded PRNG), and a `UctAI` (MCTS with UCB1).
-  `playGame({ corp, runner, state })` runs a full game between any two AIs; decisions are routed by
-  *who may act* (the turn player, or the prompted player during rez windows and accesses).
+- **AI players.** `src/ai/mod.ts` exposes a `GameAI` interface (`name`,
+  `chooseMove(state, side, legal)`), a `RandomAI` (uniform pick using the state's own seeded PRNG),
+  and a `UctAI` (MCTS with UCB1). `playGame({ corp, runner, state })` runs a full game between any
+  two AIs; decisions are routed by _who may act_ (the turn player, or the prompted player during rez
+  windows and accesses).
 
 ## Setup
 
@@ -56,8 +57,8 @@ deno task fmt
 
 ## Docker
 
-A production image serves the pre-built static site only — no build step,
-no shell, no package manager, runs as nonroot. ~50 MB base + 9.7 MB site.
+A production image serves the pre-built static site only — no build step, no shell, no package
+manager, runs as nonroot. ~50 MB base + 9.7 MB site.
 
 ```sh
 docker build -t netrunner .
@@ -67,15 +68,15 @@ docker run --rm -p 8000:8000 netrunner
 docker run --rm -e PORT=8080 -p 8080:8080 netrunner
 ```
 
-The image's only runtime dependency is the Deno interpreter, used by the
-tiny static file server (`public/serve.ts`) with scoped permissions:
-`--allow-read=/app/public --allow-env=PORT --allow-net`. It binds 0.0.0.0 by
-default; set `PORT` to change the port.
+The image's only runtime dependency is the Deno interpreter, used by the tiny static file server
+(`public/serve.ts`) with scoped permissions:
+`--allow-read=/app/public --allow-env=PORT --allow-net`. It binds 0.0.0.0 by default; set `PORT` to
+change the port.
 
 ### Pre-built multi-arch images
 
-Ready-to-use tarballs for `linux/amd64` and `linux/arm64` are checked into
-`release/` (equivalent to what `docker build` of the Dockerfile produces):
+Ready-to-use tarballs for `linux/amd64` and `linux/arm64` are checked into `release/` (equivalent to
+what `docker build` of the Dockerfile produces):
 
 ```sh
 docker load -i release/netrunner-amd64.tar   # yields netrunner:amd64
@@ -84,10 +85,9 @@ docker run --rm -p 8000:8000 netrunner:amd64
 ```
 
 They are produced by `scripts/export-docker-images.sh`, which uses
-[`crane`](https://github.com/google/go-containerregistry) instead of a Docker
-daemon — so the images can be built on hosts where `dockerd` cannot
-`mount(2)`/`unshare(2)` (e.g. unprivileged containers). Requires `crane` and
-GNU `tar`:
+[`crane`](https://github.com/google/go-containerregistry) instead of a Docker daemon — so the images
+can be built on hosts where `dockerd` cannot `mount(2)`/`unshare(2)` (e.g. unprivileged containers).
+Requires `crane` and GNU `tar`:
 
 ```sh
 scripts/export-docker-images.sh
@@ -106,8 +106,8 @@ docker save netrunner:arm64 -o release/netrunner-arm64.tar
 
 A user unit (`systemd/netrunner.service`) runs the release image under `systemctl --user`:
 
-- `ExecStartPre` loads the tarball into Docker (so the unit can restart cleanly even if the
-  image was never loaded manually),
+- `ExecStartPre` loads the tarball into Docker (so the unit can restart cleanly even if the image
+  was never loaded manually),
 - `ExecStart` runs the container, tagged `netrunner:<arch>`,
 - `Restart=always` + `StartLimitIntervalSec=300`/`StartLimitBurst=5` keep it up.
 
@@ -124,19 +124,18 @@ Then visit `http://<host>:8000/`.
 
 ## Publishing a release
 
-`deno task publish` rebuilds the web bundle, exports the docker image tarball for the
-target architecture, loads it on the server, restarts the systemd unit, and polls the
-health endpoint until it returns 200. The SSH key is the checked-in `orange` file
-(gitignored) — it is passed via `ssh -i` only and never installed.
+`deno task publish` rebuilds the web bundle, exports the docker image tarball for the target
+architecture, loads it on the server, restarts the systemd unit, and polls the health endpoint until
+it returns 200. The SSH key is the checked-in `orange` file (gitignored) — it is passed via `ssh -i`
+only and never installed.
 
 ```sh
 deno task publish                       # defaults to arm64
 deno task publish --arch amd64          # or amd64
 ```
 
-`/workspace` is mapped to `/home/matty/code/denorunner` on the host, so the tarball needs
-no scp — the publish script just runs `docker load -i` and `systemctl --user restart`
-over SSH.
+`/workspace` is mapped to `/home/matty/code/denorunner` on the host, so the tarball needs no scp —
+the publish script just runs `docker load -i` and `systemctl --user restart` over SSH.
 
 ## Usage
 

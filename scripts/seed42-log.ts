@@ -1,8 +1,14 @@
 /** Play seed 42 with the AI; verify every installed card lands in a server. */
-import { cardDef, engine, starterDeckConfigs, UctAI } from "../src/mod.ts";
+import {
+  cardDef,
+  engine,
+  makeAIDecisionContext,
+  RandomAI,
+  starterDeckConfigs,
+} from "../src/mod.ts";
 import type { CardInstance, GameState, Move, PlayerSide } from "../src/types.ts";
 
-const ai = new UctAI({ iterations: 60, timeBudgetMs: 1200 });
+const ai = new RandomAI();
 const decks = starterDeckConfigs();
 let state = engine.startGame({
   corp: decks.corp,
@@ -61,7 +67,9 @@ while (!state.winner && moves < 400) {
   const actor: PlayerSide = state.prompts[0]?.player ?? state.turn.player;
   const legal = engine.getLegalMoves(state, actor);
   if (legal.length === 0) break;
-  const move: Move = legal.length === 1 ? legal[0]! : ai.chooseMove(state, actor, legal);
+  const view = engine.getPlayerView(state, actor);
+  const ctx = makeAIDecisionContext(state, actor, (state.rngState ^ (moves + 1)) | 0);
+  const move: Move = legal.length === 1 ? legal[0]! : ai.chooseMove(view, legal, ctx);
 
   // Track corp installs: the hand instance must end up in a server.
   let tracked: { id: string; server: string } | null = null;

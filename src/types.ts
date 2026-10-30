@@ -386,13 +386,60 @@ export interface ViewCard {
   id: CardInstanceId;
   /** Card definition id; hidden information is replaced by "hidden". */
   cardId: CardId | "hidden";
+  /** Whose card this is — always open information (rule 10.2). */
+  owner: PlayerSide;
   rezzed?: boolean;
   advancement?: number;
   hostedCredits?: number;
+  /** Printed strength. Hidden together with the card id (it fingerprints the
+   * card; rules 10.2.2, 4.6.3). Temporary pumps ride in `strengthBoost`. */
   strength?: number;
+  /** Temporary strength boost gained this encounter (icebreakers) — an open
+   * counter (rule 10.2), suppressed for cards whose id is hidden. */
+  strengthBoost?: number;
+  /**
+   * Legacy stack-position field. The current engine never assigns it (ice
+   * position is carried by array order and exposed as `position`), so it is
+   * always undefined in views produced today; kept for shape compatibility.
+   * Never use it as an ice-vs-root discriminator, and beware that `0` would
+   * be falsy anyway — test `!== undefined`.
+   */
   iceIndex?: number;
+  /**
+   * Open physical placement inside the server (rule 4.6.2): "ice" for a card
+   * in the server's ice stack, "root" for a card in the server root;
+   * undefined away from servers. This is the authoritative ice-vs-root
+   * discriminator. It deliberately reveals placement without revealing type:
+   * rule 4.6.6f keeps the TYPE of a root card (asset vs agenda vs upgrade)
+   * hidden — only ice-vs-root is open.
+   */
+  position?: "ice" | "root";
   zone: Zone;
   server?: ServerId;
+}
+
+/**
+ * A player's within-turn progress. Every field here is open information
+ * (rule 10.2): installs, draws, runs, breaches, and ability activations are
+ * announced actions, and banked run funds derive from a played (announced)
+ * event. The viewer is entitled to these for both sides — which is also what
+ * lets the engine reconstruct a hypothetical state from the view alone.
+ */
+export interface PlayerTurnState {
+  /** Instance ids this player installed during the current turn (rule 4.6.2). */
+  installedThisTurn: CardInstanceId[];
+  /** True once this player took a basic draw action this turn (Verbal Plasticity). */
+  basicDrawThisTurn: boolean;
+  /** True once this player made a successful run this turn (Carmen). */
+  successfulRunThisTurn: boolean;
+  /** Central servers this player ran this turn (Red Team / recon restrictions). */
+  ranServersThisTurn: ServerId[];
+  /** HQ breaches this player made this turn (Docklands Pass). */
+  hqBreachesThisTurn: number;
+  /** Once-per-turn ability activations, keyed `${instanceId}:${abilityIndex}`. */
+  usedOncePerTurn: string[];
+  /** Credits banked for the next run this turn (Overclock). */
+  pendingRunFund: number;
 }
 
 export interface PlayerView {
@@ -401,6 +448,8 @@ export interface PlayerView {
   winner: PlayerSide | "draw" | null;
   winReason: string | null;
   agendaPointTarget: number;
+  /** Game format — public (both players know what they sat down to play). */
+  mode: GameState["mode"];
   corp: {
     credits: number;
     clicks: number;
@@ -414,6 +463,23 @@ export interface PlayerView {
     score: ViewCard[];
     /** All installed corp cards with open info; unrezzed cardIds are hidden. */
     installed: ViewCard[];
+    /**
+     * The Corp's hand. Populated with real card ids for the Corp viewer only
+     * (a player may look at their own hand, rule 4.3.2); every other viewer
+     * gets `[]` and reads `handCount` instead (rule 4.3.4).
+     */
+    hand: ViewCard[];
+    /**
+     * The Corp's discard pile (Archives). Real card ids for the Corp viewer
+     * (rules 4.4.6c/1.21.2a: facedown Archives cards are examined by the
+     * player controlling them). For any other viewer every entry carries
+     * `cardId: "hidden"`: this engine does not yet model which Archives cards
+     * are faceup vs facedown (see the TODO in `moveCardTo`, src/engine/state.ts),
+     * so it conservatively hides the whole pile from the Runner rather than
+     * leaking facedown cards. Documented deviation, not a rules claim.
+     */
+    discard: ViewCard[];
+    turnState: PlayerTurnState;
   };
   runner: {
     credits: number;
@@ -426,6 +492,19 @@ export interface PlayerView {
     identity: ViewCard;
     score: ViewCard[];
     installed: ViewCard[];
+    /**
+     * The Runner's hand: real card ids for the Runner viewer (rule 4.3.2),
+     * `[]` for anyone else.
+     */
+    hand: ViewCard[];
+    /**
+     * The Runner's discard heap: open information to every viewer
+     * (rule 4.4.7b — the heap is public).
+     */
+    discard: ViewCard[];
+    /** Tags are always public information (rule 10.2). */
+    tags: number;
+    turnState: PlayerTurnState;
   };
   run: {
     server: ServerId;
@@ -433,11 +512,27 @@ export interface PlayerView {
     position: number | null;
     currentIce?: ViewCard;
     broken: number[];
+    /** Subroutine indices already resolved this encounter (open, rule 10.2). */
+    resolved: number[];
+    /** What started the run, e.g. "jailbreak" (announced at run-start). */
+    source?: string;
+    /** Credits banked on this run (Overclock) — public credit information. */
+    fundCredits?: number;
+    /** Rez-cost increase on ice this run (Tread Lightly). */
+    rezCostIncrease?: number;
+    /** The Manegarm Skunkworks approach toll has been satisfied this run. */
+    tollPaid?: boolean;
   } | null;
   breach: {
     server: ServerId;
     randomAccessLimit: number;
     remaining: number;
+    /**
+     * Instance ids already accessed during this breach. Accesses are public
+     * actions (rules 7.3, 10.2); the ids let a viewer reconstruct which
+     * candidates remain without revealing any card identity.
+     */
+    chosen: CardInstanceId[];
     accessing?: ViewCard;
   } | null;
   /** Pending prompts, per-viewer: the owner gets the full prompt, anyone else
@@ -447,6 +542,63 @@ export interface PlayerView {
   events: GameEvent[];
   /** Non-fatal notices about partially supported card effects. */
   warnings: string[];
+}
+
+// ---------------------------------------------------------------------------
+// AI information boundary (rules 10.2, 1.21, 4.2.2, 4.3.2)
+// ---------------------------------------------------------------------------
+
+/**
+ * What an AI may know beyond its `PlayerView` when making a decision:
+ * definition-id multisets of hidden cards plus a seed. Nothing else.
+ *
+ * The context carries NO instance-level information beyond what the view
+ * already shows — no zones, no placement, no instance ids, no order. Both
+ * arrays are canonical sorted multisets ("bags"): a player knows the
+ * *composition* of hidden zones (this is a decklist-format game) but never
+ * their order (rules 4.2.2, 4.3.4), so the arrays must be treated as
+ * unordered. The seed is derived by the trusted shell per decision; an AI
+ * never sees `state.rngState`.
+ */
+export interface AIDecisionContext {
+  /** The deciding player. */
+  side: PlayerSide;
+  /**
+   * Multiset (sorted) of the deciding player's own remaining deck, by
+   * definition id. Known from their decklist minus everything that has left
+   * the deck; the order is hidden (rule 4.2.2).
+   */
+  ownDeck: CardId[];
+  /**
+   * Multiset (sorted) of every hidden card identity the deciding player does
+   * NOT know: the opponent's hand, the opponent's remaining deck (accepted
+   * multiset concession — decklist game), and every card shown as `cardId:
+   * "hidden"` in the view (unrezzed corp installs and facedown Archives for a
+   * runner viewer).
+   */
+  unseen: CardId[];
+  /** Per-decision RNG seed, derived by the trusted shell from the true game
+   * state. Never reveals the engine's `rngState`. */
+  seed: number;
+}
+
+/**
+ * An AI player under the information boundary (rules 10.2, 1.21, 4.2.2).
+ *
+ * `chooseMove` receives ONLY a sanitized `PlayerView`, the legal moves
+ * computed by the engine, and an `AIDecisionContext` of hidden-card multisets.
+ * It never receives a `GameState` — that is enforced by this signature.
+ *
+ * An AI is free to use the rules engine (`applyMove`, `getLegalMoves`) on
+ * hypothetical states it builds itself with `determinize(view, ctx, rng)`;
+ * it must return one of `legal`, must not mutate the view, and must not
+ * fabricate moves it was not offered.
+ */
+export interface GameAI {
+  /** Short human-readable name, used in test output and tournament logs. */
+  readonly name: string;
+  /** Pick a move from `legal` for `ctx.side`, seeing only `view` and `ctx`. */
+  chooseMove(view: PlayerView, legal: Move[], ctx: AIDecisionContext): Move;
 }
 
 // ---------------------------------------------------------------------------

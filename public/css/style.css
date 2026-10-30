@@ -23,7 +23,8 @@
   box-sizing: border-box;
 }
 
-html, body {
+html,
+body {
   margin: 0;
   padding: 0;
   background: var(--bg);
@@ -437,7 +438,8 @@ html, body {
   padding: 12px;
   min-height: 190px;
 }
-.banner-win, .banner-wait {
+.banner-win,
+.banner-wait {
   display: grid;
   place-items: center;
   min-height: 165px;
@@ -904,10 +906,12 @@ html, body {
   color: var(--red);
 }
 
-.zoom-enter-active, .zoom-leave-active {
+.zoom-enter-active,
+.zoom-leave-active {
   transition: opacity 0.18s ease;
 }
-.zoom-enter-from, .zoom-leave-to {
+.zoom-enter-from,
+.zoom-leave-to {
   opacity: 0;
 }
 

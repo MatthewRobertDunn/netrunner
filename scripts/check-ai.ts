@@ -1,15 +1,16 @@
 /**
- * Headless check: play a full game with the UCT AI on both sides and dump the
- * distribution of move kinds the Corp picks. Verifies the AI explores moves
- * beyond "gain credits".
+ * Headless check: play a full game with RandomAI on both sides through the
+ * information boundary and dump the distribution of move kinds each side
+ * picks. Verifies the boundary drives a complete game (a real eval AI arrives
+ * in the next phase).
  *
  *   deno run --allow-read scripts/check-ai.ts
  */
 
-import { engine, starterDeckConfigs, UctAI } from "../src/mod.ts";
+import { engine, makeAIDecisionContext, RandomAI, starterDeckConfigs } from "../src/mod.ts";
 import type { Move, PlayerSide } from "../src/types.ts";
 
-const ai = new UctAI({ iterations: 60, timeBudgetMs: 1200 });
+const ai = new RandomAI();
 const decks = starterDeckConfigs();
 let state = engine.startGame({
   corp: decks.corp,
@@ -26,7 +27,9 @@ while (!state.winner && moves < 2000) {
   const actor: PlayerSide = state.prompts[0]?.player ?? state.turn.player;
   const legal = engine.getLegalMoves(state, actor);
   if (legal.length === 0) break;
-  const move: Move = legal.length === 1 ? legal[0]! : ai.chooseMove(state, actor, legal);
+  const view = engine.getPlayerView(state, actor);
+  const ctx = makeAIDecisionContext(state, actor, (state.rngState ^ (moves + 1)) | 0);
+  const move: Move = legal.length === 1 ? legal[0]! : ai.chooseMove(view, legal, ctx);
   const tally = actor === "corp" ? corpKinds : runnerKinds;
   tally.set(move.kind, (tally.get(move.kind) ?? 0) + 1);
   const result = engine.applyMove(state, actor, move);

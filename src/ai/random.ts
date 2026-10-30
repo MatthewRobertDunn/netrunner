@@ -1,35 +1,24 @@
 /**
  * Random AI: picks uniformly among the legal moves.
  *
- * Determinism note: the choice uses this AI's own internal mulberry32 PRNG,
- * seeded at construction. It never reads or writes `state.rngState` — the
- * authoritative game PRNG belongs to the engine alone, so merely *asking* an
- * AI for a decision can never perturb the game (and `getLegalMoves` +
- * `chooseMove` stay side-effect free for any caller).
+ * Under the information boundary (rules 10.2, 4.2.2) it receives only a
+ * sanitized `PlayerView`, the legal moves, and an `AIDecisionContext` — it
+ * deliberately ignores the view. Its choice is a pure function of the
+ * decision seed in `ctx.seed` and the move list: no constructor seed (a game
+ * seed would let it recompute the setup shuffle — i.e. the opponent's deck
+ * order), no engine `rngState`, and merely *asking* it for a decision cannot
+ * perturb the game or depend on anything its player may not see.
  */
 
-import type { GameState, Move, PlayerSide } from "../types.ts";
-import type { GameAI } from "./types.ts";
+import { makeRng } from "../engine/rng.ts";
+import type { AIDecisionContext, GameAI, Move, PlayerView } from "../types.ts";
 
 export class RandomAI implements GameAI {
   readonly name = "random";
-  private rngState: number;
 
-  constructor(seed = 0x9e3779b9) {
-    this.rngState = seed | 0;
-  }
-
-  /** mulberry32: float in [0, 1), advancing this AI's own PRNG state. */
-  private next(): number {
-    this.rngState = (this.rngState + 0x6d2b79f5) | 0;
-    let t = this.rngState;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  }
-
-  chooseMove(_state: GameState, _side: PlayerSide, legal: Move[]): Move {
-    const idx = Math.floor(this.next() * legal.length);
+  chooseMove(_view: PlayerView, legal: Move[], ctx: AIDecisionContext): Move {
+    const rng = makeRng(ctx.seed);
+    const idx = Math.floor(rng.next() * legal.length);
     return legal[idx] ?? legal[0]!;
   }
 }

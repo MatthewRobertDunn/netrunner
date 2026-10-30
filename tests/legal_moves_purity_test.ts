@@ -12,6 +12,7 @@
 import { engine, RandomAI, starterDeckConfigs } from "../src/mod.ts";
 import { newStarterGame, play } from "../src/testing/fixtures.ts";
 import type { DeckConfig, GameState, Move, PlayerSide } from "../src/types.ts";
+import { decide } from "./helpers/boundary.ts";
 import { assert, assertEquals } from "./helpers/assert.ts";
 
 // ---------------------------------------------------------------------------
@@ -237,7 +238,7 @@ Deno.test("purity: RandomAI.chooseMove never touches state.rngState", () => {
   const before = JSON.stringify(state);
   const rngBefore = state.rngState;
   const ai = new RandomAI();
-  for (let i = 0; i < 50; i++) ai.chooseMove(state, "corp", legal);
+  for (let i = 0; i < 50; i++) decide(ai, state, "corp", legal, i);
   assertEquals(JSON.stringify(state), before, "chooseMove mutated the game state");
   assertEquals(state.rngState, rngBefore, "chooseMove advanced the game PRNG");
 });
@@ -245,12 +246,12 @@ Deno.test("purity: RandomAI.chooseMove never touches state.rngState", () => {
 Deno.test("purity: RandomAI is deterministic for a fixed seed", () => {
   const state = newStarterGame(42);
   const legal = engine.getLegalMoves(state, "corp");
-  const a = new RandomAI(1234);
-  const b = new RandomAI(1234);
+  const a = new RandomAI();
+  const b = new RandomAI();
   for (let i = 0; i < 30; i++) {
     assertEquals(
-      a.chooseMove(state, "corp", legal),
-      b.chooseMove(state, "corp", legal),
+      decide(a, state, "corp", legal, i),
+      decide(b, state, "corp", legal, i),
       "same seed => same choice",
     );
   }

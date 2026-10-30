@@ -130,6 +130,11 @@ Deno.test("public status: server placement and counts are public", () => {
     assert(Array.isArray(server.root), "server.root is an array");
     assertEquals(typeof server.unrezzedIceCount, "number");
     assert(Array.isArray(server.ice), "server.ice is an array");
+    // Physical placement is open information (rule 4.6.2): root cards and ice
+    // are marked, so a viewer always knows ice-vs-root even when the identity
+    // of an unrezzed card is hidden (rule 4.6.6f keeps the root TYPE hidden).
+    for (const card of server.root) assertEquals(card.position, "root");
+    for (const card of server.ice) assertEquals(card.position, "ice");
   }
 });
 
@@ -173,7 +178,7 @@ Deno.test("public status: warnings mirror the authoritative state", () => {
   assertEquals(shared.warnings, [...state.supportWarnings]);
 });
 
-Deno.test("public status: no hand or deck arrays leak into the DTO", () => {
+Deno.test("public status: no hand, deck or discard arrays leak into the DTO", () => {
   const state = newStarterGame(1);
   const json = JSON.stringify(engine.getPublicGameStatus(state));
   const parsed = JSON.parse(json) as {
@@ -187,6 +192,7 @@ Deno.test("public status: no hand or deck arrays leak into the DTO", () => {
     assert(keys.includes("discardCount"), `${side} exposes discardCount`);
     assert(!keys.includes("hand"), `${side} must not expose a hand array`);
     assert(!keys.includes("deck"), `${side} must not expose a deck array`);
+    assert(!keys.includes("discard"), `${side} must not expose a discard array`);
   }
 });
 

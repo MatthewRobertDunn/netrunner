@@ -14,6 +14,7 @@ import { assertEquals } from "./helpers/assert.ts";
 import { engine, randomAI, starterDeckConfigs, startGame } from "../src/mod.ts";
 import { fastCloneState } from "../src/ai/fast-clone.ts";
 import type { GameState, Move, PlayerSide } from "../src/types.ts";
+import { decide } from "./helpers/boundary.ts";
 
 /** Deep equality that treats own keys holding `undefined` as absent. */
 function deepEqual(a: unknown, b: unknown, path: string): string | null {
@@ -96,7 +97,9 @@ function playGame(seed: number, maxMoves: number): void {
     const actor: PlayerSide = state.prompts[0]?.player ?? state.turn.player;
     const legal = engine.getLegalMoves(state, actor);
     if (legal.length === 0) break;
-    const move: Move = legal.length === 1 ? legal[0]! : randomAI.chooseMove(state, actor, legal);
+    const move: Move = legal.length === 1
+      ? legal[0]!
+      : decide(randomAI, state, actor, legal, moves);
     const result = engine.applyMove(state, actor, move);
     if (result.kind === "illegal-move") break;
     state = result.state;

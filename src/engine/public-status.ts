@@ -30,15 +30,18 @@ import type { GameState } from "../types.ts";
 
 const HIDDEN = "hidden" as const;
 
-function viewCard(card: CardInstance, hidden: boolean): ViewCard {
+function viewCard(card: CardInstance, hidden: boolean, position?: ViewCard["position"]): ViewCard {
   return {
     id: card.id,
     cardId: hidden ? HIDDEN : card.cardId,
+    owner: card.owner,
     rezzed: card.rezzed,
     advancement: card.advancement,
     hostedCredits: card.hostedCredits,
     strength: hidden ? undefined : cardDef(card.cardId).strength ?? undefined,
+    strengthBoost: hidden ? undefined : card.strengthBoost,
     iceIndex: card.iceIndex,
+    position,
     zone: card.zone,
     server: card.server,
   };
@@ -85,8 +88,8 @@ function serverStatus(state: GameState, id: ServerId, hideInstalled: boolean): P
   const iceVisible = s.ice.filter((c) => !hideInstalled || c.rezzed === true);
   return {
     id,
-    root: s.root.map((c) => viewCard(c, hideInstalled && c.rezzed !== true)),
-    ice: iceVisible.map((c) => viewCard(c, false)),
+    root: s.root.map((c) => viewCard(c, hideInstalled && c.rezzed !== true, "root")),
+    ice: iceVisible.map((c) => viewCard(c, false, "ice")),
     unrezzedIceCount: s.ice.length - iceVisible.length,
   };
 }

@@ -1,16 +1,26 @@
 /**
  * App root: setup screen + game screen.
  *
- * Owns the game state, applies human moves, and drives the UCT AI whenever
- * it is the Corp's turn to act. The human side is interchangeable by design:
+ * Owns the game state, applies human moves, and drives the AI whenever it is
+ * not the human's turn to act. The human side is interchangeable by design:
  * `start(humanSide, seed, strength)` takes the side as a parameter, so
  * human-as-Corp (AI as Runner) needs no other change.
+ *
+ * The AI runs under the information boundary: this file is the trusted shell
+ * and builds the sanitized `PlayerView`, the legal moves, and the
+ * `AIDecisionContext`; `chooseMove` never receives the `GameState`.
  */
 
 import { defineComponent, markRaw, shallowRef } from "npm:vue@3.5.13/dist/vue.esm-bundler.js";
 import type { Ref } from "npm:vue@3.5.13/dist/vue.esm-bundler.js";
-import { engine, starterDeckConfigs, UctAI } from "../mod.ts";
-import type { GameState, Move, PlayerSide } from "../types.ts";
+import {
+  decisionSeedFor,
+  engine,
+  makeAIDecisionContext,
+  RandomAI,
+  starterDeckConfigs,
+} from "../mod.ts";
+import type { GameAI, GameState, Move, PlayerSide } from "../types.ts";
 import GameScreen from "./ui/game.ts";
 
 interface StrengthPreset {
@@ -19,6 +29,8 @@ interface StrengthPreset {
   timeBudgetMs: number;
 }
 
+// SWAP POINT (next phase): these presets configure the evaluation AI. Until
+// then the placeholder RandomAI ignores them and the boundary stays identical.
 const PRESETS: StrengthPreset[] = [
   { name: "Casual", iterations: 30, timeBudgetMs: 600 },
   { name: "Normal", iterations: 60, timeBudgetMs: 1200 },
@@ -40,13 +52,15 @@ export default defineComponent({
     const strength = shallowRef(1);
     const thinking = shallowRef(false);
     const lastWarning = shallowRef("");
-    let aiOption = { iterations: 60, timeBudgetMs: 1200 };
-    let ai: UctAI | null = null;
+    let ai: GameAI | null = null;
+    let aiDecisions = 0;
 
-    function start(side: PlayerSide, gameSeed: number, preset: StrengthPreset) {
+    function start(side: PlayerSide, gameSeed: number, _preset: StrengthPreset) {
       const decks = starterDeckConfigs();
-      aiOption = { iterations: preset.iterations, timeBudgetMs: preset.timeBudgetMs };
-      ai = new UctAI(aiOption);
+      // Placeholder AI: RandomAI. The evaluation AI (next phase) will be
+      // constructed here from `_preset` and use `determinize` internally.
+      ai = new RandomAI();
+      aiDecisions = 0;
       humanSide.value = side;
       seed.value = gameSeed;
       thinking.value = false;
@@ -78,9 +92,17 @@ export default defineComponent({
           return;
         }
         const legal = engine.getLegalMoves(live, actor);
-        let move;
+        let move: Move | null;
         try {
-          move = legal.length ? ai.chooseMove(live, actor, legal) : null;
+          if (legal.length === 0) {
+            move = null;
+          } else {
+            // Trusted shell: project the authoritative state into what the AI
+            // may see (rules 10.2, 4.2.2, 4.3.2).
+            const view = engine.getPlayerView(live, actor);
+            const ctx = makeAIDecisionContext(live, actor, decisionSeedFor(view));
+            move = ai.chooseMove(view, legal, ctx);
+          }
         } catch (err) {
           thinking.value = false;
           lastWarning.value = `AI error: ${err instanceof Error ? err.message : String(err)}`;
@@ -143,8 +165,8 @@ export default defineComponent({
       <section v-else class="setup" data-testid="setup">
         <h1>Netrunner — CyberClick Starters</h1>
         <p class="tagline">
-          Human Runner vs. a UCT Monte-Carlo AI playing the Corp.
-          Pick a side, a seed, and the AI's search strength.
+          Human vs. an AI opponent (placeholder random AI for now; a real
+          evaluation AI lands in the next phase). Pick a side and a seed.
         </p>
 
         <div class="setup-grid">

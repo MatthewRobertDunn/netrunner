@@ -16909,16 +16909,21 @@ var mod_exports = {};
 __export(mod_exports, {
   AiGameError: () => AiGameError,
   RandomAI: () => RandomAI,
-  UctAI: () => UctAI,
   applyMove: () => applyMove,
   cardDef: () => cardDef,
   cardSupport: () => cardSupport,
   cardSupportReport: () => cardSupportReport,
+  decisionSeedFor: () => decisionSeedFor,
+  determinize: () => determinize,
   engine: () => engine,
+  fastCloneState: () => fastCloneState,
   getLegalMoves: () => getLegalMoves,
   getPlayerView: () => getPlayerView,
   getPublicGameStatus: () => getPublicGameStatus,
   getPublicGameStatusFor: () => getPublicGameStatusFor,
+  infoSetKey: () => infoSetKey,
+  makeAIDecisionContext: () => makeAIDecisionContext,
+  makeRng: () => makeRng,
   playGame: () => playGame,
   randomAI: () => randomAI,
   startGame: () => startGame,
@@ -16929,7 +16934,6 @@ __export(mod_exports, {
   supportStatus: () => supportStatus,
   supportWarningsOf: () => supportWarningsOf,
   tryCardDef: () => tryCardDef,
-  uctAI: () => uctAI,
   validateDeck: () => validateDeck,
   verifyFixtureAgainstSnapshot: () => verifyFixtureAgainstSnapshot
 });
@@ -18925,10 +18929,28 @@ function shuffle(state, list) {
   }
   return list;
 }
+function makeRng(seed) {
+  let s = seed | 0;
+  return {
+    next() {
+      s = s + 1831565813 | 0;
+      let t = s;
+      t = Math.imul(t ^ t >>> 15, t | 1);
+      t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    },
+    get state() {
+      return s;
+    }
+  };
+}
 
 // src/engine/state.ts
 function player(state, side) {
   return side === "corp" ? state.corp : state.runner;
+}
+function other(side) {
+  return side === "corp" ? "runner" : "corp";
 }
 var CENTRAL_IDS = [
   "hq",
@@ -21547,17 +21569,589 @@ function corpInstalledCards(state) {
   ]);
 }
 
-// src/engine/public-status.ts
+// src/ai/fast-clone.ts
+function fastCloneState(state) {
+  return {
+    ...state,
+    turn: {
+      ...state.turn
+    },
+    corp: clonePlayer(state.corp),
+    runner: clonePlayer(state.runner),
+    servers: state.servers.map(cloneServer),
+    run: state.run ? cloneRun(state.run) : null,
+    breach: state.breach ? cloneBreach(state.breach) : null,
+    prompts: state.prompts.map(clonePrompt),
+    log: state.log.map(cloneEvent),
+    supportWarnings: [
+      ...state.supportWarnings
+    ]
+  };
+}
+function clonePlayer(p2) {
+  return {
+    ...p2,
+    identity: cloneCard(p2.identity),
+    hand: p2.hand.map(cloneCard),
+    deck: p2.deck.map(cloneCard),
+    discard: p2.discard.map(cloneCard),
+    score: p2.score.map(cloneCard),
+    installed: p2.installed.map(cloneCard),
+    installedThisTurn: [
+      ...p2.installedThisTurn
+    ],
+    ranServersThisTurn: [
+      ...p2.ranServersThisTurn
+    ],
+    usedOncePerTurn: [
+      ...p2.usedOncePerTurn
+    ]
+  };
+}
+function cloneCard(c) {
+  return {
+    ...c
+  };
+}
+function cloneServer(s) {
+  return {
+    ...s,
+    root: s.root.map(cloneCard),
+    ice: s.ice.map(cloneCard)
+  };
+}
+function cloneRun(r) {
+  return {
+    ...r,
+    broken: [
+      ...r.broken
+    ],
+    resolved: [
+      ...r.resolved
+    ]
+  };
+}
+function cloneBreach(b) {
+  return {
+    ...b,
+    chosen: [
+      ...b.chosen
+    ]
+  };
+}
+function clonePrompt(p2) {
+  if (p2.kind === "rez-window" || p2.kind === "choose-one") {
+    return {
+      ...p2,
+      options: p2.options.map(cloneOption)
+    };
+  }
+  return {
+    ...p2
+  };
+}
+function cloneOption(o) {
+  const out = {
+    ...o
+  };
+  if (o.effect !== void 0) out.effect = {
+    ...o.effect
+  };
+  return out;
+}
+function cloneEvent(e) {
+  return e.type === "damage" ? {
+    ...e,
+    trashed: [
+      ...e.trashed
+    ]
+  } : {
+    ...e
+  };
+}
+
+// src/engine/determinize.ts
 var HIDDEN = "hidden";
-function viewCard(card, hidden) {
+function otherSide(side) {
+  return side === "corp" ? "runner" : "corp";
+}
+var CardPool = class {
+  counts = /* @__PURE__ */ new Map();
+  constructor(ids) {
+    for (const id of ids) this.counts.set(id, (this.counts.get(id) ?? 0) + 1);
+  }
+  /** Remove one occurrence of `id`, if present. */
+  remove(id) {
+    const n = this.counts.get(id);
+    if (n === void 0) return;
+    if (n <= 1) this.counts.delete(id);
+    else this.counts.set(id, n - 1);
+  }
+  /** Draw one id matching `predicate`, or throw if none remains. */
+  draw(rng, predicate, what) {
+    const matching = [];
+    let total = 0;
+    for (const [id2, n] of this.counts) {
+      if (n > 0 && predicate(id2)) {
+        matching.push(id2);
+        total += n;
+      }
+    }
+    if (total === 0) {
+      throw new Error(`determinize: no card in the hidden pool matches ${what}; AIDecisionContext is inconsistent with the view`);
+    }
+    let roll = Math.floor(rng.next() * total);
+    let id;
+    for (const candidate of matching) {
+      const n = this.counts.get(candidate);
+      if (roll < n) {
+        id = candidate;
+        break;
+      }
+      roll -= n;
+    }
+    if (id === void 0) id = matching[matching.length - 1];
+    const left = this.counts.get(id) - 1;
+    if (left <= 0) this.counts.delete(id);
+    else this.counts.set(id, left);
+    return id;
+  }
+};
+function instanceOf(view, cardId) {
+  const card = {
+    id: view.id,
+    cardId,
+    owner: view.owner,
+    zone: view.zone
+  };
+  if (view.rezzed !== void 0) card.rezzed = view.rezzed;
+  if (view.advancement !== void 0) card.advancement = view.advancement;
+  if (view.hostedCredits !== void 0) card.hostedCredits = view.hostedCredits;
+  if (view.strengthBoost !== void 0) card.strengthBoost = view.strengthBoost;
+  if (view.server !== void 0) card.server = view.server;
+  if (view.iceIndex !== void 0) card.iceIndex = view.iceIndex;
+  return card;
+}
+function hiddenInstance(id, cardId, side, zone) {
+  const card = {
+    id,
+    cardId,
+    owner: side,
+    zone
+  };
+  const def2 = cardDef(cardId);
+  if (isIce(def2) || def2.type === "agenda") card.advancement = 0;
+  return card;
+}
+function basePlayerState(view, side) {
+  const section = view[side];
+  const hubBonus = side === "corp" && view.corp.score.some((c) => c.cardId === "superconducting_hub") ? 2 : 0;
+  return {
+    side,
+    identity: instanceOf(section.identity, section.identity.cardId),
+    credits: section.credits,
+    clicks: section.clicks,
+    hand: [],
+    deck: [],
+    discard: [],
+    score: section.score.map((c) => instanceOf(c, c.cardId)),
+    installed: [],
+    baseHandSize: 5,
+    maxHandSizeMod: section.handSize - 5 - hubBonus,
+    memoryLimitMod: 0,
+    tags: section.tags,
+    agendaPoints: section.agendaPoints,
+    installedThisTurn: [
+      ...section.turnState.installedThisTurn
+    ],
+    basicDrawThisTurn: section.turnState.basicDrawThisTurn,
+    successfulRunThisTurn: section.turnState.successfulRunThisTurn,
+    ranServersThisTurn: [
+      ...section.turnState.ranServersThisTurn
+    ],
+    hqBreachesThisTurn: section.turnState.hqBreachesThisTurn,
+    usedOncePerTurn: [
+      ...section.turnState.usedOncePerTurn
+    ],
+    pendingRunFund: section.turnState.pendingRunFund
+  };
+}
+function promptFromStub(stub) {
+  switch (stub.kind) {
+    case "mulligan":
+      return {
+        kind: "mulligan",
+        id: stub.id,
+        player: stub.player
+      };
+    case "discard":
+      return {
+        kind: "discard",
+        id: stub.id,
+        player: stub.player,
+        count: 0
+      };
+    case "rez-window":
+      return {
+        kind: "rez-window",
+        id: stub.id,
+        player: "corp",
+        options: []
+      };
+    case "choose-one":
+      return {
+        kind: "choose-one",
+        id: stub.id,
+        player: stub.player,
+        title: "",
+        options: []
+      };
+    case "access-decision":
+      return {
+        kind: "access-decision",
+        id: stub.id,
+        player: "runner",
+        cardId: ""
+      };
+  }
+}
+function determinize(view, ctx, rng) {
+  const viewer = view.viewer;
+  const opponent = otherSide(viewer);
+  if (ctx.side !== viewer) {
+    throw new Error(`determinize: ctx.side (${ctx.side}) does not match view.viewer (${viewer})`);
+  }
+  const corp = basePlayerState(view, "corp");
+  const runner = basePlayerState(view, "runner");
+  const players = {
+    corp,
+    runner
+  };
+  const accessed = view.breach?.accessing;
+  const isHidden = (v) => v.cardId === HIDDEN;
+  const pinnedId = (v) => accessed && accessed.id === v.id ? accessed.cardId : void 0;
+  const pool = new CardPool(ctx.unseen);
+  const orphans = collectOrphans(view);
+  const ownDeckPins = orphans.ownDeck;
+  const oppHandPins = accessed && accessed.owner === opponent && accessed.zone === "hand" ? [
+    accessed.id,
+    ...orphans.oppHand
+  ] : [
+    ...orphans.oppHand
+  ];
+  const oppDeckPins = accessed && accessed.owner === opponent && accessed.zone === "deck" ? [
+    accessed.id,
+    ...orphans.oppDeck
+  ] : [
+    ...orphans.oppDeck
+  ];
+  const servers = buildServers(view, pool, rng, pinnedId);
+  for (const side of [
+    "corp",
+    "runner"
+  ]) {
+    const section = view[side];
+    players[side].hand = section.hand.map((c) => instanceOf(c, c.cardId));
+    players[side].discard = section.discard.map((c) => {
+      if (!isHidden(c)) return instanceOf(c, c.cardId);
+      const pinned = pinnedId(c);
+      const cardId = pinned ?? pool.draw(rng, (id) => cardDef(id).side === side, `${side} discard`);
+      return instanceOf(c, cardId);
+    });
+    players[side].score = section.score.map((c) => instanceOf(c, c.cardId));
+  }
+  players.runner.installed = view.runner.installed.map((c) => instanceOf(c, c.cardId));
+  const ownDeckPool = new CardPool(ctx.ownDeck);
+  const ownPinned = accessed && accessed.owner === viewer && accessed.zone === "deck" ? accessed : void 0;
+  if (ownPinned) ownDeckPool.remove(ownPinned.cardId);
+  const deckCount = view[viewer].deckCount;
+  assertSize(ctx.ownDeck.length, deckCount, "ctx.ownDeck", `own deck count (${viewer} deck)`);
+  const ownDeck = [];
+  if (ownPinned) {
+    ownDeck.push(hiddenInstance(ownPinned.id, ownPinned.cardId, viewer, "deck"));
+  }
+  for (const id of ownDeckPins) {
+    if (ownDeck.some((c) => c.id === id)) continue;
+    ownDeck.push(hiddenInstance(id, ownDeckPool.draw(rng, () => true, "own deck pin"), viewer, "deck"));
+  }
+  for (let i = ownDeck.length; i < deckCount; i++) {
+    ownDeck.push(hiddenInstance(`${viewer}-deck-${i}`, ownDeckPool.draw(rng, () => true, "own deck"), viewer, "deck"));
+  }
+  shuffleArray(rng, ownDeck);
+  players[viewer].deck = ownDeck;
+  const oppSection = view[opponent];
+  const oppHand = [];
+  for (const id of oppHandPins) {
+    if (oppHand.some((c) => c.id === id)) continue;
+    if (accessed && accessed.id === id) {
+      oppHand.push(hiddenInstance(id, accessed.cardId, opponent, "hand"));
+      continue;
+    }
+    oppHand.push(hiddenInstance(id, pool.draw(rng, (cid) => cardDef(cid).side === opponent, "opponent hand pin"), opponent, "hand"));
+  }
+  for (let i = oppHand.length; i < oppSection.handCount; i++) {
+    oppHand.push(hiddenInstance(`${opponent}-hand-${i}`, pool.draw(rng, (id) => cardDef(id).side === opponent, "opponent hand"), opponent, "hand"));
+  }
+  players[opponent].hand = oppHand;
+  const oppDeck = [];
+  for (const id of oppDeckPins) {
+    if (oppDeck.some((c) => c.id === id)) continue;
+    if (accessed && accessed.id === id) {
+      oppDeck.push(hiddenInstance(id, accessed.cardId, opponent, "deck"));
+      continue;
+    }
+    oppDeck.push(hiddenInstance(id, pool.draw(rng, (cid) => cardDef(cid).side === opponent, "opponent deck pin"), opponent, "deck"));
+  }
+  for (let i = oppDeck.length; i < oppSection.deckCount; i++) {
+    oppDeck.push(hiddenInstance(`${opponent}-deck-${i}`, pool.draw(rng, (id) => cardDef(id).side === opponent, "opponent deck"), opponent, "deck"));
+  }
+  shuffleArray(rng, oppDeck);
+  players[opponent].deck = oppDeck;
+  const prompts = view.prompts.map((p2) => p2.player === viewer ? p2 : promptFromStub(p2));
+  const nextPromptId = prompts.reduce((max, p2) => Math.max(max, p2.id), 0) + 1;
+  const run = view.run ? {
+    server: view.run.server,
+    position: view.run.position,
+    phase: view.run.phase,
+    currentIceId: view.run.currentIce?.id,
+    broken: [
+      ...view.run.broken
+    ],
+    resolved: [
+      ...view.run.resolved
+    ],
+    successful: view.run.phase === "success",
+    unsuccessful: false,
+    jackOutOffered: false,
+    source: view.run.source,
+    fundCredits: view.run.fundCredits,
+    rezCostIncrease: view.run.rezCostIncrease,
+    tollPaid: view.run.tollPaid,
+    awaitingChoice: false,
+    encounterStarted: view.run.phase === "encounter-ice"
+  } : null;
+  const breach = view.breach ? {
+    server: view.breach.server,
+    randomAccessLimit: view.breach.randomAccessLimit,
+    randomAccessesUsed: view.breach.randomAccessLimit - view.breach.remaining,
+    chosen: [
+      ...view.breach.chosen
+    ],
+    accessing: view.breach.accessing?.id
+  } : null;
+  const skeleton = {
+    nextPromptId,
+    turn: {
+      ...view.turn
+    },
+    corp,
+    runner,
+    servers,
+    run,
+    breach,
+    prompts,
+    // The log is output-only; restore the view's redacted events. The engine
+    // never reads the log for logic, and re-redacting is idempotent.
+    log: view.events.map((e) => ({
+      ...e
+    })),
+    rngState: rng.state,
+    drawMode: "random",
+    agendaPointTarget: view.agendaPointTarget,
+    winner: view.winner,
+    winReason: view.winReason,
+    mode: view.mode,
+    supportWarnings: [
+      ...view.warnings
+    ]
+  };
+  return fastCloneState(skeleton);
+}
+function collectOrphans(view) {
+  const listed = /* @__PURE__ */ new Set();
+  for (const section of [
+    view.corp,
+    view.runner
+  ]) {
+    for (const v of [
+      section.identity,
+      ...section.score,
+      ...section.hand,
+      ...section.discard,
+      ...section.installed
+    ]) {
+      listed.add(v.id);
+    }
+  }
+  if (view.run?.currentIce) listed.add(view.run.currentIce.id);
+  if (view.breach?.accessing) listed.add(view.breach.accessing.id);
+  const referenced = /* @__PURE__ */ new Set();
+  for (const event of view.events) {
+    for (const id of eventCardIds(event)) referenced.add(id);
+  }
+  for (const prompt of view.prompts) {
+    for (const id of promptCardIds(prompt)) referenced.add(id);
+  }
+  for (const id of view.breach?.chosen ?? []) referenced.add(id);
+  if (view.breach?.accessing) referenced.add(view.breach.accessing.id);
+  const breach = view.breach;
+  const breachRefs = /* @__PURE__ */ new Set([
+    ...breach?.chosen ?? [],
+    ...breach?.accessing ? [
+      breach.accessing.id
+    ] : []
+  ]);
+  const orphans = [
+    ...referenced
+  ].filter((id) => typeof id === "string" && id !== HIDDEN && !listed.has(id));
+  const ownDeck = [];
+  const oppHand = [];
+  const oppDeck = [];
+  for (const id of orphans) {
+    if (breachRefs.has(id) && breach) {
+      if (breach.server === "hq") oppHand.push(id);
+      else if (breach.server === "rd") breachViewerDeck(view, id, ownDeck, oppDeck);
+      continue;
+    }
+    ownDeck.push(id);
+  }
+  return {
+    ownDeck,
+    oppHand,
+    oppDeck
+  };
+}
+function breachViewerDeck(view, _id, ownDeck, oppDeck) {
+  if (view.viewer === "corp") ownDeck.push(_id);
+  else oppDeck.push(_id);
+}
+function eventCardIds(event) {
+  switch (event.type) {
+    case "load-credits":
+    case "take-credits":
+      return [
+        event.targetId
+      ];
+    case "damage":
+      return [
+        ...event.trashed
+      ];
+    case "install":
+    case "play":
+    case "rez":
+    case "derez":
+    case "advance":
+    case "score":
+    case "steal":
+    case "trash":
+    case "discard":
+    case "approach-ice":
+    case "encounter-ice":
+    case "resolve-subroutine":
+    case "break-subroutine":
+    case "pass-ice":
+    case "access":
+    case "pump-strength":
+      return [
+        event.cardId
+      ];
+    default:
+      return [];
+  }
+}
+function promptCardIds(prompt) {
+  const ids = [];
+  if (prompt.kind === "access-decision" && "cardId" in prompt) ids.push(prompt.cardId);
+  if ("options" in prompt) {
+    for (const option of prompt.options) {
+      if (option.targetId !== void 0) ids.push(option.targetId);
+      if (option.effect?.kind === "rez-card-free" && option.effect.targetId !== void 0) {
+        ids.push(option.effect.targetId);
+      }
+      if (option.effect?.kind === "corp-install-ice-inward") {
+        if (option.effect.iceId !== void 0) ids.push(option.effect.iceId);
+        if (option.effect.targetId !== void 0) ids.push(option.effect.targetId);
+      }
+    }
+  }
+  return ids;
+}
+function buildServers(view, pool, rng, pinnedId) {
+  const order = [
+    "hq",
+    "rd",
+    "archives"
+  ];
+  const servers = /* @__PURE__ */ new Map();
+  for (const id of order) servers.set(id, {
+    id,
+    root: [],
+    ice: []
+  });
+  const ensure = (id) => {
+    let s = servers.get(id);
+    if (!s) {
+      s = {
+        id,
+        root: [],
+        ice: []
+      };
+      servers.set(id, s);
+      order.push(id);
+    }
+    return s;
+  };
+  for (const v of view.corp.installed) {
+    const server = ensure(v.server ?? "hq");
+    let cardId;
+    if (v.cardId !== HIDDEN) {
+      cardId = v.cardId;
+    } else {
+      const pinned = pinnedId(v);
+      cardId = pinned ?? (v.position === "ice" ? pool.draw(rng, (id) => isIce(cardDef(id)), `an unrezzed ice (${v.id})`) : pool.draw(
+        rng,
+        // upgrades (operations/events can never be installed there).
+        (id) => {
+          const type = cardDef(id).type;
+          return type === "asset" || type === "agenda" || type === "upgrade";
+        },
+        `an unrezzed server-root card (${v.id})`
+      ));
+    }
+    const card = instanceOf(v, cardId);
+    if (v.position === "ice") server.ice.push(card);
+    else server.root.push(card);
+  }
+  return order.map((id) => servers.get(id));
+}
+function shuffleArray(rng, list) {
+  for (let i = list.length - 1; i > 0; i--) {
+    const j = Math.floor(rng.next() * (i + 1));
+    const tmp = list[i];
+    list[i] = list[j];
+    list[j] = tmp;
+  }
+}
+function assertSize(actual, expected, what, expectedDesc) {
+  if (actual !== expected) {
+    throw new Error(`determinize: ${what} has ${actual} cards but the view's ${expectedDesc} is ${expected}; AIDecisionContext is inconsistent with the view`);
+  }
+}
+
+// src/engine/public-status.ts
+var HIDDEN2 = "hidden";
+function viewCard(card, hidden, position) {
   return {
     id: card.id,
-    cardId: hidden ? HIDDEN : card.cardId,
+    cardId: hidden ? HIDDEN2 : card.cardId,
+    owner: card.owner,
     rezzed: card.rezzed,
     advancement: card.advancement,
     hostedCredits: card.hostedCredits,
     strength: hidden ? void 0 : cardDef(card.cardId).strength ?? void 0,
+    strengthBoost: hidden ? void 0 : card.strengthBoost,
     iceIndex: card.iceIndex,
+    position,
     zone: card.zone,
     server: card.server
   };
@@ -21592,8 +22186,8 @@ function serverStatus(state, id, hideInstalled) {
   const iceVisible = s.ice.filter((c) => !hideInstalled || c.rezzed === true);
   return {
     id,
-    root: s.root.map((c) => viewCard(c, hideInstalled && c.rezzed !== true)),
-    ice: iceVisible.map((c) => viewCard(c, false)),
+    root: s.root.map((c) => viewCard(c, hideInstalled && c.rezzed !== true, "root")),
+    ice: iceVisible.map((c) => viewCard(c, false, "ice")),
     unrezzedIceCount: s.ice.length - iceVisible.length
   };
 }
@@ -21900,6 +22494,60 @@ function drawInitial(state, side, count) {
   });
 }
 
+// src/ai/context.ts
+function makeAIDecisionContext(state, side, seed) {
+  const opponent = other(side);
+  const opp = player(state, opponent);
+  const accessedId = state.breach?.accessing;
+  const ownDeck = player(state, side).deck.map((c) => c.cardId);
+  const unseen = [];
+  for (const card of opp.hand) if (card.id !== accessedId) unseen.push(card.cardId);
+  for (const card of opp.deck) if (card.id !== accessedId) unseen.push(card.cardId);
+  if (side === "runner") {
+    for (const server of state.servers) {
+      for (const card of [
+        ...server.root,
+        ...server.ice
+      ]) {
+        if (card.id === accessedId) continue;
+        if (card.rezzed !== true) unseen.push(card.cardId);
+      }
+    }
+    for (const card of state.corp.discard) {
+      if (card.id === accessedId) continue;
+      unseen.push(card.cardId);
+    }
+  }
+  return {
+    side,
+    ownDeck: ownDeck.sort(),
+    unseen: unseen.sort(),
+    seed
+  };
+}
+function infoSetKey(view) {
+  const { events: _events, ...rest } = view;
+  return fnv1aHex(stableStringify(rest));
+}
+function decisionSeedFor(view) {
+  return parseInt(infoSetKey(view), 16) | 0;
+}
+function stableStringify(value) {
+  if (value === null || typeof value !== "object") return JSON.stringify(value) ?? "null";
+  if (Array.isArray(value)) return `[${value.map(stableStringify).join(",")}]`;
+  const obj = value;
+  const keys = Object.keys(obj).sort();
+  return `{${keys.map((k) => `${JSON.stringify(k)}:${stableStringify(obj[k])}`).join(",")}}`;
+}
+function fnv1aHex(text) {
+  let hash = 2166136261;
+  for (let i = 0; i < text.length; i++) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(16).padStart(8, "0");
+}
+
 // src/ai/play.ts
 var AiGameError = class extends Error {
   side;
@@ -21926,7 +22574,9 @@ function playGame(config) {
     if (legal.length === 0) {
       throw new AiGameError(`no legal moves for ${side} on turn ${state.turn.number} (${state.turn.phase})`, side, null);
     }
-    const move = ai.chooseMove(state, side, legal);
+    const view = engine.getPlayerView(state, side);
+    const ctx = makeAIDecisionContext(state, side, decisionSeedFor(view));
+    const move = ai.chooseMove(view, legal, ctx);
     const result = engine.applyMove(state, side, move);
     if (result.kind === "illegal-move") {
       throw new AiGameError(`${ai.name} (${side}) played an illegal move: ${result.reason}`, side, move);
@@ -21946,288 +22596,45 @@ function playGame(config) {
 // src/ai/random.ts
 var RandomAI = class {
   name = "random";
-  rngState;
-  constructor(seed = 2654435769) {
-    this.rngState = seed | 0;
-  }
-  /** mulberry32: float in [0, 1), advancing this AI's own PRNG state. */
-  next() {
-    this.rngState = this.rngState + 1831565813 | 0;
-    let t = this.rngState;
-    t = Math.imul(t ^ t >>> 15, t | 1);
-    t ^= t + Math.imul(t ^ t >>> 7, t | 61);
-    return ((t ^ t >>> 14) >>> 0) / 4294967296;
-  }
-  chooseMove(_state, _side, legal) {
-    const idx = Math.floor(this.next() * legal.length);
+  chooseMove(_view, legal, ctx) {
+    const rng = makeRng(ctx.seed);
+    const idx = Math.floor(rng.next() * legal.length);
     return legal[idx] ?? legal[0];
   }
 };
 var randomAI = new RandomAI();
 
-// src/ai/fast-clone.ts
-function fastCloneState(state) {
-  return {
-    ...state,
-    turn: {
-      ...state.turn
-    },
-    corp: clonePlayer(state.corp),
-    runner: clonePlayer(state.runner),
-    servers: state.servers.map(cloneServer),
-    run: state.run ? cloneRun(state.run) : null,
-    breach: state.breach ? cloneBreach(state.breach) : null,
-    prompts: state.prompts.map(clonePrompt),
-    log: state.log.map(cloneEvent),
-    supportWarnings: [
-      ...state.supportWarnings
-    ]
-  };
-}
-function clonePlayer(p2) {
-  return {
-    ...p2,
-    identity: cloneCard(p2.identity),
-    hand: p2.hand.map(cloneCard),
-    deck: p2.deck.map(cloneCard),
-    discard: p2.discard.map(cloneCard),
-    score: p2.score.map(cloneCard),
-    installed: p2.installed.map(cloneCard),
-    installedThisTurn: [
-      ...p2.installedThisTurn
-    ],
-    ranServersThisTurn: [
-      ...p2.ranServersThisTurn
-    ],
-    usedOncePerTurn: [
-      ...p2.usedOncePerTurn
-    ]
-  };
-}
-function cloneCard(c) {
-  return {
-    ...c
-  };
-}
-function cloneServer(s) {
-  return {
-    ...s,
-    root: s.root.map(cloneCard),
-    ice: s.ice.map(cloneCard)
-  };
-}
-function cloneRun(r) {
-  return {
-    ...r,
-    broken: [
-      ...r.broken
-    ],
-    resolved: [
-      ...r.resolved
-    ]
-  };
-}
-function cloneBreach(b) {
-  return {
-    ...b,
-    chosen: [
-      ...b.chosen
-    ]
-  };
-}
-function clonePrompt(p2) {
-  if (p2.kind === "rez-window" || p2.kind === "choose-one") {
-    return {
-      ...p2,
-      options: p2.options.map(cloneOption)
-    };
-  }
-  return {
-    ...p2
-  };
-}
-function cloneOption(o) {
-  const out = {
-    ...o
-  };
-  if (o.effect !== void 0) out.effect = {
-    ...o.effect
-  };
-  return out;
-}
-function cloneEvent(e) {
-  return e.type === "damage" ? {
-    ...e,
-    trashed: [
-      ...e.trashed
-    ]
-  } : {
-    ...e
-  };
-}
-
-// src/ai/uct.ts
-var UctAI = class {
-  name = "uct";
-  iterations;
-  exploration;
-  playoutDepth;
-  timeBudgetMs;
-  constructor(options = {}) {
-    this.iterations = options.iterations ?? 60;
-    this.exploration = options.exploration ?? Math.SQRT2;
-    this.playoutDepth = options.playoutDepth ?? 200;
-    this.timeBudgetMs = options.timeBudgetMs ?? 2e3;
-  }
-  chooseMove(state, side, legal) {
-    if (legal.length === 1) return legal[0];
-    const rootState = fastCloneState({
-      ...state,
-      log: []
-    });
-    rootState.drawMode = "random";
-    const root = {
-      visits: 0,
-      totalReward: 0,
-      moves: legal,
-      children: legal.map(() => null),
-      playerJustMoved: other(side)
-    };
-    const deadline = Date.now() + this.timeBudgetMs;
-    for (let i = 0; i < this.iterations && Date.now() < deadline; i++) {
-      const sim = fastCloneState(rootState);
-      this.iterate(sim, root, side);
-    }
-    let best = -1;
-    let bestIndex = 0;
-    for (let i = 0; i < root.children.length; i++) {
-      const child = root.children[i];
-      const visits = child?.node.visits ?? 0;
-      if (visits > best) {
-        best = visits;
-        bestIndex = i;
-      }
-    }
-    return legal[bestIndex] ?? legal[0];
-  }
-  /** One MCTS iteration: select, expand, simulate, back-propagate. */
-  iterate(sim, root, me) {
-    const path = [];
-    let node = root;
-    while (node.moves.length > 0 && node.children.every((c) => c !== null)) {
-      let bestScore = -Infinity;
-      let bestIndex = 0;
-      for (let i = 0; i < node.children.length; i++) {
-        const child2 = node.children[i];
-        const score = ucb1(child2.node.totalReward, child2.node.visits, node.visits, this.exploration);
-        if (score > bestScore) {
-          bestScore = score;
-          bestIndex = i;
-        }
-      }
-      const child = node.children[bestIndex];
-      path.push({
-        node,
-        childIndex: bestIndex
-      });
-      const result = engine.applyMove(sim, other(node.playerJustMoved ?? "corp"), child.move, {
-        mutate: true
-      });
-      if (result.kind === "illegal-move") return;
-      node = child.node;
-      if (sim.winner) break;
-    }
-    let expanded = false;
-    for (let i = 0; i < node.children.length; i++) {
-      if (node.children[i] !== null) continue;
-      const move = node.moves[i];
-      const result = engine.applyMove(sim, other(node.playerJustMoved ?? "corp"), move, {
-        mutate: true
-      });
-      if (result.kind === "illegal-move") continue;
-      const side = sim.turn.player;
-      const legal = engine.getLegalMoves(sim, side);
-      const child = {
-        move,
-        node: {
-          visits: 0,
-          totalReward: 0,
-          moves: legal,
-          children: legal.map(() => null),
-          playerJustMoved: other(side)
-        }
-      };
-      node.children[i] = child;
-      path.push({
-        node,
-        childIndex: i
-      });
-      node = child.node;
-      expanded = true;
-      break;
-    }
-    void expanded;
-    const reward = this.playout(sim, me);
-    node.visits += 1;
-    node.totalReward += node.playerJustMoved === me ? reward : -reward;
-    for (let i = path.length - 1; i >= 0; i--) {
-      const step = path[i];
-      step.node.visits += 1;
-      step.node.totalReward += step.node.playerJustMoved === me ? reward : -reward;
-    }
-  }
-  /** Uniform-random playout; returns the terminal reward from `me`'s view. */
-  playout(sim, me) {
-    for (let depth = 0; depth < this.playoutDepth; depth++) {
-      if (sim.winner) break;
-      const side = sim.turn.player;
-      const legal = engine.getLegalMoves(sim, side);
-      if (legal.length === 0) break;
-      const move = legal[rngInt(sim, legal.length)];
-      const result = engine.applyMove(sim, side, move, {
-        mutate: true
-      });
-      if (result.kind === "illegal-move") break;
-    }
-    return terminalReward(sim, me);
-  }
-};
-function terminalReward(sim, me) {
-  if (sim.winner === "draw") return 0;
-  if (sim.winner === me) return 1;
-  if (sim.winner !== null) return -1;
-  const mine = sim[me];
-  const theirs = sim[me === "corp" ? "runner" : "corp"];
-  const pointDiff = (mine.agendaPoints - theirs.agendaPoints) / sim.agendaPointTarget;
-  const creditDiff = (mine.credits - theirs.credits) / 20;
-  const raw = pointDiff * 0.8 + creditDiff * 0.2;
-  return Math.max(-0.99, Math.min(0.99, raw));
-}
-function ucb1(reward, visits, parentVisits, c) {
-  if (visits === 0) return Infinity;
-  const mean = reward / visits;
-  return mean + c * Math.sqrt(Math.log(parentVisits + 1) / visits);
-}
-function other(side) {
-  return side === "corp" ? "runner" : "corp";
-}
-var uctAI = new UctAI();
-
 // src/mod.ts
-var HIDDEN2 = "hidden";
+var HIDDEN3 = "hidden";
 function viewCard2(card, opts = {}) {
   const hidden = opts.hidden === true;
   return {
     id: card.id,
-    cardId: hidden ? HIDDEN2 : card.cardId,
+    cardId: hidden ? HIDDEN3 : card.cardId,
+    owner: card.owner,
     rezzed: card.rezzed,
     advancement: card.advancement,
     hostedCredits: card.hostedCredits,
     strength: hidden ? void 0 : cardDef(card.cardId).strength ?? void 0,
+    strengthBoost: hidden ? void 0 : card.strengthBoost,
     iceIndex: card.iceIndex,
+    position: opts.position,
     zone: card.zone,
     server: card.server
   };
+}
+function corpInstalledView(state, viewer) {
+  const hide = viewer !== "corp";
+  return state.servers.flatMap((s) => [
+    ...s.root.map((c) => viewCard2(c, {
+      hidden: hide && c.rezzed !== true,
+      position: "root"
+    })),
+    ...s.ice.map((c) => viewCard2(c, {
+      hidden: hide && c.rezzed !== true,
+      position: "ice"
+    }))
+  ]);
 }
 function sideCards(state, side) {
   const p2 = player(state, side);
@@ -22241,14 +22648,35 @@ function sideCards(state, side) {
     score: p2.score
   };
 }
+function turnStateOf(state, side) {
+  const p2 = player(state, side);
+  return {
+    installedThisTurn: [
+      ...p2.installedThisTurn
+    ],
+    basicDrawThisTurn: p2.basicDrawThisTurn,
+    successfulRunThisTurn: p2.successfulRunThisTurn,
+    ranServersThisTurn: [
+      ...p2.ranServersThisTurn
+    ],
+    hqBreachesThisTurn: p2.hqBreachesThisTurn,
+    usedOncePerTurn: [
+      ...p2.usedOncePerTurn
+    ],
+    pendingRunFund: p2.pendingRunFund
+  };
+}
+function handView(state, side, viewer) {
+  return side === viewer ? player(state, side).hand.map((c) => viewCard2(c)) : [];
+}
+function discardView(state, side, viewer) {
+  const p2 = player(state, side);
+  if (side === "runner" || side === viewer) return p2.discard.map((c) => viewCard2(c));
+  return p2.discard.map((c) => viewCard2(c, {
+    hidden: true
+  }));
+}
 function getPlayerView(state, viewer) {
-  const hideCorpInstalled = viewer !== "corp";
-  const corpInstalled = state.servers.flatMap((s) => [
-    ...s.root,
-    ...s.ice
-  ].map((c) => viewCard2(c, {
-    hidden: hideCorpInstalled && c.rezzed !== true
-  })));
   const corpSide = sideCards(state, "corp");
   const runnerSide = sideCards(state, "runner");
   return {
@@ -22259,6 +22687,7 @@ function getPlayerView(state, viewer) {
     winner: state.winner,
     winReason: state.winReason,
     agendaPointTarget: state.agendaPointTarget,
+    mode: state.mode,
     corp: {
       credits: state.corp.credits,
       clicks: state.corp.clicks,
@@ -22270,7 +22699,10 @@ function getPlayerView(state, viewer) {
       tags: state.corp.tags,
       identity: viewCard2(state.corp.identity),
       score: corpSide.score.map((c) => viewCard2(c)),
-      installed: corpInstalled
+      installed: corpInstalledView(state, viewer),
+      hand: handView(state, "corp", viewer),
+      discard: discardView(state, "corp", viewer),
+      turnState: turnStateOf(state, "corp")
     },
     runner: {
       credits: state.runner.credits,
@@ -22282,7 +22714,11 @@ function getPlayerView(state, viewer) {
       agendaPoints: state.runner.agendaPoints,
       identity: viewCard2(state.runner.identity),
       score: runnerSide.score.map((c) => viewCard2(c)),
-      installed: runnerSide.installed.map((c) => viewCard2(c))
+      installed: runnerSide.installed.map((c) => viewCard2(c)),
+      hand: handView(state, "runner", viewer),
+      discard: discardView(state, "runner", viewer),
+      tags: state.runner.tags,
+      turnState: turnStateOf(state, "runner")
     },
     run: state.run ? {
       server: state.run.server,
@@ -22291,16 +22727,27 @@ function getPlayerView(state, viewer) {
       currentIce: state.run.currentIceId ? viewCard2(findCard(state, state.run.currentIceId)?.card ?? state.corp.identity, {
         // The ice being approached is public once rezzed (rules 1.21.1a,
         // 4.6.3): every player reads Rezzed ice off the table.
-        hidden: hideCorpInstalled && findCard(state, state.run.currentIceId)?.card.rezzed !== true
+        hidden: viewer !== "corp" && findCard(state, state.run.currentIceId)?.card.rezzed !== true,
+        position: "ice"
       }) : void 0,
       broken: [
         ...state.run.broken
-      ]
+      ],
+      resolved: [
+        ...state.run.resolved
+      ],
+      source: state.run.source,
+      fundCredits: state.run.fundCredits,
+      rezCostIncrease: state.run.rezCostIncrease,
+      tollPaid: state.run.tollPaid
     } : null,
     breach: state.breach ? {
       server: state.breach.server,
       randomAccessLimit: state.breach.randomAccessLimit,
       remaining: Math.max(0, state.breach.randomAccessLimit - state.breach.randomAccessesUsed),
+      chosen: [
+        ...state.breach.chosen
+      ],
       accessing: state.breach.accessing ? viewCard2(findCard(state, state.breach.accessing)?.card ?? state.corp.identity) : void 0
     } : null,
     prompts: state.prompts.map((p2) => visiblePrompt(p2, viewer)),
@@ -22319,7 +22766,7 @@ function visiblePrompt(prompt, viewer) {
   };
 }
 function visibleEvent(state, event, viewer) {
-  const vis = (id) => cardVisibleTo(state, id, viewer) ? id : HIDDEN2;
+  const vis = (id) => cardVisibleTo(state, id, viewer) ? id : HIDDEN3;
   switch (event.type) {
     case "load-credits":
     case "take-credits":
@@ -23369,18 +23816,12 @@ var app_default = defineComponent({
     const strength = shallowRef(1);
     const thinking = shallowRef(false);
     const lastWarning = shallowRef("");
-    let aiOption = {
-      iterations: 60,
-      timeBudgetMs: 1200
-    };
     let ai = null;
-    function start(side, gameSeed, preset) {
+    let aiDecisions = 0;
+    function start(side, gameSeed, _preset) {
       const decks = starterDeckConfigs();
-      aiOption = {
-        iterations: preset.iterations,
-        timeBudgetMs: preset.timeBudgetMs
-      };
-      ai = new UctAI(aiOption);
+      ai = new RandomAI();
+      aiDecisions = 0;
       humanSide.value = side;
       seed.value = gameSeed;
       thinking.value = false;
@@ -23409,7 +23850,13 @@ var app_default = defineComponent({
         const legal = engine.getLegalMoves(live, actor);
         let move;
         try {
-          move = legal.length ? ai.chooseMove(live, actor, legal) : null;
+          if (legal.length === 0) {
+            move = null;
+          } else {
+            const view = engine.getPlayerView(live, actor);
+            const ctx = makeAIDecisionContext(live, actor, decisionSeedFor(view));
+            move = ai.chooseMove(view, legal, ctx);
+          }
         } catch (err) {
           thinking.value = false;
           lastWarning.value = `AI error: ${err instanceof Error ? err.message : String(err)}`;
@@ -23471,8 +23918,8 @@ var app_default = defineComponent({
       <section v-else class="setup" data-testid="setup">
         <h1>Netrunner \u2014 CyberClick Starters</h1>
         <p class="tagline">
-          Human Runner vs. a UCT Monte-Carlo AI playing the Corp.
-          Pick a side, a seed, and the AI's search strength.
+          Human vs. an AI opponent (placeholder random AI for now; a real
+          evaluation AI lands in the next phase). Pick a side and a seed.
         </p>
 
         <div class="setup-grid">

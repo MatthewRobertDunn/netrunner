@@ -30,7 +30,11 @@
  * progress, pending prompts and support warnings. It never leaks hidden
  * information, so both players can safely call it and receive the same value.
  *
- * AI players live in `src/ai/mod.ts` (`RandomAI`, `UctAI`, `playGame`).
+ * AI players live in `src/ai/mod.ts` (`RandomAI`, `playGame`). They never see a
+ * `GameState`: `GameAI.chooseMove` takes only a sanitized `PlayerView`, the
+ * legal moves, and an `AIDecisionContext`. An AI builds its own hypothetical
+ * worlds with `determinize(view, ctx, rng)` and may then use `applyMove` /
+ * `getLegalMoves` on those hypotheses.
  */
 
 import { cardDef, tryCardDef } from "./cards/catalogue.ts";
@@ -41,8 +45,10 @@ import {
   verifyFixtureAgainstSnapshot,
 } from "./decks/starter-decks-cyberclick-v1.ts";
 import { applyMove } from "./engine/apply.ts";
+import { determinize } from "./engine/determinize.ts";
 import { getLegalMoves } from "./engine/legal-moves.ts";
 import { getPublicGameStatus, getPublicGameStatusFor } from "./engine/public-status.ts";
+import { makeRng } from "./engine/rng.ts";
 import { startGame, validateDeck } from "./engine/setup.ts";
 import { cardVisibleTo, findCard, player } from "./engine/state.ts";
 import { maxHandSize } from "./engine/turns.ts";
@@ -61,6 +67,7 @@ import type {
   IllegalMove,
   Move,
   PlayerSide,
+  PlayerTurnState,
   PlayerView,
   Prompt,
   PromptStub,
@@ -68,13 +75,17 @@ import type {
   ServerId,
   ViewCard,
 } from "./types.ts";
+import type { Rng } from "./engine/rng.ts";
 
 export * from "./types.ts";
+export type { Rng };
 export {
   applyMove,
+  determinize,
   getLegalMoves,
   getPublicGameStatus,
   getPublicGameStatusFor,
+  makeRng,
   startGame,
   validateDeck,
 };
@@ -92,24 +103,43 @@ const HIDDEN = "hidden" as const;
  *
  * Hiding must cover every field that fingerprints a card, strength included:
  * most starter ice are uniquely identified by their printed strength (rules
- * 10.2.2, 4.6.3).
+ * 10.2.2, 4.6.3). Temporary boosts (`strengthBoost`) are open counters but are
+ * suppressed alongside the id for the same reason. `owner` and `position`
+ * (ice-vs-root placement, rule 4.6.2) are always open information.
  */
 function viewCard(
   card: CardInstance,
-  opts: { hidden?: boolean } = {},
+  opts: { hidden?: boolean; position?: ViewCard["position"] } = {},
 ): ViewCard {
   const hidden = opts.hidden === true;
   return {
     id: card.id,
     cardId: hidden ? HIDDEN : card.cardId,
+    owner: card.owner,
     rezzed: card.rezzed,
     advancement: card.advancement,
     hostedCredits: card.hostedCredits,
     strength: hidden ? undefined : cardDef(card.cardId).strength ?? undefined,
+    strengthBoost: hidden ? undefined : card.strengthBoost,
     iceIndex: card.iceIndex,
+    position: opts.position,
     zone: card.zone,
     server: card.server,
   };
+}
+
+/**
+ * All corp cards installed in servers, preserving state.servers order and,
+ * within each server, root-then-ice order. `position` marks which list each
+ * card came from — the ice-vs-root placement is open information (rule 4.6.2)
+ * even when the card's identity is not (rule 4.6.3).
+ */
+function corpInstalledView(state: GameState, viewer: PlayerSide): ViewCard[] {
+  const hide = viewer !== "corp";
+  return state.servers.flatMap((s) => [
+    ...s.root.map((c) => viewCard(c, { hidden: hide && c.rezzed !== true, position: "root" })),
+    ...s.ice.map((c) => viewCard(c, { hidden: hide && c.rezzed !== true, position: "ice" })),
+  ]);
 }
 
 function sideCards(state: GameState, side: PlayerSide) {
@@ -125,6 +155,42 @@ function sideCards(state: GameState, side: PlayerSide) {
   };
 }
 
+function turnStateOf(state: GameState, side: PlayerSide): PlayerTurnState {
+  const p = player(state, side);
+  return {
+    installedThisTurn: [...p.installedThisTurn],
+    basicDrawThisTurn: p.basicDrawThisTurn,
+    successfulRunThisTurn: p.successfulRunThisTurn,
+    ranServersThisTurn: [...p.ranServersThisTurn],
+    hqBreachesThisTurn: p.hqBreachesThisTurn,
+    usedOncePerTurn: [...p.usedOncePerTurn],
+    pendingRunFund: p.pendingRunFund,
+  };
+}
+
+/**
+ * A player's hand as `viewer` may see it: full detail for the owner (a player
+ * may look at their own hand, rule 4.3.2), nothing at all for anyone else —
+ * only `handCount` is open (rule 4.3.4).
+ */
+function handView(state: GameState, side: PlayerSide, viewer: PlayerSide): ViewCard[] {
+  return side === viewer ? player(state, side).hand.map((c) => viewCard(c)) : [];
+}
+
+/**
+ * A player's discard pile as `viewer` may see it. The Runner's heap is open
+ * information to everyone (rule 4.4.7b). The Corp's Archives is open only to
+ * the Corp (rules 4.4.6c/1.21.2a: facedown cards are examined by the player
+ * controlling them); this engine does not yet model the faceup/facedown split
+ * (TODO in `moveCardTo`), so other viewers see every entry as "hidden" — a
+ * conservative deviation, not a rules claim.
+ */
+function discardView(state: GameState, side: PlayerSide, viewer: PlayerSide): ViewCard[] {
+  const p = player(state, side);
+  if (side === "runner" || side === viewer) return p.discard.map((c) => viewCard(c));
+  return p.discard.map((c) => viewCard(c, { hidden: true }));
+}
+
 /**
  * Project the authoritative state into what `viewer` is allowed to see.
  *
@@ -136,13 +202,6 @@ function sideCards(state: GameState, side: PlayerSide) {
  * labels and target ids routinely name hidden cards (rules 10.2.2, 10.2.3).
  */
 export function getPlayerView(state: GameState, viewer: PlayerSide): PlayerView {
-  const hideCorpInstalled = viewer !== "corp";
-  const corpInstalled: ViewCard[] = state.servers.flatMap((s) =>
-    [...s.root, ...s.ice].map((c) =>
-      viewCard(c, { hidden: hideCorpInstalled && c.rezzed !== true })
-    )
-  );
-
   const corpSide = sideCards(state, "corp");
   const runnerSide = sideCards(state, "runner");
 
@@ -152,6 +211,7 @@ export function getPlayerView(state: GameState, viewer: PlayerSide): PlayerView 
     winner: state.winner,
     winReason: state.winReason,
     agendaPointTarget: state.agendaPointTarget,
+    mode: state.mode,
     corp: {
       credits: state.corp.credits,
       clicks: state.corp.clicks,
@@ -163,7 +223,10 @@ export function getPlayerView(state: GameState, viewer: PlayerSide): PlayerView 
       tags: state.corp.tags,
       identity: viewCard(state.corp.identity),
       score: corpSide.score.map((c) => viewCard(c)),
-      installed: corpInstalled,
+      installed: corpInstalledView(state, viewer),
+      hand: handView(state, "corp", viewer),
+      discard: discardView(state, "corp", viewer),
+      turnState: turnStateOf(state, "corp"),
     },
     runner: {
       credits: state.runner.credits,
@@ -176,6 +239,10 @@ export function getPlayerView(state: GameState, viewer: PlayerSide): PlayerView 
       identity: viewCard(state.runner.identity),
       score: runnerSide.score.map((c) => viewCard(c)),
       installed: runnerSide.installed.map((c) => viewCard(c)),
+      hand: handView(state, "runner", viewer),
+      discard: discardView(state, "runner", viewer),
+      tags: state.runner.tags,
+      turnState: turnStateOf(state, "runner"),
     },
     run: state.run
       ? {
@@ -186,11 +253,17 @@ export function getPlayerView(state: GameState, viewer: PlayerSide): PlayerView 
           ? viewCard(findCard(state, state.run.currentIceId)?.card ?? state.corp.identity, {
             // The ice being approached is public once rezzed (rules 1.21.1a,
             // 4.6.3): every player reads Rezzed ice off the table.
-            hidden: hideCorpInstalled &&
+            hidden: viewer !== "corp" &&
               findCard(state, state.run.currentIceId)?.card.rezzed !== true,
+            position: "ice",
           })
           : undefined,
         broken: [...state.run.broken],
+        resolved: [...state.run.resolved],
+        source: state.run.source,
+        fundCredits: state.run.fundCredits,
+        rezCostIncrease: state.run.rezCostIncrease,
+        tollPaid: state.run.tollPaid,
       }
       : null,
     breach: state.breach
@@ -201,6 +274,7 @@ export function getPlayerView(state: GameState, viewer: PlayerSide): PlayerView 
           0,
           state.breach.randomAccessLimit - state.breach.randomAccessesUsed,
         ),
+        chosen: [...state.breach.chosen],
         accessing: state.breach.accessing
           ? viewCard(findCard(state, state.breach.accessing)?.card ?? state.corp.identity)
           : undefined,

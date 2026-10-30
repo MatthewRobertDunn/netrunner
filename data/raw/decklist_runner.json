@@ -1,1 +1,54 @@
-{"data":{"id":"4b9cf488-5bd9-4415-a57a-0864d4d0e600","type":"decklists","attributes":{"user_id":"CyberClick","follows_basic_deckbuilding_rules":true,"identity_card_id":"the_catalyst_convention_breaker","name":"[System Gateway] Runner Starter Deck","notes":"\u003cp\u003eThis is the System Gateway Runner \u003cem\u003eStarter Deck\u003c/em\u003e with pips. \nNo so called 'Booster' cards.\u003c/p\u003e\n","tags":null,"side_id":"runner","created_at":"2021-03-29T13:24:24+00:00","updated_at":"2026-06-07T22:26:32+00:00","faction_id":"neutral_runner","card_slots":{"carmen":2,"cleaver":2,"creative_commission":2,"docklands_pass":1,"jailbreak":3,"mayfly":2,"overclock":2,"pennyshaver":1,"red_team":1,"smartware_distributor":2,"sure_gamble":3,"telework_contract":2,"the_catalyst_convention_breaker":1,"tread_lightly":2,"unity":2,"verbal_plasticity":1,"vrcation":2},"num_cards":30,"influence_spent":33},"relationships":{"side":{"links":{"related":"https://api.netrunnerdb.com/api/v3/public/sides/runner"}},"faction":{"links":{"related":"https://api.netrunnerdb.com/api/v3/public/factions/neutral_runner"}},"cards":{"links":{"related":"https://api.netrunnerdb.com/api/v3/public/cards?filter[decklist_id]=4b9cf488-5bd9-4415-a57a-0864d4d0e600"}}},"links":{"self":"https://api.netrunnerdb.com/api/v3/public/decklists/4b9cf488-5bd9-4415-a57a-0864d4d0e600"}},"meta":{}}
+{
+  "data": {
+    "id": "4b9cf488-5bd9-4415-a57a-0864d4d0e600",
+    "type": "decklists",
+    "attributes": {
+      "user_id": "CyberClick",
+      "follows_basic_deckbuilding_rules": true,
+      "identity_card_id": "the_catalyst_convention_breaker",
+      "name": "[System Gateway] Runner Starter Deck",
+      "notes": "\u003cp\u003eThis is the System Gateway Runner \u003cem\u003eStarter Deck\u003c/em\u003e with pips. \nNo so called 'Booster' cards.\u003c/p\u003e\n",
+      "tags": null,
+      "side_id": "runner",
+      "created_at": "2021-03-29T13:24:24+00:00",
+      "updated_at": "2026-06-07T22:26:32+00:00",
+      "faction_id": "neutral_runner",
+      "card_slots": {
+        "carmen": 2,
+        "cleaver": 2,
+        "creative_commission": 2,
+        "docklands_pass": 1,
+        "jailbreak": 3,
+        "mayfly": 2,
+        "overclock": 2,
+        "pennyshaver": 1,
+        "red_team": 1,
+        "smartware_distributor": 2,
+        "sure_gamble": 3,
+        "telework_contract": 2,
+        "the_catalyst_convention_breaker": 1,
+        "tread_lightly": 2,
+        "unity": 2,
+        "verbal_plasticity": 1,
+        "vrcation": 2
+      },
+      "num_cards": 30,
+      "influence_spent": 33
+    },
+    "relationships": {
+      "side": { "links": { "related": "https://api.netrunnerdb.com/api/v3/public/sides/runner" } },
+      "faction": {
+        "links": { "related": "https://api.netrunnerdb.com/api/v3/public/factions/neutral_runner" }
+      },
+      "cards": {
+        "links": {
+          "related": "https://api.netrunnerdb.com/api/v3/public/cards?filter[decklist_id]=4b9cf488-5bd9-4415-a57a-0864d4d0e600"
+        }
+      }
+    },
+    "links": {
+      "self": "https://api.netrunnerdb.com/api/v3/public/decklists/4b9cf488-5bd9-4415-a57a-0864d4d0e600"
+    }
+  },
+  "meta": {}
+}

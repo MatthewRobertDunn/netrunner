@@ -9,6 +9,7 @@
 
 import { engine, RandomAI, starterDeckConfigs } from "../src/mod.ts";
 import type { GameState, Move, PlayerSide } from "../src/types.ts";
+import { decide } from "./helpers/boundary.ts";
 import { assert } from "./helpers/assert.ts";
 
 function playRandomGame(
@@ -32,7 +33,7 @@ function playRandomGame(
     const legal = engine.getLegalMoves(state, side);
     if (legal.length === 0) break;
 
-    const move = ai.chooseMove(state, side, legal);
+    const move = decide(ai, state, side, legal, i + 1);
     const result = engine.applyMove(state, side, move);
     if (result.kind === "illegal-move") {
       illegalOffered++;
