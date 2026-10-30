@@ -61,13 +61,9 @@ function clonePlayer(p: PlayerState): PlayerState {
   };
 }
 
-/** The only nested field on CardInstance is brokenSubroutines. */
+/** CardInstance is flat — a spread copies every field. */
 function cloneCard(c: CardInstance): CardInstance {
-  const out: CardInstance = { ...c };
-  if (c.brokenSubroutines !== undefined) {
-    out.brokenSubroutines = [...c.brokenSubroutines];
-  }
-  return out;
+  return { ...c };
 }
 
 function cloneServer(s: GameState["servers"][number]): GameState["servers"][number] {

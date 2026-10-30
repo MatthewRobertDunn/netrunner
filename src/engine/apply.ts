@@ -9,6 +9,7 @@ import { applyChoice, applyPaidAbility, fireInstall, resolveSubroutine } from ".
 import { beginEncounter, endRun, finishRun, initiateRun, passIce, rezCard } from "./runs.ts";
 import {
   beginBreach,
+  chooseRandomAccess,
   doAccessChoice,
   finishAccess,
   scoreAgenda,
@@ -32,7 +33,6 @@ import {
   spendClicks,
   spendCredits,
 } from "./state.ts";
-import { rngNext } from "./rng.ts";
 import { getLegalMoves } from "./legal-moves.ts";
 import { beginCorpTurn, enterDiscardPhase, maxHandSize } from "./turns.ts";
 import type {
@@ -316,7 +316,11 @@ function applyResolvedMove(state: GameState, playerSide: PlayerSide, move: Move)
       break;
     }
     case "runner.accessRandom": {
-      const chosen = chooseRandomPublic(state);
+      // The random selection happens here, at apply time — move enumeration
+      // (`getLegalMoves`) is pure and only reports that random candidates
+      // exist. `chooseRandomAccess` advances the state PRNG exactly once per
+      // applied access, keeping games deterministic (rule 7.3.4a).
+      const chosen = chooseRandomAccess(state);
       if (chosen) doAccessChoice(state, chosen);
       break;
     }
@@ -698,41 +702,6 @@ function discardSpecific(state: GameState, side: PlayerSide, instanceId: string)
   if (!found) return;
   moveCardTo(state, found.card, "discard", side);
   state.log.push({ type: "discard", cardId: instanceId, player: side });
-}
-
-function chooseRandomPublic(state: GameState): string | null {
-  // Local copy of the helper in settle.ts to avoid an import cycle.
-  const breach = state.breach!;
-  const candidates = breachCandidatesLocal(state).filter((c) =>
-    c.random && !breach.chosen.includes(c.instanceId)
-  );
-  if (candidates.length === 0) return null;
-  const idx = Math.floor(rngNext(state) * candidates.length);
-  return candidates[idx]!.instanceId;
-}
-
-function breachCandidatesLocal(state: GameState): { instanceId: string; random: boolean }[] {
-  const breach = state.breach!;
-  const server = breach.server;
-  const result: { instanceId: string; random: boolean }[] = [];
-  const push = (c: CardInstance, random: boolean): void => {
-    if (breach.chosen.includes(c.id)) return;
-    result.push({ instanceId: c.id, random });
-  };
-  for (const c of serverById(state, server).root) push(c, false);
-  if (server === "hq") {
-    if (breach.randomAccessesUsed < breach.randomAccessLimit) {
-      for (const c of state.corp.hand) push(c, true);
-    }
-  } else if (server === "rd") {
-    if (breach.randomAccessesUsed < breach.randomAccessLimit) {
-      const top = state.corp.deck[0];
-      if (top) push(top, true);
-    }
-  } else if (server === "archives") {
-    for (const c of state.corp.discard) push(c, false);
-  }
-  return result;
 }
 
 function enterEndOfTurn(state: GameState): void {

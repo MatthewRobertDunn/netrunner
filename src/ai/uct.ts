@@ -69,9 +69,9 @@ export class UctAI implements GameAI {
     // The event log is output-only (nothing in the engine reads it for
     // logic), so drop it — each per-iteration clone is ~35% cheaper.
     const rootState = fastCloneState({ ...state, log: [] });
-    // Deck order is hidden information (rule 1.10). The AI must not be able to
-    // plan around a specific draw order, so simulations draw a random card
-    // from the remaining deck instead of the top one.
+    // Deck order is hidden information (rules 10.2.2, 4.3.4). The AI must not
+    // be able to plan around a specific draw order, so simulations draw a
+    // random card from the remaining deck instead of the top one.
     rootState.drawMode = "random";
     const root: Node = {
       visits: 0,

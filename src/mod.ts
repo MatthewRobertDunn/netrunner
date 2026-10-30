@@ -24,11 +24,11 @@
  * describing why it was rejected. The original state is never mutated.
  *
  * `getPublicGameStatus` returns a viewer-agnostic DTO of everything the
- * Comprehensive Rules (rule 1.10) treat as public knowledge: credits, clicks,
- * tags, agenda points, and hand/deck/discard counts for both players, plus
- * turn/phase, score area, server placement, run and breach progress, pending
- * prompts and support warnings. It never leaks hidden information, so both
- * players can safely call it and receive the same value.
+ * Comprehensive Rules (rules 10.2.2/10.2.3) treat as public knowledge: credits,
+ * clicks, tags, agenda points, and hand/deck/discard counts for both players
+ * (4.3.4), plus turn/phase, score area, server placement, run and breach
+ * progress, pending prompts and support warnings. It never leaks hidden
+ * information, so both players can safely call it and receive the same value.
  *
  * AI players live in `src/ai/mod.ts` (`RandomAI`, `UctAI`, `playGame`).
  */
@@ -44,7 +44,8 @@ import { applyMove } from "./engine/apply.ts";
 import { getLegalMoves } from "./engine/legal-moves.ts";
 import { getPublicGameStatus, getPublicGameStatusFor } from "./engine/public-status.ts";
 import { startGame, validateDeck } from "./engine/setup.ts";
-import { findCard, player } from "./engine/state.ts";
+import { cardVisibleTo, findCard, player } from "./engine/state.ts";
+import { maxHandSize } from "./engine/turns.ts";
 import type {
   ApplyMoveOptions,
   ApplyMoveResult,
@@ -55,11 +56,14 @@ import type {
   DeckValidationResult,
   GameConfig,
   GameEngine,
+  GameEvent,
   GameState,
   IllegalMove,
   Move,
   PlayerSide,
   PlayerView,
+  Prompt,
+  PromptStub,
   PublicGameStatus,
   ServerId,
   ViewCard,
@@ -83,7 +87,13 @@ export * from "./ai/mod.ts";
 
 const HIDDEN = "hidden" as const;
 
-/** Build a safe view of a card, hiding identity when required. */
+/**
+ * Build a safe view of a card, hiding identity when required.
+ *
+ * Hiding must cover every field that fingerprints a card, strength included:
+ * most starter ice are uniquely identified by their printed strength (rules
+ * 10.2.2, 4.6.3).
+ */
 function viewCard(
   card: CardInstance,
   opts: { hidden?: boolean } = {},
@@ -95,7 +105,7 @@ function viewCard(
     rezzed: card.rezzed,
     advancement: card.advancement,
     hostedCredits: card.hostedCredits,
-    strength: cardDef(card.cardId).strength ?? undefined,
+    strength: hidden ? undefined : cardDef(card.cardId).strength ?? undefined,
     iceIndex: card.iceIndex,
     zone: card.zone,
     server: card.server,
@@ -106,7 +116,7 @@ function sideCards(state: GameState, side: PlayerSide) {
   const p = player(state, side);
   return {
     handCount: p.hand.length,
-    handSize: p.hand.length,
+    handSize: maxHandSize(state, side),
     deckCount: p.deck.length,
     discardCount: p.discard.length,
     installed: p.installed,
@@ -120,7 +130,10 @@ function sideCards(state: GameState, side: PlayerSide) {
  *
  * Hidden information produced by another player (their hand/deck cards) is
  * replaced with `cardId: "hidden"`. Corp cards installed but not rezzed show
- * only counts and server placement until they are rezzed or accessed.
+ * only counts and server placement until they are rezzed or accessed. Event
+ * log entries naming cards the viewer may not see carry `"hidden"` instead of
+ * the id, and opponent prompts are stubbed down to kind/id/player — option
+ * labels and target ids routinely name hidden cards (rules 10.2.2, 10.2.3).
  */
 export function getPlayerView(state: GameState, viewer: PlayerSide): PlayerView {
   const hideCorpInstalled = viewer !== "corp";
@@ -137,6 +150,7 @@ export function getPlayerView(state: GameState, viewer: PlayerSide): PlayerView 
     viewer,
     turn: { ...state.turn },
     winner: state.winner,
+    winReason: state.winReason,
     agendaPointTarget: state.agendaPointTarget,
     corp: {
       credits: state.corp.credits,
@@ -154,7 +168,7 @@ export function getPlayerView(state: GameState, viewer: PlayerSide): PlayerView 
     runner: {
       credits: state.runner.credits,
       clicks: state.runner.clicks,
-      handSize: runnerSide.handCount,
+      handSize: runnerSide.handSize,
       handCount: runnerSide.handCount,
       deckCount: runnerSide.deckCount,
       discardCount: runnerSide.discardCount,
@@ -170,7 +184,10 @@ export function getPlayerView(state: GameState, viewer: PlayerSide): PlayerView 
         position: state.run.position,
         currentIce: state.run.currentIceId
           ? viewCard(findCard(state, state.run.currentIceId)?.card ?? state.corp.identity, {
-            hidden: hideCorpInstalled,
+            // The ice being approached is public once rezzed (rules 1.21.1a,
+            // 4.6.3): every player reads Rezzed ice off the table.
+            hidden: hideCorpInstalled &&
+              findCard(state, state.run.currentIceId)?.card.rezzed !== true,
           })
           : undefined,
         broken: [...state.run.broken],
@@ -189,9 +206,58 @@ export function getPlayerView(state: GameState, viewer: PlayerSide): PlayerView 
           : undefined,
       }
       : null,
-    prompts: state.prompts,
-    events: state.log,
+    prompts: state.prompts.map((p) => visiblePrompt(p, viewer)),
+    events: state.log.map((e) => visibleEvent(state, e, viewer)),
+    warnings: [...state.supportWarnings],
   };
+}
+
+/**
+ * A prompt as `viewer` may see it: full detail for the player who must answer
+ * (their own prompts never hide information from them), a stub for anyone else
+ * — option labels and target ids name hidden cards, so they cannot be shared
+ * (rules 10.2.2, 1.21.3).
+ */
+function visiblePrompt(prompt: Prompt, viewer: PlayerSide): Prompt | PromptStub {
+  if (prompt.player === viewer) return prompt;
+  return { kind: prompt.kind, id: prompt.id, player: prompt.player };
+}
+
+/**
+ * A log event as `viewer` may see it. Every card id reference is filtered
+ * through `cardVisibleTo`; anything the viewer is not entitled to see (a
+ * facedown install, a card trashed from the opponent's hand by damage) becomes
+ * "hidden". The event's shape is otherwise unchanged (rules 10.2.2, 4.2).
+ */
+function visibleEvent(state: GameState, event: GameEvent, viewer: PlayerSide): GameEvent {
+  const vis = (id: CardInstanceId): CardInstanceId | "hidden" =>
+    cardVisibleTo(state, id, viewer) ? id : HIDDEN;
+  switch (event.type) {
+    case "load-credits":
+    case "take-credits":
+      return { ...event, targetId: vis(event.targetId) };
+    case "install":
+    case "play":
+    case "rez":
+    case "derez":
+    case "advance":
+    case "score":
+    case "steal":
+    case "trash":
+    case "discard":
+    case "approach-ice":
+    case "encounter-ice":
+    case "resolve-subroutine":
+    case "break-subroutine":
+    case "pass-ice":
+    case "access":
+    case "pump-strength":
+      return { ...event, cardId: vis(event.cardId) };
+    case "damage":
+      return { ...event, trashed: event.trashed.map(vis) };
+    default:
+      return event;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -247,8 +313,8 @@ export const engine: GameEngine = {
     return applyMove(state, player, move, opts);
   },
   /**
-   * Public game status (rule 1.10): only information both players are always
-   * entitled to see, so this returns the same value for either viewer.
+   * Public game status (rules 10.2.2/10.2.3): only information both players
+   * are always entitled to see, so this returns the same value for either viewer.
    */
   getPublicGameStatus(state: GameState): PublicGameStatus {
     return getPublicGameStatus(state);

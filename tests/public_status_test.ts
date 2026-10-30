@@ -1,16 +1,23 @@
 /**
- * Public game status (rule 1.10): every field of `PublicGameStatus` is
- * information both players are always entitled to see.
+ * Public game status: every field of `PublicGameStatus` is information both
+ * players are always entitled to see (rules 10.2.2/10.2.3, 4.3.4, 4.6.2/4.6.3).
  *
  * The two entry points are:
  *  - `getPublicGameStatus(state)`       -- viewer-agnostic, no hidden info at all
  *  - `getPublicGameStatusFor(state, v)` -- same DTO, but the Corp sees the ids
- *    of its own installed cards and each viewer sees its own hand identities
+ *    of its own installed cards (rules 4.6.3: facedown cards are examined by
+ *    the player controlling them)
  */
 
 import { engine } from "../src/mod.ts";
 import type { GameState, ViewCard } from "../src/types.ts";
-import { newStarterGame, play } from "../src/testing/fixtures.ts";
+import {
+  endCorpTurn,
+  newGameWithCorpHand,
+  newStarterGame,
+  play,
+  rezWindowState,
+} from "../src/testing/fixtures.ts";
 import { assert, assertDefined, assertEquals } from "./helpers/assert.ts";
 
 Deno.test("public status: credits, clicks and tags are visible to both players", () => {
@@ -193,4 +200,95 @@ Deno.test("public status: works through the engine facade", () => {
     shared.players.corp.credits,
     "counts agree between the two entry points",
   );
+});
+
+Deno.test("public status: prompts are redacted to stubs in the shared DTO", () => {
+  // A pending corp rez window whose option labels name the facedown ice.
+  const state = rezWindowState();
+  const pending = state.prompts[0]!;
+  assert(pending.kind === "rez-window", "a corp rez window is pending");
+
+  const shared = engine.getPublicGameStatus(state);
+  assertEquals(shared.prompts.length, 1, "the pending prompt is reported");
+  assertEquals(shared.prompts[0], { kind: "rez-window", id: pending.id, player: "corp" });
+  assertEquals(
+    Object.keys(shared.prompts[0]!).sort(),
+    ["id", "kind", "player"],
+    "stubs carry only kind, id and player",
+  );
+
+  // Viewer-agnostic: both entry points agree, and no corp-only option or label
+  // appears for either viewer.
+  assertEquals(engine.getPublicGameStatusFor(state, "corp").prompts, shared.prompts);
+  assertEquals(engine.getPublicGameStatusFor(state, "runner").prompts, shared.prompts);
+});
+
+Deno.test("public status: run.currentIce respects the viewer", () => {
+  // The corp installed an unrezzed ice in a remote and the runner approached
+  // it: the corp always knows its own cards, the shared/runner view does not.
+  let state = newGameWithCorpHand(["tithe"], 3);
+  const install = assertDefined(
+    engine.getLegalMoves(state, "corp").find(
+      (m) => m.kind === "corp.install" && m.cardId === "tithe" && m.server === "new-remote",
+    ),
+  );
+  state = endCorpTurn(play(state, "corp", install).state);
+  const run = assertDefined(
+    engine.getLegalMoves(state, "runner").find(
+      (m) => m.kind === "runner.run" && m.server === "remote-1",
+    ),
+  );
+  state = play(state, "runner", run).state;
+  assert(state.run !== null && state.run.currentIceId !== undefined, "ice is approached");
+
+  const forCorp = engine.getPublicGameStatusFor(state, "corp");
+  assertEquals(
+    forCorp.run?.currentIce?.cardId,
+    "tithe",
+    "the corp sees its own unrezzed approached ice",
+  );
+  assertEquals(forCorp.run?.currentIce?.strength, 1);
+
+  const shared = engine.getPublicGameStatus(state);
+  assertEquals(shared.run?.currentIce?.cardId, "hidden", "the shared DTO hides it");
+  assertEquals(shared.run?.currentIce?.strength, undefined);
+
+  const forRunner = engine.getPublicGameStatusFor(state, "runner");
+  assertEquals(forRunner.run?.currentIce?.cardId, "hidden", "the runner cannot see it");
+});
+
+Deno.test("public status: rezzed approached ice is public in every view", () => {
+  let state = newGameWithCorpHand(["tithe"], 3);
+  const install = assertDefined(
+    engine.getLegalMoves(state, "corp").find(
+      (m) => m.kind === "corp.install" && m.cardId === "tithe" && m.server === "new-remote",
+    ),
+  );
+  state = endCorpTurn(play(state, "corp", install).state);
+  const run = assertDefined(
+    engine.getLegalMoves(state, "runner").find(
+      (m) => m.kind === "runner.run" && m.server === "remote-1",
+    ),
+  );
+  state = play(state, "runner", run).state;
+  // The corp rezzes the approached ice out of its rez window.
+  const prompt = state.prompts[0]!;
+  assert(prompt.kind === "rez-window", "the rez window is pending");
+  const option = assertDefined(prompt.options.find((o) => o.targetId !== undefined));
+  const answer = assertDefined(
+    engine.getLegalMoves(state, "corp").find(
+      (m) => m.kind === "prompt.answer" && m.optionId === option.id,
+    ),
+  );
+  state = play(state, "corp", answer).state;
+
+  for (
+    const view of [
+      engine.getPublicGameStatus(state),
+      engine.getPublicGameStatusFor(state, "corp"),
+      engine.getPublicGameStatusFor(state, "runner"),
+    ]
+  ) {
+    assertEquals(view.run?.currentIce?.cardId, "tithe", "rezzed ice is public");
+  }
 });

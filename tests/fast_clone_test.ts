@@ -125,8 +125,6 @@ Deno.test("fastClone copies optional card fields the engine sets during play", (
   card.advancement = 2;
   card.hostedCredits = 3;
   card.strengthBoost = 1;
-  card.brokenSubroutines = [0, 1];
-  card.faceup = true;
   card.server = state.servers[0]!.id;
   card.iceIndex = 0;
   checkState(state, 7, -1);

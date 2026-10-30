@@ -1,8 +1,8 @@
 /**
- * Hidden information (rule 1.10): the UCT AI must not be able to plan around
- * the exact order of the opponent's deck. Its decision at a given position
- * must be the same regardless of which card sits on top of the opponent's
- * deck, because the AI cannot see it.
+ * Hidden information (rules 10.2.2, 4.3.4): the UCT AI must not be able to
+ * plan around the exact order of the opponent's deck. Its decision at a given
+ * position must be the same regardless of which card sits on top of the
+ * opponent's deck, because the AI cannot see it.
  *
  * Implementation: simulations run with `drawMode: "random"`, so every draw
  * pulls a uniformly random card from the remaining deck instead of the top

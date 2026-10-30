@@ -8,7 +8,7 @@
 import { cardDef } from "../cards/catalogue.ts";
 import { behaviors, supportStatus } from "../cards/effects.ts";
 import { abilityLegality, serversForAbility } from "./effects.ts";
-import { candidatesForBreach, chooseRandomAccess } from "./settle.ts";
+import { randomAccessCandidateCount, specificAccessCandidates } from "./settle.ts";
 import {
   allServers,
   availableCredits,
@@ -411,17 +411,18 @@ function breachMoves(state: GameState, playerSide: PlayerSide): Move[] {
   }
   const breach = state.breach!;
   if (breach.accessing) return moveList; // access-decision prompt handles this
-  const candidates = candidatesForBreach(state).filter((c) =>
-    !breach.chosen.includes(c.instanceId)
-  );
-  if (candidates.length === 0) return moveList;
-  if (candidates.length === 1) return moveList; // auto-selected by settle
-  const random = candidates.filter((c) => c.random);
-  const specific = candidates.filter((c) => !c.random);
-  for (const c of specific) {
-    moveList.push({ kind: "runner.accessCard", targetId: c.instanceId });
+  // Enumeration must stay pure (no PRNG advance): candidate lists are computed
+  // without sampling. applyMove's accessRandom handler performs the actual
+  // random selection, and the same move is validated there via sameMove.
+  const specific = specificAccessCandidates(state);
+  const randomCount = randomAccessCandidateCount(state);
+  const total = specific.length + randomCount;
+  if (total === 0) return moveList;
+  if (total === 1) return moveList; // auto-selected by settle
+  for (const id of specific) {
+    moveList.push({ kind: "runner.accessCard", targetId: id });
   }
-  if (random.length > 0 && chooseRandomAccess(state)) {
+  if (randomCount > 0) {
     moveList.push({ kind: "runner.accessRandom" });
   }
   return moveList;

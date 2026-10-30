@@ -107,10 +107,6 @@ export interface CardInstance {
   hostedCredits?: number;
   /** Temporary strength boost gained this encounter (icebreakers). */
   strengthBoost?: number;
-  /** Indices of subroutines broken during the current encounter. */
-  brokenSubroutines?: number[];
-  /** True when the card is known to the runner via a prior access this breach. */
-  faceup?: boolean;
 }
 
 export interface ServerState {
@@ -241,6 +237,19 @@ export type Prompt =
     cardId: CardInstanceId;
   };
 
+/**
+ * A redacted prompt, safe to show to players who are not its owner: the kind,
+ * the id, and whose decision it is, with every option/param that can carry
+ * hidden information (option labels naming unrezzed cards, counts, targetIds,
+ * cardIds) removed. Used by `PlayerView` for opponent prompts and by
+ * `PublicGameStatus` for all prompts.
+ */
+export interface PromptStub {
+  kind: Prompt["kind"];
+  id: number;
+  player: PlayerSide;
+}
+
 // ---------------------------------------------------------------------------
 // Game events (structured log of what happened)
 // ---------------------------------------------------------------------------
@@ -355,9 +364,9 @@ export interface GameState {
   rngState: number;
   /**
    * How draws resolve. The real game always draws from the top of the deck —
-   * deck order is hidden information (rule 1.10) and neither player knows it.
-   * AI simulations set this to `"random"` so a playout can't exploit a
-   * specific draw order the search memorised; the multiset of cards in the
+   * deck order is hidden information (rules 10.2.2, 4.3.4) and neither player
+   * knows it. AI simulations set this to `"random"` so a playout can't exploit
+   * a specific draw order the search memorised; the multiset of cards in the
    * opponent's deck is still visible, which is an accepted concession.
    */
   drawMode: "top" | "random";
@@ -390,6 +399,7 @@ export interface PlayerView {
   viewer: PlayerSide;
   turn: GameState["turn"];
   winner: PlayerSide | "draw" | null;
+  winReason: string | null;
   agendaPointTarget: number;
   corp: {
     credits: number;
@@ -430,8 +440,13 @@ export interface PlayerView {
     remaining: number;
     accessing?: ViewCard;
   } | null;
-  prompts: Prompt[];
+  /** Pending prompts, per-viewer: the owner gets the full prompt, anyone else
+   * gets a `PromptStub` saying whose decision it is. */
+  prompts: (Prompt | PromptStub)[];
+  /** Event log, redacted per viewer (hidden card ids become "hidden"). */
   events: GameEvent[];
+  /** Non-fatal notices about partially supported card effects. */
+  warnings: string[];
 }
 
 // ---------------------------------------------------------------------------
@@ -508,7 +523,7 @@ export interface IllegalMove {
 }
 
 // ---------------------------------------------------------------------------
-// Public game status (rule 1.10)
+// Public game status (rules 10.2.2/10.2.3)
 // ---------------------------------------------------------------------------
 
 /**
@@ -531,8 +546,9 @@ export interface PublicGameStatus {
   run: PublicRunStatus | null;
   /** The current breach, if any (public: server, whether a card is being accessed). */
   breach: PublicBreachStatus | null;
-  /** Actionable prompts (both players see the prompt text; only the active player may answer). */
-  prompts: Prompt[];
+  /** Pending prompts, redacted to stubs for every viewer: option labels can
+   * name hidden cards, so the shared DTO only says a decision is pending. */
+  prompts: PromptStub[];
   /** Non-fatal notices about partially supported card effects. */
   warnings: string[];
 }
@@ -557,7 +573,7 @@ export interface PublicPlayerStatus {
 
 export interface PublicServerStatus {
   id: ServerId;
-  /** Cards in the server's root, hidden when unrezzed Corp cards (rule 1.10). */
+  /** Cards in the server's root, hidden when unrezzed Corp cards (rules 4.6.2/4.6.3). */
   root: ViewCard[];
   /** Rezzed ice protecting the server, outermost last. */
   ice: ViewCard[];
@@ -598,7 +614,7 @@ export interface GameEngine {
     move: Move,
     opts?: ApplyMoveOptions,
   ): ApplyMoveResult | IllegalMove;
-  /** Public game status (rule 1.10): same value for either viewer. */
+  /** Public game status (rules 10.2.2/10.2.3): same value for either viewer. */
   getPublicGameStatus(state: GameState): PublicGameStatus;
   /** Public game status as seen by `viewer`; Corp may see its own installed card ids. */
   getPublicGameStatusFor(state: GameState, viewer: PlayerSide): PublicGameStatus;

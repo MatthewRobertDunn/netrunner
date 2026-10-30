@@ -1,11 +1,11 @@
 /**
- * Public game status (rule 1.10).
+ * Public game status (rules 10.2.2/10.2.3).
  *
  * `getPublicGameStatus(state)` returns a DTO containing only information that
  * both players are always entitled to see. It deliberately excludes:
- *  - the opponent's hand/deck card identities (only counts are public),
+ *  - the opponent's hand/deck card identities (only counts are public, 4.3.4),
  *  - the identities of unrezzed Corp installed cards (only their existence and
- *    server placement are public).
+ *    server placement are public, 4.6.2/4.6.3).
  *
  * Because the DTO is viewer-agnostic, `getPublicGameStatus(state)` returns the
  * same value for either player.
@@ -13,8 +13,11 @@
 
 import { cardDef } from "../cards/catalogue.ts";
 import { findCard, player } from "./state.ts";
+import { maxHandSize } from "./turns.ts";
 import type {
   CardInstance,
+  Prompt,
+  PromptStub,
   PublicBreachStatus,
   PublicGameStatus,
   PublicPlayerStatus,
@@ -64,7 +67,7 @@ function publicPlayer(
     tags: p.tags,
     agendaPoints: p.agendaPoints,
     handCount: p.hand.length,
-    handSize: p.baseHandSize + p.maxHandSizeMod,
+    handSize: maxHandSize(state, side),
     deckCount: p.deck.length,
     discardCount: p.discard.length,
     identity: viewCard(p.identity, false),
@@ -77,8 +80,8 @@ function publicPlayer(
 
 function serverStatus(state: GameState, id: ServerId, hideInstalled: boolean): PublicServerStatus {
   const s = state.servers.find((x) => x.id === id)!;
-  // Rule 1.10: the Corp always knows its own cards; the Runner only sees
-  // rezzed ice identities plus the count of unrezzed ice.
+  // Rules 4.6.2/4.6.3: the Corp always knows its own cards; the Runner only
+  // sees rezzed ice identities plus the count of unrezzed ice.
   const iceVisible = s.ice.filter((c) => !hideInstalled || c.rezzed === true);
   return {
     id,
@@ -92,14 +95,17 @@ function publicServers(state: GameState, hideInstalled: boolean): PublicServerSt
   return state.servers.map((s) => serverStatus(state, s.id, hideInstalled));
 }
 
-function publicRun(state: GameState): PublicRunStatus | null {
+function publicRun(state: GameState, hideCorpInstalled: boolean): PublicRunStatus | null {
   const run = state.run;
   if (!run) return null;
   const iceId = run.currentIceId;
   let currentIce: ViewCard | null = null;
   if (iceId) {
     const found = findCard(state, iceId);
-    if (found) currentIce = viewCard(found.card, found.card.rezzed !== true);
+    // The approached ice is public once rezzed (rules 1.21.1a, 4.6.3). The
+    // Corp also always knows its own unrezzed cards (4.6.3: facedown cards
+    // are examined by the player controlling them).
+    if (found) currentIce = viewCard(found.card, hideCorpInstalled && found.card.rezzed !== true);
   }
   return {
     server: run.server,
@@ -135,8 +141,8 @@ export function getPublicGameStatus(state: GameState): PublicGameStatus {
 
 /**
  * Build the public game-status DTO as seen by `viewer`. The Corp additionally
- * sees the ids of its own unrezzed installed cards (rule 1.10: you always know
- * your own cards).
+ * sees the ids of its own unrezzed installed cards (rules 4.6.2/4.6.3: facedown
+ * cards are always examined by the player controlling them).
  */
 export function getPublicGameStatusFor(
   state: GameState,
@@ -156,9 +162,17 @@ function publicStatus(state: GameState, hideCorpInstalled: boolean): PublicGameS
       runner: publicPlayer(state, "runner", "runner"),
     },
     servers: publicServers(state, hideCorpInstalled),
-    run: publicRun(state),
+    run: publicRun(state, hideCorpInstalled),
     breach: publicBreach(state),
-    prompts: state.prompts,
+    // Prompt option labels name unrezzed installed cards and hand/discard
+    // cards, so the shared DTO carries only stubs — no options, no labels
+    // (rules 10.2.2, 1.21.3).
+    prompts: state.prompts.map(promptStub),
     warnings: [...state.supportWarnings],
   };
+}
+
+/** Non-owner view of a prompt: that a decision is pending, and for whom. */
+function promptStub(prompt: Prompt): PromptStub {
+  return { kind: prompt.kind, id: prompt.id, player: prompt.player };
 }

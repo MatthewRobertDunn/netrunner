@@ -19013,6 +19013,20 @@ function findCard(state, instanceId) {
   }
   return null;
 }
+function cardVisibleTo(state, instanceId, viewer) {
+  const found = findCard(state, instanceId);
+  if (!found) return false;
+  const card = found.card;
+  if (card.owner === viewer) return true;
+  if (card.cardId === viewer) return true;
+  if (card.zone === "score") return true;
+  if (card.rezzed === true) return true;
+  for (const p2 of state.prompts) {
+    if (p2.kind === "access-decision" && p2.cardId === instanceId) return true;
+  }
+  if (state.breach?.accessing === instanceId) return true;
+  return false;
+}
 function drawCards(state, side, count) {
   const p2 = player(state, side);
   let drawn = 0;
@@ -20255,6 +20269,31 @@ function candidatesForBreach(state) {
   }
   return result;
 }
+function specificAccessCandidates(state) {
+  const breach = state.breach;
+  const server = breach.server;
+  const ids = [];
+  const push = (c) => {
+    if (!breach.chosen.includes(c.id)) ids.push(c.id);
+  };
+  for (const c of corpRootCards(state, server)) push(c);
+  if (server === "archives") {
+    for (const c of state.corp.discard) push(c);
+  }
+  return ids;
+}
+function randomAccessCandidateCount(state) {
+  const breach = state.breach;
+  if (breach.randomAccessesUsed >= breach.randomAccessLimit) return 0;
+  if (breach.server === "hq") {
+    return state.corp.hand.filter((c) => !breach.chosen.includes(c.id)).length;
+  }
+  if (breach.server === "rd") {
+    const top = state.corp.deck[0];
+    return top !== void 0 && !breach.chosen.includes(top.id) ? 1 : 0;
+  }
+  return 0;
+}
 function chooseRandomAccess(state) {
   const breach = state.breach;
   const random = candidatesForBreach(state).filter((c) => c.random && !breach.chosen.includes(c.instanceId));
@@ -20809,18 +20848,18 @@ function breachMoves(state, playerSide) {
   }
   const breach = state.breach;
   if (breach.accessing) return moveList;
-  const candidates = candidatesForBreach(state).filter((c) => !breach.chosen.includes(c.instanceId));
-  if (candidates.length === 0) return moveList;
-  if (candidates.length === 1) return moveList;
-  const random = candidates.filter((c) => c.random);
-  const specific = candidates.filter((c) => !c.random);
-  for (const c of specific) {
+  const specific = specificAccessCandidates(state);
+  const randomCount = randomAccessCandidateCount(state);
+  const total = specific.length + randomCount;
+  if (total === 0) return moveList;
+  if (total === 1) return moveList;
+  for (const id of specific) {
     moveList.push({
       kind: "runner.accessCard",
-      targetId: c.instanceId
+      targetId: id
     });
   }
-  if (random.length > 0 && chooseRandomAccess(state)) {
+  if (randomCount > 0) {
     moveList.push({
       kind: "runner.accessRandom"
     });
@@ -21126,7 +21165,7 @@ function applyResolvedMove(state, playerSide, move) {
       break;
     }
     case "runner.accessRandom": {
-      const chosen = chooseRandomPublic(state);
+      const chosen = chooseRandomAccess(state);
       if (chosen) doAccessChoice(state, chosen);
       break;
     }
@@ -21494,39 +21533,6 @@ function discardSpecific(state, side, instanceId) {
     player: side
   });
 }
-function chooseRandomPublic(state) {
-  const breach = state.breach;
-  const candidates = breachCandidatesLocal(state).filter((c) => c.random && !breach.chosen.includes(c.instanceId));
-  if (candidates.length === 0) return null;
-  const idx = Math.floor(rngNext(state) * candidates.length);
-  return candidates[idx].instanceId;
-}
-function breachCandidatesLocal(state) {
-  const breach = state.breach;
-  const server = breach.server;
-  const result = [];
-  const push = (c, random) => {
-    if (breach.chosen.includes(c.id)) return;
-    result.push({
-      instanceId: c.id,
-      random
-    });
-  };
-  for (const c of serverById(state, server).root) push(c, false);
-  if (server === "hq") {
-    if (breach.randomAccessesUsed < breach.randomAccessLimit) {
-      for (const c of state.corp.hand) push(c, true);
-    }
-  } else if (server === "rd") {
-    if (breach.randomAccessesUsed < breach.randomAccessLimit) {
-      const top = state.corp.deck[0];
-      if (top) push(top, true);
-    }
-  } else if (server === "archives") {
-    for (const c of state.corp.discard) push(c, false);
-  }
-  return result;
-}
 function enterEndOfTurn(state) {
   enterDiscardPhase(state);
 }
@@ -21573,7 +21579,7 @@ function publicPlayer(state, side, viewer) {
     tags: p2.tags,
     agendaPoints: p2.agendaPoints,
     handCount: p2.hand.length,
-    handSize: p2.baseHandSize + p2.maxHandSizeMod,
+    handSize: maxHandSize(state, side),
     deckCount: p2.deck.length,
     discardCount: p2.discard.length,
     identity: viewCard(p2.identity, false),
@@ -21594,14 +21600,14 @@ function serverStatus(state, id, hideInstalled) {
 function publicServers(state, hideInstalled) {
   return state.servers.map((s) => serverStatus(state, s.id, hideInstalled));
 }
-function publicRun(state) {
+function publicRun(state, hideCorpInstalled) {
   const run = state.run;
   if (!run) return null;
   const iceId = run.currentIceId;
   let currentIce2 = null;
   if (iceId) {
     const found = findCard(state, iceId);
-    if (found) currentIce2 = viewCard(found.card, found.card.rezzed !== true);
+    if (found) currentIce2 = viewCard(found.card, hideCorpInstalled && found.card.rezzed !== true);
   }
   return {
     server: run.server,
@@ -21642,12 +21648,22 @@ function publicStatus(state, hideCorpInstalled) {
       runner: publicPlayer(state, "runner", "runner")
     },
     servers: publicServers(state, hideCorpInstalled),
-    run: publicRun(state),
+    run: publicRun(state, hideCorpInstalled),
     breach: publicBreach(state),
-    prompts: state.prompts,
+    // Prompt option labels name unrezzed installed cards and hand/discard
+    // cards, so the shared DTO carries only stubs — no options, no labels
+    // (rules 10.2.2, 1.21.3).
+    prompts: state.prompts.map(promptStub),
     warnings: [
       ...state.supportWarnings
     ]
+  };
+}
+function promptStub(prompt) {
+  return {
+    kind: prompt.kind,
+    id: prompt.id,
+    player: prompt.player
   };
 }
 
@@ -21930,8 +21946,20 @@ function playGame(config) {
 // src/ai/random.ts
 var RandomAI = class {
   name = "random";
-  chooseMove(state, _side, legal) {
-    const idx = rngInt(state, legal.length);
+  rngState;
+  constructor(seed = 2654435769) {
+    this.rngState = seed | 0;
+  }
+  /** mulberry32: float in [0, 1), advancing this AI's own PRNG state. */
+  next() {
+    this.rngState = this.rngState + 1831565813 | 0;
+    let t = this.rngState;
+    t = Math.imul(t ^ t >>> 15, t | 1);
+    t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  }
+  chooseMove(_state, _side, legal) {
+    const idx = Math.floor(this.next() * legal.length);
     return legal[idx] ?? legal[0];
   }
 };
@@ -21977,15 +22005,9 @@ function clonePlayer(p2) {
   };
 }
 function cloneCard(c) {
-  const out = {
+  return {
     ...c
   };
-  if (c.brokenSubroutines !== void 0) {
-    out.brokenSubroutines = [
-      ...c.brokenSubroutines
-    ];
-  }
-  return out;
 }
 function cloneServer(s) {
   return {
@@ -22201,7 +22223,7 @@ function viewCard2(card, opts = {}) {
     rezzed: card.rezzed,
     advancement: card.advancement,
     hostedCredits: card.hostedCredits,
-    strength: cardDef(card.cardId).strength ?? void 0,
+    strength: hidden ? void 0 : cardDef(card.cardId).strength ?? void 0,
     iceIndex: card.iceIndex,
     zone: card.zone,
     server: card.server
@@ -22211,7 +22233,7 @@ function sideCards(state, side) {
   const p2 = player(state, side);
   return {
     handCount: p2.hand.length,
-    handSize: p2.hand.length,
+    handSize: maxHandSize(state, side),
     deckCount: p2.deck.length,
     discardCount: p2.discard.length,
     installed: p2.installed,
@@ -22235,6 +22257,7 @@ function getPlayerView(state, viewer) {
       ...state.turn
     },
     winner: state.winner,
+    winReason: state.winReason,
     agendaPointTarget: state.agendaPointTarget,
     corp: {
       credits: state.corp.credits,
@@ -22252,7 +22275,7 @@ function getPlayerView(state, viewer) {
     runner: {
       credits: state.runner.credits,
       clicks: state.runner.clicks,
-      handSize: runnerSide.handCount,
+      handSize: runnerSide.handSize,
       handCount: runnerSide.handCount,
       deckCount: runnerSide.deckCount,
       discardCount: runnerSide.discardCount,
@@ -22266,7 +22289,9 @@ function getPlayerView(state, viewer) {
       phase: state.run.phase,
       position: state.run.position,
       currentIce: state.run.currentIceId ? viewCard2(findCard(state, state.run.currentIceId)?.card ?? state.corp.identity, {
-        hidden: hideCorpInstalled
+        // The ice being approached is public once rezzed (rules 1.21.1a,
+        // 4.6.3): every player reads Rezzed ice off the table.
+        hidden: hideCorpInstalled && findCard(state, state.run.currentIceId)?.card.rezzed !== true
       }) : void 0,
       broken: [
         ...state.run.broken
@@ -22278,9 +22303,58 @@ function getPlayerView(state, viewer) {
       remaining: Math.max(0, state.breach.randomAccessLimit - state.breach.randomAccessesUsed),
       accessing: state.breach.accessing ? viewCard2(findCard(state, state.breach.accessing)?.card ?? state.corp.identity) : void 0
     } : null,
-    prompts: state.prompts,
-    events: state.log
+    prompts: state.prompts.map((p2) => visiblePrompt(p2, viewer)),
+    events: state.log.map((e) => visibleEvent(state, e, viewer)),
+    warnings: [
+      ...state.supportWarnings
+    ]
   };
+}
+function visiblePrompt(prompt, viewer) {
+  if (prompt.player === viewer) return prompt;
+  return {
+    kind: prompt.kind,
+    id: prompt.id,
+    player: prompt.player
+  };
+}
+function visibleEvent(state, event, viewer) {
+  const vis = (id) => cardVisibleTo(state, id, viewer) ? id : HIDDEN2;
+  switch (event.type) {
+    case "load-credits":
+    case "take-credits":
+      return {
+        ...event,
+        targetId: vis(event.targetId)
+      };
+    case "install":
+    case "play":
+    case "rez":
+    case "derez":
+    case "advance":
+    case "score":
+    case "steal":
+    case "trash":
+    case "discard":
+    case "approach-ice":
+    case "encounter-ice":
+    case "resolve-subroutine":
+    case "break-subroutine":
+    case "pass-ice":
+    case "access":
+    case "pump-strength":
+      return {
+        ...event,
+        cardId: vis(event.cardId)
+      };
+    case "damage":
+      return {
+        ...event,
+        trashed: event.trashed.map(vis)
+      };
+    default:
+      return event;
+  }
 }
 function starterDeckCardIds() {
   const s = starterDeckConfigs();
@@ -22329,8 +22403,8 @@ var engine = {
     return applyMove(state, player2, move, opts);
   },
   /**
-   * Public game status (rule 1.10): only information both players are always
-   * entitled to see, so this returns the same value for either viewer.
+   * Public game status (rules 10.2.2/10.2.3): only information both players
+   * are always entitled to see, so this returns the same value for either viewer.
    */
   getPublicGameStatus(state) {
     return getPublicGameStatus(state);
@@ -22417,7 +22491,7 @@ function serverLabel(server) {
 }
 function formatEvent(state, e, viewer) {
   const side = (p2) => p2 === "corp" ? "Corp" : "Runner";
-  const visible = (id) => cardVisibleTo(state, id, viewer) ? cardTitle(cardIdOfInstance(state, id)) : "a card";
+  const visible = (id) => cardVisibleTo2(state, id, viewer) ? cardTitle(cardIdOfInstance(state, id)) : "a card";
   switch (e.type) {
     case "game-started":
       return "Game started";
@@ -22507,7 +22581,7 @@ function cardIdOfInstance(state, id) {
   const card = findCardIn(state, id);
   return card ? card.cardId : String(id);
 }
-function cardVisibleTo(state, id, viewer) {
+function cardVisibleTo2(state, id, viewer) {
   const card = findCardIn(state, id);
   if (!card) return false;
   if (card.owner === viewer) return true;
@@ -22571,8 +22645,11 @@ function describeMove(state, move) {
       return `Break subroutine ${move.subIndex + 1} (spend a click)`;
     case "runner.resolveSubroutines":
       return "Let subroutines resolve";
-    case "runner.accessCard":
-      return `Access ${cardTitle(findCardIn(state, move.targetId)?.cardId ?? "")}`;
+    case "runner.accessCard": {
+      const card = findCardIn(state, move.targetId);
+      const named = card && cardVisibleTo2(state, move.targetId, "runner");
+      return `Access ${named ? cardTitle(card.cardId) : "a card"}`;
+    }
     case "runner.accessRandom":
       return "Access a random card";
     case "runner.trashAccessed":

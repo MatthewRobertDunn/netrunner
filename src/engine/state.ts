@@ -60,7 +60,7 @@ export function createRemote(state: GameState): ServerState {
 
 /**
  * The next card a player would draw. In the real game that's the top of the
- * deck (hidden information, rule 1.10). In an AI simulation with
+ * deck (hidden information, rules 10.2.2, 4.3.4). In an AI simulation with
  * `drawMode: "random"` it's a uniformly random card from the remaining deck,
  * so the search can't plan around a specific draw order.
  */
@@ -108,6 +108,36 @@ export function findCard(
 /** All Corp cards installed in servers (root cards and ice). */
 export function corpInstalled(state: GameState): CardInstance[] {
   return state.servers.flatMap((s) => [...s.root, ...s.ice]);
+}
+
+/**
+ * Whether a card instance's identity is open information for `viewer`
+ * (rules 10.2.2/10.2.3, 1.21, 4.6.2/4.6.3): cards the viewer owns, rezzed Corp
+ * cards, scored agendas, identity cards, and the card currently being accessed
+ * during a breach. Everything else — facedown Corp installs, the opponent's
+ * hand, deck, and discard pile — stays hidden. A discard only becomes known
+ * when its cards are actually accessed.
+ */
+export function cardVisibleTo(
+  state: GameState,
+  instanceId: string,
+  viewer: PlayerSide,
+): boolean {
+  const found = findCard(state, instanceId);
+  if (!found) return false; // unknown id → don't leak a title
+  const card = found.card;
+  if (card.owner === viewer) return true;
+  if (card.cardId === viewer) return true; // identity card
+  // Scored agendas are open information (rule 10.2.3).
+  if (card.zone === "score") return true;
+  // Rezzed Corp cards are public; unrezzed ones are secret (rules 1.21.1a, 4.6.3).
+  if (card.rezzed === true) return true;
+  // The card currently being accessed is visible to the Runner (rule 7.2.1).
+  for (const p of state.prompts) {
+    if (p.kind === "access-decision" && p.cardId === instanceId) return true;
+  }
+  if (state.breach?.accessing === instanceId) return true;
+  return false;
 }
 
 export function installedCard(
@@ -221,6 +251,12 @@ export function moveCardTo(
       else p.deck.push(card);
       break;
     case "discard":
+      // TODO(rules 4.4.6b–c, 7.3.2): facedown/faceup Archives is a known
+      // unmodelled gap. Cards in Archives can be either faceup or facedown
+      // depending on their visibility when trashed, and breaching Archives
+      // turns facedown cards faceup before access. This engine keeps the
+      // discard pile unordered and unmarked, so no faceup/facedown split is
+      // tracked here yet.
       p.discard.unshift(card); // most recent first
       break;
     case "score":

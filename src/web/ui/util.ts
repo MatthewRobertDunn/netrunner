@@ -190,10 +190,11 @@ function cardIdOfInstance(state: GameState, id: CardInstanceId): string {
 
 /**
  * Whether the card instance's identity is public knowledge for `viewer`
- * (rule 1.10): rezzed Corp cards, cards the viewer owns, scored agendas, the
- * identity card, and the card currently being accessed. Everything else —
- * facedown Corp installs, the opponent's hand, deck, and discard pile — stays
- * hidden. A discard only becomes known when its cards are actually accessed.
+ * (rules 10.2.2/10.2.3, 1.21, 4.6.2/4.6.3): rezzed Corp cards, cards the viewer
+ * owns, scored agendas, the identity card, and the card currently being
+ * accessed. Everything else — facedown Corp installs, the opponent's hand,
+ * deck, and discard pile — stays hidden. A discard only becomes known when its
+ * cards are actually accessed.
  */
 function cardVisibleTo(
   state: GameState,
@@ -270,8 +271,14 @@ export function describeMove(state: GameState, move: Move): string {
       return `Break subroutine ${move.subIndex + 1} (spend a click)`;
     case "runner.resolveSubroutines":
       return "Let subroutines resolve";
-    case "runner.accessCard":
-      return `Access ${cardTitle(findCardIn(state, move.targetId)?.cardId ?? "")}`;
+    case "runner.accessCard": {
+      // Name the card only when its identity is open to the Runner (rezzed or
+      // currently being accessed, rules 1.21.1a, 7.2.1); a facedown candidate
+      // (unrezzed install, facedown Archives card) stays anonymous.
+      const card = findCardIn(state, move.targetId);
+      const named = card && cardVisibleTo(state, move.targetId, "runner");
+      return `Access ${named ? cardTitle(card!.cardId) : "a card"}`;
+    }
     case "runner.accessRandom":
       return "Access a random card";
     case "runner.trashAccessed":

@@ -371,7 +371,54 @@ export function candidatesForBreach(state: GameState): BreachCandidate[] {
   return result;
 }
 
-/** Choose a random hand/deck access (rule 7.3.4a). */
+/**
+ * Specific (non-random) access candidates for the current breach — computed
+ * WITHOUT sampling, so move enumeration can call it and stay pure. Mirrors the
+ * `random: false` candidates of `candidatesForBreach`: root cards of the
+ * breached server, plus the whole discard pile for an Archives breach
+ * (rule 7.3.3).
+ */
+export function specificAccessCandidates(state: GameState): string[] {
+  const breach = state.breach!;
+  const server = breach.server;
+  const ids: string[] = [];
+  const push = (c: CardInstance): void => {
+    if (!breach.chosen.includes(c.id)) ids.push(c.id);
+  };
+  for (const c of corpRootCards(state, server)) push(c);
+  if (server === "archives") {
+    for (const c of state.corp.discard) push(c);
+  }
+  return ids;
+}
+
+/**
+ * How many random (hand/deck) access candidates the current breach has —
+ * computed WITHOUT sampling, so move enumeration can call it and stay pure.
+ * Mirrors the `random` candidates of `candidatesForBreach` exactly in the real
+ * game (`drawMode: "top"`): every unchosen HQ hand card is one candidate, and
+ * R&D contributes its top card (rule 7.3.4a). The actual card is still chosen
+ * by `chooseRandomAccess` at apply time.
+ */
+export function randomAccessCandidateCount(state: GameState): number {
+  const breach = state.breach!;
+  if (breach.randomAccessesUsed >= breach.randomAccessLimit) return 0;
+  if (breach.server === "hq") {
+    return state.corp.hand.filter((c) => !breach.chosen.includes(c.id)).length;
+  }
+  if (breach.server === "rd") {
+    const top = state.corp.deck[0];
+    return top !== undefined && !breach.chosen.includes(top.id) ? 1 : 0;
+  }
+  return 0;
+}
+
+/**
+ * Choose a random hand/deck access (rule 7.3.4a). This is the *only* place the
+ * random access is sampled: it runs inside `applyMove`'s `runner.accessRandom`
+ * handler. Move enumeration (`getLegalMoves`) never calls it, so listing
+ * legal moves never advances the state PRNG.
+ */
 export function chooseRandomAccess(state: GameState): string | null {
   const breach = state.breach!;
   const random = candidatesForBreach(state).filter((c) =>
