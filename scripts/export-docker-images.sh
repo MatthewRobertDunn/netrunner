@@ -73,7 +73,7 @@ for arch in arm64 amd64; do
   # Report what was built.
   cfg=$(grep -o '"Config":"sha256:[0-9a-f]*' "$WORK_DIR/unpack/manifest.json" | cut -d: -f3-)
   echo "    tag:      $IMAGE_NAME:$arch"
-  echo "    config:   ${cfg:0:12}…"
+  echo "    config:   $(printf '%s' "$cfg" | cut -c1-12)…"
   echo "    size:     $(du -h "$RELEASE_DIR/$IMAGE_NAME-$arch.tar" | cut -f1)"
   grep -o '"User":"[^"]*"'        "$WORK_DIR/unpack/sha256:$cfg" | sed 's/^/    user:     /'
   grep -o '"WorkingDir":"[^"]*"'  "$WORK_DIR/unpack/sha256:$cfg" | sed 's/^/    workdir:  /'
