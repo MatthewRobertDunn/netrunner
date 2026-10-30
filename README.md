@@ -75,8 +75,8 @@ change the port.
 
 ### Pre-built multi-arch images
 
-Ready-to-use tarballs for `linux/amd64` and `linux/arm64` are checked into `release/` (equivalent to
-what `docker build` of the Dockerfile produces):
+Ready-to-use tarballs for `linux/amd64` and `linux/arm64` live in `release/` (gitignored,
+regenerated on every publish; equivalent to what `docker build` of the Dockerfile produces):
 
 ```sh
 docker load -i release/netrunner-amd64.tar   # yields netrunner:amd64
@@ -84,13 +84,13 @@ docker load -i release/netrunner-arm64.tar   # yields netrunner:arm64
 docker run --rm -p 8000:8000 netrunner:amd64
 ```
 
-They are produced by `scripts/export-docker-images.sh`, which uses
+They are produced by `scripts/export-docker-images.ts`, which uses
 [`crane`](https://github.com/google/go-containerregistry) instead of a Docker daemon — so the images
 can be built on hosts where `dockerd` cannot `mount(2)`/`unshare(2)` (e.g. unprivileged containers).
 Requires `crane` and GNU `tar`:
 
 ```sh
-scripts/export-docker-images.sh
+deno run --allow-read --allow-write --allow-run --allow-env scripts/export-docker-images.ts
 ```
 
 An alternative is `docker buildx` via `docker-bake.hcl`:
@@ -126,8 +126,8 @@ Then visit `http://<host>:8000/`.
 
 `deno task publish` rebuilds the web bundle, exports the docker image tarball for the target
 architecture, loads it on the server, restarts the systemd unit, and polls the health endpoint until
-it returns 200. The SSH key is the checked-in `orange` file (gitignored) — it is passed via `ssh -i`
-only and never installed.
+it returns 200. The SSH key is `secrets/orange` (the whole `secrets/` directory is gitignored) — it
+is passed via `ssh -i` only and never installed.
 
 ```sh
 deno task publish                       # defaults to arm64

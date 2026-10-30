@@ -9,8 +9,8 @@
  *      place and needs no scp.
  *   4. restart the systemd unit that runs the container
  *
- * The SSH key is read from the checked-in `orange` file (gitignored) — it
- * stays in the repo, is never installed, and is only referenced here.
+ * The SSH key lives in `secrets/orange` (gitignored via `secrets/`) — it
+ * stays on disk, is never installed, and is only referenced here.
  *
  *   deno run --allow-read --allow-write --allow-run --allow-net scripts/publish.ts [--arch arm64|amd64]
  */
@@ -21,7 +21,7 @@ for (let i = 0; i < args.length; i++) {
   if (args[i] === "--arch" && args[i + 1]) ARCH = args[++i] as string;
 }
 const HOST = "matty@192.168.0.2";
-const SSH_KEY = "./orange"; // gitignored; passed via -i, never installed
+const SSH_KEY = "./secrets/orange"; // gitignored; passed via -i, never installed
 const REMOTE_DIR = "/home/matty/code/denorunner/release";
 const REMOTE_TARBALL = `${REMOTE_DIR}/netrunner-${ARCH}.tar`;
 
@@ -96,9 +96,19 @@ run(
   "build-web",
 );
 
-// 2. Export the docker image tarball.
+// 2. Export the docker image tarballs.
 console.log(`==> 2/5 export docker images`);
-run(cmd("sh", ["scripts/export-docker-images.sh"]), "export-docker-images");
+run(
+  cmd(Deno.execPath(), [
+    "run",
+    "--allow-read",
+    "--allow-write",
+    "--allow-run",
+    "--allow-env",
+    "scripts/export-docker-images.ts",
+  ]),
+  "export-docker-images",
+);
 
 // 3. Load the image into the server's Docker. /workspace is mapped to
 //    /home/matty/code/denorunner on the host, so the tarball is already in

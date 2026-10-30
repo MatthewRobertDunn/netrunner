@@ -53,15 +53,18 @@ deno task publish
 
 ## Secrets
 
-`opencode.json`, `core`, and `orange` are gitignored. Never commit them. `orange` is the SSH key for
-`matty@192.168.0.2` and is passed via `ssh -i` only. `gh_fine_grained_key.txt` holds the GitHub PAT
-— also gitignored.
+All local credentials live in `secrets/` (SSH key `orange` + `orange.pub`, GitHub PAT
+`gh_fine_grained_key.txt`), and the whole directory is gitignored — never commit it.
+`secrets/orange` is the SSH key for `matty@192.168.0.2` and is passed via `ssh -i` only.
+
+`opencode.json` stays at the repo root (the harness loads it from there) and is gitignored on its
+own line. `core` crash dumps are gitignored too — delete them, they are never useful.
 
 The GitHub CLI is permanently logged in as MatthewRobertDunn using that PAT. After a sandbox
 rebuild, re-run:
 
 ```sh
-cat gh_fine_grained_key.txt | tr -d '[:space:]' | gh auth login --with-token
+cat secrets/gh_fine_grained_key.txt | tr -d '[:space:]' | gh auth login --with-token
 gh auth setup-git
 ```
 

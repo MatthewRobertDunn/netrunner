@@ -9,11 +9,8 @@ tmp/
 *.log
 .playwright-mcp/
 
-# Local SSH keys
-orange
-orange.pub
-# GitHub fine-grained personal access token (never commit)
-gh_fine_grained_key.txt
+# Secrets and local credentials (SSH keys, tokens) — whole directory ignored
+secrets/
 # Local tool config (contains API keys) + crash dumps
 opencode.json
 core
