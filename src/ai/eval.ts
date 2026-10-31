@@ -207,13 +207,21 @@ export class EvalAI implements GameAI {
   }
 
   chooseMove(view: PlayerView, legal: Move[], ctx: AIDecisionContext): Move {
-    if (legal.length === 1) return legal[0]!;
+    // Jack-out judgment (pricing the ice still ahead against what the server
+    // might hold) is future work: until the eval can weigh it, a movement
+    // phase that offers `runner.continueRun` should just continue — keeping
+    // `runner.jackOut` in the mix would make the fun AI randomly abandon runs
+    // it already priced as good.
+    const moves = legal.some((m) => m.kind === "runner.continueRun")
+      ? legal.filter((m) => m.kind !== "runner.jackOut")
+      : legal;
+    if (moves.length === 1) return moves[0]!;
     const baseSeed = hashSeed(ctx.seed, this.seedSalt);
 
     // World loop: AVERAGE FIRST (step 3 above). Every move is scored in every
     // world, so a move's number is its expected value across the opponent's
     // possible hidden configurations.
-    const sums = new Float64Array(legal.length);
+    const sums = new Float64Array(moves.length);
     let worlds = 0;
     for (let k = 1; k <= this.samples; k++) {
       const worldRng = makeRng(hashSeed(baseSeed, k));
@@ -226,9 +234,9 @@ export class EvalAI implements GameAI {
         continue;
       }
       worlds++;
-      for (let i = 0; i < legal.length; i++) {
+      for (let i = 0; i < moves.length; i++) {
         const clone = fastCloneState(world);
-        const result = applyMove(clone, ctx.side, legal[i]!, { mutate: true });
+        const result = applyMove(clone, ctx.side, moves[i]!, { mutate: true });
         // Legal on the real state but not here (determinize drift): the
         // guarded floor score keeps a bad hypothesis from winning.
         const score = result.kind === "applied" ? evaluate(result.state, ctx.side) : FLOOR;
@@ -238,15 +246,15 @@ export class EvalAI implements GameAI {
     if (worlds === 0) {
       // No world survived: uniform over the real legal moves.
       const rng = makeRng(baseSeed ^ 0x5bf03635);
-      const idx = Math.floor(rng.next() * legal.length) % legal.length;
-      return legal[idx] ?? legal[0]!;
+      const idx = Math.floor(rng.next() * moves.length) % moves.length;
+      return moves[idx] ?? moves[0]!;
     }
 
     // Softmax root selection over the per-move averages.
-    const avgs = new Float64Array(legal.length);
-    for (let i = 0; i < legal.length; i++) avgs[i] = sums[i]! / worlds;
+    const avgs = new Float64Array(moves.length);
+    for (let i = 0; i < moves.length; i++) avgs[i] = sums[i]! / worlds;
     const pickRng = makeRng(hashSeed(baseSeed, 7919));
-    return legal[softmaxIndex(avgs, this.temperature, pickRng)]!;
+    return moves[softmaxIndex(avgs, this.temperature, pickRng)]!;
   }
 }
 

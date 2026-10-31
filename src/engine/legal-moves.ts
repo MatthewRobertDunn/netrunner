@@ -19,6 +19,7 @@ import {
   memoryLimit,
   memoryUsed,
   player,
+  runnerInstallCost,
   serverById,
 } from "./state.ts";
 import { rezCostFor } from "./runs.ts";
@@ -269,7 +270,8 @@ function runnerActionMoves(state: GameState): Move[] {
   for (const card of runner.hand) {
     const def = cardDef(card.cardId);
     if (def.type !== "program" && def.type !== "hardware" && def.type !== "resource") continue;
-    const cost = def.cost ?? 0;
+    // Effective cost incl. discounts (Carmen after a successful run this turn).
+    const cost = runnerInstallCost(state, card.cardId);
     if (cost > runner.credits) continue;
     if (def.type === "program" && memoryUsed(state) + (def.memoryCost ?? 0) > memoryLimit(state)) {
       continue;
@@ -333,6 +335,9 @@ function runMoves(state: GameState, playerSide: PlayerSide): Move[] {
     return moves;
   }
   if (run.phase === "movement") {
+    // Rule 6.9.4c / 6.6.3: during the movement phase the Runner may jack out
+    // or continue (pass the ice / approach the server).
+    moves.push({ kind: "runner.continueRun" });
     moves.push({ kind: "runner.jackOut" });
     return moves;
   }

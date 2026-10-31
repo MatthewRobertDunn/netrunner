@@ -4,7 +4,7 @@ var __export = (target, all) => {
     __defProp(target, name, { get: all[name], enumerable: true });
 };
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-dom/3.5.13/dist/runtime-dom.esm-bundler.js
+// ../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-dom/3.5.13/dist/runtime-dom.esm-bundler.js
 var runtime_dom_esm_bundler_exports = {};
 __export(runtime_dom_esm_bundler_exports, {
   BaseTransition: () => BaseTransition,
@@ -177,7 +177,7 @@ __export(runtime_dom_esm_bundler_exports, {
   withScopeId: () => withScopeId
 });
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/shared/3.5.13/dist/shared.esm-bundler.js
+// ../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/shared/3.5.13/dist/shared.esm-bundler.js
 // @__NO_SIDE_EFFECTS__
 function makeMap(str) {
   const map2 = /* @__PURE__ */ Object.create(null);
@@ -523,7 +523,7 @@ var stringifySymbol = (v, i = "") => {
   );
 };
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/reactivity/3.5.13/dist/reactivity.esm-bundler.js
+// ../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/reactivity/3.5.13/dist/reactivity.esm-bundler.js
 function warn(msg, ...args) {
   console.warn(`[Vue warn] ${msg}`, ...args);
 }
@@ -2200,7 +2200,7 @@ function traverse(value, depth = Infinity, seen2) {
   return value;
 }
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-core/3.5.13/dist/runtime-core.esm-bundler.js
+// ../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-core/3.5.13/dist/runtime-core.esm-bundler.js
 var stack = [];
 function pushWarningContext(vnode) {
   stack.push(vnode);
@@ -9588,7 +9588,7 @@ var resolveFilter = null;
 var compatUtils = null;
 var DeprecationTypes = null;
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-dom/3.5.13/dist/runtime-dom.esm-bundler.js
+// ../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-dom/3.5.13/dist/runtime-dom.esm-bundler.js
 var policy = void 0;
 var tt = typeof window !== "undefined" && window.trustedTypes;
 if (tt) {
@@ -11384,7 +11384,7 @@ var initDirectivesForSSR = () => {
   }
 };
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/compiler-core/3.5.13/dist/compiler-core.esm-bundler.js
+// ../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/compiler-core/3.5.13/dist/compiler-core.esm-bundler.js
 var FRAGMENT = Symbol(true ? `Fragment` : ``);
 var TELEPORT = Symbol(true ? `Teleport` : ``);
 var SUSPENSE = Symbol(true ? `Suspense` : ``);
@@ -16216,7 +16216,7 @@ var noopDirectiveTransform = () => ({
   props: []
 });
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/compiler-dom/3.5.13/dist/compiler-dom.esm-bundler.js
+// ../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/compiler-dom/3.5.13/dist/compiler-dom.esm-bundler.js
 var V_MODEL_RADIO = Symbol(true ? `vModelRadio` : ``);
 var V_MODEL_CHECKBOX = Symbol(true ? `vModelCheckbox` : ``);
 var V_MODEL_TEXT = Symbol(true ? `vModelText` : ``);
@@ -16852,7 +16852,7 @@ function compile2(src, options = {}) {
   }));
 }
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/vue/3.5.13/dist/vue.esm-bundler.js
+// ../../../usr/local/share/deno/npm/registry.npmjs.org/vue/3.5.13/dist/vue.esm-bundler.js
 function initDev() {
   {
     initCustomFormatter();
@@ -19073,6 +19073,11 @@ function availableCredits(state, side) {
   if (side === "runner" && state.run?.fundCredits) return p2.credits + state.run.fundCredits;
   return p2.credits;
 }
+function runnerInstallCost(state, cardId) {
+  let cost = cardDef(cardId).cost ?? 0;
+  if (cardId === "carmen" && state.runner.successfulRunThisTurn) cost = Math.max(0, cost - 2);
+  return cost;
+}
 function spendCredits(state, side, amount) {
   const p2 = player(state, side);
   let left = amount;
@@ -19361,10 +19366,11 @@ function passIce(state) {
     type: "pass-ice",
     cardId: current.id
   });
+  run.jackOutOffered = false;
   if (run.position === null || run.position === 0) {
     run.position = null;
     run.currentIceId = void 0;
-    run.phase = "success";
+    run.phase = "movement";
     return;
   }
   run.position -= 1;
@@ -19375,6 +19381,73 @@ function passIce(state) {
     type: "approach-ice",
     cardId: run.currentIceId
   });
+}
+function continueMovement(state) {
+  const run = state.run;
+  const ice = iceAt(state, run.server);
+  if (run.position === null) {
+    if (approachToll(state)) return true;
+    declareSuccess(state);
+    return false;
+  }
+  const current = ice[run.position];
+  if (current) state.log.push({
+    type: "pass-ice",
+    cardId: current.id
+  });
+  run.currentIceId = void 0;
+  if (run.position === 0) {
+    run.position = null;
+    if (approachToll(state)) return true;
+    declareSuccess(state);
+    return false;
+  }
+  run.position -= 1;
+  run.currentIceId = ice[run.position].id;
+  run.phase = "approach-ice";
+  state.log.push({
+    type: "approach-ice",
+    cardId: run.currentIceId
+  });
+  return false;
+}
+function approachToll(state) {
+  const run = state.run;
+  if (run.tollPaid) return false;
+  const manegarm = serverById(state, run.server).root.find((c) => c.cardId === "manegarm_skunkworks" && c.rezzed === true);
+  if (!manegarm) return false;
+  state.prompts.push({
+    kind: "choose-one",
+    id: state.nextPromptId++,
+    player: "runner",
+    title: "Manegarm Skunkworks: end the run unless you spend [click][click] or pay 5[credit]",
+    options: [
+      {
+        id: "toll-credits",
+        label: "Pay 5 credits",
+        creditCost: 5,
+        effect: {
+          kind: "pay-toll-credits"
+        }
+      },
+      {
+        id: "toll-clicks",
+        label: "Spend [click][click]",
+        clickCost: 2,
+        effect: {
+          kind: "pay-toll-clicks"
+        }
+      },
+      {
+        id: "toll-end",
+        label: "End the run",
+        effect: {
+          kind: "end-run"
+        }
+      }
+    ]
+  });
+  return true;
 }
 function declareSuccess(state) {
   const run = state.run;
@@ -20072,7 +20145,9 @@ function stepRun(state) {
     case "encounter-ice":
       return encounterStep(state);
     case "movement":
-      return movementStep(state);
+      if (run.jackOutOffered) return continueMovement(state);
+      run.jackOutOffered = true;
+      return true;
     case "success":
       successStep(state);
       return false;
@@ -20086,6 +20161,7 @@ function approachIceStep(state) {
   const ice = currentIce(state);
   if (!ice) {
     run.phase = "movement";
+    run.jackOutOffered = false;
     return false;
   }
   if (ice.rezzed === true) {
@@ -20151,6 +20227,7 @@ function encounterStep(state) {
   const ice = currentIce(state);
   if (!ice) {
     run.phase = "movement";
+    run.jackOutOffered = false;
     return false;
   }
   const total = subroutineCount(ice);
@@ -20163,65 +20240,6 @@ function encounterStep(state) {
     run.jackOutOffered = false;
     return false;
   }
-  return true;
-}
-function movementStep(state) {
-  const run = state.run;
-  const ice = iceAt(state, run.server);
-  if (run.position === null) {
-    if (approachToll(state)) return true;
-    declareSuccess(state);
-    return false;
-  }
-  run.currentIceId = void 0;
-  if (run.position === 0) {
-    run.position = null;
-    run.phase = "movement";
-    if (approachToll(state)) return true;
-    declareSuccess(state);
-    return false;
-  }
-  run.position -= 1;
-  run.currentIceId = ice[run.position].id;
-  run.phase = "approach-ice";
-  return false;
-}
-function approachToll(state) {
-  const run = state.run;
-  if (run.tollPaid) return false;
-  const manegarm = corpRootCards(state, run.server).find((c) => c.cardId === "manegarm_skunkworks" && c.rezzed === true);
-  if (!manegarm) return false;
-  state.prompts.push({
-    kind: "choose-one",
-    id: state.nextPromptId++,
-    player: "runner",
-    title: "Manegarm Skunkworks: end the run unless you spend [click][click] or pay 5[credit]",
-    options: [
-      {
-        id: "toll-credits",
-        label: "Pay 5 credits",
-        creditCost: 5,
-        effect: {
-          kind: "pay-toll-credits"
-        }
-      },
-      {
-        id: "toll-clicks",
-        label: "Spend [click][click]",
-        clickCost: 2,
-        effect: {
-          kind: "pay-toll-clicks"
-        }
-      },
-      {
-        id: "toll-end",
-        label: "End the run",
-        effect: {
-          kind: "end-run"
-        }
-      }
-    ]
-  });
   return true;
 }
 function successStep(state) {
@@ -20733,7 +20751,7 @@ function runnerActionMoves(state) {
   for (const card of runner.hand) {
     const def2 = cardDef(card.cardId);
     if (def2.type !== "program" && def2.type !== "hardware" && def2.type !== "resource") continue;
-    const cost = def2.cost ?? 0;
+    const cost = runnerInstallCost(state, card.cardId);
     if (cost > runner.credits) continue;
     if (def2.type === "program" && memoryUsed(state) + (def2.memoryCost ?? 0) > memoryLimit(state)) {
       continue;
@@ -20799,6 +20817,9 @@ function runMoves(state, playerSide) {
     return moves;
   }
   if (run.phase === "movement") {
+    moves.push({
+      kind: "runner.continueRun"
+    });
     moves.push({
       kind: "runner.jackOut"
     });
@@ -21016,6 +21037,9 @@ function explainIllegal(_state, playerSide, move) {
     case "runner.install":
     case "runner.run":
       return "Not legal in the current Runner action phase state";
+    case "runner.continueRun":
+    case "runner.jackOut":
+      return "The run is not waiting in its movement phase right now";
     default:
       return `Move '${move.kind}' is not legal right now`;
   }
@@ -21162,8 +21186,17 @@ function applyResolvedMove(state, playerSide, move) {
       if (found) applyPaidAbility(state, "runner", found.card, move.abilityIndex, move.server);
       break;
     }
+    case "runner.continueRun": {
+      continueMovement(state);
+      break;
+    }
     case "runner.jackOut": {
-      if (state.run) endRun(state);
+      if (state.run) {
+        state.log.push({
+          type: "jack-out"
+        });
+        endRun(state);
+      }
       break;
     }
     case "runner.breakSubroutine": {
@@ -21308,8 +21341,7 @@ function installRunnerCard(state, cardId) {
   if (!card) return;
   const def2 = cardDef(cardId);
   spendClicks(state, "runner", 1);
-  let cost = def2.cost ?? 0;
-  if (state.runner.successfulRunThisTurn && cardId === "carmen") cost = Math.max(0, cost - 2);
+  const cost = runnerInstallCost(state, cardId);
   spendCredits(state, "runner", cost);
   if (def2.type === "program") memoryUsed(state);
   state.runner.hand.splice(state.runner.hand.findIndex((c) => c.id === card.id), 1);
@@ -22679,9 +22711,10 @@ var EvalAI = class {
     this.seedSalt = opts.seedSalt ?? 0;
   }
   chooseMove(view, legal, ctx) {
-    if (legal.length === 1) return legal[0];
+    const moves = legal.some((m) => m.kind === "runner.continueRun") ? legal.filter((m) => m.kind !== "runner.jackOut") : legal;
+    if (moves.length === 1) return moves[0];
     const baseSeed = hashSeed(ctx.seed, this.seedSalt);
-    const sums = new Float64Array(legal.length);
+    const sums = new Float64Array(moves.length);
     let worlds = 0;
     for (let k = 1; k <= this.samples; k++) {
       const worldRng = makeRng(hashSeed(baseSeed, k));
@@ -22692,9 +22725,9 @@ var EvalAI = class {
         continue;
       }
       worlds++;
-      for (let i = 0; i < legal.length; i++) {
+      for (let i = 0; i < moves.length; i++) {
         const clone = fastCloneState(world);
-        const result = applyMove(clone, ctx.side, legal[i], {
+        const result = applyMove(clone, ctx.side, moves[i], {
           mutate: true
         });
         const score = result.kind === "applied" ? evaluate(result.state, ctx.side) : FLOOR;
@@ -22703,13 +22736,13 @@ var EvalAI = class {
     }
     if (worlds === 0) {
       const rng = makeRng(baseSeed ^ 1542469173);
-      const idx = Math.floor(rng.next() * legal.length) % legal.length;
-      return legal[idx] ?? legal[0];
+      const idx = Math.floor(rng.next() * moves.length) % moves.length;
+      return moves[idx] ?? moves[0];
     }
-    const avgs = new Float64Array(legal.length);
-    for (let i = 0; i < legal.length; i++) avgs[i] = sums[i] / worlds;
+    const avgs = new Float64Array(moves.length);
+    for (let i = 0; i < moves.length; i++) avgs[i] = sums[i] / worlds;
     const pickRng = makeRng(hashSeed(baseSeed, 7919));
-    return legal[softmaxIndex(avgs, this.temperature, pickRng)];
+    return moves[softmaxIndex(avgs, this.temperature, pickRng)];
   }
 };
 function softmaxIndex(avgs, temperature, rng) {
@@ -23395,6 +23428,8 @@ function describeMove(state, move) {
       const title = cardTitle(findCardIn(state, move.targetId)?.cardId ?? "");
       return `Ability ${move.abilityIndex + 1} \u2014 ${title}`;
     }
+    case "runner.continueRun":
+      return "Continue the run";
     case "runner.jackOut":
       return "Jack out";
     case "runner.breakSubroutine":
@@ -23416,8 +23451,6 @@ function describeMove(state, move) {
       return "Trash";
     case "runner.finishAccess":
       return "Finish access";
-    case "runner.payToll":
-      return move.method === "credits" ? "Pay the toll (credits)" : "Pay the toll (click)";
     case "prompt.answer": {
       const prompt = state.prompts.find((p2) => p2.id === move.promptId);
       const option = prompt && "options" in prompt ? prompt.options.find((o) => o.id === move.optionId) : void 0;

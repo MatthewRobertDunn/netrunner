@@ -10,6 +10,7 @@ import { cardDef, isIce } from "../cards/catalogue.ts";
 import { behaviors } from "../cards/effects.ts";
 import { rngInt } from "./rng.ts";
 import type {
+  CardId,
   CardInstance,
   GameState,
   PlayerSide,
@@ -174,6 +175,18 @@ export function availableCredits(state: GameState, side: PlayerSide): number {
   const p = player(state, side);
   if (side === "runner" && state.run?.fundCredits) return p.credits + state.run.fundCredits;
   return p.credits;
+}
+
+/**
+ * Effective Runner install cost for a card, including the one cost-reduction
+ * the starter pool models: Carmen costs 2 less after a successful run this
+ * turn. Used by BOTH move enumeration (legality) and apply, so a discounted
+ * install is offered exactly when it can actually be paid.
+ */
+export function runnerInstallCost(state: GameState, cardId: CardId): number {
+  let cost = cardDef(cardId).cost ?? 0;
+  if (cardId === "carmen" && state.runner.successfulRunThisTurn) cost = Math.max(0, cost - 2);
+  return cost;
 }
 
 /** Spend credits, consuming the run fund (Overclock) first. */

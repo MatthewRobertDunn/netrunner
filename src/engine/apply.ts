@@ -6,7 +6,15 @@
 import { cardDef, isIce } from "../cards/catalogue.ts";
 import { behaviors } from "../cards/effects.ts";
 import { applyChoice, applyPaidAbility, fireInstall, resolveSubroutine } from "./effects.ts";
-import { beginEncounter, endRun, finishRun, initiateRun, passIce, rezCard } from "./runs.ts";
+import {
+  beginEncounter,
+  continueMovement,
+  endRun,
+  finishRun,
+  initiateRun,
+  passIce,
+  rezCard,
+} from "./runs.ts";
 import {
   beginBreach,
   chooseRandomAccess,
@@ -28,6 +36,7 @@ import {
   moveCardTo,
   player,
   pruneEmptyRemotes,
+  runnerInstallCost,
   serverById,
   serverExists,
   spendClicks,
@@ -144,6 +153,9 @@ function explainIllegal(_state: GameState, playerSide: PlayerSide, move: Move): 
     case "runner.install":
     case "runner.run":
       return "Not legal in the current Runner action phase state";
+    case "runner.continueRun":
+    case "runner.jackOut":
+      return "The run is not waiting in its movement phase right now";
     default:
       return `Move '${move.kind}' is not legal right now`;
   }
@@ -287,8 +299,16 @@ function applyResolvedMove(state: GameState, playerSide: PlayerSide, move: Move)
       break;
     }
 
+    case "runner.continueRun": {
+      // Decline to jack out: continue the movement phase (rule 6.9.4d-g).
+      continueMovement(state);
+      break;
+    }
     case "runner.jackOut": {
-      if (state.run) endRun(state);
+      if (state.run) {
+        state.log.push({ type: "jack-out" });
+        endRun(state);
+      }
       break;
     }
     case "runner.breakSubroutine": {
@@ -458,8 +478,8 @@ function installRunnerCard(state: GameState, cardId: string): void {
   if (!card) return;
   const def = cardDef(cardId);
   spendClicks(state, "runner", 1);
-  let cost = def.cost ?? 0;
-  if (state.runner.successfulRunThisTurn && cardId === "carmen") cost = Math.max(0, cost - 2);
+  // Carmen: -2 after a successful run this turn (shared with enumeration).
+  const cost = runnerInstallCost(state, cardId);
   spendCredits(state, "runner", cost);
   if (def.type === "program") memoryUsed(state);
   state.runner.hand.splice(state.runner.hand.findIndex((c) => c.id === card.id), 1);

@@ -5,6 +5,7 @@
  */
 
 import { cardDef, engine, starterDeckConfigs } from "../src/mod.ts";
+import { continueRun } from "../src/testing/fixtures.ts";
 import type { GameState, Move } from "../src/types.ts";
 import { assert, assertDefined, assertEquals } from "./helpers/assert.ts";
 
@@ -55,7 +56,7 @@ Deno.test("servers: a remote whose last card is trashed ceases to exist", () => 
     m.kind === "runner.run" && m.server === "remote-1"
   );
   assertDefined(run, "the Runner can run the new remote");
-  state = play(state, "runner", run!);
+  state = continueRun(play(state, "runner", run!));
   assert(state.breach !== null, "the run breaches the remote");
 
   // Access the card (with a single candidate the engine auto-accesses it),

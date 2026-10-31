@@ -151,4 +151,14 @@ export function movesOfKind(state: GameState, side: PlayerSide, kind: Move["kind
   return engine.getLegalMoves(state, side).filter((m) => m.kind === kind);
 }
 
+/**
+ * Play the movement-phase `runner.continueRun` decision if it is pending
+ * (rule 6.9.4c: the run parks in the movement phase until the Runner jacks
+ * out or continues). No-op when no such move is legal.
+ */
+export function continueRun(state: GameState): GameState {
+  const m = movesOfKind(state, "runner", "runner.continueRun")[0];
+  return m ? play(state, "runner", m).state : state;
+}
+
 export { engine };

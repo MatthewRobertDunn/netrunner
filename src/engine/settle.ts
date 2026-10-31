@@ -14,7 +14,7 @@ import {
 import {
   beginEncounter,
   completeInitiation,
-  declareSuccess,
+  continueMovement,
   finishRun,
   iceAt,
   passIce,
@@ -133,7 +133,14 @@ function stepRun(state: GameState): boolean {
     case "encounter-ice":
       return encounterStep(state);
     case "movement":
-      return movementStep(state);
+      // Rule 6.9.4c / 6.6.3: during the movement phase the Runner may jack
+      // out. Park and wait for `runner.jackOut` / `runner.continueRun` —
+      // unless the chance was already given for this movement (the field is
+      // set when parking), e.g. after paying the Manegarm toll at the server,
+      // which rule 6.9.4g places after the jack-out step.
+      if (run.jackOutOffered) return continueMovement(state);
+      run.jackOutOffered = true;
+      return true;
     case "success":
       successStep(state);
       return false;
@@ -148,6 +155,7 @@ function approachIceStep(state: GameState): boolean {
   const ice = currentIce(state);
   if (!ice) {
     run.phase = "movement";
+    run.jackOutOffered = false;
     return false;
   }
   if (ice.rezzed === true) {
@@ -219,6 +227,7 @@ function encounterStep(state: GameState): boolean {
   const ice = currentIce(state);
   if (!ice) {
     run.phase = "movement";
+    run.jackOutOffered = false;
     return false;
   }
   const total = subroutineCount(ice);
@@ -233,62 +242,6 @@ function encounterStep(state: GameState): boolean {
     return false;
   }
   // Break window: the Runner may break subroutines (exposed as moves).
-  return true;
-}
-
-function movementStep(state: GameState): boolean {
-  const run = state.run!;
-  const ice = iceAt(state, run.server);
-  if (run.position === null) {
-    // The Runner approaches the server (rule 6.9.4g).
-    if (approachToll(state)) return true;
-    declareSuccess(state);
-    return false;
-  }
-  // Passing the ice at the current position and moving inward (rule 6.9.4).
-  run.currentIceId = undefined;
-  if (run.position === 0) {
-    run.position = null;
-    run.phase = "movement";
-    if (approachToll(state)) return true;
-    declareSuccess(state);
-    return false;
-  }
-  run.position -= 1;
-  run.currentIceId = ice[run.position]!.id;
-  run.phase = "approach-ice";
-  return false;
-}
-
-/** Manegarm Skunkworks toll when the Runner approaches the server. */
-function approachToll(state: GameState): boolean {
-  const run = state.run!;
-  if (run.tollPaid) return false;
-  const manegarm = corpRootCards(state, run.server).find((c) =>
-    c.cardId === "manegarm_skunkworks" && c.rezzed === true
-  );
-  if (!manegarm) return false;
-  state.prompts.push({
-    kind: "choose-one",
-    id: state.nextPromptId++,
-    player: "runner",
-    title: "Manegarm Skunkworks: end the run unless you spend [click][click] or pay 5[credit]",
-    options: [
-      {
-        id: "toll-credits",
-        label: "Pay 5 credits",
-        creditCost: 5,
-        effect: { kind: "pay-toll-credits" },
-      },
-      {
-        id: "toll-clicks",
-        label: "Spend [click][click]",
-        clickCost: 2,
-        effect: { kind: "pay-toll-clicks" },
-      },
-      { id: "toll-end", label: "End the run", effect: { kind: "end-run" } },
-    ],
-  });
   return true;
 }
 
