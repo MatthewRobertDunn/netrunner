@@ -74,6 +74,9 @@ export default defineComponent({
   ) {
     const discardSelected = ref<string[]>([]);
     const zoomCardId = ref<string | null>(null);
+    /** Instance id of the grip card the popup was opened for (actions only
+     *  attach to the zoom when this matches a card still in the hand). */
+    const zoomHandCardId = ref<string | null>(null);
     /** Game-log dock visibility (right sidebar). */
     const logOpen = ref(true);
 
@@ -163,6 +166,7 @@ export default defineComponent({
       accessedCard,
       (card: CardInstance | null) => {
         zoomCardId.value = card && card.cardId !== "hidden" ? card.cardId : null;
+        zoomHandCardId.value = null;
       },
     );
 
@@ -198,10 +202,24 @@ export default defineComponent({
 
     function zoom(cardId: string) {
       zoomCardId.value = cardId;
+      zoomHandCardId.value = null;
+    }
+
+    /** Open the popup for a grip card (its play/install actions attach). */
+    function zoomHand(c: CardInstance) {
+      zoomCardId.value = c.cardId;
+      zoomHandCardId.value = c.id;
     }
 
     function closeZoom() {
       zoomCardId.value = null;
+      zoomHandCardId.value = null;
+    }
+
+    /** A popup action consumed the card or ended the access — dismiss it. */
+    function playFromZoom(move: Move) {
+      play(move);
+      closeZoom();
     }
 
     function isCurrentIce(card: ViewCard): boolean {
@@ -229,8 +247,8 @@ export default defineComponent({
     /** Generic moves (credits, runs, jack out, …) for the action panel. */
     const generalMoves = computed<Move[]>(() => legal.value.filter((m: Move) => !isCardMove(m)));
 
-    /** Legal actions for one card in the human player's hand. */
-    function handActionsFor(c: CardInstance): Move[] {
+    /** Legal play/install moves for a card with this definition id. */
+    function cardMoves(cardId: string): Move[] {
       if (!isHumanTurn.value || prompt.value) return [];
       return legal.value.filter((m: Move) => {
         switch (m.kind) {
@@ -238,12 +256,36 @@ export default defineComponent({
           case "runner.playEvent":
           case "corp.install":
           case "corp.playOperation":
-            return m.cardId === c.cardId;
+            return m.cardId === cardId;
           default:
             return false;
         }
       });
     }
+
+    /** Legal actions for one card in the human player's hand. */
+    function handActionsFor(c: CardInstance): Move[] {
+      return cardMoves(c.cardId);
+    }
+
+    /**
+     * Buttons for the card popup: access decisions when the accessed card is
+     * zoomed (rule 7.2.2), otherwise the play/install actions of the grip
+     * card it was opened from. Empty for every other zoom (servers, ice,
+     * hand peeks on the AI's turn).
+     */
+    const zoomActions = computed<{ label: string; move: Move }[]>(() => {
+      const id = zoomCardId.value;
+      if (!id) return [];
+      if (accessedCard.value && accessedCard.value.cardId === id) {
+        return accessActions.value;
+      }
+      const handCard = zoomHandCardId.value
+        ? hand.value.find((c: CardInstance) => c.id === zoomHandCardId.value)
+        : null;
+      if (!handCard) return [];
+      return cardMoves(handCard.cardId).map((m) => ({ label: shortActionLabel(m), move: m }));
+    });
 
     /** Short button label for an under-card action (the card is above it). */
     function shortActionLabel(m: Move): string {
@@ -289,6 +331,7 @@ export default defineComponent({
       breach,
       accessedCard,
       accessActions,
+      zoomActions,
       serverRows,
       // methods
       label,
@@ -297,7 +340,9 @@ export default defineComponent({
       toggleDiscard,
       submitDiscard,
       play,
+      playFromZoom,
       zoom,
+      zoomHand,
       closeZoom,
       isCurrentIce,
       serverGlyph,
@@ -497,7 +542,7 @@ export default defineComponent({
             <card-tile
               :card="{ cardId: c.cardId, rezzed: true, advancement: 0 }"
               clickable
-              @zoom="zoom"
+              @zoom="zoomHand(c)"
             />
             <div v-if="handActionsFor(c).length" class="card-actions">
               <button
@@ -549,9 +594,9 @@ export default defineComponent({
       <card-zoom
         v-if="zoomCardId"
         :card-id="zoomCardId"
-        :actions="accessActions"
+        :actions="zoomActions"
         @close="closeZoom"
-        @move="play"
+        @move="playFromZoom"
       />
     </div>
   `,

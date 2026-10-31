@@ -23663,6 +23663,7 @@ var game_default = defineComponent({
   setup(props, { emit: emit2 }) {
     const discardSelected = ref([]);
     const zoomCardId = ref(null);
+    const zoomHandCardId = ref(null);
     const logOpen = ref(true);
     const status = computed2(() => engine.getPublicGameStatusFor(props.state, props.humanSide));
     const actor = computed2(() => actorOf2(props.state));
@@ -23728,6 +23729,7 @@ var game_default = defineComponent({
     });
     watch2(accessedCard, (card) => {
       zoomCardId.value = card && card.cardId !== "hidden" ? card.cardId : null;
+      zoomHandCardId.value = null;
     });
     function label(move) {
       return describeMove(props.state, move);
@@ -23757,9 +23759,19 @@ var game_default = defineComponent({
     }
     function zoom(cardId) {
       zoomCardId.value = cardId;
+      zoomHandCardId.value = null;
+    }
+    function zoomHand(c) {
+      zoomCardId.value = c.cardId;
+      zoomHandCardId.value = c.id;
     }
     function closeZoom() {
       zoomCardId.value = null;
+      zoomHandCardId.value = null;
+    }
+    function playFromZoom(move) {
+      play(move);
+      closeZoom();
     }
     function isCurrentIce(card) {
       const r = status.value.run;
@@ -23776,7 +23788,7 @@ var game_default = defineComponent({
       return m.kind === "runner.install" || m.kind === "runner.playEvent" || m.kind === "corp.install" || m.kind === "corp.playOperation";
     }
     const generalMoves = computed2(() => legal.value.filter((m) => !isCardMove(m)));
-    function handActionsFor(c) {
+    function cardMoves(cardId) {
       if (!isHumanTurn.value || prompt.value) return [];
       return legal.value.filter((m) => {
         switch (m.kind) {
@@ -23784,12 +23796,28 @@ var game_default = defineComponent({
           case "runner.playEvent":
           case "corp.install":
           case "corp.playOperation":
-            return m.cardId === c.cardId;
+            return m.cardId === cardId;
           default:
             return false;
         }
       });
     }
+    function handActionsFor(c) {
+      return cardMoves(c.cardId);
+    }
+    const zoomActions = computed2(() => {
+      const id = zoomCardId.value;
+      if (!id) return [];
+      if (accessedCard.value && accessedCard.value.cardId === id) {
+        return accessActions.value;
+      }
+      const handCard = zoomHandCardId.value ? hand.value.find((c) => c.id === zoomHandCardId.value) : null;
+      if (!handCard) return [];
+      return cardMoves(handCard.cardId).map((m) => ({
+        label: shortActionLabel(m),
+        move: m
+      }));
+    });
     function shortActionLabel(m) {
       switch (m.kind) {
         case "runner.install":
@@ -23831,6 +23859,7 @@ var game_default = defineComponent({
       breach,
       accessedCard,
       accessActions,
+      zoomActions,
       serverRows,
       // methods
       label,
@@ -23839,7 +23868,9 @@ var game_default = defineComponent({
       toggleDiscard,
       submitDiscard,
       play,
+      playFromZoom,
       zoom,
+      zoomHand,
       closeZoom,
       isCurrentIce,
       serverGlyph,
@@ -24039,7 +24070,7 @@ var game_default = defineComponent({
             <card-tile
               :card="{ cardId: c.cardId, rezzed: true, advancement: 0 }"
               clickable
-              @zoom="zoom"
+              @zoom="zoomHand(c)"
             />
             <div v-if="handActionsFor(c).length" class="card-actions">
               <button
@@ -24091,9 +24122,9 @@ var game_default = defineComponent({
       <card-zoom
         v-if="zoomCardId"
         :card-id="zoomCardId"
-        :actions="accessActions"
+        :actions="zoomActions"
         @close="closeZoom"
-        @move="play"
+        @move="playFromZoom"
       />
     </div>
   `
