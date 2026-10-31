@@ -407,7 +407,10 @@ export default defineComponent({
   },
   template: `
     <div class="game" :class="{ 'log-collapsed': !logOpen }">
-      <div class="game-main">
+      <!-- Perspective class drives strip order: the human player's own area
+           renders at the bottom via CSS order rules (own side bottom, opponent
+           top), so the template keeps a single copy of each area. -->
+      <div class="game-main" :class="'perspective-' + humanSide">
       <!-- ================= HEADER ================= -->
       <header class="game-header">
         <div class="turn-badge">

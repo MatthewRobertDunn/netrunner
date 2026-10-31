@@ -174,6 +174,30 @@ body {
   grid-template-rows: auto auto auto 1fr auto;
   gap: 10px;
 }
+/* Perspective: the human player's own strip sits at the bottom (nearer the
+   player), the opponent at the top. The template lists corp-area first, which
+   is already correct for perspective-runner; for perspective-corp explicit
+   grid orders pull runner-area just below the header and push corp-area to
+   the bottom. Single copy of each area in the DOM, so testids, Run buttons,
+   prompts, and the log are untouched; the header stays on top in both. */
+.game-main.perspective-corp .game-header {
+  order: 0;
+}
+.game-main.perspective-corp .runner-area {
+  order: 1;
+}
+.game-main.perspective-corp .run-banner {
+  order: 2;
+}
+.game-main.perspective-corp .action-row {
+  order: 3;
+}
+.game-main.perspective-corp .corp-area {
+  order: 4;
+}
+.game-main.perspective-corp .support-warnings {
+  order: 5;
+}
 
 .game-header {
   display: flex;
