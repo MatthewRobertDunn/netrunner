@@ -398,6 +398,10 @@ body {
   font-weight: 700;
   font-size: 12px;
   cursor: pointer;
+  /* Pin to the bottom of the server column. `.servers` stretches every
+   * `.server` column to the same height, so all run buttons line up on one
+   * baseline regardless of how much ice sits above them. */
+  margin-top: auto;
 }
 .run-btn:hover {
   filter: brightness(1.15);
