@@ -303,11 +303,15 @@ export function beginBreach(state: GameState, server: ServerId): void {
   let limit = 1;
   if (server === "hq" || server === "rd") {
     if (run.source === "jailbreak") limit += 1;
+    // Docklands Pass: "The first time each turn you breach HQ, access 1
+    // additional card" — only HQ breaches count toward that once-per-turn,
+    // so a prior R&D/Archives/remote breach must not consume the bonus.
     if (server === "hq" && state.runner.hqBreachesThisTurn === 0) {
       if (state.runner.installed.some((c) => c.cardId === "docklands_pass")) limit += 1;
     }
   }
-  state.runner.hqBreachesThisTurn += 1;
+  // The counter tracks HQ breaches only (it exists for Docklands Pass).
+  if (server === "hq") state.runner.hqBreachesThisTurn += 1;
   state.breach = {
     server,
     randomAccessLimit: limit,
