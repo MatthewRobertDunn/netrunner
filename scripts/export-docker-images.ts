@@ -105,7 +105,7 @@ for (const arch of ["arm64", "amd64"]) {
     "--cmd",
     "--allow-read=/app/public",
     "--cmd",
-    "--allow-env=PORT",
+    "--allow-env=PORT,AUTO_PORT",
     "--cmd",
     "--allow-net",
     "--cmd",
