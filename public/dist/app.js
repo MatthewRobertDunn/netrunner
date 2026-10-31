@@ -20677,10 +20677,13 @@ function corpActionMoves(state) {
   if (corp.deck.length > 0) moves.push({
     kind: "corp.draw"
   });
+  const installed = /* @__PURE__ */ new Set();
   for (const card of corp.hand) {
+    if (installed.has(card.cardId)) continue;
     const def2 = cardDef(card.cardId);
     const servers = installServersFor(state, card);
     if (servers.length === 0) continue;
+    installed.add(card.cardId);
     if (def2.type === "ice") {
       for (const server of servers) {
         if (server === "new-remote") {
@@ -20710,10 +20713,13 @@ function corpActionMoves(state) {
       }
     }
   }
+  const operated = /* @__PURE__ */ new Set();
   for (const card of corp.hand) {
+    if (operated.has(card.cardId)) continue;
     const def2 = cardDef(card.cardId);
     if (def2.type !== "operation") continue;
     if (def2.cost !== null && def2.cost > state.corp.credits) continue;
+    operated.add(card.cardId);
     moves.push({
       kind: "corp.playOperation",
       cardId: card.cardId
@@ -20786,7 +20792,9 @@ function runnerActionMoves(state) {
   if (runner.deck.length > 0) moves.push({
     kind: "runner.draw"
   });
+  const runnerInstalled = /* @__PURE__ */ new Set();
   for (const card of runner.hand) {
+    if (runnerInstalled.has(card.cardId)) continue;
     const def2 = cardDef(card.cardId);
     if (def2.type !== "program" && def2.type !== "hardware" && def2.type !== "resource") continue;
     const cost = runnerInstallCost(state, card.cardId);
@@ -20794,16 +20802,20 @@ function runnerActionMoves(state) {
     if (def2.type === "program" && memoryUsed(state) + (def2.memoryCost ?? 0) > memoryLimit(state)) {
       continue;
     }
+    runnerInstalled.add(card.cardId);
     moves.push({
       kind: "runner.install",
       cardId: card.cardId
     });
   }
+  const evented = /* @__PURE__ */ new Set();
   for (const card of runner.hand) {
+    if (evented.has(card.cardId)) continue;
     const def2 = cardDef(card.cardId);
     if (def2.type !== "event") continue;
     if (def2.cost !== null && def2.cost > runner.credits) continue;
     if (def2.minimumDeckSize !== null) continue;
+    evented.add(card.cardId);
     if (card.cardId === "jailbreak" || card.cardId === "overclock" || card.cardId === "tread_lightly") {
       const servers = card.cardId === "jailbreak" ? [
         "hq",
@@ -23692,7 +23704,6 @@ var game_default = defineComponent({
   setup(props, { emit: emit2 }) {
     const discardSelected = ref([]);
     const zoomCardId = ref(null);
-    const zoomHandCardId = ref(null);
     const logOpen = ref(true);
     const status = computed2(() => engine.getPublicGameStatusFor(props.state, props.humanSide));
     const actor = computed2(() => actorOf2(props.state));
@@ -23770,7 +23781,6 @@ var game_default = defineComponent({
     });
     watch2(accessedCard, (card) => {
       zoomCardId.value = card && card.cardId !== "hidden" ? card.cardId : null;
-      zoomHandCardId.value = null;
     });
     function label(move) {
       return describeMove(props.state, move);
@@ -23800,15 +23810,9 @@ var game_default = defineComponent({
     }
     function zoom(cardId) {
       zoomCardId.value = cardId;
-      zoomHandCardId.value = null;
-    }
-    function zoomHand(c) {
-      zoomCardId.value = c.cardId;
-      zoomHandCardId.value = c.id;
     }
     function closeZoom() {
       zoomCardId.value = null;
-      zoomHandCardId.value = null;
     }
     function playFromZoom(move) {
       play(move);
@@ -23858,12 +23862,7 @@ var game_default = defineComponent({
       if (accessedCard.value && accessedCard.value.cardId === id) {
         return accessActions.value;
       }
-      const handCard = zoomHandCardId.value ? hand.value.find((c) => c.id === zoomHandCardId.value) : null;
-      if (!handCard) return [];
-      return cardMoves(handCard.cardId).map((m) => ({
-        label: shortActionLabel(m),
-        move: m
-      }));
+      return [];
     });
     function shortActionLabel(m) {
       switch (m.kind) {
@@ -23917,7 +23916,6 @@ var game_default = defineComponent({
       play,
       playFromZoom,
       zoom,
-      zoomHand,
       closeZoom,
       isCurrentIce,
       serverGlyph,
@@ -24176,7 +24174,7 @@ var game_default = defineComponent({
             <card-tile
               :card="{ cardId: c.cardId, rezzed: true, advancement: 0 }"
               clickable
-              @zoom="zoomHand(c)"
+              @zoom="zoom"
             />
             <div v-if="handActionsFor(c).length" class="card-actions">
               <button

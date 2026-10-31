@@ -179,10 +179,16 @@ function corpActionMoves(state: GameState): Move[] {
   if (corp.deck.length > 0) moves.push({ kind: "corp.draw" });
 
   // Install: hand cards that can be installed in their legal servers.
+  // Install/play moves key on the definition id (apply resolves the first
+  // matching instance), so emit one move set per definition — a second copy
+  // in hand must not double the buttons (or the AI's softmax mass).
+  const installed = new Set<string>();
   for (const card of corp.hand) {
+    if (installed.has(card.cardId)) continue;
     const def = cardDef(card.cardId);
     const servers = installServersFor(state, card);
     if (servers.length === 0) continue;
+    installed.add(card.cardId);
     if (def.type === "ice") {
       // Ice install cost = number of ice already protecting that server.
       for (const server of servers) {
@@ -204,11 +210,14 @@ function corpActionMoves(state: GameState): Move[] {
     }
   }
 
-  // Play operations from hand.
+  // Play operations from hand (one move per definition id — see above).
+  const operated = new Set<string>();
   for (const card of corp.hand) {
+    if (operated.has(card.cardId)) continue;
     const def = cardDef(card.cardId);
     if (def.type !== "operation") continue;
     if (def.cost !== null && def.cost > state.corp.credits) continue;
+    operated.add(card.cardId);
     moves.push({ kind: "corp.playOperation", cardId: card.cardId });
   }
 
@@ -290,8 +299,10 @@ function runnerActionMoves(state: GameState): Move[] {
   moves.push({ kind: "runner.gainCredits" });
   if (runner.deck.length > 0) moves.push({ kind: "runner.draw" });
 
-  // Install programs/hardware/resources from hand.
+  // Install programs/hardware/resources from hand (one move per definition id).
+  const runnerInstalled = new Set<string>();
   for (const card of runner.hand) {
+    if (runnerInstalled.has(card.cardId)) continue;
     const def = cardDef(card.cardId);
     if (def.type !== "program" && def.type !== "hardware" && def.type !== "resource") continue;
     // Effective cost incl. discounts (Carmen after a successful run this turn).
@@ -300,15 +311,19 @@ function runnerActionMoves(state: GameState): Move[] {
     if (def.type === "program" && memoryUsed(state) + (def.memoryCost ?? 0) > memoryLimit(state)) {
       continue;
     }
+    runnerInstalled.add(card.cardId);
     moves.push({ kind: "runner.install", cardId: card.cardId });
   }
 
-  // Play events from hand.
+  // Play events from hand (one move set per definition id).
+  const evented = new Set<string>();
   for (const card of runner.hand) {
+    if (evented.has(card.cardId)) continue;
     const def = cardDef(card.cardId);
     if (def.type !== "event") continue;
     if (def.cost !== null && def.cost > runner.credits) continue;
     if (def.minimumDeckSize !== null) continue;
+    evented.add(card.cardId);
     if (
       card.cardId === "jailbreak" || card.cardId === "overclock" || card.cardId === "tread_lightly"
     ) {

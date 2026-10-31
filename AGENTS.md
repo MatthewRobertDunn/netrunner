@@ -126,3 +126,9 @@ or commits.
    `"top"`. Don't shuffle the deck — the flag is O(1) per draw.
 10. **Rez-cost arithmetic has three calculators** (`rezCostFor`, `rezSafeCost`, printed cost) and
     the rez window has paid twice — see `docs/rules-gotchas.md` before touching any cost path.
+11. **The Dockerfile is not the build.** `scripts/export-docker-images.ts` constructs the image
+    config directly with `crane mutate`, bypassing the Dockerfile entirely (there is no Dockerfile
+    anymore — it was deleted after exactly this divergence broke a deploy). Change the CMD there.
+12. **`crane mutate --cmd` comma-splits its value.** `--cmd "--allow-env=PORT,AUTO_PORT"` becomes
+    two CMD entries (`--allow-env=PORT`, `AUTO_PORT`) and Deno tries to run `AUTO_PORT` as a
+    script. Pass repeated flags instead: `--cmd "--allow-env=PORT" --cmd "--allow-env=AUTO_PORT"`.
