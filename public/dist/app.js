@@ -24129,15 +24129,15 @@ var game_default = defineComponent({
 
                  The DOM order below is one order for every case (server
                  card/label -> root row -> ice stack -> Run); the column order
-                 is fixed up in CSS via order on .server.central children
-                 (public/css/style.css). The screen is drawn from the human
-                 player's seat, own side at the bottom, so the ice must sit on
-                 the RUNNER side of the central server card: as Runner (runner
-                 at the bottom) that is BELOW the card, which is this DOM
-                 order; as Corp (corp at the bottom, runner at the top) the
-                 ice stack moves ABOVE the card. The corp-seat class on
-                 .servers drives that flip. Remotes keep their
-                 label -> root -> ice order in both seats. -->
+                 is fixed up in CSS via order on .server.central AND
+                 .server.remote children (public/css/style.css). The screen is
+                 drawn from the human player's seat, own side at the bottom,
+                 so the ice must sit on the RUNNER side of the central server
+                 card and the remote root: as Runner (runner at the bottom)
+                 that is BELOW the card/root, which is this DOM order; as
+                 Corp (corp at the bottom, runner at the top) the ice stack
+                 moves ABOVE the card/root. The corp-seat class on .servers
+                 drives that flip. -->
             <div v-if="s.root.length" class="server-root-row">
               <template v-for="c in s.root" :key="c.id">
                 <card-tile

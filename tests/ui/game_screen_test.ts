@@ -256,6 +256,97 @@ Deno.test("GameScreen side panel: own credits tile takes the gain-credit action"
   }
 });
 
+Deno.test("GameScreen remotes: ice sits on the runner side in both seats", () => {
+  // Structural DOM types: this repo typechecks without the DOM lib (see
+  // tests/ui/setup.ts, which bridges the same happy-dom globals).
+  interface TestDocument {
+    getElementById(id: string): unknown;
+    createElement(tag: string): { id: string; textContent: string | null };
+    head: { appendChild(n: unknown): void };
+  }
+  interface TestWindow {
+    getComputedStyle(el: unknown): { order: string };
+  }
+  const testDom = globalThis as unknown as { document: TestDocument; window: TestWindow };
+
+  // One <style> with the real shipped CSS, so computed `order` reflects what
+  // the browser does (happy-dom resolves stylesheet rules into
+  // getComputedStyle).
+  if (!testDom.document.getElementById("real-ui-css")) {
+    const css = Deno.readTextFileSync(new URL("../../public/css/style.css", import.meta.url));
+    const style = testDom.document.createElement("style");
+    style.id = "real-ui-css";
+    style.textContent = css;
+    testDom.document.head.appendChild(style);
+  }
+
+  // Corp installs Palisade then Send a Message in a new remote: remote-1
+  // ends up with ice plus a root card.
+  const { state } = createTestFixture(42, "corp", [
+    { kind: "corp.install", cardId: "palisade", server: "new-remote" },
+    { kind: "corp.install", cardId: "send_a_message", server: "remote-1" },
+  ] as never[]);
+
+  for (const humanSide of ["corp", "runner"] as const) {
+    const wrapper = mount(GameScreen, {
+      props: { state, humanSide },
+      attachTo: "body",
+    });
+    try {
+      const servers = wrapper.find(".servers");
+      assertEquals(
+        servers.classes().includes("corp-seat"),
+        humanSide === "corp",
+        `corp-seat only in the corp seat (${humanSide})`,
+      );
+      const remote = wrapper.find(".server.remote");
+      assert(remote.exists(), `remote column renders (${humanSide})`);
+
+      // The template keeps one DOM order in both seats: label, root, ice.
+      // (Run buttons never render here: corp moves hold no runner.run, and
+      // on the corp turn the runner has no legal moves.)
+      const domOrder = [...remote.element.children].map((c) => c.className.split(" ")[0]);
+      assertEquals(
+        domOrder,
+        ["server-label", "server-root-row", "server-ice-stack"],
+        `remote DOM order is label, root, ice (${humanSide})`,
+      );
+
+      const order = (sel: string) =>
+        testDom.window.getComputedStyle(remote.find(sel).element).order;
+      if (humanSide === "corp") {
+        // Runner side is the top: ice above root above label.
+        assertEquals(order(".server-ice-stack"), "1", "corp seat: ice first");
+        assertEquals(order(".server-root-row"), "2", "corp seat: root second");
+        assertEquals(order(".server-label"), "3", "corp seat: label third");
+      } else {
+        // Runner side is the bottom, which is already DOM order: no flips.
+        // (happy-dom reports an unset `order` as "", i.e. the initial 0.)
+        assertEquals(order(".server-ice-stack"), "", "runner seat: no ice flip");
+        assertEquals(order(".server-root-row"), "", "runner seat: no root flip");
+        assertEquals(order(".server-label"), "", "runner seat: no label flip");
+      }
+
+      // Central columns flip the same way (HQ: ice above the identity card
+      // in the corp seat, below it as runner).
+      const hq = wrapper.findAll(".server.central")[0]!;
+      const hqOrder = (sel: string) => testDom.window.getComputedStyle(hq.find(sel).element).order;
+      assertEquals(
+        hqOrder(".server-ice-stack"),
+        humanSide === "corp" ? "1" : "",
+        `HQ ice (${humanSide})`,
+      );
+      assertEquals(
+        hqOrder(".server-card"),
+        humanSide === "corp" ? "3" : "",
+        `HQ card (${humanSide})`,
+      );
+    } finally {
+      wrapper.unmount();
+    }
+  }
+});
+
 Deno.test("GameScreen side panel: acting-side highlight follows state.turn.player", () => {
   const { state, humanSide } = createTestFixture(42, "corp");
   const acting = state.turn.player;

@@ -436,10 +436,10 @@ button.primary-stat:disabled {
    (own side at the bottom). The DOM order is server card/label -> root row
    -> ice stack -> Run button, which already puts ice on the RUNNER side
    (below the card) when the human is the Runner (corp top, runner bottom).
-   When the human is the Corp (corp bottom, runner top) the central columns
-   flip via `order` below so the ice stack sits ABOVE the card — still on
-   the runner side. The Run button stays last (pinned to the column bottom)
-   in both seats. Remotes keep label -> root -> ice in both seats. */
+   When the human is the Corp (corp bottom, runner top) the columns flip via
+   `order` below so the ice stack sits ABOVE the card/root — still on the
+   runner side. The Run button stays last (pinned to the column bottom)
+   in both seats. */
 .server {
   display: flex;
   flex-direction: column;
@@ -461,7 +461,26 @@ button.primary-stat:disabled {
 .servers.corp-seat .server.central .run-btn {
   order: 4;
 }
-/* Small server name label for remotes (first in DOM, top in both seats;
+/* Corp seat: remotes flip the same way — ice on the runner side (top), so
+   the column reads ice stack -> root row -> label -> Run button. The label
+   stays nearest the corp side (bottom), mirroring the runner seat where it
+   sits on top. The run-btn rule is belt-and-braces (Run buttons only render
+   for the human Runner, which never sees the corp seat): without it the
+   button's default order 0 would jump above the ice. */
+.servers.corp-seat .server.remote .server-ice-stack {
+  order: 1;
+}
+.servers.corp-seat .server.remote .server-root-row {
+  order: 2;
+}
+.servers.corp-seat .server.remote .server-label {
+  order: 3;
+}
+.servers.corp-seat .server.remote .run-btn {
+  order: 4;
+}
+/* Small server name label for remotes: nearest the corp side in both seats
+   (top as Runner, bottom as Corp via the corp-seat order flip below — it
    replaces the old corporate card-back "server card"). */
 .server-label {
   font-size: 11px;
