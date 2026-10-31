@@ -82,6 +82,10 @@ export default defineComponent({
   ) {
     const discardSelected = ref<string[]>([]);
     const zoomCardId = ref<string | null>(null);
+    /** Instance id of the grip card the popup was opened for (its single
+     *  action row attaches to the zoom; the zoomed tile's under-tile row
+     *  hides while open so the row never appears twice). */
+    const zoomHandCardId = ref<string | null>(null);
     /** Game-log dock visibility (right sidebar). */
     const logOpen = ref(true);
 
@@ -196,6 +200,7 @@ export default defineComponent({
       accessedCard,
       (card: CardInstance | null) => {
         zoomCardId.value = card && card.cardId !== "hidden" ? card.cardId : null;
+        zoomHandCardId.value = null;
       },
     );
 
@@ -231,10 +236,18 @@ export default defineComponent({
 
     function zoom(cardId: string) {
       zoomCardId.value = cardId;
+      zoomHandCardId.value = null;
+    }
+
+    /** Open the popup for a grip card (its single play/install row attaches). */
+    function zoomHand(c: CardInstance) {
+      zoomCardId.value = c.cardId;
+      zoomHandCardId.value = c.id;
     }
 
     function closeZoom() {
       zoomCardId.value = null;
+      zoomHandCardId.value = null;
     }
 
     /** A popup action consumed the card or ended the access — dismiss it. */
@@ -309,10 +322,11 @@ export default defineComponent({
 
     /**
      * Buttons for the card popup: access decisions when the accessed card is
-     * zoomed (rule 7.2.2), and nothing else. A grip card's play/install buttons
-     * are deliberately NOT repeated here — `handActionsFor` already renders
-     * them under every card tile, and feeding the same moves to both places
-     * showed the row twice (two identical rows of install buttons).
+     * zoomed (rule 7.2.2), otherwise the single play/install row of the grip
+     * card it was opened from. The engine emits one move set per definition
+     * id, so this row is never doubled; the zoomed tile's own under-tile row
+     * hides while the popup is open (see template), so the row appears
+     * exactly once on screen. Empty for every other zoom.
      */
     const zoomActions = computed<{ label: string; move: Move }[]>(() => {
       const id = zoomCardId.value;
@@ -320,7 +334,11 @@ export default defineComponent({
       if (accessedCard.value && accessedCard.value.cardId === id) {
         return accessActions.value;
       }
-      return [];
+      const handCard = zoomHandCardId.value
+        ? hand.value.find((c: CardInstance) => c.id === zoomHandCardId.value)
+        : null;
+      if (!handCard) return [];
+      return cardMoves(handCard.cardId).map((m) => ({ label: shortActionLabel(m), move: m }));
     });
 
     /** Short button label for an under-card action (the card is above it). */
@@ -347,6 +365,7 @@ export default defineComponent({
       // data
       discardSelected,
       zoomCardId,
+      zoomHandCardId,
       logOpen,
       // computed
       status,
@@ -378,6 +397,7 @@ export default defineComponent({
       play,
       playFromZoom,
       zoom,
+      zoomHand,
       closeZoom,
       isCurrentIce,
       serverGlyph,
@@ -636,9 +656,9 @@ export default defineComponent({
             <card-tile
               :card="{ cardId: c.cardId, rezzed: true, advancement: 0 }"
               clickable
-              @zoom="zoom"
+              @zoom="zoomHand(c)"
             />
-            <div v-if="handActionsFor(c).length" class="card-actions">
+            <div v-if="handActionsFor(c).length && zoomHandCardId !== c.id" class="card-actions">
               <button
                 v-for="m in handActionsFor(c)"
                 :key="moveKey(m)"

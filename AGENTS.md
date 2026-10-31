@@ -10,7 +10,7 @@ the build/verify loop, the engine invariants, and the mistakes I keep repeating.
 /usr/local/bin/deno check src/mod.ts
 /usr/local/bin/deno check src/web/entry.ts   # the Vue UI; src/mod.ts does not import it
 
-# Format check, lint, check, and test suite in one task (138 tests, ~10s)
+# Format check, lint, check, and test suite in one task (163 tests, ~10s)
 deno task verify
 
 # AI sanity: EvalAI vs RandomAI win rates + move variety (~1 min)

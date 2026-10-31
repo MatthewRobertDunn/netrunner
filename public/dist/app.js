@@ -23704,6 +23704,7 @@ var game_default = defineComponent({
   setup(props, { emit: emit2 }) {
     const discardSelected = ref([]);
     const zoomCardId = ref(null);
+    const zoomHandCardId = ref(null);
     const logOpen = ref(true);
     const status = computed2(() => engine.getPublicGameStatusFor(props.state, props.humanSide));
     const actor = computed2(() => actorOf2(props.state));
@@ -23781,6 +23782,7 @@ var game_default = defineComponent({
     });
     watch2(accessedCard, (card) => {
       zoomCardId.value = card && card.cardId !== "hidden" ? card.cardId : null;
+      zoomHandCardId.value = null;
     });
     function label(move) {
       return describeMove(props.state, move);
@@ -23810,9 +23812,15 @@ var game_default = defineComponent({
     }
     function zoom(cardId) {
       zoomCardId.value = cardId;
+      zoomHandCardId.value = null;
+    }
+    function zoomHand(c) {
+      zoomCardId.value = c.cardId;
+      zoomHandCardId.value = c.id;
     }
     function closeZoom() {
       zoomCardId.value = null;
+      zoomHandCardId.value = null;
     }
     function playFromZoom(move) {
       play(move);
@@ -23862,7 +23870,12 @@ var game_default = defineComponent({
       if (accessedCard.value && accessedCard.value.cardId === id) {
         return accessActions.value;
       }
-      return [];
+      const handCard = zoomHandCardId.value ? hand.value.find((c) => c.id === zoomHandCardId.value) : null;
+      if (!handCard) return [];
+      return cardMoves(handCard.cardId).map((m) => ({
+        label: shortActionLabel(m),
+        move: m
+      }));
     });
     function shortActionLabel(m) {
       switch (m.kind) {
@@ -23885,6 +23898,7 @@ var game_default = defineComponent({
       // data
       discardSelected,
       zoomCardId,
+      zoomHandCardId,
       logOpen,
       // computed
       status,
@@ -23916,6 +23930,7 @@ var game_default = defineComponent({
       play,
       playFromZoom,
       zoom,
+      zoomHand,
       closeZoom,
       isCurrentIce,
       serverGlyph,
@@ -24174,9 +24189,9 @@ var game_default = defineComponent({
             <card-tile
               :card="{ cardId: c.cardId, rezzed: true, advancement: 0 }"
               clickable
-              @zoom="zoom"
+              @zoom="zoomHand(c)"
             />
-            <div v-if="handActionsFor(c).length" class="card-actions">
+            <div v-if="handActionsFor(c).length && zoomHandCardId !== c.id" class="card-actions">
               <button
                 v-for="m in handActionsFor(c)"
                 :key="moveKey(m)"
