@@ -353,6 +353,28 @@ export function currentStrength(_state: GameState, card: CardInstance): number {
   return baseStrength(card) + (card.strengthBoost ?? 0);
 }
 
+/**
+ * Expire every temporary strength pump on the Runner's installed programs.
+ *
+ * Rule 3.9.5b: a paid ability that modifies an icebreaker's strength has an
+ * implicit duration of "for the remainder of the current encounter"; one used
+ * outside an encounter expires at the next checkpoint (rule 3.9.5d). So pumps
+ * are cleared when an encounter ends and again when the run ends, and no boost
+ * can outlive the run that created it. `strengthBoost` is the only pump field
+ * (its sole writer is `pumpIcebreaker` in apply.ts) and every consumer reads it
+ * with `?? 0`, so clearing it to `undefined` restores printed strength.
+ *
+ * Unity is unaffected by design: its "+X = installed icebreakers" strength is a
+ * static ability recomputed on the fly in legal-moves.ts `currentIceStrength`
+ * and is never stored in `strengthBoost` (`pumpIcebreaker` refuses to pump
+ * Unity), so this sweep cannot clobber it.
+ */
+export function expireIcebreakerPumps(state: GameState): void {
+  for (const card of state.runner.installed) {
+    if (card.strengthBoost !== undefined) card.strengthBoost = undefined;
+  }
+}
+
 export function memoryUsed(state: GameState): number {
   let used = 0;
   for (const c of state.runner.installed) used += cardDef(c.cardId).memoryCost ?? 0;

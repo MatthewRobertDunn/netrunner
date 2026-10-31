@@ -20,6 +20,7 @@ import {
   availableCredits,
   createRemote,
   drawCards,
+  expireIcebreakerPumps,
   findCard,
   gainCredits,
   loseCredits,
@@ -681,6 +682,8 @@ export function resolveEncounter(state: GameState): void {
   run.currentIceId = undefined;
   run.phase = "movement";
   run.jackOutOffered = false;
+  // Encounter over: icebreaker pumps expire with it (rule 3.9.5b).
+  expireIcebreakerPumps(state);
 }
 
 // ---------------------------------------------------------------------------
