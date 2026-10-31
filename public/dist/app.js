@@ -19868,6 +19868,9 @@ function applyPaidAbility(state, side, card, abilityIndex, server) {
   if (card.cardId === "red_team" && ability.id === "run-central") {
     if (!server) return false;
     initiateRun(state, server, `red-team:${card.id}`);
+    if (server === "hq" || server === "rd" || server === "archives") {
+      state.runner.ranServersThisTurn.push(server);
+    }
     return true;
   }
   if (card.cardId === "regolith_mining_license" && ability.id === "take-3") {
@@ -20084,6 +20087,7 @@ function settle(state) {
     }
     return;
   }
+  state.supportWarnings.push("settle loop guard reached 1000 steps \u2014 the phase machine may be wedged");
 }
 function promptOrFinishDiscard(state) {
   const side = state.turn.player;
@@ -23804,7 +23808,13 @@ var game_default = defineComponent({
       return card.id === r.currentIce.id;
     }
     function serverGlyph(id) {
-      return SERVER_GLYPH[id] ?? "assets/svg/set-sysgw.svg";
+      return SERVER_GLYPH[id] ?? "";
+    }
+    function isCentral2(id) {
+      return id === "hq" || id === "rd" || id === "archives";
+    }
+    function remoteLabel(id) {
+      return id.replace("-", " ");
     }
     function runMove(server) {
       return legal.value.find((m) => m.kind === "runner.run" && m.server === server);
@@ -23899,6 +23909,8 @@ var game_default = defineComponent({
       closeZoom,
       isCurrentIce,
       serverGlyph,
+      isCentral: isCentral2,
+      remoteLabel,
       runMove,
       promptTitle,
       handActionsFor,
@@ -23953,29 +23965,48 @@ var game_default = defineComponent({
 
         <div class="servers" data-testid="servers">
           <div v-for="s in serverRows" :key="s.id" class="server">
-            <div
-              class="server-card"
-              :class="{ clickable: s.id === 'hq' && hqIdentityImg }"
-              @click="zoomHqIdentity(s.id)"
-            >
-              <img class="corp-back-img" src="assets/corp-back.svg" alt="" />
-              <!-- HQ shows the Corp's identity card (open info, rule 10.2.3);
-                   every other server keeps the glyph face. The @error flag
-                   falls back to the glyph when the art file is missing. -->
-              <div v-if="s.id === 'hq' && hqIdentityImg" class="server-card-face identity-face">
-                <img
-                  class="identity-art"
-                  :src="hqIdentityImg"
-                  :alt="name(hqIdentity)"
-                  @error="identityImgFailed = true"
-                />
-                <span class="server-name">{{ name(hqIdentity) }}</span>
+            <!-- Central servers (hq, rd, archives) keep their dedicated server
+                 card (corp back + glyph + name). HQ additionally shows the
+                 Corp's identity card (open information, rule 10.2.3); the
+                 @error flag falls back to the glyph when the art is missing. -->
+            <template v-if="isCentral(s.id)">
+              <div
+                class="server-card"
+                :class="{ clickable: s.id === 'hq' && hqIdentityImg }"
+                @click="zoomHqIdentity(s.id)"
+              >
+                <img class="corp-back-img" src="assets/corp-back.svg" alt="" />
+                <div v-if="s.id === 'hq' && hqIdentityImg" class="server-card-face identity-face">
+                  <img
+                    class="identity-art"
+                    :src="hqIdentityImg"
+                    :alt="name(hqIdentity)"
+                    @error="identityImgFailed = true"
+                  />
+                  <span class="server-name">{{ name(hqIdentity) }}</span>
+                </div>
+                <div v-else class="server-card-face">
+                  <img class="server-glyph" :src="serverGlyph(s.id)" :alt="name(s.id)" />
+                  <span class="server-name">{{ name(s.id) }}</span>
+                </div>
               </div>
-              <div v-else class="server-card-face">
-                <img class="server-glyph" :src="serverGlyph(s.id)" :alt="name(s.id)" />
-                <span class="server-name">{{ name(s.id) }}</span>
-              </div>
-            </div>
+            </template>
+            <!-- Remotes: a small label nearest the corp side, shown only when the
+                 server has a root card or ice. -->
+            <template v-else>
+              <div
+                v-if="s.root.length || s.ice.length || s.unrezzedIceCount"
+                class="server-label"
+              >{{ remoteLabel(s.id) }}</div>
+            </template>
+            <!-- Root row and ice stack render for BOTH kinds. Remotes with only
+                 ice reserve a one-card root-slot space (blank, no glyph/back) so
+                 the layout doesn't jump when a root card is later installed; a
+                 completely empty remote draws nothing else at all (only its Run
+                 button). Central roots hold at most an upgrade; ice (if any)
+                 renders below, toward the runner. unrezzedIceCount covers ice
+                 the Runner cannot identify yet (public status redacts the
+                 cards, the count stays open information). -->
             <div v-if="s.root.length" class="server-root-row">
               <template v-for="c in s.root" :key="c.id">
                 <card-tile
@@ -23988,6 +24019,10 @@ var game_default = defineComponent({
                 <card-tile v-else facedown small corp />
               </template>
             </div>
+            <div
+              v-else-if="!isCentral(s.id) && (s.ice.length || s.unrezzedIceCount)"
+              class="server-root-row server-root-empty"
+            ></div>
             <div class="server-ice-stack">
               <div v-for="card in s.ice" :key="card.id" class="ice-slot">
                 <card-tile

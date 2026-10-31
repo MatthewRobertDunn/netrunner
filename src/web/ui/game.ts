@@ -266,9 +266,12 @@ export default defineComponent({
     }
 
     /** Central servers keep their dedicated server card; everything else is a
-     *  remote (id "remote-N"), drawn as a label + root/ice columns. */
+     *  remote (id "remote-N"), drawn as a label + root/ice columns. Note: this
+     *  is deliberately NOT `id in SERVER_GLYPH` — the glyph map only holds the
+     *  servers that render one (the HQ branch shows the identity card instead,
+     *  and is no longer in the map). */
     function isCentral(id: string): boolean {
-      return id in SERVER_GLYPH;
+      return id === "hq" || id === "rd" || id === "archives";
     }
 
     /** Label for a remote server: "remote-3" reads as "remote 3" (rule 4.6.8). */
@@ -472,49 +475,53 @@ export default defineComponent({
                 </div>
               </div>
             </template>
-              </div>
-            </template>
             <!-- Remotes: a small label nearest the corp side, shown only when the
-                 server has a root card or ice. unrezzedIceCount covers ice the
-                 Runner cannot identify yet (the public status redacts the
-                 cards, the count stays open information). An ice-only server
-                 reserves a one-card root-slot space (blank, no glyph/back) so
-                 the layout doesn't jump when a root card is later installed.
-                 A completely empty remote draws nothing at all here (only its
-                 Run button). -->
+                 server has a root card or ice. -->
             <template v-else>
-              <template v-if="s.root.length || s.ice.length || s.unrezzedIceCount">
-                <div class="server-label">{{ remoteLabel(s.id) }}</div>
-                <div v-if="s.root.length" class="server-root-row">
-                  <template v-for="c in s.root" :key="c.id">
-                    <card-tile
-                      v-if="c.cardId !== 'hidden'"
-                      :card="{ cardId: c.cardId, rezzed: c.rezzed, advancement: c.advancement }"
-                      small
-                      clickable
-                      @zoom="zoom"
-                    />
-                    <card-tile v-else facedown small corp />
-                  </template>
-                </div>
-                <div v-else class="server-root-row server-root-empty"></div>
-                <div class="server-ice-stack">
-                  <div v-for="card in s.ice" :key="card.id" class="ice-slot">
-                    <card-tile
-                      :card="card"
-                      ice
-                      clickable
-                      :highlight="isCurrentIce(card)"
-                      :badge="isCurrentIce(card) ? 'RUN' : ''"
-                      @zoom="zoom"
-                    />
-                  </div>
-                  <div v-for="n in s.unrezzedIceCount" :key="'u' + s.id + n" class="ice-slot facedown">
-                    <card-tile facedown ice corp />
-                  </div>
-                </div>
-              </template>
+              <div
+                v-if="s.root.length || s.ice.length || s.unrezzedIceCount"
+                class="server-label"
+              >{{ remoteLabel(s.id) }}</div>
             </template>
+            <!-- Root row and ice stack render for BOTH kinds. Remotes with only
+                 ice reserve a one-card root-slot space (blank, no glyph/back) so
+                 the layout doesn't jump when a root card is later installed; a
+                 completely empty remote draws nothing else at all (only its Run
+                 button). Central roots hold at most an upgrade; ice (if any)
+                 renders below, toward the runner. unrezzedIceCount covers ice
+                 the Runner cannot identify yet (public status redacts the
+                 cards, the count stays open information). -->
+            <div v-if="s.root.length" class="server-root-row">
+              <template v-for="c in s.root" :key="c.id">
+                <card-tile
+                  v-if="c.cardId !== 'hidden'"
+                  :card="{ cardId: c.cardId, rezzed: c.rezzed, advancement: c.advancement }"
+                  small
+                  clickable
+                  @zoom="zoom"
+                />
+                <card-tile v-else facedown small corp />
+              </template>
+            </div>
+            <div
+              v-else-if="!isCentral(s.id) && (s.ice.length || s.unrezzedIceCount)"
+              class="server-root-row server-root-empty"
+            ></div>
+            <div class="server-ice-stack">
+              <div v-for="card in s.ice" :key="card.id" class="ice-slot">
+                <card-tile
+                  :card="card"
+                  ice
+                  clickable
+                  :highlight="isCurrentIce(card)"
+                  :badge="isCurrentIce(card) ? 'RUN' : ''"
+                  @zoom="zoom"
+                />
+              </div>
+              <div v-for="n in s.unrezzedIceCount" :key="'u' + s.id + n" class="ice-slot facedown">
+                <card-tile facedown ice corp />
+              </div>
+            </div>
             <button
               v-if="runMove(s.id) && !state.run"
               class="run-btn"
