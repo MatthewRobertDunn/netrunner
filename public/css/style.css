@@ -376,6 +376,39 @@ body {
   width: 24px;
   height: 24px;
 }
+/* HQ's identity-card face (rule 10.2.3: the identity is open information to
+   both players). Portrait art cropped to the 66×92 server-card footprint;
+   the label sits on a dark strip at the bottom for legibility. Long identity
+   titles wrap to at most three lines. */
+.server-card-face.identity-face {
+  justify-content: flex-end;
+  gap: 0;
+  background: transparent;
+}
+.server-card .identity-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.server-card-face.identity-face .server-name {
+  position: relative;
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 8px;
+  line-height: 1.15;
+  text-align: center;
+  letter-spacing: 0.2px;
+  padding: 2px 3px;
+  background: rgba(4, 10, 20, 0.72);
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: break-word;
+}
 .server-name {
   font-size: 11px;
   font-weight: 700;

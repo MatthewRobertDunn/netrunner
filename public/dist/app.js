@@ -23632,7 +23632,6 @@ var card_zoom_default = defineComponent({
 
 // src/web/ui/game.ts
 var SERVER_GLYPH = {
-  hq: "assets/svg/hq.svg",
   rd: "assets/svg/rd.svg",
   archives: "assets/svg/archives.svg"
 };
@@ -23684,6 +23683,18 @@ var game_default = defineComponent({
     const isHumanTurn = computed2(() => !props.state.winner && actor.value === props.humanSide);
     const isAiTurn = computed2(() => !props.state.winner && actor.value !== props.humanSide);
     const corp = computed2(() => status.value.players.corp);
+    const hqIdentity = computed2(() => {
+      const id = corp.value.identity.cardId;
+      return id && id !== "hidden" ? id : null;
+    });
+    const identityImgFailed = ref(false);
+    const hqIdentityImg = computed2(() => hqIdentity.value && !identityImgFailed.value ? imageFor(hqIdentity.value) : null);
+    watch2(hqIdentity, () => {
+      identityImgFailed.value = false;
+    });
+    function zoomHqIdentity(serverId) {
+      if (serverId === "hq" && hqIdentity.value) zoom(hqIdentity.value);
+    }
     const runner = computed2(() => status.value.players.runner);
     const prompt = computed2(() => promptFor(props.state, props.humanSide));
     const legal = computed2(() => isHumanTurn.value ? engine.getLegalMoves(props.state, props.humanSide) : []);
@@ -23891,7 +23902,11 @@ var game_default = defineComponent({
       runMove,
       promptTitle,
       handActionsFor,
-      shortActionLabel
+      shortActionLabel,
+      hqIdentity,
+      hqIdentityImg,
+      zoomHqIdentity,
+      identityImgFailed
     };
   },
   template: `
@@ -23938,9 +23953,25 @@ var game_default = defineComponent({
 
         <div class="servers" data-testid="servers">
           <div v-for="s in serverRows" :key="s.id" class="server">
-            <div class="server-card">
+            <div
+              class="server-card"
+              :class="{ clickable: s.id === 'hq' && hqIdentityImg }"
+              @click="zoomHqIdentity(s.id)"
+            >
               <img class="corp-back-img" src="assets/corp-back.svg" alt="" />
-              <div class="server-card-face">
+              <!-- HQ shows the Corp's identity card (open info, rule 10.2.3);
+                   every other server keeps the glyph face. The @error flag
+                   falls back to the glyph when the art file is missing. -->
+              <div v-if="s.id === 'hq' && hqIdentityImg" class="server-card-face identity-face">
+                <img
+                  class="identity-art"
+                  :src="hqIdentityImg"
+                  :alt="name(hqIdentity)"
+                  @error="identityImgFailed = true"
+                />
+                <span class="server-name">{{ name(hqIdentity) }}</span>
+              </div>
+              <div v-else class="server-card-face">
                 <img class="server-glyph" :src="serverGlyph(s.id)" :alt="name(s.id)" />
                 <span class="server-name">{{ name(s.id) }}</span>
               </div>

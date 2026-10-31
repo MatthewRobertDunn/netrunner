@@ -31,12 +31,20 @@ import {
   findCardIn,
   formatEvent,
   handOf,
+  imageFor,
   promptFor,
   serverLabel,
 } from "./util.ts";
 
+/**
+ * Server glyphs for the central servers that still render a glyph: R&D,
+ * Archives, and any remote server (which falls back to the generic
+ * "set-sysgw" glyph via serverGlyph()). HQ no longer uses its glyph here —
+ * the HQ server card renders the Corp's identity card instead (see the `hq`
+ * branch in the CORP AREA template). The identity is public information to
+ * both players (rule 10.2.3), so it is read from the public status DTO.
+ */
 const SERVER_GLYPH: Record<string, string> = {
-  hq: "assets/svg/hq.svg",
   rd: "assets/svg/rd.svg",
   archives: "assets/svg/archives.svg",
 };
@@ -91,6 +99,31 @@ export default defineComponent({
       () => !props.state.winner && actor.value !== props.humanSide,
     );
     const corp = computed(() => status.value.players.corp);
+    /**
+     * The Corp's identity card id, read from the public status DTO. The
+     * identity card is open information to both players (rules 10.2.2/10.2.3:
+     * it starts the game faceup in the play area and is never hidden
+     * information), so `players.corp.identity` already carries the real
+     * cardId for every viewer — no new exposure was needed. Null only guards
+     * a degenerate status so HQ keeps its glyph rendering instead of crashing.
+     */
+    const hqIdentity = computed<string | null>(() => {
+      const id = corp.value.identity.cardId;
+      return id && id !== "hidden" ? id : null;
+    });
+    /** Set when the identity art failed to load — HQ falls back to its glyph. */
+    const identityImgFailed = ref(false);
+    /** The HQ server card's identity art, or null to render the glyph face. */
+    const hqIdentityImg = computed<string | null>(() =>
+      hqIdentity.value && !identityImgFailed.value ? imageFor(hqIdentity.value) : null
+    );
+    watch(hqIdentity, () => {
+      identityImgFailed.value = false;
+    });
+    /** Clicking the HQ server card opens the identity card popup. */
+    function zoomHqIdentity(serverId: string) {
+      if (serverId === "hq" && hqIdentity.value) zoom(hqIdentity.value);
+    }
     const runner = computed(() => status.value.players.runner);
     const prompt = computed(() => promptFor(props.state, props.humanSide));
     const legal = computed<Move[]>(() =>
@@ -350,6 +383,10 @@ export default defineComponent({
       promptTitle,
       handActionsFor,
       shortActionLabel,
+      hqIdentity,
+      hqIdentityImg,
+      zoomHqIdentity,
+      identityImgFailed,
     };
   },
   template: `
@@ -396,9 +433,25 @@ export default defineComponent({
 
         <div class="servers" data-testid="servers">
           <div v-for="s in serverRows" :key="s.id" class="server">
-            <div class="server-card">
+            <div
+              class="server-card"
+              :class="{ clickable: s.id === 'hq' && hqIdentityImg }"
+              @click="zoomHqIdentity(s.id)"
+            >
               <img class="corp-back-img" src="assets/corp-back.svg" alt="" />
-              <div class="server-card-face">
+              <!-- HQ shows the Corp's identity card (open info, rule 10.2.3);
+                   every other server keeps the glyph face. The @error flag
+                   falls back to the glyph when the art file is missing. -->
+              <div v-if="s.id === 'hq' && hqIdentityImg" class="server-card-face identity-face">
+                <img
+                  class="identity-art"
+                  :src="hqIdentityImg"
+                  :alt="name(hqIdentity)"
+                  @error="identityImgFailed = true"
+                />
+                <span class="server-name">{{ name(hqIdentity) }}</span>
+              </div>
+              <div v-else class="server-card-face">
                 <img class="server-glyph" :src="serverGlyph(s.id)" :alt="name(s.id)" />
                 <span class="server-name">{{ name(s.id) }}</span>
               </div>
