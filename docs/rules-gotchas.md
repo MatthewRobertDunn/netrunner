@@ -7,106 +7,46 @@ this summary. Where an entry says the engine "was wrong / now correct", an earli
 wrong and the current code handles it correctly — don't reintroduce the old behavior. Where an entry
 is listed under "documented simplifications", it is a deliberate, safe-to-keep deviation.
 
-1. **Ice has two different costs (2.3.4a, 2.3.5, 3.4.3, 1.16.6b, 8.5.11a).** The install cost of ice
-   is 1 credit per ice already protecting the destination server and is never printed; the rez cost
-   is the printed number on the card. The engine once charged the install-count as the rez cost AND
-   charged it twice in the rez window — Tithe's printed cost (1) coincidentally equals "1 ice
-   protecting", which hid the bug in the most-tested card. Was wrong / now correct — don't
-   reintroduce.
-2. **"Advance" ≠ "place advancement counters" (1.18.2, 1.18.3, 5.2.6f).** Only agendas can be
-   _advanced_ (plus cards whose text says so — Urtica Cipher qualifies, no starter ice does), the
-   basic action costs **a click and 1 credit**, and directly-placed counters (Seamless Launch)
-   bypass the eligibility rule entirely. Was wrong / now correct — don't reintroduce.
-3. **The Runner's jack-out window (6.1.5, 6.6.3, 6.9.4c) happens inside the Movement Phase.** If
-   `settle` never parks in `movement` waiting for a decision, the move list can offer
-   `runner.jackOut` all it wants — it will never be reachable.
-4. **A run becomes successful at the Success Phase (6.9.5a), and only there.** Passing the last
-   (unrezzed) ice must still route through `declareSuccess`. If a shortcut sets `phase = "success"`
-   directly, `run.successful`, the `run-successful` log event, and `successfulRunThisTurn` silently
-   never happen. "If successful" triggers (6.7.4) key off the declaration, not the phase name. Was
-   wrong / now correct — don't reintroduce.
-5. **Prompt options must not carry both a cost and an effect that spends the same cost (1.16.1,
-   9.5.7b).** The Manegarm toll was written as `creditCost: 5` + effect `pay-toll-credits`, and both
-   paths spent; the affordability guard swallowed the second spend and skipped its bookkeeping
-   (`tollPaid`), so the visible amount looked right while the flag never stuck. Pick one
-   representation for "cost" across all prompt kinds.
-6. **Paid-ability strength pumps expire with the encounter (3.9.5b) or at the next checkpoint
-   outside one (3.9.5d, 9.10.4a).** Any `strengthBoost` write needs a matching expiry in the
-   encounter/run teardown. A pump with no reset site is permanent.
-7. **Per-turn counters must count what they're named for.** `hqBreachesThisTurn` was incremented for
-   _every_ breach, so "first time each turn you breach HQ" (Docklands Pass) broke whenever another
-   server was breached first. Increment after the server check, and only for HQ.
-8. **Events that create runs state the whole package (Overclock, Jailbreak, Tread Lightly).** If the
-   engine splits "bank credits" from "run", "that run" (Overclock) and "during that run" (+3 rez
-   cost, Tread Lightly) become unenforceable. Model the run as part of the event's resolution.
-9. **Upgrades can create remotes (8.5.2c, 4.6.8b).** A remote is created by _declaring it as the
-   install destination_ — for any installable corp card type, upgrades included. Was wrong / now
-   correct — don't reintroduce.
-10. **Dead triggers are worse than unsupported ones.** `fireRez` (Nico/Regolith load-on-rez) and
-    `trashMayfly` (run-end trash) existed but were never called, while `supportStatus` reported
-    "supported". If a trigger kind exists in `cards/effects.ts`, a test must exercise it through
-    `applyMove`.
-11. **Rule citations in comments go stale.** Known-fixed list: "4.6.10" (→ 4.6.8e/8.5.8/10.3.1h),
-    "4.6.7d/e" (→ 4.6.6d/e), "1.16.6b as rez cost", eval.ts "1.15.2"/"8.6"/"6.4". Fixed in the same
-    changeset as this file — don't reintroduce. When you touch a rule, re-read the cited section in
-    the rules doc, not the comment.
-12. **Documented simplifications that are safe to keep (do not "fix" casually):** no faceup/facedown
-    Archives split (whole pile hidden from the Runner); installing over a like card is forbidden
-    rather than forcing the trash (8.5.6a); no ice-trash-during-install discount (8.5.6b); memory
-    over-limit is prevented rather than resolved by trashing (3.9.3b); `drawMode: "random"` in AI
-    hypotheses only. The corp's in-run non-ice rez window offers only the approached ice and the
-    attacked server's root, whereas the `(R)` window (6.9.2b, 6.9.4e) permits rezzing any installed
-    unrezzed non-ice card — no starter card needs the wider window.
-13. **`choose-one` options mean exactly what their `effect` says — never dispatch on "corp +
-    targetId" (1.18.2, 8.1.2d, 8.5.14).** `answerPrompt` once rezzed any corp prompt option that
-    carried a `targetId`, whatever the prompt was for: Seamless Launch with 2+ targets rezzed its
-    target and placed zero counters, and Brân 1.0's "install 1 ice inward, ignoring all costs"
-    option became unanswerable. Route every option through its `effect.kind` (`place-2-advancement`,
-    `corp-install-ice-inward`, `rez-card-free`, …) and keep `rezCard` the single rez payment point.
-    Was wrong / now correct — don't reintroduce.
-14. **A card that creates a run states the whole package (5.2.2b).** Tread Lightly must offer a
-    server choice ("Run any server", not a hard-coded HQ) and Overclock must RUN the chosen server
-    as part of the event ("Place 5 on this event, then run any server") — not bank a fund for a
-    later, separately-clicked run. Was wrong / now correct — don't reintroduce.
-15. **`data/cards.json` text is the specification.** VRcation ("Draw 4 cards. If you have any click
-    remaining, lose click.") was implemented as draw 3 + discard 1 / lose a credit. When
-    `cards/effects.ts` claims `supported`, every clause of `stripped_text` must be modelled; when a
-    clause is not, say so in the behavior's `note`.
-16. **"If you have any [click] remaining, lose [click]" is conditional and evaluated last (Creative
-    Commission, VRcation).** Pay the event's own click first, then charge the clause only if a click
-    actually remains, and never log a click that was not spent.
-17. **"You cannot run the same central server twice in a turn" applies to run-creating abilities
-    too** (Red Team's paid ability), not just the basic action — the ability's run must be recorded
-    in `ranServersThisTurn` like `runner.run` is. hypotheses only; the corp's rez window during runs
-    is the only in-run rez opportunity (rule 6.9.4e nuance not modelled).
-18. **Remote-server rendering is viewer-agnostic CSS, not code.** The corp area renders the same
-    template for both viewers (no `humanSide` branch), so "ice grows toward the Corp" was a CSS
-    illusion: the old `.ice-slot` was a 92×66 landscape slot with `rotate(90deg)`, which laid the
-    ice out _horizontally_ and made the column read as growing toward the corp edge. The direction
-    fix is in CSS only (portrait slots, no rotation) — don't "fix" it by branching the template on
-    `humanSide`. Also: an empty remote is pruned by the engine (`pruneEmptyRemotes`), so the UI only
-    ever sees it when the state is hand-built; the "draw nothing" branch is defensive. And a remote
-    with only unrezzed ice must still render — the public status redacts the card identities but
-    keeps `unrezzedIceCount`, so visibility must key on that count too, not just `s.ice.length`.
-19. **A prompt option's meaning is its `effect.kind`, never "corp + targetId" (1.18.2, 8.1.2d,
-    8.5.14).** `answerPrompt`'s `choose-one` branch used to dispatch on
-    `option.targetId &&
-    prompt.player === "corp"` and rezz the named card — so every corp
-    choose-one option became a rez instruction. Seamless Launch's multi-target prompt (which only
-    _places_ 2 advancement counters) rezzed the chosen card and placed zero counters, and Brân 1.0's
-    install-inward option was constructed without a `targetId` in its `corp-install-ice-inward`
-    effect, so its handler ran with `undefined` and installed nothing. Both `answerPrompt`
-    (apply.ts) and `movesForPrompt` (legal-moves.ts) must dispatch on the explicit effect kind
-    (`rez-card-free`, `rez-card-paid`, `corp-install-ice-inward`, `place-2-advancement`), and a paid
-    rez must carry `rez-card-paid` so `rezCard` stays the single payment point. Corollary: a
-    `corp-install-ice-inward` effect needs BOTH `iceId` (the source ice, which must have a position
-    per 8.5.14) and `targetId` (the ice to install). Was wrong / now correct — don't reintroduce.
-    Tests: `tests/prompts_dispatch_test.ts`.
+## Test coverage is authoritative
 
-20. **A card effect's printed amount is the amount — never the net delta.** `resolveCorpOperation`
-    hardcoded `hedge_fund` → +5 and `government_subsidy` → +10, which is the _net_ after the play
-    cost (5 and 10 respectively). The printed text is "Gain 9 credits." and "Gain 15 credits.", so
-    the resolver must gain the printed amount; `playCorpOperation` already spends the cost
-    separately via `spendCredits`. A hardcoded net amount silently refunds the cost and makes the
-    card worse than printed. Was wrong / now correct — don't reintroduce. Tests:
-    `tests/event_texts_test.ts`.
+Every bug listed below as "was wrong / now correct" is pinned by a test, and the test is the
+regression record — the prose is a pointer to the test, not a duplicate of it. If a behavior is
+covered by a test, the test is the thing that catches a reintroduction; re-reading this file instead
+of running the suite is how it goes stale. The two entries that survive here are the ones with
+**no** test:
+
+1. **Rule citations in comments go stale.** Known-fixed list: "4.6.10" (→ 4.6.8e/8.5.8/10.3.1h),
+   "4.6.7d/e" (→ 4.6.6d/e), "1.16.6b as rez cost", eval.ts "1.15.2"/"8.6"/"6.4". Fixed in the same
+   changeset as this file — don't reintroduce. When you touch a rule, re-read the cited section in
+   the rules doc, not the comment.
+
+2. **Documented simplifications that are safe to keep (do not "fix" casually):** no faceup/facedown
+   Archives split (whole pile hidden from the Runner); installing over a like card is forbidden
+   rather than forcing the trash (8.5.6a); no ice-trash-during-install discount (8.5.6b); memory
+   over-limit is prevented rather than resolved by trashing (3.9.3b); `drawMode: "random"` in AI
+   hypotheses only. The corp's in-run non-ice rez window offers only the approached ice and the
+   attacked server's root, whereas the `(R)` window (6.9.2b, 6.9.4e) permits rezzing any installed
+   unrezzed non-ice card — no starter card needs the wider window.
+
+## Pinned by tests (no entry kept here)
+
+The following were all "was wrong / now correct" and are each covered by a named test with explicit
+assertions. They live in the test files as the authoritative regression record:
+
+- Ice install cost vs. printed rez cost, charged once — `tests/rules_costs_test.ts`
+- "Advance" ≠ "place advancement counters" — `tests/corp_actions_test.ts`,
+  `tests/prompts_dispatch_test.ts`
+- Jack-out window parks in the Movement Phase — `tests/runs_movement_test.ts`
+- Run success declared only at the Success Phase — `tests/runs_movement_test.ts`
+- Prompt options don't double-charge a cost — `tests/toll_test.ts`
+- Paid-ability strength pumps expire — `tests/pump_expiry_test.ts`
+- `hqBreachesThisTurn` counts HQ breaches only — `tests/corp_actions_test.ts`
+- Events that create runs state the whole package — `tests/event_texts_test.ts`
+- Upgrades can create remotes — `tests/corp_actions_test.ts`
+- Dead triggers exercised through `applyMove` — `tests/triggers_test.ts`
+- `choose-one` options mean what their `effect` says — `tests/prompts_dispatch_test.ts`
+- `data/cards.json` text is the specification — `tests/event_texts_test.ts`
+- "If you have any [click] remaining, lose [click]" is conditional — `tests/event_texts_test.ts`
+- Run-creating abilities count toward the same-central-twice restriction — `tests/redteam_test.ts`
+- Remote rendering is viewer-agnostic CSS — `tests/ui/game_screen_test.ts`
+- Card effects gain the printed amount, not the net delta — `tests/event_texts_test.ts`

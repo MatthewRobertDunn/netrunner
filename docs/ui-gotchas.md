@@ -14,10 +14,9 @@ and the test that pins the fix.
    split had the same disease: the halves divided a log-driven page height instead of the viewport.
    Now: `.game` aligns to `flex-start`, `.game-main` uses `align-content: start` (leftover space
    stays below the column), and both docks are `position: sticky` capped to `100vh - 24px` with
-   internal scroll. Don't reintroduce stretch-driven heights — re-measure
-   `actionRowH == actionPanelH` in the browser after touching this layout. Files:
-   `public/css/style.css`. Tests: browser measurement (action row hugs its panel, action→hand gap is
-   exactly the 10px grid gap).
+   internal scroll. **Manual check only — no `deno test` pins this.** Re-measure
+   `actionRowH == actionPanelH` and confirm the action→hand gap is exactly the 10px grid gap in the
+   browser after touching this layout. Files: `public/css/style.css`.
 
 2. **The access zoom is the human's decision prompt, not any access.** `accessedCard` in
    `src/web/ui/game.ts` resolved every `access-decision` prompt, so during the AI Runner's turn the
