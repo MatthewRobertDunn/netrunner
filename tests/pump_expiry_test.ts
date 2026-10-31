@@ -104,11 +104,15 @@ function corpRezApproachedIce(state: GameState): GameState {
 function drainRun(state: GameState): GameState {
   let cur = state;
   for (let i = 0; i < 20 && cur.run !== null && !cur.winner; i++) {
-    const move = engine.getLegalMoves(cur, "runner").find((m) =>
-      m.kind === "runner.accessRandom" || m.kind === "runner.accessCard" ||
-      m.kind === "runner.finishAccess" || m.kind === "runner.jackOut" ||
-      m.kind === "runner.resolveSubroutines"
-    );
+    const moves = engine.getLegalMoves(cur, "runner");
+    // Prefer progressing the run; jack out only as a last resort.
+    const move = moves.find((m) => m.kind === "runner.continueRun") ??
+      moves.find((m) =>
+        m.kind === "runner.accessRandom" || m.kind === "runner.accessCard" ||
+        m.kind === "runner.finishAccess"
+      ) ??
+      moves.find((m) => m.kind === "runner.resolveSubroutines") ??
+      moves.find((m) => m.kind === "runner.jackOut");
     if (!move) break;
     cur = play(cur, "runner", move).state;
   }
@@ -224,33 +228,39 @@ Deno.test("pump: strength boost expires when the run ends mid-encounter", () => 
 Deno.test("pump: Unity's static +X strength is not a pump and survives the sweep", () => {
   const runnerDeck = [
     "unity",
-    "mayfly",
+    "cleaver",
     "sure_gamble",
     "carmen",
     "sure_gamble",
     "sure_gamble",
     "unity",
-    "cleaver",
+    "mayfly",
     "docklands_pass",
     "telework_contract",
   ];
   let state = startGame(["diviner", "hedge_fund", "hedge_fund"], runnerDeck);
   // Corp turn 1: install Diviner (code gate, strength 3) on HQ.
   state = corpInstallIceOnHqAndEndTurn(state);
-  // Runner turn 1: sure_gamble, install Unity, install Mayfly, gain a credit.
+  // Runner turn 1: sure_gamble (+6), install Unity (3) and Cleaver (3),
+  // gain a credit. (Not Mayfly: it trashes when the first run ends — that
+  // would drop Unity's icebreaker count below Diviner's strength for the
+  // second run.)
   state = sureGamble(state);
   state = installProgram(state, "unity");
-  state = installProgram(state, "mayfly");
+  state = installProgram(state, "cleaver");
   state = play(state, "runner", { kind: "runner.gainCredits" }).state;
   state = endCorpTurn(state);
-  // Runner turn 2: sure_gamble, install Carmen (3rd icebreaker), run HQ.
+  // Runner turn 2: gain a credit, sure_gamble (+9 net), install Carmen (3rd
+  // icebreaker), run HQ. (Sure Gamble costs 5 and gains 9 here; without the
+  // extra credit neither it nor Carmen's 5-credit install is affordable.)
+  state = play(state, "runner", { kind: "runner.gainCredits" }).state;
   state = sureGamble(state);
   state = installProgram(state, "carmen");
   state = runHq(state);
   state = corpRezApproachedIce(state);
 
   const unity = installed(state, "unity");
-  const mayfly = installed(state, "mayfly");
+  const cleaver = installed(state, "cleaver");
   // Unity's strength = installed icebreakers (3) >= Diviner's 3, so Unity can
   // interface even though its printed strength is 1 — the +X is static.
   assert(
@@ -271,25 +281,27 @@ Deno.test("pump: Unity's static +X strength is not a pump and survives the sweep
     "the static-strength support warning was recorded",
   );
 
-  // Pump Mayfly, then break Diviner's subroutine with Unity; the encounter
+  // Pump Cleaver, then break Diviner's subroutine with Unity; the encounter
   // completes while the run continues.
-  state = play(state, "runner", pumpMove(state, mayfly.id)).state;
-  assert(installed(state, "mayfly").strengthBoost === 1, "Mayfly pumped +1");
+  state = play(state, "runner", pumpMove(state, cleaver.id)).state;
+  assert(installed(state, "cleaver").strengthBoost === 1, "Cleaver pumped +1");
   state = play(state, "runner", breakMove(state, unity.id, 0)).state;
   assert(state.run !== null && state.run.phase !== "encounter-ice", "encounter over, run active");
   assert(
-    installed(state, "mayfly").strengthBoost === undefined,
-    "Mayfly's pump expired at encounter end",
+    installed(state, "cleaver").strengthBoost === undefined,
+    "Cleaver's pump expired at encounter end",
   );
   assert(
     installed(state, "unity").strengthBoost === undefined,
     "the sweep left Unity's strengthBoost untouched (it was never set)",
   );
 
-  // Second run on the same rezzed ice: Unity's static +X must still be intact —
-  // if the sweep had cleared a static bonus stored in strengthBoost, Unity's
-  // strength would drop to 1 and the break move below would not be offered.
+  // Second run on the same rezzed ice (next runner turn — turn 2's clicks are
+  // spent): Unity's static +X must still be intact — if the sweep had cleared
+  // a static bonus stored in strengthBoost, Unity's strength would drop to 1
+  // and the break move below would not be offered.
   state = drainRun(state);
+  state = endCorpTurn(state); // runner t2 clicks are spent; play out the corp turn
   state = runHq(state);
   assert(state.run?.phase === "encounter-ice", "second encounter begins");
   assert(

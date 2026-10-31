@@ -310,7 +310,12 @@ Deno.test("triggers: Mayfly is trashed when a successful run ends", () => {
       "run archives",
     ),
   ).state;
-  // The breach auto-accesses the single Archives card; finish the access to end the run.
+  // The run parks in the movement phase (rule 6.9.4c); continuing reaches the
+  // server. The breach auto-accesses the single Archives card; finish the
+  // access to end the run.
+  const cont = engine.getLegalMoves(state, "runner").find((m) => m.kind === "runner.continueRun");
+  assertDefined(cont, "continueRun is offered in the movement phase");
+  state = play(state, "runner", cont!).state;
   if (state.run !== null) {
     state = play(
       state,
