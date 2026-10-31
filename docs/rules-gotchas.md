@@ -102,4 +102,11 @@ is listed under "documented simplifications", it is a deliberate, safe-to-keep d
     BOTH `iceId` (the source ice, which must have a position per 8.5.14) and `targetId` (the ice to
     install). Was wrong / now correct — don't reintroduce. Tests: `tests/prompts_dispatch_test.ts`.
 
+20. **A card effect's printed amount is the amount — never the net delta.** `resolveCorpOperation`
+    hardcoded `hedge_fund` → +5 and `government_subsidy` → +10, which is the *net* after the play
+    cost (5 and 10 respectively). The printed text is "Gain 9 credits." and "Gain 15 credits.",
+    so the resolver must gain the printed amount; `playCorpOperation` already spends the cost
+    separately via `spendCredits`. A hardcoded net amount silently refunds the cost and makes the
+    card worse than printed. Was wrong / now correct — don't reintroduce. Tests: `tests/event_texts_test.ts`.
+
 

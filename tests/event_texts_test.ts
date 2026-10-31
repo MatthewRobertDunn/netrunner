@@ -93,6 +93,32 @@ function burnUntil(state: GameState, side: PlayerSide): GameState {
   return cur;
 }
 
+/** Bank Corp credits across turns: gain-credit, discard down, burn the
+ *  Runner's turn, repeat, until `target` credits are reached. */
+function bankCorpCredits(state: GameState, target: number): GameState {
+  let cur = state;
+  for (let i = 0; i < 60 && cur.corp.credits < target; i++) {
+    if (cur.winner) return cur;
+    if (cur.turn.player !== "corp") {
+      // Burn the Runner's turn (first-legal move) to get back to the Corp.
+      const moves = engine.getLegalMoves(cur, "runner");
+      if (moves.length === 0) return cur;
+      cur = play(cur, "runner", moves[0]!).state;
+      continue;
+    }
+    if (cur.prompts.length > 0) {
+      const drop = cur.corp.hand[0]?.id;
+      if (!drop) return cur;
+      cur = play(cur, "corp", { kind: "discard", player: "corp", cardInstanceIds: [drop] }).state;
+      continue;
+    }
+    const gain = engine.getLegalMoves(cur, "corp").find((m) => m.kind === "corp.gainCredits");
+    if (!gain) return cur;
+    cur = play(cur, "corp", gain).state;
+  }
+  return cur;
+}
+
 /** First installed corp card with the given card id (root or ice), if any. */
 function findInstalled(state: GameState, cardId: CardId): CardInstance | undefined {
   for (const s of state.servers) {
@@ -299,6 +325,59 @@ Deno.test("creative commission: loses no click with none remaining", () => {
     0,
     "no click is lost when none remains (the old code logged one anyway)",
   );
+});
+
+// ---------------------------------------------------------------------------
+// Corp operations: printed gain amounts (not net deltas).
+// ---------------------------------------------------------------------------
+// Hedge Fund: "Gain 9 credits." (cost 5, net +4). Government Subsidy:
+// "Gain 15 credits." (cost 10, net +5). The resolver must gain the printed
+// amount — `playCorpOperation` already spends the cost separately — so a
+// hardcoded net amount silently refunds the play cost.
+
+Deno.test("hedge fund: gains the printed 9 credits", () => {
+  let s = newGame(["hedge_fund"]);
+  s = burnUntil(s, "corp");
+  const creditsBefore = s.corp.credits;
+  const move = assertDefined(
+    engine.getLegalMoves(s, "corp").find((m) =>
+      m.kind === "corp.playOperation" && m.cardId === "hedge_fund"
+    ),
+    "hedge fund is playable",
+  );
+  const result = play(s, "corp", move);
+  const after = result.state;
+
+  assertEquals(
+    (typedEvents(result, "gain-credits")[0] as { amount: number }).amount,
+    9,
+    "gains the printed 9 credits",
+  );
+  assertEquals(after.corp.credits, creditsBefore + 4, "gains 9, pays the 5-credit play cost");
+});
+
+Deno.test("government subsidy: gains the printed 15 credits", () => {
+  let s = newGame(["government_subsidy"]);
+  s = burnUntil(s, "corp");
+  // Government Subsidy costs 10 and the Corp opens with 5 credits — bank
+  // credits across turns until it is affordable.
+  s = bankCorpCredits(s, 10);
+  const creditsBefore = s.corp.credits;
+  const move = assertDefined(
+    engine.getLegalMoves(s, "corp").find((m) =>
+      m.kind === "corp.playOperation" && m.cardId === "government_subsidy"
+    ),
+    "government subsidy is playable",
+  );
+  const result = play(s, "corp", move);
+  const after = result.state;
+
+  assertEquals(
+    (typedEvents(result, "gain-credits")[0] as { amount: number }).amount,
+    15,
+    "gains the printed 15 credits",
+  );
+  assertEquals(after.corp.credits, creditsBefore + 5, "gains 15, pays the 10-credit play cost");
 });
 
 // ---------------------------------------------------------------------------

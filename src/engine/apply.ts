@@ -517,10 +517,12 @@ function playCorpOperation(state: GameState, cardId: string): void {
 function resolveCorpOperation(state: GameState, cardId: string, card: CardInstance): void {
   switch (cardId) {
     case "hedge_fund":
-      gainCredits(state, "corp", 5);
+      // Printed: "Gain 9 credits." (cost 5, net +4).
+      gainCredits(state, "corp", 9);
       break;
     case "government_subsidy":
-      gainCredits(state, "corp", 10);
+      // Printed: "Gain 15 credits." (cost 10, net +5).
+      gainCredits(state, "corp", 15);
       break;
     case "seamless_launch": {
       // Printed text: "Place 2 advancement counters on 1 installed card that

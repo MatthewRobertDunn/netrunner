@@ -21417,10 +21417,10 @@ function playCorpOperation(state, cardId) {
 function resolveCorpOperation(state, cardId, card) {
   switch (cardId) {
     case "hedge_fund":
-      gainCredits(state, "corp", 5);
+      gainCredits(state, "corp", 9);
       break;
     case "government_subsidy":
-      gainCredits(state, "corp", 10);
+      gainCredits(state, "corp", 15);
       break;
     case "seamless_launch": {
       const candidates = corpInstalledCards(state).filter((c) => !state.corp.installedThisTurn.includes(c.id));
