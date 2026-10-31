@@ -450,8 +450,8 @@ export default defineComponent({
           </span>
         </div>
 
-        <div class="servers" data-testid="servers">
-          <div v-for="s in serverRows" :key="s.id" class="server">
+        <div class="servers" data-testid="servers" :class="{ 'corp-seat': humanSide === 'corp' }">
+          <div v-for="s in serverRows" :key="s.id" class="server" :class="isCentral(s.id) ? 'central' : 'remote'">
             <!-- Central servers (hq, rd, archives) keep their dedicated server
                  card (corp back + glyph + name). HQ additionally shows the
                  Corp's identity card (open information, rule 10.2.3); the
@@ -490,10 +490,21 @@ export default defineComponent({
                  ice reserve a one-card root-slot space (blank, no glyph/back) so
                  the layout doesn't jump when a root card is later installed; a
                  completely empty remote draws nothing else at all (only its Run
-                 button). Central roots hold at most an upgrade; ice (if any)
-                 renders below, toward the runner. unrezzedIceCount covers ice
-                 the Runner cannot identify yet (public status redacts the
-                 cards, the count stays open information). -->
+                 button). Central roots hold at most an upgrade. unrezzedIceCount
+                 covers ice the Runner cannot identify yet (public status redacts
+                 the cards, the count stays open information).
+
+                 The DOM order below is one order for every case (server
+                 card/label -> root row -> ice stack -> Run); the column order
+                 is fixed up in CSS via order on .server.central children
+                 (public/css/style.css). The screen is drawn from the human
+                 player's seat, own side at the bottom, so the ice must sit on
+                 the RUNNER side of the central server card: as Runner (runner
+                 at the bottom) that is BELOW the card, which is this DOM
+                 order; as Corp (corp at the bottom, runner at the top) the
+                 ice stack moves ABOVE the card. The corp-seat class on
+                 .servers drives that flip. Remotes keep their
+                 label -> root -> ice order in both seats. -->
             <div v-if="s.root.length" class="server-root-row">
               <template v-for="c in s.root" :key="c.id">
                 <card-tile

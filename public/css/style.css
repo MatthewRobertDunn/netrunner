@@ -326,11 +326,14 @@ body {
   border-radius: 10px;
   padding: 10px;
 }
-/* Each server is a vertical card stack: a label (remotes) or dedicated server
-   card (centrals) nearest the corp side, the root card slot(s) below it, then
-   the ice column extending DOWN toward the runner, and the run button pinned
-   to the bottom. Ice is directional: it always grows toward the runner
-   (bottom of the playspace) for BOTH viewers — the corp edge is the top. */
+/* Each server is a vertical card stack drawn from the human player's seat
+   (own side at the bottom). The DOM order is server card/label -> root row
+   -> ice stack -> Run button, which already puts ice on the RUNNER side
+   (below the card) when the human is the Runner (corp top, runner bottom).
+   When the human is the Corp (corp bottom, runner top) the central columns
+   flip via `order` below so the ice stack sits ABOVE the card — still on
+   the runner side. The Run button stays last (pinned to the column bottom)
+   in both seats. Remotes keep label -> root -> ice in both seats. */
 .server {
   display: flex;
   flex-direction: column;
@@ -338,8 +341,22 @@ body {
   gap: 7px;
   padding: 6px 4px;
 }
-/* Small server name label, nearest the corp side (replaces the old
-   corporate card-back "server card" for remotes). */
+/* Corp seat: central servers show ice on the runner side (top), so the
+   column reads ice stack -> root row -> server card -> Run button. */
+.servers.corp-seat .server.central .server-ice-stack {
+  order: 1;
+}
+.servers.corp-seat .server.central .server-root-row {
+  order: 2;
+}
+.servers.corp-seat .server.central .server-card {
+  order: 3;
+}
+.servers.corp-seat .server.central .run-btn {
+  order: 4;
+}
+/* Small server name label for remotes (first in DOM, top in both seats;
+   replaces the old corporate card-back "server card"). */
 .server-label {
   font-size: 11px;
   font-weight: 700;
@@ -354,7 +371,8 @@ body {
 }
 /* Ice is rendered horizontally (rule 4.6.9a): the tile keeps its portrait
    dimensions but is rotated 90° inside a landscape slot. The outermost ice
-   (the first the Runner encounters) ends up at the bottom, nearest the runner. */
+   (the first the Runner encounters) ends up farthest from the server card,
+   on the runner side of the column. */
 .ice-slot {
   position: relative;
   width: 92px;
