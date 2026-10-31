@@ -4,7 +4,7 @@ var __export = (target, all) => {
     __defProp(target, name, { get: all[name], enumerable: true });
 };
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-dom/3.5.13/dist/runtime-dom.esm-bundler.js
+// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-dom/3.5.13/dist/runtime-dom.esm-bundler.js
 var runtime_dom_esm_bundler_exports = {};
 __export(runtime_dom_esm_bundler_exports, {
   BaseTransition: () => BaseTransition,
@@ -177,7 +177,7 @@ __export(runtime_dom_esm_bundler_exports, {
   withScopeId: () => withScopeId
 });
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/shared/3.5.13/dist/shared.esm-bundler.js
+// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/shared/3.5.13/dist/shared.esm-bundler.js
 // @__NO_SIDE_EFFECTS__
 function makeMap(str) {
   const map2 = /* @__PURE__ */ Object.create(null);
@@ -523,7 +523,7 @@ var stringifySymbol = (v, i = "") => {
   );
 };
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/reactivity/3.5.13/dist/reactivity.esm-bundler.js
+// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/reactivity/3.5.13/dist/reactivity.esm-bundler.js
 function warn(msg, ...args) {
   console.warn(`[Vue warn] ${msg}`, ...args);
 }
@@ -2200,7 +2200,7 @@ function traverse(value, depth = Infinity, seen2) {
   return value;
 }
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-core/3.5.13/dist/runtime-core.esm-bundler.js
+// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-core/3.5.13/dist/runtime-core.esm-bundler.js
 var stack = [];
 function pushWarningContext(vnode) {
   stack.push(vnode);
@@ -9588,7 +9588,7 @@ var resolveFilter = null;
 var compatUtils = null;
 var DeprecationTypes = null;
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-dom/3.5.13/dist/runtime-dom.esm-bundler.js
+// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-dom/3.5.13/dist/runtime-dom.esm-bundler.js
 var policy = void 0;
 var tt = typeof window !== "undefined" && window.trustedTypes;
 if (tt) {
@@ -11384,7 +11384,7 @@ var initDirectivesForSSR = () => {
   }
 };
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/compiler-core/3.5.13/dist/compiler-core.esm-bundler.js
+// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/compiler-core/3.5.13/dist/compiler-core.esm-bundler.js
 var FRAGMENT = Symbol(true ? `Fragment` : ``);
 var TELEPORT = Symbol(true ? `Teleport` : ``);
 var SUSPENSE = Symbol(true ? `Suspense` : ``);
@@ -16216,7 +16216,7 @@ var noopDirectiveTransform = () => ({
   props: []
 });
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/compiler-dom/3.5.13/dist/compiler-dom.esm-bundler.js
+// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/compiler-dom/3.5.13/dist/compiler-dom.esm-bundler.js
 var V_MODEL_RADIO = Symbol(true ? `vModelRadio` : ``);
 var V_MODEL_CHECKBOX = Symbol(true ? `vModelCheckbox` : ``);
 var V_MODEL_TEXT = Symbol(true ? `vModelText` : ``);
@@ -16852,7 +16852,7 @@ function compile2(src, options = {}) {
   }));
 }
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/vue/3.5.13/dist/vue.esm-bundler.js
+// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/vue/3.5.13/dist/vue.esm-bundler.js
 function initDev() {
   {
     initCustomFormatter();
@@ -23948,9 +23948,12 @@ var game_default = defineComponent({
   },
   template: `
     <div class="game" :class="{ 'log-collapsed': !logOpen }">
-      <!-- Perspective class drives strip order: the human player's own area
-           renders at the bottom via CSS order rules (own side bottom, opponent
-           top), so the template keeps a single copy of each area. -->
+      <!-- Perspective class drives panel order: the human player's own strip
+           renders at the bottom via CSS order rules (own side bottom,
+           opponent top), so the template keeps a single copy of each panel.
+           Each of the six panels is a direct child of .game-main so the
+           order scheme can interleave them: header, opponent strip,
+           servers, banner, action panel, hand, own strip. -->
       <div class="game-main" :class="'perspective-' + humanSide">
       <!-- ================= HEADER ================= -->
       <header class="game-header">
@@ -23974,8 +23977,7 @@ var game_default = defineComponent({
         <button class="ghost-btn" @click="$emit('new-game')">New game</button>
       </header>
 
-      <!-- ================= CORP AREA ================= -->
-      <section class="corp-area">
+      <!-- ================= CORP STRIP ================= -->
         <div class="player-strip corp" :class="{ active: state.turn.player === 'corp' }">
           <img class="glyph-side" src="assets/svg/faction-hb.svg" alt="" />
           <span class="who">CORP</span>
@@ -23991,6 +23993,7 @@ var game_default = defineComponent({
           </span>
         </div>
 
+      <!-- ================= SERVERS ================= -->
         <div class="servers" data-testid="servers" :class="{ 'corp-seat': humanSide === 'corp' }">
           <div v-for="s in serverRows" :key="s.id" class="server" :class="isCentral(s.id) ? 'central' : 'remote'">
             <!-- Central servers (hq, rd, archives) keep their dedicated server
@@ -24085,9 +24088,8 @@ var game_default = defineComponent({
             >Run</button>
           </div>
         </div>
-      </section>
 
-      <!-- ================= RUN / BREACH BANNER ================= -->
+      <!-- ================= RUN / BREACH BANNER (run/breach context for the action row) ================= -->
       <section v-if="run || breach" class="run-banner" data-testid="run-banner">
         <template v-if="breach">
           <span class="run-tag">BREACH</span> {{ name(breach.server) }} \xB7
@@ -24182,8 +24184,8 @@ var game_default = defineComponent({
         </div>
       </section>
 
-      <!-- ================= RUNNER AREA ================= -->
-      <section class="runner-area">
+      <!-- ================= HAND ================= -->
+      <section class="hand-area">
         <div class="hand-row runner-hand" data-testid="human-hand">
           <div v-for="c in hand" :key="c.id" class="hand-card">
             <card-tile
@@ -24203,6 +24205,8 @@ var game_default = defineComponent({
           </div>
           <span v-if="!hand.length" class="empty-hand">(no cards in hand)</span>
         </div>
+      </section>
+      <!-- ================= RUNNER STRIP ================= -->
         <div class="player-strip runner" :class="{ active: state.turn.player === 'runner' }">
           <img class="glyph-side" src="assets/svg/faction-criminal.svg" alt="" />
           <span class="who">RUNNER</span>
@@ -24216,7 +24220,6 @@ var game_default = defineComponent({
             <img v-for="c in runner.score" :key="c.id" class="mini-card" :src="'images/' + c.cardId + '.webp'" :alt="name(c.cardId)" />
           </span>
         </div>
-      </section>
 
       <div v-if="warnings.length" class="support-warnings" data-testid="warnings">
         <span v-for="(w, i) in warnings" :key="i">\u26A0 {{ w }}</span>

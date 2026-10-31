@@ -171,32 +171,65 @@ body {
   flex: 1;
   min-width: 0;
   display: grid;
-  grid-template-rows: auto auto auto 1fr auto;
   gap: 10px;
 }
-/* Perspective: the human player's own strip sits at the bottom (nearer the
-   player), the opponent at the top. The template lists corp-area first, which
-   is already correct for perspective-runner; for perspective-corp explicit
-   grid orders pull runner-area just below the header and push corp-area to
-   the bottom. Single copy of each area in the DOM, so testids, Run buttons,
-   prompts, and the log are untouched; the header stays on top in both. */
+/* Perspective: six panels are direct grid children so CSS order can
+   interleave them per seat. Required visual order, top to bottom, is
+   header, opponent strip, servers, run banner, action panel, hand,
+   own strip — always. The template lists them in runner-seat order
+   (corp strip first), so perspective-runner needs only explicit
+   confirmation orders while perspective-corp pulls the runner strip
+   just below the header and pushes the corp strip to the bottom.
+   Single copy of each panel in the DOM, so testids, Run buttons,
+   prompts, and the log are untouched; the header stays on top in both.
+   The run banner stays directly above the action panel in both seats. */
+.game-main.perspective-runner .game-header {
+  order: 0;
+}
+.game-main.perspective-runner > .player-strip.corp {
+  order: 1;
+}
+.game-main.perspective-runner .servers {
+  order: 2;
+}
+.game-main.perspective-runner .run-banner {
+  order: 3;
+}
+.game-main.perspective-runner .action-row {
+  order: 4;
+}
+.game-main.perspective-runner .hand-area {
+  order: 5;
+}
+.game-main.perspective-runner > .player-strip.runner {
+  order: 6;
+}
+.game-main.perspective-runner .support-warnings {
+  order: 7;
+}
 .game-main.perspective-corp .game-header {
   order: 0;
 }
-.game-main.perspective-corp .runner-area {
+.game-main.perspective-corp > .player-strip.runner {
   order: 1;
 }
-.game-main.perspective-corp .run-banner {
+.game-main.perspective-corp .servers {
   order: 2;
 }
-.game-main.perspective-corp .action-row {
+.game-main.perspective-corp .run-banner {
   order: 3;
 }
-.game-main.perspective-corp .corp-area {
+.game-main.perspective-corp .action-row {
   order: 4;
 }
-.game-main.perspective-corp .support-warnings {
+.game-main.perspective-corp .hand-area {
   order: 5;
+}
+.game-main.perspective-corp > .player-strip.corp {
+  order: 6;
+}
+.game-main.perspective-corp .support-warnings {
+  order: 7;
 }
 
 .game-header {
@@ -313,10 +346,7 @@ body {
 
 /* Servers ------------------------------------------------------------ */
 
-.corp-area {
-  display: grid;
-  gap: 8px;
-}
+/* Servers (direct grid child of .game-main) ------------------------------ */
 .servers {
   display: flex;
   gap: 28px;
@@ -703,9 +733,10 @@ body {
 
 /* Hand ---------------------------------------------------------------- */
 
-.runner-area {
+/* Hand (own grip, direct grid child via .hand-area wrapper) ----------------- */
+
+.hand-area {
   display: grid;
-  gap: 8px;
 }
 .hand-row {
   display: flex;

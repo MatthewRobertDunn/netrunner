@@ -415,9 +415,12 @@ export default defineComponent({
   },
   template: `
     <div class="game" :class="{ 'log-collapsed': !logOpen }">
-      <!-- Perspective class drives strip order: the human player's own area
-           renders at the bottom via CSS order rules (own side bottom, opponent
-           top), so the template keeps a single copy of each area. -->
+      <!-- Perspective class drives panel order: the human player's own strip
+           renders at the bottom via CSS order rules (own side bottom,
+           opponent top), so the template keeps a single copy of each panel.
+           Each of the six panels is a direct child of .game-main so the
+           order scheme can interleave them: header, opponent strip,
+           servers, banner, action panel, hand, own strip. -->
       <div class="game-main" :class="'perspective-' + humanSide">
       <!-- ================= HEADER ================= -->
       <header class="game-header">
@@ -441,8 +444,7 @@ export default defineComponent({
         <button class="ghost-btn" @click="$emit('new-game')">New game</button>
       </header>
 
-      <!-- ================= CORP AREA ================= -->
-      <section class="corp-area">
+      <!-- ================= CORP STRIP ================= -->
         <div class="player-strip corp" :class="{ active: state.turn.player === 'corp' }">
           <img class="glyph-side" src="assets/svg/faction-hb.svg" alt="" />
           <span class="who">CORP</span>
@@ -458,6 +460,7 @@ export default defineComponent({
           </span>
         </div>
 
+      <!-- ================= SERVERS ================= -->
         <div class="servers" data-testid="servers" :class="{ 'corp-seat': humanSide === 'corp' }">
           <div v-for="s in serverRows" :key="s.id" class="server" :class="isCentral(s.id) ? 'central' : 'remote'">
             <!-- Central servers (hq, rd, archives) keep their dedicated server
@@ -552,9 +555,8 @@ export default defineComponent({
             >Run</button>
           </div>
         </div>
-      </section>
 
-      <!-- ================= RUN / BREACH BANNER ================= -->
+      <!-- ================= RUN / BREACH BANNER (run/breach context for the action row) ================= -->
       <section v-if="run || breach" class="run-banner" data-testid="run-banner">
         <template v-if="breach">
           <span class="run-tag">BREACH</span> {{ name(breach.server) }} ·
@@ -649,8 +651,8 @@ export default defineComponent({
         </div>
       </section>
 
-      <!-- ================= RUNNER AREA ================= -->
-      <section class="runner-area">
+      <!-- ================= HAND ================= -->
+      <section class="hand-area">
         <div class="hand-row runner-hand" data-testid="human-hand">
           <div v-for="c in hand" :key="c.id" class="hand-card">
             <card-tile
@@ -670,6 +672,8 @@ export default defineComponent({
           </div>
           <span v-if="!hand.length" class="empty-hand">(no cards in hand)</span>
         </div>
+      </section>
+      <!-- ================= RUNNER STRIP ================= -->
         <div class="player-strip runner" :class="{ active: state.turn.player === 'runner' }">
           <img class="glyph-side" src="assets/svg/faction-criminal.svg" alt="" />
           <span class="who">RUNNER</span>
@@ -683,7 +687,6 @@ export default defineComponent({
             <img v-for="c in runner.score" :key="c.id" class="mini-card" :src="'images/' + c.cardId + '.webp'" :alt="name(c.cardId)" />
           </span>
         </div>
-      </section>
 
       <div v-if="warnings.length" class="support-warnings" data-testid="warnings">
         <span v-for="(w, i) in warnings" :key="i">⚠ {{ w }}</span>
