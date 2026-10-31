@@ -18,6 +18,7 @@ import {
   finishRun,
   iceAt,
   passIce,
+  rezCostFor,
 } from "./runs.ts";
 import {
   findCard,
@@ -205,13 +206,10 @@ export function corpRezOptions(
 }
 
 function rezSafeCost(state: GameState, card: CardInstance): number {
-  const def = cardDef(card.cardId);
-  if (def.type === "ice") {
-    // Ice rez cost is its install cost (rule 1.16.6b).
-    const server = state.servers.find((s) => s.ice.some((c) => c.id === card.id));
-    if (server) return server.ice.length;
-  }
-  return def.cost ?? 0;
+  // The displayed cost must equal what rezzing charges: the printed rez cost
+  // (rule 1.16.8), plus the run's increase for ice while Tread Lightly is
+  // active. `rezCostFor` is the single source of truth for both.
+  return rezCostFor(state, card);
 }
 
 function encounterStep(state: GameState): boolean {
