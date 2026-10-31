@@ -10,7 +10,7 @@
  */
 
 import { engine, RandomAI, starterDeckConfigs } from "../src/mod.ts";
-import { newStarterGame, play } from "../src/testing/fixtures.ts";
+import { continueRun, newStarterGame, play } from "../src/testing/fixtures.ts";
 import type { DeckConfig, GameState, Move, PlayerSide } from "../src/types.ts";
 import { decide } from "./helpers/boundary.ts";
 import { assert, assertEquals } from "./helpers/assert.ts";
@@ -89,7 +89,7 @@ function hqBreachState(seed = 3): GameState {
     (m) => m.kind === "runner.run" && m.server === "hq",
   );
   assert(run && run.kind === "runner.run", "runner can run HQ");
-  const after = play(state, "runner", run).state;
+  const after = continueRun(play(state, "runner", run).state);
   assert(after.breach !== null, "the HQ run reaches a breach");
   assert(after.breach!.accessing === undefined, "the access choice is pending");
   return after;
@@ -112,7 +112,7 @@ function rdChoiceState(seed = 3): GameState {
     (m) => m.kind === "runner.run" && m.server === "rd",
   );
   assert(run && run.kind === "runner.run", "runner can run R&D");
-  const after = play(state, "runner", run).state;
+  const after = continueRun(play(state, "runner", run).state);
   assert(after.breach !== null, "the R&D run reaches a breach");
   assert(after.breach!.accessing === undefined, "the access choice is pending");
   return after;

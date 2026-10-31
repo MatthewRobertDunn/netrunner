@@ -112,10 +112,15 @@ export function passIce(state: GameState): void {
   const ice = iceAt(state, run.server);
   const current = run.position !== null ? ice[run.position] : null;
   if (current) state.log.push({ type: "pass-ice", cardId: current.id });
+  // A passed piece of ice gives a fresh jack-out chance in the next movement
+  // phase (rule 6.1.5a).
+  run.jackOutOffered = false;
   if (run.position === null || run.position === 0) {
     run.position = null;
     run.currentIceId = undefined;
-    run.phase = "success";
+    // The movement phase decides success (toll, then declareSuccess) — it must
+    // not bypass declareSuccess, or "run-successful" never fires (rule 6.7.2).
+    run.phase = "movement";
     return;
   }
   run.position -= 1;
@@ -123,6 +128,74 @@ export function passIce(state: GameState): void {
   run.currentIceId = ice[run.position]!.id;
   run.encounterStarted = false;
   state.log.push({ type: "approach-ice", cardId: run.currentIceId });
+}
+
+/**
+ * The Runner declines to jack out and continues the movement phase
+ * (rule 6.9.4d-g): pass the ice at the current position and move inward, or
+ * approach the server — paying the Manegarm toll first if it is rezzed
+ * (rule 6.9.4g) — and declare the run successful.
+ *
+ * This is the body of the old auto-resolving `movementStep`; it now runs from
+ * the `runner.continueRun` move handler (apply.ts) and from settle when the
+ * jack-out chance for this movement was already given.
+ */
+export function continueMovement(state: GameState): boolean {
+  const run = state.run!;
+  const ice = iceAt(state, run.server);
+  if (run.position === null) {
+    // The Runner approaches the server (rule 6.9.4g).
+    if (approachToll(state)) return true;
+    declareSuccess(state);
+    return false;
+  }
+  // Passing the ice at the current position and moving inward (rule 6.9.4a/d).
+  const current = ice[run.position];
+  if (current) state.log.push({ type: "pass-ice", cardId: current.id });
+  run.currentIceId = undefined;
+  if (run.position === 0) {
+    run.position = null;
+    if (approachToll(state)) return true;
+    declareSuccess(state);
+    return false;
+  }
+  run.position -= 1;
+  run.currentIceId = ice[run.position]!.id;
+  run.phase = "approach-ice";
+  state.log.push({ type: "approach-ice", cardId: run.currentIceId });
+  return false;
+}
+
+/** Manegarm Skunkworks toll when the Runner approaches the server (rule 6.9.4g). */
+function approachToll(state: GameState): boolean {
+  const run = state.run!;
+  if (run.tollPaid) return false;
+  const manegarm = serverById(state, run.server).root.find((c) =>
+    c.cardId === "manegarm_skunkworks" && c.rezzed === true
+  );
+  if (!manegarm) return false;
+  state.prompts.push({
+    kind: "choose-one",
+    id: state.nextPromptId++,
+    player: "runner",
+    title: "Manegarm Skunkworks: end the run unless you spend [click][click] or pay 5[credit]",
+    options: [
+      {
+        id: "toll-credits",
+        label: "Pay 5 credits",
+        creditCost: 5,
+        effect: { kind: "pay-toll-credits" },
+      },
+      {
+        id: "toll-clicks",
+        label: "Spend [click][click]",
+        clickCost: 2,
+        effect: { kind: "pay-toll-clicks" },
+      },
+      { id: "toll-end", label: "End the run", effect: { kind: "end-run" } },
+    ],
+  });
+  return true;
 }
 
 /** The Runner reaches the server: declare the run successful. */

@@ -259,6 +259,8 @@ export function describeMove(state: GameState, move: Move): string {
       const title = cardTitle(findCardIn(state, move.targetId)?.cardId ?? "");
       return `Ability ${move.abilityIndex + 1} — ${title}`;
     }
+    case "runner.continueRun":
+      return "Continue the run";
     case "runner.jackOut":
       return "Jack out";
     case "runner.breakSubroutine":
@@ -285,8 +287,6 @@ export function describeMove(state: GameState, move: Move): string {
       return "Trash";
     case "runner.finishAccess":
       return "Finish access";
-    case "runner.payToll":
-      return move.method === "credits" ? "Pay the toll (credits)" : "Pay the toll (click)";
     case "prompt.answer": {
       const prompt = state.prompts.find((p) => p.id === move.promptId);
       const option = prompt && "options" in prompt

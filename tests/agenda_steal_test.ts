@@ -10,6 +10,7 @@
  */
 
 import { cardDef, engine, starterDeckConfigs } from "../src/mod.ts";
+import { continueRun } from "../src/testing/fixtures.ts";
 import type { GameState, Move } from "../src/types.ts";
 import { assert, assertDefined } from "./helpers/assert.ts";
 
@@ -75,7 +76,7 @@ Deno.test("access: an accessed agenda is stolen exactly once when the Runner pas
     m.kind === "runner.run" && m.server === "remote-1"
   ) as Move | undefined;
   assertDefined(run, "the Runner can run the new remote");
-  state = play(state, "runner", run!);
+  state = continueRun(play(state, "runner", run!));
   assert(state.breach !== null, "the run breaches the remote");
 
   // Access the agenda (single candidate → auto-accessed).

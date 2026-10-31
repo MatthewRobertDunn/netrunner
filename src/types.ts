@@ -629,6 +629,7 @@ export type Move =
   | { kind: "runner.run"; server: ServerId }
   | { kind: "runner.ability"; targetId: CardInstanceId; abilityIndex: number; server?: ServerId }
   // Run interaction
+  | { kind: "runner.continueRun" }
   | { kind: "runner.jackOut" }
   | { kind: "runner.breakSubroutine"; programId: CardInstanceId; subIndex: number }
   | { kind: "runner.pumpIcebreaker"; programId: CardInstanceId }
@@ -639,8 +640,6 @@ export type Move =
   | { kind: "runner.accessRandom" }
   | { kind: "runner.trashAccessed" }
   | { kind: "runner.finishAccess" }
-  // Approach toll (Manegarm Skunkworks)
-  | { kind: "runner.payToll"; method: "credits" | "clicks" }
   // Answers to pending prompts (generic; the option carries the effect)
   | { kind: "prompt.answer"; player: PlayerSide; promptId: number; optionId: string };
 

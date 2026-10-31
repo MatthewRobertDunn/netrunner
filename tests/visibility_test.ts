@@ -8,6 +8,7 @@
 
 import { cardDef, engine } from "../src/mod.ts";
 import {
+  continueRun,
   endCorpTurn,
   installInNewRemoteAndEndTurn,
   newGameWithCorpHand,
@@ -81,7 +82,7 @@ function accessChoiceState(seed = 3): GameState {
     (m) => m.kind === "runner.run" && m.server === "remote-1",
   );
   assert(run && run.kind === "runner.run", "runner can run the remote");
-  const after = play(state, "runner", run).state;
+  const after = continueRun(play(state, "runner", run).state);
   assert(after.breach !== null, "the run breaches the remote");
   return after;
 }
