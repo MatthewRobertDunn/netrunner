@@ -54,5 +54,27 @@ is listed under "documented simplifications", it is a deliberate, safe-to-keep d
     Archives split (whole pile hidden from the Runner); installing over a like card is forbidden
     rather than forcing the trash (8.5.6a); no ice-trash-during-install discount (8.5.6b); memory
     over-limit is prevented rather than resolved by trashing (3.9.3b); `drawMode: "random"` in AI
-    hypotheses only; the corp's rez window during runs is the only in-run rez opportunity (rule
-    6.9.4e nuance not modelled).
+    hypotheses only. The corp's in-run non-ice rez window offers only the approached ice and the
+    attacked server's root, whereas the `(R)` window (6.9.2b, 6.9.4e) permits rezzing any installed
+    unrezzed non-ice card — no starter card needs the wider window.
+13. **`choose-one` options mean exactly what their `effect` says — never dispatch on "corp +
+    targetId" (1.18.2, 8.1.2d, 8.5.14).** `answerPrompt` once rezzed any corp prompt option that
+    carried a `targetId`, whatever the prompt was for: Seamless Launch with 2+ targets rezzed its
+    target and placed zero counters, and Brân 1.0's "install 1 ice inward, ignoring all costs"
+    option became unanswerable. Route every option through its `effect.kind` (`place-2-advancement`,
+    `corp-install-ice-inward`, `rez-card-free`, …) and keep `rezCard` the single rez payment point.
+    Was wrong / now correct — don't reintroduce.
+14. **A card that creates a run states the whole package (5.2.2b).** Tread Lightly must offer a
+    server choice ("Run any server", not a hard-coded HQ) and Overclock must RUN the chosen server
+    as part of the event ("Place 5 on this event, then run any server") — not bank a fund for a
+    later, separately-clicked run. Was wrong / now correct — don't reintroduce.
+15. **`data/cards.json` text is the specification.** VRcation ("Draw 4 cards. If you have any click
+    remaining, lose click.") was implemented as draw 3 + discard 1 / lose a credit. When
+    `cards/effects.ts` claims `supported`, every clause of `stripped_text` must be modelled; when a
+    clause is not, say so in the behavior's `note`.
+16. **"If you have any [click] remaining, lose [click]" is conditional and evaluated last (Creative
+    Commission, VRcation).** Pay the event's own click first, then charge the clause only if a click
+    actually remains, and never log a click that was not spent.
+17. **"You cannot run the same central server twice in a turn" applies to run-creating abilities
+    too** (Red Team's paid ability), not just the basic action — the ability's run must be recorded
+    in `ranServersThisTurn` like `runner.run` is.

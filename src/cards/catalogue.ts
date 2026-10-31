@@ -137,24 +137,6 @@ export function tryCardDef(cardId: CardId): CardDef | undefined {
   return cards.get(cardId);
 }
 
-export function allCardDefs(): CardDef[] {
-  return [...cards.values()];
-}
-
-export function catalogueMeta(): CatalogueMeta {
-  return { ...data._source };
-}
-
-/** Cards that can be rezzed (assets, upgrades, ice). */
-export function isRezzable(def: CardDef): boolean {
-  return def.type === "asset" || def.type === "upgrade" || def.type === "ice";
-}
-
-/** Cards that are always active once installed by the Runner. */
-export function isRunnerInstallable(def: CardDef): boolean {
-  return def.type === "program" || def.type === "hardware" || def.type === "resource";
-}
-
 export function isIce(def: CardDef): boolean {
   return def.type === "ice";
 }

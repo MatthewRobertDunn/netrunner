@@ -141,15 +141,6 @@ export function cardVisibleTo(
   return false;
 }
 
-export function installedCard(
-  state: GameState,
-  side: PlayerSide,
-  instanceId: string,
-): CardInstance | null {
-  if (side === "corp") return corpInstalled(state).find((c) => c.id === instanceId) ?? null;
-  return state.runner.installed.find((c) => c.id === instanceId) ?? null;
-}
-
 /** Draw `count` cards from the top of the player's deck. Returns drawn count. */
 export function drawCards(state: GameState, side: PlayerSide, count: number): number {
   const p = player(state, side);
@@ -358,14 +349,6 @@ export function baseStrength(card: CardInstance): number {
   return cardDef(card.cardId).strength ?? 0;
 }
 
-/** Current strength of ice or an icebreaker (printed + temporary pump). */
-export function currentStrength(_state: GameState, card: CardInstance): number {
-  if (card.cardId === "palisade" && (card.server?.startsWith("remote") ?? false)) {
-    return baseStrength(card) + 2 + (card.strengthBoost ?? 0);
-  }
-  return baseStrength(card) + (card.strengthBoost ?? 0);
-}
-
 /**
  * Expire every temporary strength pump on the Runner's installed programs.
  *
@@ -425,12 +408,6 @@ export function takeCreditsFrom(state: GameState, card: CardInstance, amount: nu
   card.hostedCredits = have - taken;
   state.log.push({ type: "take-credits", targetId: card.id, amount: taken, player: card.owner });
   return taken;
-}
-
-/** Add an advancement counter. */
-export function addAdvancement(state: GameState, card: CardInstance, amount = 1): void {
-  card.advancement = (card.advancement ?? 0) + amount;
-  state.log.push({ type: "advance", cardId: card.id, amount });
 }
 
 /** Total credits available on installed Corp cards with hosted credits. */
