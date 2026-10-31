@@ -483,7 +483,6 @@ function installRunnerCard(state: GameState, cardId: string): void {
   // Carmen: -2 after a successful run this turn (shared with enumeration).
   const cost = runnerInstallCost(state, cardId);
   spendCredits(state, "runner", cost);
-  if (def.type === "program") memoryUsed(state);
   state.runner.hand.splice(state.runner.hand.findIndex((c) => c.id === card.id), 1);
   card.zone = "play-area";
   state.runner.installed.push(card);
@@ -696,7 +695,6 @@ export function resolveEncounter(state: GameState): void {
       // Stop and let the player answer before continuing (rule 9.11.4g: a
       // choice between options ends the instruction; the chosen option
       // resolves next — see also 9.8.7b, subroutines resolve one at a time).
-      run.resumeSubIndex = i;
       return;
     }
     if (state.winner) return;

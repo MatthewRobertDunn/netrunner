@@ -203,8 +203,7 @@ function cardVisibleTo(
 ): boolean {
   const card = findCardIn(state, id);
   if (!card) return false; // unknown id → don't leak a title
-  if (card.owner === viewer) return true;
-  if (card.cardId === viewer) return true; // identity card
+  if (card.owner === viewer) return true; // covers the identity card too
   // Scored agendas are open information.
   if (card.zone === "score") return true;
   // Rezzed Corp cards are public; unrezzed ones are not.

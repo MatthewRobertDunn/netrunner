@@ -128,8 +128,7 @@ export function cardVisibleTo(
   const found = findCard(state, instanceId);
   if (!found) return false; // unknown id → don't leak a title
   const card = found.card;
-  if (card.owner === viewer) return true;
-  if (card.cardId === viewer) return true; // identity card
+  if (card.owner === viewer) return true; // covers the identity card too
   // Scored agendas are open information (rule 10.2.3).
   if (card.zone === "score") return true;
   // Rezzed Corp cards are public; unrezzed ones are secret (rules 1.21.1a, 4.6.3).

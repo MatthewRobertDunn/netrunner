@@ -397,7 +397,6 @@ export function determinize(view: PlayerView, ctx: AIDecisionContext, rng: Rng):
       fundCredits: view.run.fundCredits,
       rezCostIncrease: view.run.rezCostIncrease,
       tollPaid: view.run.tollPaid,
-      awaitingChoice: false,
       encounterStarted: view.run.phase === "encounter-ice",
     }
     : null;

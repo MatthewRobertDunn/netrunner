@@ -97,7 +97,6 @@ export function beginEncounter(state: GameState): void {
   run.broken = [];
   run.resolved = [];
   run.encounterStarted = true;
-  run.awaitingChoice = false;
   // Safety: each encounter starts with no leftover pumps, making "no boost
   // outside an encounter" (rule 3.9.5b) local to the encounter. All pumps in
   // the card pool are encounter-duration; a "for the remainder of this run"

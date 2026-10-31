@@ -121,7 +121,7 @@ export interface ServerState {
 // ---------------------------------------------------------------------------
 
 /** The phases a turn can be in (rule 5.3-5.7). */
-export type TurnPhase = "mulligans" | "draw" | "action" | "discard" | "game-over";
+export type TurnPhase = "mulligans" | "action" | "discard" | "game-over";
 
 export type RunPhase =
   | "initiation"
@@ -152,14 +152,8 @@ export interface RunState {
   fundCredits?: number;
   /** Rez cost increase for ice during this run (Tread Lightly). */
   rezCostIncrease?: number;
-  /** Extra random accesses during breach (Jailbreak). */
-  extraAccess?: number;
   /** Manegarm Skunkworks toll has been satisfied this run. */
   tollPaid?: boolean;
-  /** True while a choice prompt is gating a subroutine's remaining resolution. */
-  awaitingChoice?: boolean;
-  /** Subroutine index to resume after a runner choice (Karuna). */
-  resumeSubIndex?: number;
   /** Encounter has begun for the current approach (guards duplicate logs). */
   encounterStarted?: boolean;
 }
