@@ -5,6 +5,7 @@
  * mandatory draw can lose the game (rule 1.7.2c), the Runner has no draw phase.
  */
 
+import { checkEmpty } from "./effects.ts";
 import { drawCards, player, takeCreditsFrom, toDiscard } from "./state.ts";
 import type { CardInstance, GameState, PlayerSide } from "../types.ts";
 
@@ -82,6 +83,9 @@ export function beginRunnerTurn(state: GameState): void {
     if (taken > 0) {
       state.log.push({ type: "take-credits", targetId: card.id, amount: taken, player: "runner" });
     }
+    // Every take-from path checks "when it is empty, trash it" (no-op for
+    // cards without that trigger, e.g. Smartware Distributor).
+    checkEmpty(state, card);
   }
 }
 
@@ -131,8 +135,7 @@ export function maxHandSize(state: GameState, side: PlayerSide): number {
 /** "When it is empty, trash it" for hosted-credit assets. */
 export function checkEmptyAsset(state: GameState, card: CardInstance, drawOne: boolean): void {
   if ((card.hostedCredits ?? 0) > 0) return;
-  state.log.push({ type: "trash", cardId: card.id, from: "emptied" });
-  toDiscard(state, card, "emptied");
+  toDiscard(state, card, "emptied"); // logs the trash event
   if (drawOne) drawCards(state, "corp", 1);
 }
 

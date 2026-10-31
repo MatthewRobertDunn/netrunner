@@ -5,6 +5,7 @@
  */
 
 import { cardDef, isIce } from "../cards/catalogue.ts";
+import { fireRez, trashMayfly } from "./effects.ts";
 import { expireIcebreakerPumps, serverById, spendCredits } from "./state.ts";
 import type { CardInstance, GameState, ServerId } from "../types.ts";
 
@@ -45,6 +46,11 @@ export function rezCard(
   }
   card.rezzed = true;
   state.log.push({ type: "rez", cardId: card.id });
+  // "When you rez this asset, load N credits onto it" (e.g. Nico Campaign,
+  // Regolith Mining License). Every rez path — the corp.rez action, the
+  // approach rez window, and free rezzes (Send a Message) — funnels through
+  // this choke point, so the trigger fires exactly once per actual rez.
+  fireRez(state, card);
   return true;
 }
 
@@ -221,5 +227,11 @@ export function finishRun(state: GameState): void {
   // The run is over (jack-out, subroutine, breach complete): any icebreaker
   // pump still pending expires with it (rules 3.9.5b/3.9.5d).
   expireIcebreakerPumps(state);
+  // Mayfly: "When this run ends, trash this program." Every run end funnels
+  // through here — jack out, subroutine ETR, breach complete, server pruned
+  // mid-run — so the delayed ability fires on any run end. The one exception
+  // is settle()'s win-mid-run path, which nulls `state.run` without calling
+  // finishRun: the game is over, so the delayed ability never resolves.
+  trashMayfly(state);
   state.run = null;
 }

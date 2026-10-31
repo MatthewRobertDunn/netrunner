@@ -247,10 +247,8 @@ function applyResolvedMove(state: GameState, playerSide: PlayerSide, move: Move)
     }
     case "corp.rez": {
       const found = findCard(state, move.targetId);
-      if (found) {
-        rezCard(state, found.card);
-        fireInstall(state, found.card);
-      }
+      // rezCard fires the on-rez triggers (load credits) itself.
+      if (found) rezCard(state, found.card);
       break;
     }
     case "corp.ability": {
@@ -385,8 +383,8 @@ function answerPrompt(state: GameState, promptId: number, optionId: string): voi
       }
       const ok = rezCard(state, found.card);
       if (!ok) return; // not payable; leave the prompt open
-      fireInstall(state, found.card);
-      // rezCard already paid the rez cost (rule 8.1.2d) — do not charge again.
+      // rezCard is the single payment point (rule 8.1.2d) and fires the
+      // load-on-rez trigger (fireRez) — nothing more to do here.
       state.prompts.shift();
       finishCurrentApproach(state);
       break;
@@ -404,14 +402,11 @@ function answerPrompt(state: GameState, promptId: number, optionId: string): voi
         const found = findCard(state, option.targetId);
         if (found) {
           rezCard(state, found.card, true);
-          fireInstall(state, found.card);
         }
       } else if (option.targetId && (prompt.player === "corp")) {
         const found = findCard(state, option.targetId);
         if (found) {
-          const wasUnrezzed = found.card.rezzed !== true;
-          const ok = rezCard(state, found.card);
-          if (ok && wasUnrezzed) fireInstall(state, found.card);
+          rezCard(state, found.card);
         }
       } else {
         applyChoice(state, option.effect);
