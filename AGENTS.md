@@ -24,6 +24,13 @@ pkill -f "deno.*serve-web"; sleep 1
 (deno task serve-web > /tmp/opencode/serve.log 2>&1 &)
 sleep 3; deno eval "const r = await fetch('http://localhost:8000/'); console.log(r.status)"
 
+# Parallel agents each run their OWN server (no port clashes): PORT=0 lets the
+# OS pick a free port; the first log line is SERVING_PORT=<n> (grep for it).
+# (PORT=<n> pins a port; AUTO_PORT=1 falls back to a free port if PORT is busy.)
+# NOTE: the browser is still ONE shared instance — screenshots need a focused
+# visible tab, so agents must serialize screenshot-taking (navigate freely,
+# coordinate captures).
+
 # Publish to the host (rebuilds bundle, exports docker tarball, restarts systemd)
 deno task publish
 ```
