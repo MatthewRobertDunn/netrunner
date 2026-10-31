@@ -4,7 +4,7 @@ var __export = (target, all) => {
     __defProp(target, name, { get: all[name], enumerable: true });
 };
 
-// ../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-dom/3.5.13/dist/runtime-dom.esm-bundler.js
+// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-dom/3.5.13/dist/runtime-dom.esm-bundler.js
 var runtime_dom_esm_bundler_exports = {};
 __export(runtime_dom_esm_bundler_exports, {
   BaseTransition: () => BaseTransition,
@@ -177,7 +177,7 @@ __export(runtime_dom_esm_bundler_exports, {
   withScopeId: () => withScopeId
 });
 
-// ../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/shared/3.5.13/dist/shared.esm-bundler.js
+// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/shared/3.5.13/dist/shared.esm-bundler.js
 // @__NO_SIDE_EFFECTS__
 function makeMap(str) {
   const map2 = /* @__PURE__ */ Object.create(null);
@@ -523,7 +523,7 @@ var stringifySymbol = (v, i = "") => {
   );
 };
 
-// ../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/reactivity/3.5.13/dist/reactivity.esm-bundler.js
+// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/reactivity/3.5.13/dist/reactivity.esm-bundler.js
 function warn(msg, ...args) {
   console.warn(`[Vue warn] ${msg}`, ...args);
 }
@@ -2200,7 +2200,7 @@ function traverse(value, depth = Infinity, seen2) {
   return value;
 }
 
-// ../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-core/3.5.13/dist/runtime-core.esm-bundler.js
+// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-core/3.5.13/dist/runtime-core.esm-bundler.js
 var stack = [];
 function pushWarningContext(vnode) {
   stack.push(vnode);
@@ -9588,7 +9588,7 @@ var resolveFilter = null;
 var compatUtils = null;
 var DeprecationTypes = null;
 
-// ../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-dom/3.5.13/dist/runtime-dom.esm-bundler.js
+// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-dom/3.5.13/dist/runtime-dom.esm-bundler.js
 var policy = void 0;
 var tt = typeof window !== "undefined" && window.trustedTypes;
 if (tt) {
@@ -11384,7 +11384,7 @@ var initDirectivesForSSR = () => {
   }
 };
 
-// ../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/compiler-core/3.5.13/dist/compiler-core.esm-bundler.js
+// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/compiler-core/3.5.13/dist/compiler-core.esm-bundler.js
 var FRAGMENT = Symbol(true ? `Fragment` : ``);
 var TELEPORT = Symbol(true ? `Teleport` : ``);
 var SUSPENSE = Symbol(true ? `Suspense` : ``);
@@ -16216,7 +16216,7 @@ var noopDirectiveTransform = () => ({
   props: []
 });
 
-// ../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/compiler-dom/3.5.13/dist/compiler-dom.esm-bundler.js
+// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/compiler-dom/3.5.13/dist/compiler-dom.esm-bundler.js
 var V_MODEL_RADIO = Symbol(true ? `vModelRadio` : ``);
 var V_MODEL_CHECKBOX = Symbol(true ? `vModelCheckbox` : ``);
 var V_MODEL_TEXT = Symbol(true ? `vModelText` : ``);
@@ -16852,7 +16852,7 @@ function compile2(src, options = {}) {
   }));
 }
 
-// ../../../usr/local/share/deno/npm/registry.npmjs.org/vue/3.5.13/dist/vue.esm-bundler.js
+// ../usr/local/share/deno/npm/registry.npmjs.org/vue/3.5.13/dist/vue.esm-bundler.js
 function initDev() {
   {
     initCustomFormatter();
@@ -19122,6 +19122,16 @@ function spendClicks(state, side, amount) {
   });
   return spent;
 }
+function loseClicks(state, side, amount) {
+  const p2 = player(state, side);
+  const lost = Math.min(p2.clicks, amount);
+  p2.clicks -= lost;
+  if (lost > 0) state.log.push({
+    type: "lose-clicks",
+    player: side,
+    amount: lost
+  });
+}
 function detachFromPlayer(p2, card) {
   if (p2.identity.id === card.id) return;
   for (const list of [
@@ -20794,11 +20804,12 @@ function runnerActionMoves(state) {
     if (def2.type !== "event") continue;
     if (def2.cost !== null && def2.cost > runner.credits) continue;
     if (def2.minimumDeckSize !== null) continue;
-    if (card.cardId === "jailbreak" || card.cardId === "overclock") {
-      for (const server of [
+    if (card.cardId === "jailbreak" || card.cardId === "overclock" || card.cardId === "tread_lightly") {
+      const servers = card.cardId === "jailbreak" ? [
         "hq",
         "rd"
-      ]) {
+      ] : allServers(state).filter((s) => !cardRestrictsRun(state, s));
+      for (const server of servers) {
         moves.push({
           kind: "runner.playEvent",
           cardId: card.cardId,
@@ -21452,44 +21463,30 @@ function playRunnerEvent(state, cardId, server) {
       break;
     case "creative_commission": {
       gainCredits(state, "runner", 5);
-      spendClicks(state, "runner", 1);
-      state.log.push({
-        type: "lose-clicks",
-        player: "runner",
-        amount: 1
-      });
+      if (state.runner.clicks > 0) loseClicks(state, "runner", 1);
       break;
     }
     case "vrcation": {
-      const drawn = drawCards(state, "runner", 3);
-      if (state.runner.hand.length > 0 && drawn > 0) {
-        if (state.runner.hand.length === 1) {
-          discardSpecific(state, "runner", state.runner.hand[0].id);
-        } else {
-          state.prompts.push({
-            kind: "discard",
-            id: state.nextPromptId++,
-            player: "runner",
-            count: 1
-          });
-        }
-      } else {
-        loseCredits(state, "runner", 1);
-      }
+      drawCards(state, "runner", 4);
+      if (state.runner.clicks > 0) loseClicks(state, "runner", 1);
       break;
     }
     case "jailbreak": {
-      initiateRun(state, server ?? "hq", "jailbreak");
-      state.runner.ranServersThisTurn.push(server ?? "hq");
+      const target = server ?? "hq";
+      initiateRun(state, target, "jailbreak");
+      state.runner.ranServersThisTurn.push(target);
       break;
     }
     case "overclock": {
-      state.runner.pendingRunFund += 5;
+      const target = server ?? "hq";
+      initiateRun(state, target, "overclock");
+      state.run.fundCredits = 5;
+      state.runner.ranServersThisTurn.push(target);
       break;
     }
     case "tread_lightly": {
       const target = server ?? "hq";
-      if (!state.run) initiateRun(state, target, "tread_lightly");
+      initiateRun(state, target, "tread_lightly");
       state.run.rezCostIncrease = 3;
       state.runner.ranServersThisTurn.push(target);
       break;
@@ -21582,16 +21579,6 @@ function addAdvancementCounter(state, card) {
     type: "advance",
     cardId: card.id,
     amount: 1
-  });
-}
-function discardSpecific(state, side, instanceId) {
-  const found = findCard(state, instanceId);
-  if (!found) return;
-  moveCardTo(state, found.card, "discard", side);
-  state.log.push({
-    type: "discard",
-    cardId: instanceId,
-    player: side
   });
 }
 function enterEndOfTurn(state) {
