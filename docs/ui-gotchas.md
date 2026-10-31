@@ -26,14 +26,3 @@ and the test that pins the fix.
    `accessActions`), so opponent accesses surface via the breach banner and log only. Files:
    `src/web/ui/game.ts`. Tests: `tests/ui/game_screen_test.ts` ("only the human's own access
    decision pops the zoom").
-
-3. **Remote columns flip ice to the runner side too — centrals are not the whole story.** The
-   corp-seat `order` flip once covered only `.server.central`, so ice installed in a remote rendered
-   below the root card in the corp seat — on the corp side instead of the runner side (top). Every
-   `.server.remote` column needs the same flip (ice 1, root 2, label 3, Run 4); the run-btn rule is
-   belt-and-braces, since Run buttons only render for the human Runner, but without it the button's
-   default order 0 would jump above the flipped ice. The DOM order stays label/root/ice in both
-   seats; only CSS `order` moves things. Files: `public/css/style.css`, `src/web/ui/game.ts`
-   (template comment). Tests: `tests/ui/game_screen_test.ts` ("ice sits on the runner side in both
-   seats") mounts with the real stylesheet injected into happy-dom and asserts computed `order` per
-   seat — note happy-dom reports an unset `order` as `""`, not `"0"`.
