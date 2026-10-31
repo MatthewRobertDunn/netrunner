@@ -5,6 +5,7 @@
  */
 
 import { cardDef, isIce } from "../cards/catalogue.ts";
+import { fireRez, trashMayfly } from "./effects.ts";
 import { serverById, spendCredits } from "./state.ts";
 import type { CardInstance, GameState, ServerId } from "../types.ts";
 
@@ -41,6 +42,11 @@ export function rezCard(
   }
   card.rezzed = true;
   state.log.push({ type: "rez", cardId: card.id });
+  // "When you rez this asset, load N credits onto it" (e.g. Nico Campaign,
+  // Regolith Mining License). Every rez path — the corp.rez action, the
+  // approach rez window, and free rezzes (Send a Message) — funnels through
+  // this choke point, so the trigger fires exactly once per actual rez.
+  fireRez(state, card);
   return true;
 }
 
@@ -137,5 +143,11 @@ export function finishRun(state: GameState): void {
   const run = state.run!;
   const successful = run.successful;
   state.log.push({ type: "run-end", server: run.server, successful });
+  // Mayfly: "When this run ends, trash this program." Every run end funnels
+  // through here — jack out, subroutine ETR, breach complete, server pruned
+  // mid-run — so the delayed ability fires on any run end. The one exception
+  // is settle()'s win-mid-run path, which nulls `state.run` without calling
+  // finishRun: the game is over, so the delayed ability never resolves.
+  trashMayfly(state);
   state.run = null;
 }

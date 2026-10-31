@@ -422,6 +422,7 @@ export function applyPaidAbility(
     addHostedCredits(state, card, 1);
     const taken = takeCreditsFrom(state, card, 999);
     runner.credits += taken;
+    checkEmpty(state, card);
     return true;
   }
   if (card.cardId === "red_team" && ability.id === "run-central") {
@@ -448,8 +449,7 @@ export function checkEmpty(state: GameState, card: CardInstance): void {
   );
   if (!trigger) return;
   const draw = trigger.kind === "empty-then-trash-and-draw";
-  state.log.push({ type: "trash", cardId: card.id, from: "emptied" });
-  toDiscard(state, card, "emptied");
+  toDiscard(state, card, "emptied"); // logs the trash event
   if (draw) drawCards(state, "corp", 1);
 }
 
@@ -457,8 +457,7 @@ export function checkEmpty(state: GameState, card: CardInstance): void {
 export function trashMayfly(state: GameState): void {
   for (const card of [...state.runner.installed]) {
     if (card.cardId === "mayfly") {
-      state.log.push({ type: "trash", cardId: card.id, from: "run ends" });
-      toDiscard(state, card, "run ends");
+      toDiscard(state, card, "run ends"); // logs the trash event
     }
   }
 }

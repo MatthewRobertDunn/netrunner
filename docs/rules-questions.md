@@ -26,10 +26,12 @@ Runner's turn has no draw phase (rule 5.3.3).
 **Question.** Mayfly says "Trash this program when this run ends." Does the run end during the
 access phase (after the Runner breaches), or only after the Runner finishes accessing?
 
-**Answer.** **At the end of the run, after the access phase.** The engine trashes Mayfly when
-`finishRun` is called, which happens after the access phase completes (or when the Runner jacks out
-/ the run is otherwise ended). This is the conservative reading and matches the "trash this program
-when this run ends" trigger timing in rule 9.9.4.
+**Answer.** **At the end of the run, after the access phase.** The engine trashes Mayfly in
+`finishRun` (`src/engine/runs.ts`), which every run end funnels through: after the access phase
+completes, when the Runner jacks out, or when the run is otherwise ended. (If the game ends
+mid-run, `settle` clears the run without calling `finishRun`, so the delayed ability never
+resolves — the game is already over.) This is the conservative reading and matches the "trash this
+program when this run ends" trigger timing in rule 9.9.4.
 
 ---
 
