@@ -5,7 +5,7 @@
  */
 
 import { cardDef, isIce } from "../cards/catalogue.ts";
-import { serverById, spendCredits } from "./state.ts";
+import { expireIcebreakerPumps, serverById, spendCredits } from "./state.ts";
 import type { CardInstance, GameState, ServerId } from "../types.ts";
 
 export function iceAt(state: GameState, server: ServerId): CardInstance[] {
@@ -98,6 +98,11 @@ export function beginEncounter(state: GameState): void {
   run.resolved = [];
   run.encounterStarted = true;
   run.awaitingChoice = false;
+  // Safety: each encounter starts with no leftover pumps, making "no boost
+  // outside an encounter" (rule 3.9.5b) local to the encounter. All pumps in
+  // the card pool are encounter-duration; a "for the remainder of this run"
+  // pump (rule 3.9.5c) would need to be exempted here.
+  expireIcebreakerPumps(state);
   state.log.push({ type: "encounter-ice", cardId: current.id });
 }
 
@@ -141,5 +146,8 @@ export function finishRun(state: GameState): void {
   const run = state.run!;
   const successful = run.successful;
   state.log.push({ type: "run-end", server: run.server, successful });
+  // The run is over (jack-out, subroutine, breach complete): any icebreaker
+  // pump still pending expires with it (rules 3.9.5b/3.9.5d).
+  expireIcebreakerPumps(state);
   state.run = null;
 }

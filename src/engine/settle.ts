@@ -21,6 +21,7 @@ import {
   rezCostFor,
 } from "./runs.ts";
 import {
+  expireIcebreakerPumps,
   findCard,
   nextDeckCard,
   player,
@@ -229,6 +230,10 @@ function encounterStep(state: GameState): boolean {
     // Encounter complete: proceed to the movement phase (rule 6.5.6).
     run.phase = "movement";
     run.jackOutOffered = false;
+    // Icebreaker pumps last only "for the remainder of the current encounter"
+    // (rule 3.9.5b) — clear them for every installed program now that the
+    // encounter is over.
+    expireIcebreakerPumps(state);
     return false;
   }
   // Break window: the Runner may break subroutines (exposed as moves).
