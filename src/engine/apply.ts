@@ -5,7 +5,13 @@
 
 import { cardDef, isIce } from "../cards/catalogue.ts";
 import { behaviors } from "../cards/effects.ts";
-import { applyChoice, applyPaidAbility, fireInstall, resolveSubroutine } from "./effects.ts";
+import {
+  addTwoAdvancement,
+  applyChoice,
+  applyPaidAbility,
+  fireInstall,
+  resolveSubroutine,
+} from "./effects.ts";
 import {
   beginEncounter,
   continueMovement,
@@ -398,16 +404,16 @@ function answerPrompt(state: GameState, promptId: number, optionId: string): voi
       if (!option) return;
       if (option.creditCost) spendCredits(state, prompt.player, option.creditCost);
       if (option.clickCost) spendClicks(state, prompt.player, option.clickCost);
+      // Dispatch on what the OPTION MEANS, never on "corp + targetId ⇒ rez":
+      // that heuristic rezzed Seamless Launch targets and misrouted Brân's
+      // install-inward option (BUG B1). Every rez path still funnels through
+      // rezCard, the single payment point (rule 8.1.2d).
       if (option.effect?.kind === "rez-card-free" && option.targetId) {
         const found = findCard(state, option.targetId);
-        if (found) {
-          rezCard(state, found.card, true);
-        }
-      } else if (option.targetId && (prompt.player === "corp")) {
+        if (found) rezCard(state, found.card, true);
+      } else if (option.effect?.kind === "rez-card-paid" && option.targetId) {
         const found = findCard(state, option.targetId);
-        if (found) {
-          rezCard(state, found.card);
-        }
+        if (found) rezCard(state, found.card);
       } else {
         applyChoice(state, option.effect);
       }
@@ -543,7 +549,7 @@ function resolveCorpOperation(state: GameState, cardId: string, card: CardInstan
           id: `advance-${c.id}`,
           label: `Place 2 on ${cardDef(c.cardId).title}`,
           targetId: c.id,
-          effect: { kind: "no-op" } as const,
+          effect: { kind: "place-2-advancement", targetId: c.id } as const,
         })),
       });
       break;
@@ -706,11 +712,6 @@ export function resolveEncounter(state: GameState): void {
 // ---------------------------------------------------------------------------
 // Misc helpers
 // ---------------------------------------------------------------------------
-
-function addTwoAdvancement(state: GameState, card: CardInstance): void {
-  card.advancement = (card.advancement ?? 0) + 2;
-  state.log.push({ type: "advance", cardId: card.id, amount: 2 });
-}
 
 function addAdvancementCounter(state: GameState, card: CardInstance): void {
   card.advancement = (card.advancement ?? 0) + 1;

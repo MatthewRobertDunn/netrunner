@@ -56,3 +56,16 @@ is listed under "documented simplifications", it is a deliberate, safe-to-keep d
     over-limit is prevented rather than resolved by trashing (3.9.3b); `drawMode: "random"` in AI
     hypotheses only; the corp's rez window during runs is the only in-run rez opportunity (rule
     6.9.4e nuance not modelled).
+13. **A prompt option's meaning is its `effect.kind`, never "corp + targetId" (1.18.2, 8.1.2d,
+    8.5.14).** `answerPrompt`'s `choose-one` branch used to dispatch on `option.targetId &&
+    prompt.player === "corp"` and rezz the named card — so every corp choose-one option became a rez
+    instruction. Seamless Launch's multi-target prompt (which only *places* 2 advancement counters)
+    rezzed the chosen card and placed zero counters, and Brân 1.0's install-inward option was
+    constructed without a `targetId` in its `corp-install-ice-inward` effect, so its handler ran
+    with `undefined` and installed nothing. Both `answerPrompt` (apply.ts) and `movesForPrompt`
+    (legal-moves.ts) must dispatch on the explicit effect kind (`rez-card-free`, `rez-card-paid`,
+    `corp-install-ice-inward`, `place-2-advancement`), and a paid rez must carry `rez-card-paid` so
+    `rezCard` stays the single payment point. Corollary: a `corp-install-ice-inward` effect needs
+    BOTH `iceId` (the source ice, which must have a position per 8.5.14) and `targetId` (the ice to
+    install). Was wrong / now correct — don't reintroduce. Tests: `tests/prompts_dispatch_test.ts`.
+

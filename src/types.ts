@@ -181,8 +181,10 @@ export type ChoiceEffect =
   | { kind: "pay-toll-credits" }
   | { kind: "pay-toll-clicks" }
   | { kind: "rez-card-free"; targetId: CardInstanceId }
+  | { kind: "rez-card-paid"; targetId: CardInstanceId }
   | { kind: "corp-draw"; amount: number }
   | { kind: "corp-install-ice-inward"; iceId: CardInstanceId; targetId: CardInstanceId }
+  | { kind: "place-2-advancement"; targetId: CardInstanceId }
   | { kind: "runner-take-3-red-team" };
 
 export interface PromptOption {

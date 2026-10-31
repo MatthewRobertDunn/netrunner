@@ -556,9 +556,15 @@ function promptCardIds(prompt: Prompt | PromptStub): CardInstanceId[] {
       if (option.effect?.kind === "rez-card-free" && option.effect.targetId !== undefined) {
         ids.push(option.effect.targetId);
       }
+      if (option.effect?.kind === "rez-card-paid" && option.effect.targetId !== undefined) {
+        ids.push(option.effect.targetId);
+      }
       if (option.effect?.kind === "corp-install-ice-inward") {
         if (option.effect.iceId !== undefined) ids.push(option.effect.iceId);
         if (option.effect.targetId !== undefined) ids.push(option.effect.targetId);
+      }
+      if (option.effect?.kind === "place-2-advancement" && option.effect.targetId !== undefined) {
+        ids.push(option.effect.targetId);
       }
     }
   }
