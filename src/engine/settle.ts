@@ -48,7 +48,8 @@ export function settle(state: GameState): void {
     // Checkpoint (rule 4.6.8e): a remote server with nothing in its root and
     // no ice ceases to exist. If that happens during a run against it, the run
     // ends after the open paid-ability window closes — neither successful nor
-    // unsuccessful (rules 8.5.8, 10.3.1h).
+    // unsuccessful (rules 8.5.8, 10.3.1h). The leftover access/rez prompts
+    // reference a server that no longer exists, so they are dropped here.
     const gone = pruneEmptyRemotes(state);
     if (state.run && gone.includes(state.run.server)) {
       state.breach = null;
@@ -80,6 +81,12 @@ export function settle(state: GameState): void {
     }
     return;
   }
+  // The guard exists so a wedged settle loop can't hang the process; if it
+  // ever trips, leave a breadcrumb (the warnings surface in the UI log) saying
+  // so — a silent exit would look like an engine stall.
+  state.supportWarnings.push(
+    "settle loop guard reached 1000 steps — the phase machine may be wedged",
+  );
 }
 
 function promptOrFinishDiscard(state: GameState): void {

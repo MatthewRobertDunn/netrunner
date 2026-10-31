@@ -175,6 +175,39 @@ Deno.test("purity: HQ breach state with random candidates stays identical", () =
   assertEquals(again, legal, "enumeration is stable across calls");
 });
 
+Deno.test("purity: every offered move is accepted by applyMove (offered ⇒ applies)", () => {
+  // Br lesson: legal-moves once offered a choose-one option (Brân's install-ice-
+  // inward) that applyMove rejected — the enumerator and the applier disagreed.
+  // Enumerating is cheap; asserting every offer applies closes that class.
+  for (let seed = 1; seed <= 12; seed++) {
+    const decks = starterDeckConfigs();
+    let state = engine.startGame({
+      corp: decks.corp,
+      runner: decks.runner,
+      mode: "starter-decks",
+      seed,
+    });
+    for (let i = 0; i < 250 && !state.winner; i++) {
+      const side: PlayerSide = state.prompts[0]?.player ?? state.turn.player;
+      const legal = engine.getLegalMoves(state, side);
+      for (const move of legal) {
+        const result = engine.applyMove(state, side, move);
+        if (result.kind === "illegal-move") {
+          throw new Error(
+            `offered ⇒ applies violated: ${JSON.stringify(move)} for ${side} was ` +
+              `rejected as illegal (seed ${seed}, step ${i}): ${result.reason}`,
+          );
+        }
+      }
+      if (legal.length === 0) break;
+      // Drive forward with a rotating pick to walk many states/positions.
+      const applied = engine.applyMove(state, side, legal[i % legal.length]!);
+      if (applied.kind === "illegal-move") break;
+      state = applied.state;
+    }
+  }
+});
+
 Deno.test("purity: R&D breach state with a specific and a random candidate stays identical", () => {
   const state = rdChoiceState();
   assertPure(state, "runner");
