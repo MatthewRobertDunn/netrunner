@@ -10,8 +10,10 @@
  *    additional card" — a prior non-HQ breach must not consume the bonus.
  *  - Seamless Launch: "Place 2 advancement counters on 1 installed card that
  *    you did not install this turn" — any installed card, including upgrades.
- *  - Overclock: "You can spend hosted credits during that run" — the fund must
- *    not survive to a run on a later turn.
+ *  - Overclock: "Place 5 credit on this event, then run any server. You can
+ *    spend hosted credits during that run" — the run is part of the event's
+ *    resolution (rule 5.2.2b), so the 5 hosted credits ride on THE run the
+ *    event starts and never become banked credits for a later turn.
  *
  * Hands are scripted deterministically via `orderedCards` (see
  * `orderedCorpDeck` in src/testing/fixtures.ts).
@@ -275,35 +277,69 @@ Deno.test("seamless launch: places 2 advancement counters on an upgrade", () => 
 });
 
 // ---------------------------------------------------------------------------
-// Overclock: the fund is bound to a run made during the same turn
+// Overclock: the run is part of the event, so the fund is bound to that run
 // ---------------------------------------------------------------------------
 
-Deno.test("overclock: the run fund applies to a same-turn run but not to a later turn's run", () => {
+Deno.test("overclock: the event's own run carries the fund; a later turn's run does not", () => {
   const overclockMove = (state: GameState) =>
     engine.getLegalMoves(state, "runner").find((m) =>
       m.kind === "runner.playEvent" && m.cardId === "overclock" && m.server === "hq"
     );
 
-  // A run made during the same turn carries the fund.
+  // The premises of this test changed with the printed text: "Place 5[credit]
+  // on this event, THEN RUN ANY SERVER" (rule 5.2.2b + docs/rules-gotchas.md #8)
+  // makes the run part of the event's resolution, not a separate, click-cost
+  // action. So the fund no longer sits in `pendingRunFund` waiting for a later
+  // run — it is placed on the run the event starts, and `initiateRun` clears
+  // `pendingRunFund`, so a fund can never survive to a later turn at all.
   let s = newGame([], ["overclock"]);
   s = burnUntil(s, "runner");
+  const clicksBefore = s.runner.clicks;
   const oc1 = assertDefined(overclockMove(s), "Overclock is playable");
   s = play(s, "runner", oc1).state;
-  assertEquals(s.runner.pendingRunFund, 5, "Overclock placed 5 credits on the event");
-  s = play(s, "runner", { kind: "runner.run", server: "archives" }).state;
-  assertEquals(s.run?.fundCredits, 5, "the same-turn run can spend the hosted credits");
 
-  // No run made: the fund must not survive into the next runner turn.
+  assertEquals(s.run?.server, "hq", "the event initiated the run itself");
+  assertEquals(s.run?.source, "overclock", "the run's source is the event");
+  assertEquals(s.run?.fundCredits, 5, "the event's run can spend the hosted credits");
+  assertEquals(s.runner.pendingRunFund, 0, "nothing is banked for a later run");
+  assertEquals(
+    s.runner.clicks,
+    clicksBefore - 1,
+    "only the event's click was spent — no extra click for a separate run",
+  );
+
+  // Finish the event's run, then take the runner's turn and the corp's turn.
+  for (let i = 0; i < 20 && (s.run || s.breach) && !s.winner; i++) {
+    const moves = engine.getLegalMoves(s, "runner");
+    const next = moves.find((m) =>
+      m.kind === "runner.accessRandom" || m.kind === "runner.accessCard"
+    ) ?? moves.find((m) => m.kind === "runner.finishAccess") ??
+      moves.find((m) => m.kind === "runner.continueRun");
+    assertDefined(next, "the breach/run offers a decision");
+    s = play(s, "runner", next!).state;
+  }
+  assertEquals(s.run, null, "the event's run has ended");
+
   let t = newGame([], ["overclock"]);
   t = burnUntil(t, "runner");
-  const oc2 = assertDefined(overclockMove(t), "Overclock is playable");
-  t = play(t, "runner", oc2).state;
-  assertEquals(t.runner.pendingRunFund, 5, "Overclock placed 5 credits on the event");
-  t = nextTurnOf(t, "runner"); // finish runner turn 1 without running
+  t = play(t, "runner", overclockMove(t)!).state;
+  assertEquals(t.run?.fundCredits, 5, "the same-turn event run carries the hosted credits");
+  while (t.turn.player === "runner" && !t.winner) {
+    const moves = engine.getLegalMoves(t, "runner");
+    if (moves.length === 0) break;
+    t = play(t, "runner", moves[0]!).state;
+  }
+  t = burnUntil(t, "corp");
+  while (t.turn.player === "corp" && !t.winner) {
+    const moves = engine.getLegalMoves(t, "corp");
+    if (moves.length === 0) break;
+    t = play(t, "corp", moves[0]!).state;
+  }
+  t = burnUntil(t, "runner");
   assertEquals(
     t.runner.pendingRunFund,
     0,
-    "the Overclock fund is cleared by the next runner turn",
+    "the Overclock host is cleared by the next runner turn (nothing to spend)",
   );
   t = play(t, "runner", { kind: "runner.run", server: "archives" }).state;
   assert(

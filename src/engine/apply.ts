@@ -37,7 +37,7 @@ import {
   expireIcebreakerPumps,
   findCard,
   gainCredits,
-  loseCredits,
+  loseClicks,
   memoryLimit,
   memoryUsed,
   moveCardTo,
@@ -576,47 +576,58 @@ function playRunnerEvent(state: GameState, cardId: string, server?: ServerId): v
       gainCredits(state, "runner", 9);
       break;
     case "creative_commission": {
+      // Printed: "Gain 5[credit]. If you have any [click] remaining, lose [click]."
+      // Rule 5.2.2a: the event's trigger cost (1 click, rule 5.2.7e) is paid
+      // first, then the conditional clause is evaluated against the Runner's
+      // remaining clicks (rule 1.11.3b: "lose" and "spend" are not synonyms).
+      // Only a click that was actually available is lost — playing it as the
+      // last action of the turn loses nothing.
       gainCredits(state, "runner", 5);
-      spendClicks(state, "runner", 1);
-      state.log.push({ type: "lose-clicks", player: "runner", amount: 1 });
+      if (state.runner.clicks > 0) loseClicks(state, "runner", 1);
       break;
     }
     case "vrcation": {
-      // Draw 3 cards, then discard 1 (or lose 1 if the hand is empty).
-      const drawn = drawCards(state, "runner", 3);
-      if (state.runner.hand.length > 0 && drawn > 0) {
-        if (state.runner.hand.length === 1) {
-          discardSpecific(state, "runner", state.runner.hand[0]!.id);
-        } else {
-          state.prompts.push({
-            kind: "discard",
-            id: state.nextPromptId++,
-            player: "runner",
-            count: 1,
-          });
-        }
-      } else {
-        loseCredits(state, "runner", 1);
-      }
+      // Printed: "Draw 4 cards. If you have any [click] remaining, lose [click]."
+      // Rule 5.2.2a: pay the event's trigger cost, draw 4, then evaluate the
+      // conditional clause (rule 1.11.3b). No discard prompt — the old
+      // "draw 3 then discard 1" implemented the wrong card.
+      drawCards(state, "runner", 4);
+      if (state.runner.clicks > 0) loseClicks(state, "runner", 1);
       break;
     }
     case "jailbreak": {
       // "Run HQ or R&D. If successful, draw 1 card and when you breach the
       // attacked server, access 1 additional card."
-      initiateRun(state, server ?? "hq", "jailbreak");
-      state.runner.ranServersThisTurn.push(server ?? "hq");
+      // Rule 5.2.2b: the run is part of the event's resolution — the action is
+      // not complete until the new timing structure (the run) is complete.
+      const target = server ?? "hq";
+      initiateRun(state, target, "jailbreak");
+      state.runner.ranServersThisTurn.push(target);
       break;
     }
     case "overclock": {
-      // "The 5 credits are added to the bank for the next run you make this turn."
-      state.runner.pendingRunFund += 5;
+      // Printed: "Place 5[credit] on this event, then run any server. You can
+      // spend hosted credits during that run."
+      // Rule 5.2.2b: the run is part of the event's resolution (see
+      // docs/rules-gotchas.md #8 — splitting "bank credits" from "run" left
+      // "that run" unenforceable). The 5 hosted credits ride on the run state
+      // as `fundCredits`: `spendCredits` draws from the fund first, and
+      // `initiateRun` clears `pendingRunFund`, so the fund can never leak to a
+      // later turn's run.
+      const target = server ?? "hq";
+      initiateRun(state, target, "overclock");
+      state.run!.fundCredits = 5;
+      state.runner.ranServersThisTurn.push(target);
       break;
     }
     case "tread_lightly": {
       // "Run any server. During that run, the rez cost of each piece of ice is
       // increased by 3[credit]."
+      // Rule 5.2.2b: the run is part of the event's resolution, and the +3
+      // applies to the run actually initiated (runs.ts `rezCostFor` reads
+      // `state.run.rezCostIncrease`).
       const target = server ?? "hq";
-      if (!state.run) initiateRun(state, target, "tread_lightly");
+      initiateRun(state, target, "tread_lightly");
       state.run!.rezCostIncrease = 3;
       state.runner.ranServersThisTurn.push(target);
       break;
@@ -716,13 +727,6 @@ export function resolveEncounter(state: GameState): void {
 function addAdvancementCounter(state: GameState, card: CardInstance): void {
   card.advancement = (card.advancement ?? 0) + 1;
   state.log.push({ type: "advance", cardId: card.id, amount: 1 });
-}
-
-function discardSpecific(state: GameState, side: PlayerSide, instanceId: string): void {
-  const found = findCard(state, instanceId);
-  if (!found) return;
-  moveCardTo(state, found.card, "discard", side);
-  state.log.push({ type: "discard", cardId: instanceId, player: side });
 }
 
 function enterEndOfTurn(state: GameState): void {
