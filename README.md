@@ -19,7 +19,7 @@ CyberClick NetrunnerDB starter decks (Runner `4b9cf488-5bd9-4415-a57a-0864d4d0e6
 - **Visible support status.** Every card has a `CardBehavior` definition keyed by card id (rules
   text is never parsed). `cardSupport` / `starterDeckSupport` report `supported` / `partial` /
   `unsupported` per card.
-- **Tested.** `deno test` runs 163 tests across setup, cards, runs, servers, visibility,
+- **Tested.** `deno test` runs 174 tests across setup, cards, runs, servers, visibility,
   rules-costs, prompts, triggers, pump expiry, determinism, public-status, and AI playthrough suites.
 - **AI players.** `src/ai/mod.ts` exposes a `GameAI` interface (`name`,
   `chooseMove(view: PlayerView, legal: Move[], ctx: AIDecisionContext)` — AIs never receive the

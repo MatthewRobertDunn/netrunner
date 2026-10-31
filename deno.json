@@ -1,7 +1,9 @@
 {
   "nodeModulesDir": "none",
   "imports": {
-    "vue": "npm:vue@3.5.13/dist/vue.esm-bundler.js"
+    "vue": "npm:vue@3.5.13/dist/vue.esm-bundler.js",
+    "@vue/test-utils": "npm:@vue/test-utils@2.4.6",
+    "happy-dom": "npm:happy-dom@15.7.4"
   },
   "compilerOptions": {
     "strict": true,
@@ -22,7 +24,7 @@
   "tasks": {
     "import-decks": "deno run --allow-net --allow-read --allow-write scripts/import-starter-decks.ts",
     "fetch-images": "deno run --allow-net --allow-read --allow-write scripts/fetch-card-images.ts",
-    "test": "deno test --allow-read",
+    "test": "deno test --allow-read --allow-env",
     "check-ai": "deno run --allow-read scripts/check-ai.ts",
     "publish": "deno run --allow-read --allow-write --allow-run --allow-net scripts/publish.ts",
     "check": "deno check src/mod.ts src/web/entry.ts",
