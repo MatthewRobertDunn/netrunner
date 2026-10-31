@@ -78,3 +78,15 @@ is listed under "documented simplifications", it is a deliberate, safe-to-keep d
 17. **"You cannot run the same central server twice in a turn" applies to run-creating abilities
     too** (Red Team's paid ability), not just the basic action — the ability's run must be recorded
     in `ranServersThisTurn` like `runner.run` is.
+    hypotheses only; the corp's rez window during runs is the only in-run rez opportunity (rule
+    6.9.4e nuance not modelled).
+18. **Remote-server rendering is viewer-agnostic CSS, not code.** The corp area renders the same
+    template for both viewers (no `humanSide` branch), so "ice grows toward the Corp" was a CSS
+    illusion: the old `.ice-slot` was a 92×66 landscape slot with `rotate(90deg)`, which laid the
+    ice out _horizontally_ and made the column read as growing toward the corp edge. The direction
+    fix is in CSS only (portrait slots, no rotation) — don't "fix" it by branching the template on
+    `humanSide`. Also: an empty remote is pruned by the engine (`pruneEmptyRemotes`), so the UI only
+    ever sees it when the state is hand-built; the "draw nothing" branch is defensive. And a remote
+    with only unrezzed ice must still render — the public status redacts the card identities but
+    keeps `unrezzedIceCount`, so visibility must key on that count too, not just `s.ice.length`.
+
