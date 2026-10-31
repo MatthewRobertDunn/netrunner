@@ -4,7 +4,7 @@ var __export = (target, all) => {
     __defProp(target, name, { get: all[name], enumerable: true });
 };
 
-// ../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-dom/3.5.13/dist/runtime-dom.esm-bundler.js
+// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-dom/3.5.13/dist/runtime-dom.esm-bundler.js
 var runtime_dom_esm_bundler_exports = {};
 __export(runtime_dom_esm_bundler_exports, {
   BaseTransition: () => BaseTransition,
@@ -177,7 +177,7 @@ __export(runtime_dom_esm_bundler_exports, {
   withScopeId: () => withScopeId
 });
 
-// ../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/shared/3.5.13/dist/shared.esm-bundler.js
+// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/shared/3.5.13/dist/shared.esm-bundler.js
 // @__NO_SIDE_EFFECTS__
 function makeMap(str) {
   const map2 = /* @__PURE__ */ Object.create(null);
@@ -523,7 +523,7 @@ var stringifySymbol = (v, i = "") => {
   );
 };
 
-// ../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/reactivity/3.5.13/dist/reactivity.esm-bundler.js
+// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/reactivity/3.5.13/dist/reactivity.esm-bundler.js
 function warn(msg, ...args) {
   console.warn(`[Vue warn] ${msg}`, ...args);
 }
@@ -2200,7 +2200,7 @@ function traverse(value, depth = Infinity, seen2) {
   return value;
 }
 
-// ../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-core/3.5.13/dist/runtime-core.esm-bundler.js
+// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-core/3.5.13/dist/runtime-core.esm-bundler.js
 var stack = [];
 function pushWarningContext(vnode) {
   stack.push(vnode);
@@ -9588,7 +9588,7 @@ var resolveFilter = null;
 var compatUtils = null;
 var DeprecationTypes = null;
 
-// ../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-dom/3.5.13/dist/runtime-dom.esm-bundler.js
+// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-dom/3.5.13/dist/runtime-dom.esm-bundler.js
 var policy = void 0;
 var tt = typeof window !== "undefined" && window.trustedTypes;
 if (tt) {
@@ -11384,7 +11384,7 @@ var initDirectivesForSSR = () => {
   }
 };
 
-// ../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/compiler-core/3.5.13/dist/compiler-core.esm-bundler.js
+// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/compiler-core/3.5.13/dist/compiler-core.esm-bundler.js
 var FRAGMENT = Symbol(true ? `Fragment` : ``);
 var TELEPORT = Symbol(true ? `Teleport` : ``);
 var SUSPENSE = Symbol(true ? `Suspense` : ``);
@@ -16216,7 +16216,7 @@ var noopDirectiveTransform = () => ({
   props: []
 });
 
-// ../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/compiler-dom/3.5.13/dist/compiler-dom.esm-bundler.js
+// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/compiler-dom/3.5.13/dist/compiler-dom.esm-bundler.js
 var V_MODEL_RADIO = Symbol(true ? `vModelRadio` : ``);
 var V_MODEL_CHECKBOX = Symbol(true ? `vModelCheckbox` : ``);
 var V_MODEL_TEXT = Symbol(true ? `vModelText` : ``);
@@ -16852,7 +16852,7 @@ function compile2(src, options = {}) {
   }));
 }
 
-// ../../../usr/local/share/deno/npm/registry.npmjs.org/vue/3.5.13/dist/vue.esm-bundler.js
+// ../usr/local/share/deno/npm/registry.npmjs.org/vue/3.5.13/dist/vue.esm-bundler.js
 function initDev() {
   {
     initCustomFormatter();
@@ -19041,7 +19041,6 @@ function cardVisibleTo(state, instanceId, viewer) {
   if (!found) return false;
   const card = found.card;
   if (card.owner === viewer) return true;
-  if (card.cardId === viewer) return true;
   if (card.zone === "score") return true;
   if (card.rezzed === true) return true;
   for (const p2 of state.prompts) {
@@ -19230,6 +19229,11 @@ function setWinner(state, winner, reason) {
     reason
   });
 }
+function expireIcebreakerPumps(state) {
+  for (const card of state.runner.installed) {
+    if (card.strengthBoost !== void 0) card.strengthBoost = void 0;
+  }
+}
 function memoryUsed(state) {
   let used = 0;
   for (const c of state.runner.installed) used += cardDef(c.cardId).memoryCost ?? 0;
@@ -19278,12 +19282,7 @@ function iceAt(state, server) {
 }
 function rezCostFor(state, card) {
   const def2 = cardDef(card.cardId);
-  let cost;
-  if (isIce(def2)) {
-    cost = serverById(state, card.server).ice.length;
-  } else {
-    cost = def2.cost ?? 0;
-  }
+  let cost = def2.cost ?? 0;
   if (isIce(def2) && state.run?.rezCostIncrease) cost += state.run.rezCostIncrease;
   return cost;
 }
@@ -19299,6 +19298,7 @@ function rezCard(state, card, free = false) {
     type: "rez",
     cardId: card.id
   });
+  fireRez(state, card);
   return true;
 }
 function initiateRun(state, server, source) {
@@ -19352,7 +19352,7 @@ function beginEncounter(state) {
   run.broken = [];
   run.resolved = [];
   run.encounterStarted = true;
-  run.awaitingChoice = false;
+  expireIcebreakerPumps(state);
   state.log.push({
     type: "encounter-ice",
     cardId: current.id
@@ -19472,6 +19472,8 @@ function finishRun(state) {
     server: run.server,
     successful
   });
+  expireIcebreakerPumps(state);
+  trashMayfly(state);
   state.run = null;
 }
 
@@ -19484,6 +19486,13 @@ function fireInstall(state, card) {
   if (!b) return;
   for (const t of b.triggers ?? []) {
     if (t.kind === "on-install-load-credits") addHostedCredits(state, card, t.amount ?? 0);
+  }
+}
+function fireRez(state, card) {
+  const b = behaviors.get(card.cardId);
+  if (!b) return;
+  for (const t of b.triggers ?? []) {
+    if (t.kind === "on-rez-load-credits") addHostedCredits(state, card, t.amount ?? 0);
   }
 }
 function fireAccessBegin(state, card) {
@@ -19702,10 +19711,10 @@ function applyChoice(state, effect2) {
       endRun(state);
       break;
     case "pay-toll-credits":
-      spendToll(state, true);
+      spendToll(state);
       break;
     case "pay-toll-clicks":
-      spendToll(state, false);
+      spendToll(state);
       break;
     case "rez-card-free": {
       const found = findCard(state, effect2.targetId);
@@ -19723,26 +19732,9 @@ function applyChoice(state, effect2) {
       break;
   }
 }
-function spendToll(state, credits) {
+function spendToll(state) {
   const run = state.run;
   if (!run) return;
-  if (credits) {
-    if (state.runner.credits < 5) return;
-    state.runner.credits -= 5;
-    state.log.push({
-      type: "lose-credits",
-      player: "runner",
-      amount: 5
-    });
-  } else {
-    if (state.runner.clicks < 2) return;
-    state.runner.clicks -= 2;
-    state.log.push({
-      type: "lose-clicks",
-      player: "runner",
-      amount: 2
-    });
-  }
   run.tollPaid = true;
 }
 function installIceInward(state, targetId, fromIceId) {
@@ -19870,6 +19862,7 @@ function applyPaidAbility(state, side, card, abilityIndex, server) {
     addHostedCredits(state, card, 1);
     const taken = takeCreditsFrom(state, card, 999);
     runner.credits += taken;
+    checkEmpty(state, card);
     return true;
   }
   if (card.cardId === "red_team" && ability.id === "run-central") {
@@ -19892,13 +19885,17 @@ function checkEmpty(state, card) {
   const trigger2 = (b.triggers ?? []).find((t) => t.kind === "empty-then-trash" || t.kind === "empty-then-trash-and-draw");
   if (!trigger2) return;
   const draw = trigger2.kind === "empty-then-trash-and-draw";
-  state.log.push({
-    type: "trash",
-    cardId: card.id,
-    from: "emptied"
-  });
   toDiscard(state, card, "emptied");
   if (draw) drawCards(state, "corp", 1);
+}
+function trashMayfly(state) {
+  for (const card of [
+    ...state.runner.installed
+  ]) {
+    if (card.cardId === "mayfly") {
+      toDiscard(state, card, "run ends");
+    }
+  }
 }
 
 // src/engine/turns.ts
@@ -19989,6 +19986,7 @@ function beginRunnerTurn(state) {
         player: "runner"
       });
     }
+    checkEmpty(state, card);
   }
 }
 function enterDiscardPhase(state) {
@@ -20037,11 +20035,6 @@ function maxHandSize(state, side) {
 }
 function checkEmptyAsset(state, card, drawOne) {
   if ((card.hostedCredits ?? 0) > 0) return;
-  state.log.push({
-    type: "trash",
-    cardId: card.id,
-    from: "emptied"
-  });
   toDiscard(state, card, "emptied");
   if (drawOne) drawCards(state, "corp", 1);
 }
@@ -20215,12 +20208,7 @@ function corpRezOptions(state) {
   return options;
 }
 function rezSafeCost(state, card) {
-  const def2 = cardDef(card.cardId);
-  if (def2.type === "ice") {
-    const server = state.servers.find((s) => s.ice.some((c) => c.id === card.id));
-    if (server) return server.ice.length;
-  }
-  return def2.cost ?? 0;
+  return rezCostFor(state, card);
 }
 function encounterStep(state) {
   const run = state.run;
@@ -20238,6 +20226,7 @@ function encounterStep(state) {
     run.currentIceId = void 0;
     run.phase = "movement";
     run.jackOutOffered = false;
+    expireIcebreakerPumps(state);
     return false;
   }
   return true;
@@ -20256,7 +20245,7 @@ function beginBreach(state, server) {
       if (state.runner.installed.some((c) => c.cardId === "docklands_pass")) limit += 1;
     }
   }
-  state.runner.hqBreachesThisTurn += 1;
+  if (server === "hq") state.runner.hqBreachesThisTurn += 1;
   state.breach = {
     server,
     randomAccessLimit: limit,
@@ -20688,11 +20677,13 @@ function corpActionMoves(state) {
   }
   for (const card of corpInstalledCardsLocal(state)) {
     const def2 = cardDef(card.cardId);
-    if (def2.advancementRequirement === null && def2.type !== "ice") continue;
-    moves.push({
-      kind: "corp.advance",
-      targetId: card.id
-    });
+    const isAdvanceable = def2.type === "agenda" || card.cardId === "urtica_cipher";
+    if (isAdvanceable && state.corp.credits >= 1) {
+      moves.push({
+        kind: "corp.advance",
+        targetId: card.id
+      });
+    }
     if (def2.type === "agenda") {
       const adv = card.advancement ?? 0;
       const requirement = def2.advancementRequirement ?? 0;
@@ -20734,7 +20725,10 @@ function installServersFor(state, card) {
     ];
   }
   if (def2.type === "upgrade") {
-    return allServers(state);
+    return [
+      ...allServers(state),
+      "new-remote"
+    ];
   }
   return [];
 }
@@ -21120,6 +21114,7 @@ function applyResolvedMove(state, playerSide, move) {
       const found = findCard(state, move.targetId);
       if (!found) break;
       spendClicks(state, "corp", 1);
+      spendCredits(state, "corp", 1);
       addAdvancementCounter(state, found.card);
       break;
     }
@@ -21129,10 +21124,7 @@ function applyResolvedMove(state, playerSide, move) {
     }
     case "corp.rez": {
       const found = findCard(state, move.targetId);
-      if (found) {
-        rezCard(state, found.card);
-        fireInstall(state, found.card);
-      }
+      if (found) rezCard(state, found.card);
       break;
     }
     case "corp.ability": {
@@ -21259,8 +21251,6 @@ function answerPrompt(state, promptId, optionId) {
       }
       const ok = rezCard(state, found.card);
       if (!ok) return;
-      fireInstall(state, found.card);
-      spendCredits(state, "corp", option.creditCost ?? 0);
       state.prompts.shift();
       finishCurrentApproach(state);
       break;
@@ -21278,14 +21268,11 @@ function answerPrompt(state, promptId, optionId) {
         const found = findCard(state, option.targetId);
         if (found) {
           rezCard(state, found.card, true);
-          fireInstall(state, found.card);
         }
       } else if (option.targetId && prompt.player === "corp") {
         const found = findCard(state, option.targetId);
         if (found) {
-          const wasUnrezzed = found.card.rezzed !== true;
-          const ok = rezCard(state, found.card);
-          if (ok && wasUnrezzed) fireInstall(state, found.card);
+          rezCard(state, found.card);
         }
       } else {
         applyChoice(state, option.effect);
@@ -21343,7 +21330,6 @@ function installRunnerCard(state, cardId) {
   spendClicks(state, "runner", 1);
   const cost = runnerInstallCost(state, cardId);
   spendCredits(state, "runner", cost);
-  if (def2.type === "program") memoryUsed(state);
   state.runner.hand.splice(state.runner.hand.findIndex((c) => c.id === card.id), 1);
   card.zone = "play-area";
   state.runner.installed.push(card);
@@ -21385,10 +21371,7 @@ function resolveCorpOperation(state, cardId, card) {
       break;
     case "seamless_launch": {
       const candidates = corpInstalledCards(state).filter((c) => !state.corp.installedThisTurn.includes(c.id));
-      const targets = candidates.filter((c) => {
-        const d = cardDef(c.cardId);
-        return d.type === "agenda" || d.type === "asset" || d.type === "ice";
-      });
+      const targets = candidates;
       if (targets.length === 0) {
         state.supportWarnings.push("Seamless Launch found no legal target; it resolves without placing counters");
         break;
@@ -21476,7 +21459,7 @@ function playRunnerEvent(state, cardId, server) {
     case "tread_lightly": {
       const target = server ?? "hq";
       if (!state.run) initiateRun(state, target, "tread_lightly");
-      else state.run.rezCostIncrease = 1;
+      state.run.rezCostIncrease = 3;
       state.runner.ranServersThisTurn.push(target);
       break;
     }
@@ -21552,7 +21535,6 @@ function resolveEncounter(state) {
     if (run.broken.includes(i) || run.resolved.includes(i)) continue;
     resolveSubroutine(state, ice, i);
     if (state.prompts.length > 0) {
-      run.resumeSubIndex = i;
       return;
     }
     if (state.winner) return;
@@ -21561,6 +21543,7 @@ function resolveEncounter(state) {
   run.currentIceId = void 0;
   run.phase = "movement";
   run.jackOutOffered = false;
+  expireIcebreakerPumps(state);
 }
 function addTwoAdvancement(state, card) {
   card.advancement = (card.advancement ?? 0) + 2;
@@ -21960,7 +21943,6 @@ function determinize(view, ctx, rng) {
     fundCredits: view.run.fundCredits,
     rezCostIncrease: view.run.rezCostIncrease,
     tollPaid: view.run.tollPaid,
-    awaitingChoice: false,
     encounterStarted: view.run.phase === "encounter-ice"
   } : null;
   const breach = view.breach ? {
@@ -23378,7 +23360,6 @@ function cardVisibleTo2(state, id, viewer) {
   const card = findCardIn(state, id);
   if (!card) return false;
   if (card.owner === viewer) return true;
-  if (card.cardId === viewer) return true;
   if (card.zone === "score") return true;
   if (card.rezzed === true) return true;
   for (const p2 of state.prompts) {
