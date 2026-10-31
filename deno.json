@@ -14,10 +14,10 @@
     "lineWidth": 100,
     "singleQuote": false,
     "indentWidth": 2,
-    "exclude": ["public/dist"]
+    "exclude": ["public/dist", "worktrees"]
   },
   "lint": {
-    "exclude": ["public/dist"]
+    "exclude": ["public/dist", "worktrees"]
   },
   "tasks": {
     "import-decks": "deno run --allow-net --allow-read --allow-write scripts/import-starter-decks.ts",
