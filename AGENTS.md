@@ -59,7 +59,13 @@ deno task publish
   input view (events excepted). `public-status.ts` is the both-players intersection.
 - **Rules citations:** engine comments cite rules like "rule 7.1.6". When touching rule logic, read
   the cited section in `docs/rules-v26.03.txt` — see `docs/rules-gotchas.md` for known trip-hazards.
-  Never edit `docs/rules-v26.03.txt`; recorded interpretations live in `docs/rules-questions.md`.
+  When a bug fixes/lands, add a gotchas entry in the same commit so the trap isn't reintroduced
+  (the review loop asks for this). Never edit `docs/rules-v26.03.txt`; recorded interpretations live
+  in `docs/rules-questions.md` — and if an implementation changes, update the doc the same commit
+  (a stale doc is a silent lie).
+- **Prompt answers are moves too.** `prompt.answer` is the only way to resolve Seamless Launch,
+  Brân, Send a Message, Manegarm, and other decisions — card-effect regressions hide at the prompt
+  boundary, so every choose-one option must be answered end-to-end in a test. See `docs/rules-gotchas.md` #13.
 
 ## Secrets & releases
 
