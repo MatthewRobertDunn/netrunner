@@ -443,6 +443,7 @@ export default defineComponent({
            carries the human player's OWN status. data-side marks which
            side each block shows; active marks state.turn.player. -->
       <aside class="status-dock" data-testid="status-dock">
+        <div class="status-half status-top">
         <div class="status-title" data-testid="status-title">
           <div class="turn-badge">
             <span class="turn-num">Turn {{ state.turn.number }}</span>
@@ -519,6 +520,7 @@ export default defineComponent({
             <img v-for="c in own.score" :key="c.id" class="mini-card" :src="'images/' + c.cardId + '.webp'" :alt="name(c.cardId)" />
           </span>
         </section>
+        </div>
       </aside>
       <!-- Perspective class stays for seat-specific tweaks (server ice flip
            uses .corp-seat); the old in-flow strip order scheme is gone since

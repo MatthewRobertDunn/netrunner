@@ -263,6 +263,7 @@ body {
   align-self: stretch;
 }
 .status-title {
+  flex: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -272,8 +273,19 @@ body {
   border-radius: 10px;
   padding: 8px 12px;
 }
+/* Even 50/50 split: the top half (title + opponent block) and the own
+   block each take exactly half the dock height. The opponent block fills
+   whatever the title leaves in the top half. */
+.status-half {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
 .status-block {
-  flex: 1;
+  flex: 1 1 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -282,8 +294,7 @@ body {
   padding: 10px 12px;
   background: var(--panel);
 }
-/* Top block + title form the upper half; the own block fills the lower
-   half, so the split sits near the top of the action panel. */
+/* Acting-side highlight. */
 .status-block.active {
   border-color: var(--accent);
   box-shadow: 0 0 0 1px var(--accent) inset;
