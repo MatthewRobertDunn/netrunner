@@ -23838,7 +23838,7 @@ var game_default = defineComponent({
     function isCardMove(m) {
       return m.kind === "runner.install" || m.kind === "runner.playEvent" || m.kind === "corp.install" || m.kind === "corp.playOperation";
     }
-    const generalMoves = computed2(() => legal.value.filter((m) => !isCardMove(m)));
+    const generalMoves = computed2(() => legal.value.filter((m) => !isCardMove(m) && m.kind !== "runner.run"));
     function cardMoves(cardId) {
       if (!isHumanTurn.value || prompt.value) return [];
       return legal.value.filter((m) => {

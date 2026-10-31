@@ -279,8 +279,12 @@ export default defineComponent({
         m.kind === "corp.install" || m.kind === "corp.playOperation";
     }
 
-    /** Generic moves (credits, runs, jack out, …) for the action panel. */
-    const generalMoves = computed<Move[]>(() => legal.value.filter((m: Move) => !isCardMove(m)));
+    /** Generic moves for the action panel (credits, jack out, …). Runs are
+     *  deliberately excluded: every server already has its own Run button
+     *  under it, so listing them here too only duplicates the row. */
+    const generalMoves = computed<Move[]>(
+      () => legal.value.filter((m: Move) => !isCardMove(m) && m.kind !== "runner.run"),
+    );
 
     /** Legal play/install moves for a card with this definition id. */
     function cardMoves(cardId: string): Move[] {
