@@ -363,8 +363,7 @@ function answerPrompt(state: GameState, promptId: number, optionId: string): voi
       const ok = rezCard(state, found.card);
       if (!ok) return; // not payable; leave the prompt open
       fireInstall(state, found.card);
-      // Pay the rez cost.
-      spendCredits(state, "corp", option.creditCost ?? 0);
+      // rezCard already paid the rez cost (rule 8.1.2d) — do not charge again.
       state.prompts.shift();
       finishCurrentApproach(state);
       break;
@@ -592,9 +591,11 @@ function playRunnerEvent(state: GameState, cardId: string, server?: ServerId): v
       break;
     }
     case "tread_lightly": {
+      // "Run any server. During that run, the rez cost of each piece of ice is
+      // increased by 3[credit]."
       const target = server ?? "hq";
       if (!state.run) initiateRun(state, target, "tread_lightly");
-      else state.run.rezCostIncrease = 1;
+      state.run!.rezCostIncrease = 3;
       state.runner.ranServersThisTurn.push(target);
       break;
     }

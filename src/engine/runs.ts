@@ -12,15 +12,19 @@ export function iceAt(state: GameState, server: ServerId): CardInstance[] {
   return serverById(state, server).ice;
 }
 
-/** Rez cost: printed cost; for ice, the number of ice already protecting the server. */
+/**
+ * Rez cost of a card (rule 1.16.8): the printed cost listed on the card.
+ * Ice pay this printed rez cost when rezzed (rule 3.4.3) — the one-credit-per-
+ * existing-ice number is the INSTALL cost (rule 1.16.6b/8.5.11a), which is
+ * charged by `installCorpCard`, not here. While a run is in progress, an ice's
+ * rez cost is increased by `run.rezCostIncrease` (Tread Lightly).
+ *
+ * This is the single source of truth for what rezzing charges; the corp rez
+ * window displays the same value via `rezSafeCost` (settle.ts).
+ */
 export function rezCostFor(state: GameState, card: CardInstance): number {
   const def = cardDef(card.cardId);
-  let cost: number;
-  if (isIce(def)) {
-    cost = serverById(state, card.server!).ice.length;
-  } else {
-    cost = def.cost ?? 0;
-  }
+  let cost = def.cost ?? 0;
   if (isIce(def) && state.run?.rezCostIncrease) cost += state.run.rezCostIncrease;
   return cost;
 }
