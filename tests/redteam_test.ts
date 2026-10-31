@@ -177,8 +177,8 @@ Deno.test("red team: the ability's run restricts only the central it ran, and th
   // The Red Team ability itself only offers centrals not yet run.
   const offered = engine.getLegalMoves(s, "runner")
     .filter((m) => m.kind === "runner.ability" && m.targetId === red.id && m.abilityIndex === 0)
-    .map((m) => m.server);
-  assertEquals(offered, ["hq", "rd"], "the ability excludes the already-run central");
+    .map((m) => (m as { server?: string }).server);
+  assertEquals(offered.sort(), ["hq", "rd"], "the ability excludes the already-run central");
 
   // Using it on HQ keeps HQ restricted and leaves R&D alone.
   const use = assertDefined(
@@ -246,7 +246,6 @@ Deno.test("red team: a successful ability run takes 3 credits from the resource"
   const red = installedRedTeam(s);
   assertEquals(red.hostedCredits, 12, "installing loaded 12 credits onto Red Team");
   const creditsBefore = s.runner.credits;
-
   s =
     play(s, "runner", assertDefined(redTeamRunMove(s, "archives"), "the ability can run archives"))
       .state;
@@ -256,8 +255,9 @@ Deno.test("red team: a successful ability run takes 3 credits from the resource"
     9,
     "the successful run took 3 credits from the resource",
   );
-  // The Runner paid 5 credits to install and 0 to run, then gained 3.
-  assertEquals(s.runner.credits, creditsBefore - 5 + 3, "the Runner banked the 3 credits");
+  // The install already happened before creditsBefore was captured, so the
+  // expected total is simply before + 3 (0 spent to run, +3 banked).
+  assertEquals(s.runner.credits, creditsBefore + 3, "the Runner banked the 3 credits");
 });
 
 Deno.test("red team: Red Team is trashed when the resource is empty", () => {
