@@ -27,9 +27,10 @@ sleep 3; deno eval "const r = await fetch('http://localhost:8000/'); console.log
 # Parallel agents each run their OWN server (no port clashes): PORT=0 lets the
 # OS pick a free port; the first log line is SERVING_PORT=<n> (grep for it).
 # (PORT=<n> pins a port; AUTO_PORT=1 falls back to a free port if PORT is busy.)
-# NOTE: the browser is still ONE shared instance — screenshots need a focused
-# visible tab, so agents must serialize screenshot-taking (navigate freely,
-# coordinate captures).
+# Browser tabs are SHARED across sessions (probe-verified): each agent opens
+# its own tab and pins it with browser_tabs select before acting — but focus
+# is single, so screenshot-taking must be serialized (one agent captures at a
+# time; navigation/snapshots need no coordination).
 
 # Publish to the host (rebuilds bundle, exports docker tarball, restarts systemd)
 deno task publish
