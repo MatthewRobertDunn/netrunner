@@ -66,22 +66,22 @@ A production image serves the pre-built static site only — no build step, no s
 manager, runs as nonroot. ~50 MB base + 9.7 MB site.
 
 ```sh
-docker build -t netrunner .
-docker run --rm -p 8000:8000 netrunner
+docker load -i release/netrunner-amd64.tar   # yields netrunner:amd64
+docker run --rm -p 8000:8000 netrunner:amd64
 
 # Custom port / bind address:
-docker run --rm -e PORT=8080 -p 8080:8080 netrunner
+docker run --rm -e PORT=8080 -p 8080:8080 netrunner:amd64
 ```
 
 The image's only runtime dependency is the Deno interpreter, used by the tiny static file server
 (`public/serve.ts`) with scoped permissions:
-`--allow-read=/app/public --allow-env=PORT --allow-net`. It binds 0.0.0.0 by default; set `PORT` to
-change the port.
+`--allow-read=/app/public --allow-env=PORT --allow-env=AUTO_PORT --allow-net`. It binds 0.0.0.0
+by default; set `PORT` to change the port.
 
 ### Pre-built multi-arch images
 
 Ready-to-use tarballs for `linux/amd64` and `linux/arm64` live in `release/` (gitignored,
-regenerated on every publish; equivalent to what `docker build` of the Dockerfile produces):
+regenerated on every publish):
 
 ```sh
 docker load -i release/netrunner-amd64.tar   # yields netrunner:amd64
@@ -96,15 +96,6 @@ Requires `crane` and GNU `tar`:
 
 ```sh
 deno run --allow-read --allow-write --allow-run --allow-env scripts/export-docker-images.ts
-```
-
-An alternative is `docker buildx` via `docker-bake.hcl`:
-
-```sh
-docker buildx create --use
-docker buildx bake --load netrunner-amd64 netrunner-arm64
-docker save netrunner:amd64 -o release/netrunner-amd64.tar
-docker save netrunner:arm64 -o release/netrunner-arm64.tar
 ```
 
 ## Running under systemd

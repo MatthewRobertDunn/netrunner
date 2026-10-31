@@ -3,8 +3,7 @@
  * into ./release/.
  *
  * The image is a single layer on top of `denoland/deno:distroless-2.9.8`
- * containing the pre-built static site (public/) — equivalent to what
- * `docker build` of Dockerfile would produce. `crane` (go-containerregistry)
+ * containing the pre-built static site (public/). `crane` (go-containerregistry)
  * is used instead of a Docker daemon so the images can be produced on hosts
  * where dockerd cannot mount(2)/unshare(2) (e.g. unprivileged containers).
  *
@@ -61,8 +60,7 @@ await Deno.remove(WORK_DIR, { recursive: true }).catch(() => {});
 await Deno.mkdir(`${WORK_DIR}/layerroot/app`, { recursive: true });
 await Deno.mkdir(RELEASE_DIR, { recursive: true });
 
-// The layer is owned by the nonroot uid the image runs as (65532), matching
-// `COPY --chown=65532:65532 public/ /app/public/` in the Dockerfile.
+// The layer is owned by the nonroot uid the image runs as (65532).
 run("cp", ["-a", "public", `${WORK_DIR}/layerroot/app/public`]);
 // Best-effort: the layer tar below forces 65532:65532 anyway, so a failed
 // chown (e.g. unprivileged sandbox) changes nothing about the artifact.
@@ -105,7 +103,9 @@ for (const arch of ["arm64", "amd64"]) {
     "--cmd",
     "--allow-read=/app/public",
     "--cmd",
-    "--allow-env=PORT,AUTO_PORT",
+    "--allow-env=PORT",
+    "--cmd",
+    "--allow-env=AUTO_PORT",
     "--cmd",
     "--allow-net",
     "--cmd",
