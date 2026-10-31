@@ -426,7 +426,7 @@ export default defineComponent({
           <span class="stat"><img class="sym" src="assets/svg/click.svg" alt="Click" />{{ corp.clicks }}</span>
           <span class="stat">hand {{ corp.handCount }}/{{ corp.handSize }}</span>
           <span class="stat">deck {{ corp.deckCount }}</span>
-          <span class="stat">heap {{ corp.discardCount }}</span>
+          <span class="stat">archives {{ corp.discardCount }}</span>
           <span class="stat"><img class="sym" src="assets/svg/agenda.svg" alt="Agenda points" />{{ corp.agendaPoints }}/{{ status.agendaPointTarget }}</span>
           <span v-if="corp.tags" class="stat">bad publicity {{ corp.tags }}</span>
           <span v-if="corp.score.length" class="score-strip" data-testid="corp-score">
