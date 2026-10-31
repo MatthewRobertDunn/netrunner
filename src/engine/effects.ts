@@ -259,10 +259,10 @@ export function applyChoice(state: GameState, effect: ChoiceEffect | undefined):
       endRun(state);
       break;
     case "pay-toll-credits":
-      spendToll(state, true);
+      spendToll(state);
       break;
     case "pay-toll-clicks":
-      spendToll(state, false);
+      spendToll(state);
       break;
     case "rez-card-free": {
       const found = findCard(state, effect.targetId);
@@ -281,18 +281,17 @@ export function applyChoice(state: GameState, effect: ChoiceEffect | undefined):
   }
 }
 
-function spendToll(state: GameState, credits: boolean): void {
+/**
+ * Mark the Manegarm Skunkworks toll as paid. The credit/click cost is charged
+ * once, by `answerPrompt`'s generic option-cost spend (legal-moves.ts filters
+ * unaffordable options by reading `option.creditCost`/`option.clickCost`), so
+ * this effect only sets the flag. It must not spend again — that double-charged
+ * and, after the generic spend drained the runner, the old affordability guard
+ * returned early without ever setting `tollPaid`, so the toll re-prompted.
+ */
+function spendToll(state: GameState): void {
   const run = state.run;
   if (!run) return;
-  if (credits) {
-    if (state.runner.credits < 5) return;
-    state.runner.credits -= 5;
-    state.log.push({ type: "lose-credits", player: "runner", amount: 5 });
-  } else {
-    if (state.runner.clicks < 2) return;
-    state.runner.clicks -= 2;
-    state.log.push({ type: "lose-clicks", player: "runner", amount: 2 });
-  }
   run.tollPaid = true;
 }
 
