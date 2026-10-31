@@ -302,9 +302,11 @@ body {
   border-radius: 10px;
   padding: 10px;
 }
-/* Each server is a vertical card stack: the server card itself (corp card
-   back), its root cards behind it, then ice laid out horizontally toward the
-   centre of the playspace (rule 4.6.9a), run button nearest the runner. */
+/* Each server is a vertical card stack: a label (remotes) or dedicated server
+   card (centrals) nearest the corp side, the root card slot(s) below it, then
+   the ice column extending DOWN toward the runner, and the run button pinned
+   to the bottom. Ice is directional: it always grows toward the runner
+   (bottom of the playspace) for BOTH viewers — the corp edge is the top. */
 .server {
   display: flex;
   flex-direction: column;
@@ -312,28 +314,37 @@ body {
   gap: 7px;
   padding: 6px 4px;
 }
+/* Small server name label, nearest the corp side (replaces the old
+   corporate card-back "server card" for remotes). */
+.server-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: 0.5px;
+  text-transform: lowercase;
+}
 .server-ice-stack {
   display: flex;
   flex-direction: column;
   align-items: center;
 }
-/* Ice is rendered horizontally (rule 4.6.9a): the tile keeps its portrait
-   dimensions but is rotated 90° inside a landscape slot. */
+/* Ice is rendered as a vertical column of portrait tiles, each overlapping the
+   one below it so the top sliver of the lower card shows — the outermost ice
+   (the first the Runner encounters) ends up at the bottom, nearest the runner.
+   No rotation: the tile keeps its natural portrait orientation. */
 .ice-slot {
   position: relative;
-  width: 92px;
-  height: 66px;
+  width: 66px;
+  height: 92px;
 }
 .ice-slot .card-tile {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%) rotate(90deg);
+  width: 66px;
+  height: 92px;
 }
 /* Overlap the ice column like the tabletop: show the top sliver of each
    card below the previous one. */
 .server-ice-stack .ice-slot + .ice-slot {
-  margin-top: -34px;
+  margin-top: -58px;
 }
 .ice-slot.facedown {
   opacity: 0.9;
@@ -344,6 +355,15 @@ body {
   justify-content: center;
   gap: 6px;
   min-height: 20px;
+}
+/* Reserved one-card root-slot space for an ice-only remote: blank, no glyph
+   and no card back, so the layout doesn't jump when a root card is installed
+   later. */
+.server-root-empty {
+  width: 66px;
+  height: 92px;
+  border: 1px dashed rgba(125, 211, 252, 0.25);
+  border-radius: 5px;
 }
 .server-card {
   position: relative;

@@ -4,7 +4,7 @@ var __export = (target, all) => {
     __defProp(target, name, { get: all[name], enumerable: true });
 };
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-dom/3.5.13/dist/runtime-dom.esm-bundler.js
+// ../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-dom/3.5.13/dist/runtime-dom.esm-bundler.js
 var runtime_dom_esm_bundler_exports = {};
 __export(runtime_dom_esm_bundler_exports, {
   BaseTransition: () => BaseTransition,
@@ -177,7 +177,7 @@ __export(runtime_dom_esm_bundler_exports, {
   withScopeId: () => withScopeId
 });
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/shared/3.5.13/dist/shared.esm-bundler.js
+// ../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/shared/3.5.13/dist/shared.esm-bundler.js
 // @__NO_SIDE_EFFECTS__
 function makeMap(str) {
   const map2 = /* @__PURE__ */ Object.create(null);
@@ -523,7 +523,7 @@ var stringifySymbol = (v, i = "") => {
   );
 };
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/reactivity/3.5.13/dist/reactivity.esm-bundler.js
+// ../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/reactivity/3.5.13/dist/reactivity.esm-bundler.js
 function warn(msg, ...args) {
   console.warn(`[Vue warn] ${msg}`, ...args);
 }
@@ -2200,7 +2200,7 @@ function traverse(value, depth = Infinity, seen2) {
   return value;
 }
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-core/3.5.13/dist/runtime-core.esm-bundler.js
+// ../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-core/3.5.13/dist/runtime-core.esm-bundler.js
 var stack = [];
 function pushWarningContext(vnode) {
   stack.push(vnode);
@@ -9588,7 +9588,7 @@ var resolveFilter = null;
 var compatUtils = null;
 var DeprecationTypes = null;
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-dom/3.5.13/dist/runtime-dom.esm-bundler.js
+// ../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-dom/3.5.13/dist/runtime-dom.esm-bundler.js
 var policy = void 0;
 var tt = typeof window !== "undefined" && window.trustedTypes;
 if (tt) {
@@ -11384,7 +11384,7 @@ var initDirectivesForSSR = () => {
   }
 };
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/compiler-core/3.5.13/dist/compiler-core.esm-bundler.js
+// ../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/compiler-core/3.5.13/dist/compiler-core.esm-bundler.js
 var FRAGMENT = Symbol(true ? `Fragment` : ``);
 var TELEPORT = Symbol(true ? `Teleport` : ``);
 var SUSPENSE = Symbol(true ? `Suspense` : ``);
@@ -16216,7 +16216,7 @@ var noopDirectiveTransform = () => ({
   props: []
 });
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/compiler-dom/3.5.13/dist/compiler-dom.esm-bundler.js
+// ../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/compiler-dom/3.5.13/dist/compiler-dom.esm-bundler.js
 var V_MODEL_RADIO = Symbol(true ? `vModelRadio` : ``);
 var V_MODEL_CHECKBOX = Symbol(true ? `vModelCheckbox` : ``);
 var V_MODEL_TEXT = Symbol(true ? `vModelText` : ``);
@@ -16852,7 +16852,7 @@ function compile2(src, options = {}) {
   }));
 }
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/vue/3.5.13/dist/vue.esm-bundler.js
+// ../../../usr/local/share/deno/npm/registry.npmjs.org/vue/3.5.13/dist/vue.esm-bundler.js
 function initDev() {
   {
     initCustomFormatter();
@@ -23793,7 +23793,13 @@ var game_default = defineComponent({
       return card.id === r.currentIce.id;
     }
     function serverGlyph(id) {
-      return SERVER_GLYPH[id] ?? "assets/svg/set-sysgw.svg";
+      return SERVER_GLYPH[id] ?? "";
+    }
+    function isCentral2(id) {
+      return id in SERVER_GLYPH;
+    }
+    function remoteLabel(id) {
+      return id.replace("-", " ");
     }
     function runMove(server) {
       return legal.value.find((m) => m.kind === "runner.run" && m.server === server);
@@ -23888,6 +23894,8 @@ var game_default = defineComponent({
       closeZoom,
       isCurrentIce,
       serverGlyph,
+      isCentral: isCentral2,
+      remoteLabel,
       runMove,
       promptTitle,
       handActionsFor,
@@ -23938,40 +23946,58 @@ var game_default = defineComponent({
 
         <div class="servers" data-testid="servers">
           <div v-for="s in serverRows" :key="s.id" class="server">
-            <div class="server-card">
-              <img class="corp-back-img" src="assets/corp-back.svg" alt="" />
-              <div class="server-card-face">
-                <img class="server-glyph" :src="serverGlyph(s.id)" :alt="name(s.id)" />
-                <span class="server-name">{{ name(s.id) }}</span>
+            <!-- Central servers (hq, rd, archives) keep their dedicated server
+                 card (corp back + glyph + name). -->
+            <template v-if="isCentral(s.id)">
+              <div class="server-card">
+                <img class="corp-back-img" src="assets/corp-back.svg" alt="" />
+                <div class="server-card-face">
+                  <img class="server-glyph" :src="serverGlyph(s.id)" :alt="name(s.id)" />
+                  <span class="server-name">{{ name(s.id) }}</span>
+                </div>
               </div>
-            </div>
-            <div v-if="s.root.length" class="server-root-row">
-              <template v-for="c in s.root" :key="c.id">
-                <card-tile
-                  v-if="c.cardId !== 'hidden'"
-                  :card="{ cardId: c.cardId, rezzed: c.rezzed, advancement: c.advancement }"
-                  small
-                  clickable
-                  @zoom="zoom"
-                />
-                <card-tile v-else facedown small corp />
+            </template>
+            <!-- Remotes: a small label nearest the corp side, shown only when the
+                 server has a root card or ice. unrezzedIceCount covers ice the
+                 Runner cannot identify yet (the public status redacts the
+                 cards, the count stays open information). An ice-only server
+                 reserves a one-card root-slot space (blank, no glyph/back) so
+                 the layout doesn't jump when a root card is later installed.
+                 A completely empty remote draws nothing at all here (only its
+                 Run button). -->
+            <template v-else>
+              <template v-if="s.root.length || s.ice.length || s.unrezzedIceCount">
+                <div class="server-label">{{ remoteLabel(s.id) }}</div>
+                <div v-if="s.root.length" class="server-root-row">
+                  <template v-for="c in s.root" :key="c.id">
+                    <card-tile
+                      v-if="c.cardId !== 'hidden'"
+                      :card="{ cardId: c.cardId, rezzed: c.rezzed, advancement: c.advancement }"
+                      small
+                      clickable
+                      @zoom="zoom"
+                    />
+                    <card-tile v-else facedown small corp />
+                  </template>
+                </div>
+                <div v-else class="server-root-row server-root-empty"></div>
+                <div class="server-ice-stack">
+                  <div v-for="card in s.ice" :key="card.id" class="ice-slot">
+                    <card-tile
+                      :card="card"
+                      ice
+                      clickable
+                      :highlight="isCurrentIce(card)"
+                      :badge="isCurrentIce(card) ? 'RUN' : ''"
+                      @zoom="zoom"
+                    />
+                  </div>
+                  <div v-for="n in s.unrezzedIceCount" :key="'u' + s.id + n" class="ice-slot facedown">
+                    <card-tile facedown ice corp />
+                  </div>
+                </div>
               </template>
-            </div>
-            <div class="server-ice-stack">
-              <div v-for="card in s.ice" :key="card.id" class="ice-slot">
-                <card-tile
-                  :card="card"
-                  ice
-                  clickable
-                  :highlight="isCurrentIce(card)"
-                  :badge="isCurrentIce(card) ? 'RUN' : ''"
-                  @zoom="zoom"
-                />
-              </div>
-              <div v-for="n in s.unrezzedIceCount" :key="'u' + s.id + n" class="ice-slot facedown">
-                <card-tile facedown ice corp />
-              </div>
-            </div>
+            </template>
             <button
               v-if="runMove(s.id) && !state.run"
               class="run-btn"
