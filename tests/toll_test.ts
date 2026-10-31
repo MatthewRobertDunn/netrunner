@@ -69,6 +69,11 @@ function tollState(seed = 3): GameState {
   );
   assertDefined(run, "runner can run remote-1");
   state = play(state, "runner", run!).state;
+  // The run parks in the movement phase (rule 6.9.4c); continuing reaches the
+  // server, where the rezzed Manegarm raises its toll prompt.
+  const cont = engine.getLegalMoves(state, "runner").find((m) => m.kind === "runner.continueRun");
+  assertDefined(cont, "continueRun is offered in the movement phase");
+  state = play(state, "runner", cont!).state;
 
   assert(tollPrompt(state) !== undefined, "the Manegarm toll prompt is pending");
   return state;
@@ -125,7 +130,8 @@ function finishRunToEnd(state: GameState): GameState {
     );
     const moves = engine.getLegalMoves(cur, "runner");
     if (moves.length === 0) break;
-    const m = moves.find((mm) => mm.kind === "runner.finishAccess") ??
+    const m = moves.find((mm) => mm.kind === "runner.continueRun") ??
+      moves.find((mm) => mm.kind === "runner.finishAccess") ??
       moves.find((mm) => mm.kind === "runner.accessCard") ??
       moves[0]!;
     cur = play(cur, "runner", m).state;
@@ -265,6 +271,11 @@ Deno.test("toll: the prompt appears once per run — a second run re-prompts, a 
   );
   assertDefined(run2, "the runner can run remote-1 again");
   state = play(state, "runner", run2!).state;
+  // The run parks in the movement phase; continuing approaches the server and
+  // raises the toll prompt again.
+  const cont = engine.getLegalMoves(state, "runner").find((m) => m.kind === "runner.continueRun");
+  assertDefined(cont, "run 2 parks in the movement phase");
+  state = play(state, "runner", cont!).state;
   assert(tollPrompt(state) !== undefined, "run 2 approaches the rezzed upgrade: toll prompts");
   // With 0 clicks left after initiating run 2, only the credit option is offered.
   assertEquals(offeredOptionIds(state), ["toll-credits", "toll-end"]);

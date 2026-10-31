@@ -19,8 +19,13 @@
 
 import { engine, starterDeckConfigs } from "../src/mod.ts";
 import type { CardId, DeckConfig, GameState, PlayerSide } from "../src/types.ts";
-import { orderedCorpDeck, play } from "../src/testing/fixtures.ts";
+import { continueRun, orderedCorpDeck, play } from "../src/testing/fixtures.ts";
 import { assert, assertDefined, assertEquals } from "./helpers/assert.ts";
+
+/** Play the parked movement-phase decision (rule 6.9.4c), if pending. */
+function continueMovement(state: GameState): GameState {
+  return continueRun(state);
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -92,7 +97,8 @@ function resolveRun(state: GameState): GameState {
   for (let i = 0; i < 60; i++) {
     if (!cur.run || cur.winner) return cur;
     const moves = engine.getLegalMoves(cur, "runner");
-    const m = moves.find((x) => x.kind === "runner.finishAccess") ??
+    const m = moves.find((x) => x.kind === "runner.continueRun") ??
+      moves.find((x) => x.kind === "runner.finishAccess") ??
       moves.find((x) => x.kind === "runner.accessCard" || x.kind === "runner.accessRandom") ??
       moves.find((x) => x.kind === "prompt.answer");
     if (m) {
@@ -226,6 +232,7 @@ Deno.test("breach: Docklands Pass still applies to the first HQ breach after a n
 
   // Now breach HQ: Docklands Pass grants +1 access on the first HQ breach.
   s = play(s, "runner", { kind: "runner.run", server: "hq" }).state;
+  s = continueMovement(s); // the run parks in movement (6.9.4c) before the breach
   assert(s.breach !== null && s.breach.server === "hq", "the HQ breach began");
   assertEquals(
     s.breach!.randomAccessLimit,
@@ -236,6 +243,7 @@ Deno.test("breach: Docklands Pass still applies to the first HQ breach after a n
 
   // A second HQ breach the same turn gets no bonus (once per turn).
   s = play(s, "runner", { kind: "runner.run", server: "hq" }).state;
+  s = continueMovement(s);
   assert(s.breach !== null && s.breach.server === "hq", "the second HQ breach began");
   assertEquals(s.breach!.randomAccessLimit, 1, "second HQ breach of the turn: access 1 only");
 });
