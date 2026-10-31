@@ -15,7 +15,13 @@ Deno.test("GameScreen renders the public status and the human hand", () => {
   const { state, humanSide } = createTestFixture(42, "corp");
   const wrapper = mount(GameScreen, { props: { state, humanSide } });
 
-  assertEquals(wrapper.text().includes("CORP"), true, "shows the corp strip");
+  assertEquals(wrapper.text().includes("CORP"), true, "shows the corp status");
+  assert(wrapper.find('[data-testid="status-dock"]').exists(), "status dock present");
+  assertEquals(
+    wrapper.findAll(".player-strip").length,
+    0,
+    "no in-flow player strips remain",
+  );
   assertEquals(
     wrapper.findAll('[data-testid="human-hand"] .hand-card').length,
     state.corp.hand.length,
@@ -100,7 +106,7 @@ Deno.test("GameScreen regression: popup shows a single action row, no duplicates
   );
 });
 
-Deno.test("GameScreen strip/order: corp perspective and central columns", () => {
+Deno.test("GameScreen panel/order: corp perspective and central columns", () => {
   const { state, humanSide } = createTestFixture(42, "corp");
   const wrapper = mount(GameScreen, { props: { state, humanSide } });
 
@@ -120,11 +126,9 @@ Deno.test("GameScreen strip/order: corp perspective and central columns", () => 
     assert(col.find(".server-ice-stack").exists(), "ice stack present");
   }
 
-  // Flattened panels: both strips and the hand render as direct .game-main
-  // children; under perspective-corp the runner strip orders just below the
-  // header and the corp strip to the bottom (CSS order rules in style.css).
-  assert(wrapper.find(".game-main > .player-strip.runner").exists(), "runner strip present");
-  assert(wrapper.find(".game-main > .player-strip.corp").exists(), "corp strip present");
+  // Statuses live in the left dock now, not in the main column.
+  assert(wrapper.find('[data-testid="status-dock"]').exists(), "status dock present");
+  assertEquals(wrapper.findAll(".player-strip").length, 0, "old strips removed");
   assert(
     wrapper.find(".game-main > .hand-area [data-testid='human-hand']").exists(),
     "hand area present",
@@ -137,4 +141,96 @@ Deno.test("GameScreen strip/order: corp perspective and central columns", () => 
     "hq",
     "rd",
   ]);
+});
+
+Deno.test("GameScreen side panel: opponent on top, own on bottom per seat", () => {
+  for (const humanSide of ["corp", "runner"] as const) {
+    const { state } = createTestFixture(42, humanSide);
+    const wrapper = mount(GameScreen, { props: { state, humanSide } });
+    const dock = wrapper.find('[data-testid="status-dock"]');
+    assert(dock.exists(), `dock present (${humanSide})`);
+
+    const opponent = dock.find('[data-testid="status-opponent"]');
+    const own = dock.find('[data-testid="status-own"]');
+    assert(opponent.exists() && own.exists(), `both blocks present (${humanSide})`);
+
+    const expectedOpp = humanSide === "corp" ? "runner" : "corp";
+    assertEquals(
+      opponent.attributes("data-side"),
+      expectedOpp,
+      `opponent block shows ${expectedOpp} when human is ${humanSide}`,
+    );
+    assertEquals(own.attributes("data-side"), humanSide, `own block shows ${humanSide}`);
+
+    // DOM order: opponent block precedes the own block (top vs bottom half).
+    const html = dock.html();
+    assert(
+      html.indexOf('data-testid="status-opponent"') < html.indexOf('data-testid="status-own"'),
+      `opponent block above own block (${humanSide})`,
+    );
+  }
+});
+
+Deno.test("GameScreen side panel: both statuses render values, Archives/Heap labels", () => {
+  for (const humanSide of ["corp", "runner"] as const) {
+    const { state } = createTestFixture(42, humanSide);
+    const wrapper = mount(GameScreen, { props: { state, humanSide } });
+    const status = publicStatusFor(state, humanSide);
+    const dock = wrapper.find('[data-testid="status-dock"]');
+
+    for (const side of ["corp", "runner"] as const) {
+      const block = dock.find(`[data-side="${side}"]`);
+      assert(block.exists(), `${side} block present`);
+      const expected = status.players[side];
+      const text = block.text();
+      assert(text.includes(String(expected.credits)), `${side} credits ${expected.credits}`);
+      assert(
+        text.includes(`${expected.agendaPoints}/${status.agendaPointTarget}`),
+        `${side} agenda points prominent`,
+      );
+      assert(text.includes(String(expected.handCount)), `${side} hand count`);
+      assert(text.includes(String(expected.deckCount)), `${side} deck count`);
+      assert(text.includes(String(expected.discardCount)), `${side} discard count`);
+      // Credits + agenda points are the prominent stats.
+      assertEquals(
+        block.findAll(".primary-stat").length,
+        2,
+        `${side} has prominent credits + agenda stats`,
+      );
+    }
+
+    // Correct zone names: Corp Archives, Runner Heap (never "heap" for corp).
+    const corpBlock = dock.find('[data-side="corp"]');
+    const runnerBlock = dock.find('[data-side="runner"]');
+    assert(corpBlock.text().includes("Archives"), "corp discard labeled Archives");
+    assert(!corpBlock.text().toLowerCase().includes("heap"), "corp block never says heap");
+    assert(runnerBlock.text().includes("Heap"), "runner discard labeled Heap");
+  }
+});
+
+Deno.test("GameScreen side panel: acting-side highlight follows state.turn.player", () => {
+  const { state, humanSide } = createTestFixture(42, "corp");
+  const acting = state.turn.player;
+  const idle = acting === "corp" ? "runner" : "corp";
+  const wrapper = mount(GameScreen, { props: { state, humanSide } });
+  const dock = wrapper.find('[data-testid="status-dock"]');
+  assert(
+    dock.find(`[data-side="${acting}"]`).classes().includes("active"),
+    `${acting} block highlighted while acting`,
+  );
+  assertEquals(
+    dock.find(`[data-side="${idle}"]`).classes().includes("active"),
+    false,
+    `${idle} block not highlighted`,
+  );
+
+  // Flip the actor: the highlight must follow.
+  const flipped = structuredClone(state);
+  flipped.turn.player = idle;
+  const wrapper2 = mount(GameScreen, { props: { state: flipped, humanSide } });
+  const dock2 = wrapper2.find('[data-testid="status-dock"]');
+  assert(
+    dock2.find(`[data-side="${idle}"]`).classes().includes("active"),
+    `highlight follows turn flip to ${idle}`,
+  );
 });

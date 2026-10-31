@@ -173,63 +173,33 @@ body {
   display: grid;
   gap: 10px;
 }
-/* Perspective: six panels are direct grid children so CSS order can
-   interleave them per seat. Required visual order, top to bottom, is
-   header, opponent strip, servers, run banner, action panel, hand,
-   own strip — always. The template lists them in runner-seat order
-   (corp strip first), so perspective-runner needs only explicit
-   confirmation orders while perspective-corp pulls the runner strip
-   just below the header and pushes the corp strip to the bottom.
-   Single copy of each panel in the DOM, so testids, Run buttons,
-   prompts, and the log are untouched; the header stays on top in both.
-   The run banner stays directly above the action panel in both seats. */
-.game-main.perspective-runner .game-header {
-  order: 0;
-}
-.game-main.perspective-runner > .player-strip.corp {
-  order: 1;
-}
-.game-main.perspective-runner .servers {
-  order: 2;
-}
-.game-main.perspective-runner .run-banner {
-  order: 3;
-}
-.game-main.perspective-runner .action-row {
-  order: 4;
-}
-.game-main.perspective-runner .hand-area {
-  order: 5;
-}
-.game-main.perspective-runner > .player-strip.runner {
-  order: 6;
-}
-.game-main.perspective-runner .support-warnings {
-  order: 7;
-}
+/* Perspective classes remain as seat hooks (server ice flip uses
+   .corp-seat); the old in-flow strip order scheme is gone since both
+   statuses now live in the left dock. .game-main children stack top to
+   bottom: header, servers, banner, action panel, hand, warnings. */
+.game-main.perspective-runner .game-header,
 .game-main.perspective-corp .game-header {
   order: 0;
 }
-.game-main.perspective-corp > .player-strip.runner {
+.game-main.perspective-runner .servers,
+.game-main.perspective-corp .servers {
   order: 1;
 }
-.game-main.perspective-corp .servers {
+.game-main.perspective-runner .run-banner,
+.game-main.perspective-corp .run-banner {
   order: 2;
 }
-.game-main.perspective-corp .run-banner {
+.game-main.perspective-runner .action-row,
+.game-main.perspective-corp .action-row {
   order: 3;
 }
-.game-main.perspective-corp .action-row {
+.game-main.perspective-runner .hand-area,
+.game-main.perspective-corp .hand-area {
   order: 4;
 }
-.game-main.perspective-corp .hand-area {
-  order: 5;
-}
-.game-main.perspective-corp > .player-strip.corp {
-  order: 6;
-}
+.game-main.perspective-runner .support-warnings,
 .game-main.perspective-corp .support-warnings {
-  order: 7;
+  order: 5;
 }
 
 .game-header {
@@ -282,43 +252,117 @@ body {
   border-color: var(--warn);
 }
 
-/* Player strips ------------------------------------------------------ */
+/* Status dock (left sidebar, mirrors the log dock) --------------------- */
 
-.player-strip {
+.status-dock {
+  flex: none;
+  width: 250px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-self: stretch;
+}
+.status-title {
   display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: space-between;
+  gap: 10px;
+  background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 10px;
-  padding: 6px 12px;
+  padding: 8px 12px;
+}
+.status-block {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
   background: var(--panel);
 }
-.player-strip.active {
+/* Top block + title form the upper half; the own block fills the lower
+   half, so the split sits near the top of the action panel. */
+.status-block.active {
   border-color: var(--accent);
   box-shadow: 0 0 0 1px var(--accent) inset;
 }
-.player-strip.corp {
+.status-block.corp {
   border-left: 3px solid var(--corp);
 }
-.player-strip.runner {
+.status-block.runner {
   border-left: 3px solid var(--runner);
 }
-
+.status-who {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 .glyph-side {
   width: 22px;
   height: 22px;
 }
-.player-strip .who {
+.status-who .who {
   font-weight: 700;
   letter-spacing: 1px;
   font-size: 12px;
   color: var(--dim);
 }
-.player-strip .stat {
+.acting-tag {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  padding: 1px 8px;
+}
+.opp-tag {
+  font-size: 11px;
+  color: var(--dim);
+  text-transform: lowercase;
+}
+/* Credits + agenda points are the prominent stats; the rest is secondary. */
+.status-primary {
+  display: flex;
+  gap: 10px;
+}
+.primary-stat {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 6px;
+}
+.primary-stat .sym {
+  width: 22px;
+  height: 22px;
+}
+.primary-val {
+  font-size: 22px;
+  font-weight: 800;
+}
+.status-secondary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 10px;
+}
+.status-secondary .stat {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 14px;
+  font-size: 13px;
+  color: var(--dim);
+}
+.status-block .score-strip {
+  margin-left: 0;
 }
 
 .sym {
@@ -1061,6 +1105,9 @@ body {
     flex-direction: column;
   }
   .log-dock {
+    width: 100%;
+  }
+  .status-dock {
     width: 100%;
   }
   .log-dock.collapsed {

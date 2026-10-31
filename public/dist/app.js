@@ -4,7 +4,7 @@ var __export = (target, all) => {
     __defProp(target, name, { get: all[name], enumerable: true });
 };
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-dom/3.5.13/dist/runtime-dom.esm-bundler.js
+// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-dom/3.5.13/dist/runtime-dom.esm-bundler.js
 var runtime_dom_esm_bundler_exports = {};
 __export(runtime_dom_esm_bundler_exports, {
   BaseTransition: () => BaseTransition,
@@ -177,7 +177,7 @@ __export(runtime_dom_esm_bundler_exports, {
   withScopeId: () => withScopeId
 });
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/shared/3.5.13/dist/shared.esm-bundler.js
+// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/shared/3.5.13/dist/shared.esm-bundler.js
 // @__NO_SIDE_EFFECTS__
 function makeMap(str) {
   const map2 = /* @__PURE__ */ Object.create(null);
@@ -523,7 +523,7 @@ var stringifySymbol = (v, i = "") => {
   );
 };
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/reactivity/3.5.13/dist/reactivity.esm-bundler.js
+// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/reactivity/3.5.13/dist/reactivity.esm-bundler.js
 function warn(msg, ...args) {
   console.warn(`[Vue warn] ${msg}`, ...args);
 }
@@ -2200,7 +2200,7 @@ function traverse(value, depth = Infinity, seen2) {
   return value;
 }
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-core/3.5.13/dist/runtime-core.esm-bundler.js
+// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-core/3.5.13/dist/runtime-core.esm-bundler.js
 var stack = [];
 function pushWarningContext(vnode) {
   stack.push(vnode);
@@ -9588,7 +9588,7 @@ var resolveFilter = null;
 var compatUtils = null;
 var DeprecationTypes = null;
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-dom/3.5.13/dist/runtime-dom.esm-bundler.js
+// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-dom/3.5.13/dist/runtime-dom.esm-bundler.js
 var policy = void 0;
 var tt = typeof window !== "undefined" && window.trustedTypes;
 if (tt) {
@@ -11384,7 +11384,7 @@ var initDirectivesForSSR = () => {
   }
 };
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/compiler-core/3.5.13/dist/compiler-core.esm-bundler.js
+// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/compiler-core/3.5.13/dist/compiler-core.esm-bundler.js
 var FRAGMENT = Symbol(true ? `Fragment` : ``);
 var TELEPORT = Symbol(true ? `Teleport` : ``);
 var SUSPENSE = Symbol(true ? `Suspense` : ``);
@@ -16216,7 +16216,7 @@ var noopDirectiveTransform = () => ({
   props: []
 });
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/compiler-dom/3.5.13/dist/compiler-dom.esm-bundler.js
+// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/compiler-dom/3.5.13/dist/compiler-dom.esm-bundler.js
 var V_MODEL_RADIO = Symbol(true ? `vModelRadio` : ``);
 var V_MODEL_CHECKBOX = Symbol(true ? `vModelCheckbox` : ``);
 var V_MODEL_TEXT = Symbol(true ? `vModelText` : ``);
@@ -16852,7 +16852,7 @@ function compile2(src, options = {}) {
   }));
 }
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/vue/3.5.13/dist/vue.esm-bundler.js
+// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/vue/3.5.13/dist/vue.esm-bundler.js
 function initDev() {
   {
     initCustomFormatter();
@@ -23724,6 +23724,10 @@ var game_default = defineComponent({
       if (serverId === "hq" && hqIdentity.value) zoom(hqIdentity.value);
     }
     const runner = computed2(() => status.value.players.runner);
+    const opponentSide = computed2(() => props.humanSide === "corp" ? "runner" : "corp");
+    const ownSide = computed2(() => props.humanSide);
+    const opponent = computed2(() => opponentSide.value === "corp" ? corp.value : runner.value);
+    const own = computed2(() => ownSide.value === "corp" ? corp.value : runner.value);
     const prompt = computed2(() => promptFor(props.state, props.humanSide));
     const legal = computed2(() => isHumanTurn.value ? engine.getLegalMoves(props.state, props.humanSide) : []);
     const hand = computed2(() => handOf(props.state, props.humanSide));
@@ -23831,6 +23835,12 @@ var game_default = defineComponent({
       if (!r || !r.currentIce) return false;
       return card.id === r.currentIce.id;
     }
+    function sideGlyph(side) {
+      return side === "corp" ? "assets/svg/faction-hb.svg" : "assets/svg/faction-criminal.svg";
+    }
+    function discardName(side) {
+      return side === "corp" ? "Archives" : "Heap";
+    }
     function serverGlyph(id) {
       return SERVER_GLYPH[id] ?? "";
     }
@@ -23907,6 +23917,10 @@ var game_default = defineComponent({
       isAiTurn,
       corp,
       runner,
+      opponentSide,
+      ownSide,
+      opponent,
+      own,
       prompt,
       legal,
       generalMoves,
@@ -23934,6 +23948,8 @@ var game_default = defineComponent({
       closeZoom,
       isCurrentIce,
       serverGlyph,
+      sideGlyph,
+      discardName,
       isCentral: isCentral2,
       remoteLabel,
       runMove,
@@ -23948,12 +23964,93 @@ var game_default = defineComponent({
   },
   template: `
     <div class="game" :class="{ 'log-collapsed': !logOpen }">
-      <!-- Perspective class drives panel order: the human player's own strip
-           renders at the bottom via CSS order rules (own side bottom,
-           opponent top), so the template keeps a single copy of each panel.
-           Each of the six panels is a direct child of .game-main so the
-           order scheme can interleave them: header, opponent strip,
-           servers, banner, action panel, hand, own strip. -->
+      <!-- ================= STATUS DOCK (left) =================
+           Mirrors the game-log dock width. Top half carries the title
+           (turn badge style) plus the OPPONENT's status; the bottom half
+           carries the human player's OWN status. data-side marks which
+           side each block shows; active marks state.turn.player. -->
+      <aside class="status-dock" data-testid="status-dock">
+        <div class="status-title" data-testid="status-title">
+          <div class="turn-badge">
+            <span class="turn-num">Turn {{ state.turn.number }}</span>
+            <span class="turn-player" :class="state.turn.player">
+              {{ state.turn.player === 'corp' ? 'Corp' : 'Runner' }} acting \xB7 {{ state.turn.phase }}
+            </span>
+          </div>
+          <span class="chip">AP target {{ status.agendaPointTarget }}</span>
+        </div>
+        <section
+          class="status-block status-opponent"
+          :class="[opponentSide, { active: state.turn.player === opponentSide }]"
+          data-testid="status-opponent"
+          :data-side="opponentSide"
+        >
+          <div class="status-who">
+            <img class="glyph-side" :src="sideGlyph(opponentSide)" alt="" />
+            <span class="who">{{ opponentSide === 'corp' ? 'CORP' : 'RUNNER' }}</span>
+            <span v-if="state.turn.player === opponentSide" class="acting-tag">acting</span>
+            <span class="opp-tag">opponent</span>
+          </div>
+          <div class="status-primary">
+            <div class="primary-stat credits">
+              <img class="sym" src="assets/svg/credit.svg" alt="Credits" />
+              <span class="primary-val">{{ opponent.credits }}</span>
+            </div>
+            <div class="primary-stat agenda">
+              <img class="sym" src="assets/svg/agenda.svg" alt="Agenda points" />
+              <span class="primary-val">{{ opponent.agendaPoints }}/{{ status.agendaPointTarget }}</span>
+            </div>
+          </div>
+          <div class="status-secondary">
+            <span class="stat"><img class="sym" src="assets/svg/click.svg" alt="Clicks" />{{ opponent.clicks }}</span>
+            <span class="stat">hand {{ opponent.handCount }}/{{ opponent.handSize }}</span>
+            <span class="stat">deck {{ opponent.deckCount }}</span>
+            <span class="stat">{{ discardName(opponentSide) }} {{ opponent.discardCount }}</span>
+            <span v-if="opponentSide === 'runner' && opponent.tags" class="stat"><img class="sym" src="assets/svg/tag.svg" alt="Tags" />{{ opponent.tags }}</span>
+            <span v-if="opponentSide === 'corp' && opponent.tags" class="stat">bad pub {{ opponent.tags }}</span>
+          </div>
+          <span v-if="opponent.score.length" class="score-strip" :data-testid="opponentSide + '-score'">
+            <img v-for="c in opponent.score" :key="c.id" class="mini-card" :src="'images/' + c.cardId + '.webp'" :alt="name(c.cardId)" />
+          </span>
+        </section>
+        <section
+          class="status-block status-own"
+          :class="[ownSide, { active: state.turn.player === ownSide }]"
+          data-testid="status-own"
+          :data-side="ownSide"
+        >
+          <div class="status-who">
+            <img class="glyph-side" :src="sideGlyph(ownSide)" alt="" />
+            <span class="who">{{ ownSide === 'corp' ? 'CORP' : 'RUNNER' }} (you)</span>
+            <span v-if="state.turn.player === ownSide" class="acting-tag">acting</span>
+          </div>
+          <div class="status-primary">
+            <div class="primary-stat credits">
+              <img class="sym" src="assets/svg/credit.svg" alt="Credits" />
+              <span class="primary-val">{{ own.credits }}</span>
+            </div>
+            <div class="primary-stat agenda">
+              <img class="sym" src="assets/svg/agenda.svg" alt="Agenda points" />
+              <span class="primary-val">{{ own.agendaPoints }}/{{ status.agendaPointTarget }}</span>
+            </div>
+          </div>
+          <div class="status-secondary">
+            <span class="stat"><img class="sym" src="assets/svg/click.svg" alt="Clicks" />{{ own.clicks }}</span>
+            <span class="stat">hand {{ own.handCount }}/{{ own.handSize }}</span>
+            <span class="stat">deck {{ own.deckCount }}</span>
+            <span class="stat">{{ discardName(ownSide) }} {{ own.discardCount }}</span>
+            <span v-if="ownSide === 'runner' && own.tags" class="stat"><img class="sym" src="assets/svg/tag.svg" alt="Tags" />{{ own.tags }}</span>
+            <span v-if="ownSide === 'corp' && own.tags" class="stat">bad pub {{ own.tags }}</span>
+          </div>
+          <span v-if="own.score.length" class="score-strip" :data-testid="ownSide + '-score'">
+            <img v-for="c in own.score" :key="c.id" class="mini-card" :src="'images/' + c.cardId + '.webp'" :alt="name(c.cardId)" />
+          </span>
+        </section>
+      </aside>
+      <!-- Perspective class stays for seat-specific tweaks (server ice flip
+           uses .corp-seat); the old in-flow strip order scheme is gone since
+           both statuses now live in the left dock. .game-main holds header,
+           servers, banner, action panel, hand, warnings top to bottom. -->
       <div class="game-main" :class="'perspective-' + humanSide">
       <!-- ================= HEADER ================= -->
       <header class="game-header">
@@ -23976,22 +24073,6 @@ var game_default = defineComponent({
         </div>
         <button class="ghost-btn" @click="$emit('new-game')">New game</button>
       </header>
-
-      <!-- ================= CORP STRIP ================= -->
-        <div class="player-strip corp" :class="{ active: state.turn.player === 'corp' }">
-          <img class="glyph-side" src="assets/svg/faction-hb.svg" alt="" />
-          <span class="who">CORP</span>
-          <span class="stat"><img class="sym" src="assets/svg/credit.svg" alt="Credit" />{{ corp.credits }}</span>
-          <span class="stat"><img class="sym" src="assets/svg/click.svg" alt="Click" />{{ corp.clicks }}</span>
-          <span class="stat">hand {{ corp.handCount }}/{{ corp.handSize }}</span>
-          <span class="stat">deck {{ corp.deckCount }}</span>
-          <span class="stat">archives {{ corp.discardCount }}</span>
-          <span class="stat"><img class="sym" src="assets/svg/agenda.svg" alt="Agenda points" />{{ corp.agendaPoints }}/{{ status.agendaPointTarget }}</span>
-          <span v-if="corp.tags" class="stat">bad publicity {{ corp.tags }}</span>
-          <span v-if="corp.score.length" class="score-strip" data-testid="corp-score">
-            <img v-for="c in corp.score" :key="c.id" class="mini-card" :src="'images/' + c.cardId + '.webp'" :alt="name(c.cardId)" />
-          </span>
-        </div>
 
       <!-- ================= SERVERS ================= -->
         <div class="servers" data-testid="servers" :class="{ 'corp-seat': humanSide === 'corp' }">
@@ -24206,20 +24287,6 @@ var game_default = defineComponent({
           <span v-if="!hand.length" class="empty-hand">(no cards in hand)</span>
         </div>
       </section>
-      <!-- ================= RUNNER STRIP ================= -->
-        <div class="player-strip runner" :class="{ active: state.turn.player === 'runner' }">
-          <img class="glyph-side" src="assets/svg/faction-criminal.svg" alt="" />
-          <span class="who">RUNNER</span>
-          <span class="stat"><img class="sym" src="assets/svg/credit.svg" alt="Credit" />{{ runner.credits }}</span>
-          <span class="stat"><img class="sym" src="assets/svg/click.svg" alt="Click" />{{ runner.clicks }}</span>
-          <span class="stat">hand {{ runner.handCount }}/{{ runner.handSize }}</span>
-          <span class="stat">deck {{ runner.deckCount }}</span>
-          <span class="stat">heap {{ runner.discardCount }}</span>
-          <span v-if="runner.tags" class="stat"><img class="sym" src="assets/svg/tag.svg" alt="Tags" />{{ runner.tags }} tags</span>
-          <span v-if="runner.score.length" class="score-strip">
-            <img v-for="c in runner.score" :key="c.id" class="mini-card" :src="'images/' + c.cardId + '.webp'" :alt="name(c.cardId)" />
-          </span>
-        </div>
 
       <div v-if="warnings.length" class="support-warnings" data-testid="warnings">
         <span v-for="(w, i) in warnings" :key="i">\u26A0 {{ w }}</span>
