@@ -197,8 +197,13 @@ function corpActionMoves(state: GameState): Move[] {
   // Advance and score installed cards.
   for (const card of corpInstalledCardsLocal(state)) {
     const def = cardDef(card.cardId);
-    if (def.advancementRequirement === null && def.type !== "ice") continue;
-    moves.push({ kind: "corp.advance", targetId: card.id });
+    // Rule 1.18.3: Agendas can always be advanced; non-agenda cards only if printed
+    // card text explicitly permits it (e.g. Urtica Cipher: "You can advance this asset.").
+    // Rule 5.2.6f: Advancing costs 1 click and 1 credit.
+    const isAdvanceable = def.type === "agenda" || card.cardId === "urtica_cipher";
+    if (isAdvanceable && state.corp.credits >= 1) {
+      moves.push({ kind: "corp.advance", targetId: card.id });
+    }
     if (def.type === "agenda") {
       const adv = card.advancement ?? 0;
       const requirement = def.advancementRequirement ?? 0;
@@ -246,10 +251,12 @@ function installServersFor(state: GameState, card: CardInstance): (ServerId | "n
     ];
   }
   if (def.type === "upgrade") {
-    // Upgrades may be installed in the root of any server (rule 8.5.2c).
+    // Upgrades may be installed in the root of any server (rule 8.5.2c), and
+    // the Corp may declare a new remote server as the install destination
+    // (rules 8.5.2a / 4.6.8b).
     // (Central-only upgrade restrictions from rule 8.5.12 are not modelled;
     // no starter upgrade has one.)
-    return allServers(state);
+    return [...allServers(state), "new-remote"];
   }
   return [];
 }

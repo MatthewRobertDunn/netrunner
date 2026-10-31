@@ -222,7 +222,9 @@ function applyResolvedMove(state: GameState, playerSide: PlayerSide, move: Move)
     case "corp.advance": {
       const found = findCard(state, move.targetId);
       if (!found) break;
+      // Rule 5.2.6f: "[click], 1[credit]: Advance 1 installed card."
       spendClicks(state, "corp", 1);
+      spendCredits(state, "corp", 1);
       addAdvancementCounter(state, found.card);
       break;
     }
@@ -501,14 +503,13 @@ function resolveCorpOperation(state: GameState, cardId: string, card: CardInstan
       gainCredits(state, "corp", 10);
       break;
     case "seamless_launch": {
-      // Place 2 advancement counters on 1 installed card not installed this turn.
+      // Printed text: "Place 2 advancement counters on 1 installed card that
+      // you did not install this turn." — any installed card, including
+      // upgrades (rule 1.18.2: placing counters directly is not "advancing").
       const candidates = corpInstalledCards(state).filter((c) =>
         !state.corp.installedThisTurn.includes(c.id)
       );
-      const targets = candidates.filter((c) => {
-        const d = cardDef(c.cardId);
-        return d.type === "agenda" || d.type === "asset" || d.type === "ice";
-      });
+      const targets = candidates;
       if (targets.length === 0) {
         state.supportWarnings.push(
           "Seamless Launch found no legal target; it resolves without placing counters",
