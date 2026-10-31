@@ -176,40 +176,37 @@ body {
 /* Perspective classes remain as seat hooks (server ice flip uses
    .corp-seat); the old in-flow strip order scheme is gone since both
    statuses now live in the left dock. .game-main children stack top to
-   bottom: header, servers, banner, action panel, hand, warnings. */
-.game-main.perspective-runner .game-header,
-.game-main.perspective-corp .game-header {
-  order: 0;
-}
+   bottom: servers, banner, action panel, hand, warnings. */
 .game-main.perspective-runner .servers,
 .game-main.perspective-corp .servers {
-  order: 1;
+  order: 0;
 }
 .game-main.perspective-runner .run-banner,
 .game-main.perspective-corp .run-banner {
-  order: 2;
+  order: 1;
 }
 .game-main.perspective-runner .action-row,
 .game-main.perspective-corp .action-row {
-  order: 3;
+  order: 2;
 }
 .game-main.perspective-runner .hand-area,
 .game-main.perspective-corp .hand-area {
-  order: 4;
+  order: 3;
 }
 .game-main.perspective-runner .support-warnings,
 .game-main.perspective-corp .support-warnings {
-  order: 5;
+  order: 4;
 }
 
-.game-header {
+.status-title .ghost-btn {
+  padding: 5px 10px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.status-alerts {
   display: flex;
-  align-items: center;
-  gap: 14px;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 8px 14px;
+  flex-direction: column;
+  gap: 6px;
 }
 .turn-badge {
   display: flex;
@@ -222,13 +219,6 @@ body {
 .turn-player {
   font-size: 12px;
   color: var(--dim);
-}
-.header-status {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  flex: 1;
-  flex-wrap: wrap;
 }
 
 .chip {

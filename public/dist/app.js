@@ -23978,7 +23978,17 @@ var game_default = defineComponent({
               {{ state.turn.player === 'corp' ? 'Corp' : 'Runner' }} acting \xB7 {{ state.turn.phase }}
             </span>
           </div>
-          <span class="chip">AP target {{ status.agendaPointTarget }}</span>
+          <button class="ghost-btn" @click="$emit('new-game')">New game</button>
+        </div>
+        <div v-if="state.winner || (!state.winner && isAiTurn && thinking) || lastWarning" class="status-alerts">
+          <span v-if="state.winner" class="chip win" data-testid="winner">
+            Winner: {{ state.winner }}
+            <template v-if="state.winReason"> \u2014 {{ state.winReason }}</template>
+          </span>
+          <span v-if="!state.winner && isAiTurn && thinking" class="chip thinking" data-testid="ai-thinking">
+            Corp is thinking\u2026
+          </span>
+          <span v-if="lastWarning" class="chip warn">{{ lastWarning }}</span>
         </div>
         <section
           class="status-block status-opponent"
@@ -24054,28 +24064,6 @@ var game_default = defineComponent({
            both statuses now live in the left dock. .game-main holds header,
            servers, banner, action panel, hand, warnings top to bottom. -->
       <div class="game-main" :class="'perspective-' + humanSide">
-      <!-- ================= HEADER ================= -->
-      <header class="game-header">
-        <div class="turn-badge">
-          <span class="turn-num">Turn {{ state.turn.number }}</span>
-          <span class="turn-player" :class="state.turn.player">
-            {{ state.turn.player === 'corp' ? 'Corp' : 'Runner' }} acting \xB7 {{ state.turn.phase }}
-          </span>
-        </div>
-        <div class="header-status">
-          <span class="chip">AP target {{ status.agendaPointTarget }}</span>
-          <span v-if="state.winner" class="chip win" data-testid="winner">
-            Winner: {{ state.winner }}
-            <template v-if="state.winReason"> \u2014 {{ state.winReason }}</template>
-          </span>
-          <span v-if="!state.winner && isAiTurn && thinking" class="chip thinking" data-testid="ai-thinking">
-            Corp is thinking\u2026
-          </span>
-          <span v-if="lastWarning" class="chip warn">{{ lastWarning }}</span>
-        </div>
-        <button class="ghost-btn" @click="$emit('new-game')">New game</button>
-      </header>
-
       <!-- ================= SERVERS ================= -->
         <div class="servers" data-testid="servers" :class="{ 'corp-seat': humanSide === 'corp' }">
           <div v-for="s in serverRows" :key="s.id" class="server" :class="isCentral(s.id) ? 'central' : 'remote'">
