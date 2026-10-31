@@ -426,7 +426,14 @@ export function applyPaidAbility(
   }
   if (card.cardId === "red_team" && ability.id === "run-central") {
     if (!server) return false;
+    // Rule 6.3.2a: the ability announces a central server "you have not run this
+    // turn" (Red Team). That run counts toward the same-central-twice
+    // restriction exactly like a basic `runner.run` move (apply.ts), so the
+    // Runner cannot then legally `runner.run` the same central again.
     initiateRun(state, server, `red-team:${card.id}`);
+    if (server === "hq" || server === "rd" || server === "archives") {
+      state.runner.ranServersThisTurn.push(server);
+    }
     return true;
   }
   if (card.cardId === "regolith_mining_license" && ability.id === "take-3") {

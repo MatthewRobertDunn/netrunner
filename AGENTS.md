@@ -48,7 +48,7 @@ deno task publish
   the accepted concession). Decision seeds derive only from `decisionSeedFor(view)` — never from
   `state.rngState`.
 - **AIs are pure functions of (view, legal, ctx):** no `Date.now()`, no unseeded randomness. EvalAI
-  is a deliberately *fun* opponent (1-ply determinized eval + softmax); `infoSetKey(view)` in
+  is a deliberately _fun_ opponent (1-ply determinized eval + softmax); `infoSetKey(view)` in
   `src/ai/context.ts` is the future ISMCTS tree key — don't weaken either.
 - **`applyMove` never mutates the caller's state** (it copies, or mutates only under `mutate: true`
   which AI playouts own). Read results from `result.state`.
