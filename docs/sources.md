@@ -3,14 +3,15 @@
 ## Rules
 
 - **Netrunner Comprehensive Rules v26.03.** Retrieved 2026-10-24. Text dump at
-  `docs/rules-v26.03.txt` (~7,313 lines). The HTML was fetched from the official Netrunner
+  `docs/rules-v26.03.txt` (~7,312 lines). The HTML was fetched from the official Netrunner
   Comprehensive Rules page; the text dump was cleaned and verified against the following sections
   used by the engine:
   - 1.6.4–1.6.7 (starting credits, starting hand, mulligans, first turn)
   - 1.7 (ending the game: flatline, decking, agenda-point target)
-  - 1.10 (public/private information)
-  - 1.12 (rezzing)
-  - 1.16 (installing)
+  - 10.2 (public/private information)
+  - 8.1 (rezzing / faceup-facedown status)
+  - 8.5 (installing)
+  - 1.16 (costs)
   - 1.17 (scoring)
   - 1.18 (advancing)
   - 1.19 (trashing)
@@ -26,7 +27,7 @@
   - 6.8 (ending a run)
   - 6.9 (run steps)
   - 7.3–7.5 (breach / access)
-  - 9.9 (subroutine resolution)
+  - 9.8 (subroutine resolution)
 
 ## Card data
 

@@ -225,11 +225,11 @@ function corpActionMoves(state: GameState): Move[] {
 function installServersFor(state: GameState, card: CardInstance): (ServerId | "new-remote")[] {
   const def = cardDef(card.cardId);
   if (def.type === "ice") {
-    // Ice can protect any server (rule 4.6.7d), outermost position (rule 8.5).
+    // Ice can protect any server (rule 4.6.6d), outermost position (rule 8.5.2d, 4.6.9d).
     return [...allServers(state), "new-remote"];
   }
   if (def.type === "agenda" || def.type === "asset") {
-    // Assets and agendas cannot be installed in central roots (rule 4.6.7e),
+    // Assets and agendas cannot be installed in central roots (rule 4.6.6e),
     // and a remote root may hold at most one of them (rule 8.5.6a) — but an
     // upgrade may share the root, so the filter is on asset/agenda count,
     // not on root length.

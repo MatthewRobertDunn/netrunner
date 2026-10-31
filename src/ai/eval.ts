@@ -71,7 +71,7 @@ const W_TARGET_PROXIMITY = 2;
 // (see the file header for what that means for the temperature).
 // ---------------------------------------------------------------------------
 
-/** Agenda points already banked (rule 1.15.2): the road to the win. Scored
+/** Agenda points already banked (rule 1.17.1): the road to the win. Scored
  * points are permanent, so they outvalue the same points sitting in a server. */
 const W_AGENDA_POINT = 13;
 /** Credits, including anything banked or loaded onto your own cards. */
@@ -149,7 +149,7 @@ const W_RESOURCE = 1.0;
 const W_INSTALLED_PER_CREDIT = 0.3;
 /** Memory units committed past the limit: dead weight, no sharding. */
 const W_MEMORY_OVERFLOW = 2;
-/** Each tag: a damage magnet the corp can cash in (rule 8.6). */
+/** Each tag: a damage magnet the corp can cash in (rule 10.5). */
 const W_TAG = 2.5;
 
 // Run pressure (runner only).
@@ -406,8 +406,9 @@ function runnerBoardTerm(state: GameState): number {
     memory += def.memoryCost ?? 0;
     if (def.subtypes.includes("console")) consoles += 1;
   }
-  // Memory discipline (rule 6.4): installing past the limit is not allowed
-  // and cheats the runner of nothing — keep a gentle pressure not to jam MU.
+  // Memory discipline (rules 1.20, 3.9.3): installing past the limit is not
+  // allowed and cheats the runner of nothing — keep a gentle pressure not to
+  // jam MU.
   const over = memory - (4 + me.memoryLimitMod + consoles);
   if (over > 0) s -= W_MEMORY_OVERFLOW * over;
 

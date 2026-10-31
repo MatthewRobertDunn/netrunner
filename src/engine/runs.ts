@@ -12,7 +12,9 @@ export function iceAt(state: GameState, server: ServerId): CardInstance[] {
   return serverById(state, server).ice;
 }
 
-/** Rez cost: printed cost; for ice, the number of ice already protecting the server. */
+/** Rez cost: the printed number on the card (rules 2.3.5, 3.4.3, 1.16.8). The
+ *  ice install cost (rule 1.16.6b) — 1 credit per ice already protecting the
+ *  destination server — is a different quantity and must not be substituted. */
 export function rezCostFor(state: GameState, card: CardInstance): number {
   const def = cardDef(card.cardId);
   let cost: number;

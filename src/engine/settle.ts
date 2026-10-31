@@ -43,9 +43,10 @@ export function settle(state: GameState): void {
       return;
     }
 
-    // Checkpoint (rule 4.6.10): a remote server with nothing in its root and
+    // Checkpoint (rule 4.6.8e): a remote server with nothing in its root and
     // no ice ceases to exist. If that happens during a run against it, the run
-    // ends — neither successful nor unsuccessful (rule 4.6.10b).
+    // ends after the open paid-ability window closes — neither successful nor
+    // unsuccessful (rules 8.5.8, 10.3.1h).
     const gone = pruneEmptyRemotes(state);
     if (state.run && gone.includes(state.run.server)) {
       state.breach = null;
@@ -207,7 +208,10 @@ export function corpRezOptions(
 function rezSafeCost(state: GameState, card: CardInstance): number {
   const def = cardDef(card.cardId);
   if (def.type === "ice") {
-    // Ice rez cost is its install cost (rule 1.16.6b).
+    // Rez cost is the printed number on the card (rules 2.3.5, 3.4.3, 1.16.8).
+    // Rule 1.16.6b defines the ice INSTALL cost — 1 credit per ice already
+    // protecting the destination server — which is a different quantity and
+    // must not be substituted for the rez cost.
     const server = state.servers.find((s) => s.ice.some((c) => c.id === card.id));
     if (server) return server.ice.length;
   }
