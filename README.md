@@ -19,13 +19,18 @@ CyberClick NetrunnerDB starter decks (Runner `4b9cf488-5bd9-4415-a57a-0864d4d0e6
 - **Visible support status.** Every card has a `CardBehavior` definition keyed by card id (rules
   text is never parsed). `cardSupport` / `starterDeckSupport` report `supported` / `partial` /
   `unsupported` per card.
-- **Tested.** `deno test` runs 53 tests across setup, cards, runs, visibility, determinism,
-  public-status, AI playthrough, and UCT-vs-random strength suites.
+- **Tested.** `deno test` runs 100+ tests across setup, cards, runs, servers, visibility,
+  determinism, public-status, and AI playthrough suites.
 - **AI players.** `src/ai/mod.ts` exposes a `GameAI` interface (`name`,
-  `chooseMove(state, side, legal)`), a `RandomAI` (uniform pick using the state's own seeded PRNG),
-  and a `UctAI` (MCTS with UCB1). `playGame({ corp, runner, state })` runs a full game between any
-  two AIs; decisions are routed by _who may act_ (the turn player, or the prompted player during rez
-  windows and accesses).
+  `chooseMove(view: PlayerView, legal: Move[], ctx: AIDecisionContext)` — AIs never receive the
+  `GameState`, only a sanitized `PlayerView`, the legal moves, and a per-decision
+  `AIDecisionContext`), a `RandomAI` (uniform pick seeded from the per-decision `ctx.seed`, never
+  from `state.rngState`), and an `EvalAI` — a deliberately _fun_ opponent that samples ~32
+  determinized worlds per decision via `determinize(view, ctx, rng)`, scores every legal move with a
+  1-ply hand-written evaluation, and picks with a softmax over the world-averaged scores (see
+  `src/ai/eval.ts`). `playGame({ corp, runner, state })` runs a full game between any two AIs;
+  decisions are routed by _who may act_ (the turn player, or the prompted player during rez windows
+  and accesses).
 
 ## Setup
 
@@ -162,12 +167,12 @@ if (result.kind === "illegal-move") {
   console.log(view.corp.credits, view.corp.clicks);
 }
 
-// Everything the rules consider public knowledge (rule 1.10).
+// Everything the rules consider public knowledge (rule 10.2).
 const status = engine.getPublicGameStatus(result.state);
 console.log(status.players.corp.credits, status.players.runner.tags);
 ```
 
-## Public game status (rule 1.10)
+## Public game status (rule 10.2)
 
 `engine.getPublicGameStatus(state)` returns a `PublicGameStatus` DTO holding only information that
 _both_ players are always entitled to see:
@@ -207,10 +212,10 @@ simply not offered as legal, and the game state records a `supportWarning` (visi
 ```
 data/                 Offline card snapshots + raw API responses + images/*.webp
 docs/                 rules-v26.03.txt, sources.md, rules-questions.md,
-                      card-data-audit.md
+                      card-data-audit.md, rules-gotchas.md
 src/
   mod.ts              Public facade
-  types.ts            All core types
+  types.ts            All core types (incl. GameAI, AIDecisionContext)
   cards/
     catalogue.ts      Immutable printed-card data (from data/cards.json)
     effects.ts        Typed CardBehavior per card id
@@ -226,14 +231,25 @@ src/
     apply.ts          Validate + execute + settle a move
     state.ts          Zone movement, credits, damage
     rng.ts            Seeded PRNG
+    determinize.ts    Hidden-info hypotheses for the AI (drawMode "random")
+    public-status.ts  PublicGameStatus DTO
   ai/
-    types.ts          GameAI interface
-    random.ts         RandomAI
-    uct.ts            UctAI (MCTS with UCB1)
+    mod.ts            Exports: RandomAI, EvalAI, playGame, decision context
+    context.ts        AIDecisionContext built by the trusted shell (AI never sees rngState)
+    random.ts         RandomAI (uniform pick from the per-decision ctx.seed)
+    eval.ts           EvalAI (~32 determinized worlds, 1-ply eval, softmax root)
+    fast-clone.ts     Cheap state clone for AI simulations
     play.ts           playGame loop, AiGameError
-  tests/                Smoke, cards, setup, runs, visibility, determinism,
-                       public-status, AI playthrough, UCT-vs-random suites
-scripts/              import-starter-decks.ts (dev only)
+  testing/
+    fixtures.ts       Shared test fixtures
+  web/
+    entry.ts          Browser entry (bundled into public/dist/app.js)
+    app.ts            Vue root: setup screen + game screen (trusted shell)
+    ui/               card-tile, card-zoom, game, util
+tests/                Smoke, cards, setup, runs, servers, visibility, determinism,
+                      public-status, AI playthrough suites
+scripts/              import-starter-decks.ts, fetch-card-images.ts, build-web.ts,
+                      check-ai.ts, publish.ts, export-docker-images.ts (dev only)
 ```
 
 ## Rules version

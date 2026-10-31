@@ -72,8 +72,9 @@ export function nextDeckCard(state: GameState, side: PlayerSide): CardInstance |
 }
 
 /**
- * Checkpoint cleanup (rule 4.6.2 / 4.6.10): a remote server with no cards in
- * its root and no ice protecting it ceases to exist. Centrals are permanent.
+ * Checkpoint cleanup (rules 4.6.8d/e, 8.5.8, 10.3.1h): a remote server with
+ * no cards in its root and no ice protecting it ceases to exist. Centrals
+ * are permanent (rule 4.6.7a).
  * Returns the ids of the servers that were removed.
  */
 export function pruneEmptyRemotes(state: GameState): ServerId[] {

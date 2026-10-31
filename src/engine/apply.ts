@@ -672,7 +672,9 @@ export function resolveEncounter(state: GameState): void {
     if (run.broken.includes(i) || run.resolved.includes(i)) continue;
     resolveSubroutine(state, ice, i);
     if (state.prompts.length > 0) {
-      // Stop and let the player answer before continuing (rule 9.9.2).
+      // Stop and let the player answer before continuing (rule 9.11.4g: a
+      // choice between options ends the instruction; the chosen option
+      // resolves next — see also 9.8.7b, subroutines resolve one at a time).
       run.resumeSubIndex = i;
       return;
     }

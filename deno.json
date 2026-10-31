@@ -25,10 +25,11 @@
     "test": "deno test --allow-read",
     "check-ai": "deno run --allow-read scripts/check-ai.ts",
     "publish": "deno run --allow-read --allow-write --allow-run --allow-net scripts/publish.ts",
-    "check": "deno check src/mod.ts scripts/import-starter-decks.ts scripts/fetch-card-images.ts",
+    "check": "deno check src/mod.ts src/web/entry.ts",
     "lint": "deno lint src tests scripts",
     "fmt": "deno fmt src tests scripts",
     "fmt:check": "deno fmt --check src tests scripts",
+    "verify": "deno fmt --check src tests scripts && deno task lint && deno task check && deno task test",
     "build-web": "deno run --allow-read --allow-write --allow-net --allow-run scripts/build-web.ts",
     "serve-web": "deno run -A public/serve.ts"
   },

@@ -44,9 +44,10 @@ export function settle(state: GameState): void {
       return;
     }
 
-    // Checkpoint (rule 4.6.10): a remote server with nothing in its root and
+    // Checkpoint (rule 4.6.8e): a remote server with nothing in its root and
     // no ice ceases to exist. If that happens during a run against it, the run
-    // ends — neither successful nor unsuccessful (rule 4.6.10b).
+    // ends after the open paid-ability window closes — neither successful nor
+    // unsuccessful (rules 8.5.8, 10.3.1h).
     const gone = pruneEmptyRemotes(state);
     if (state.run && gone.includes(state.run.server)) {
       state.breach = null;
