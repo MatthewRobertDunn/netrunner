@@ -282,3 +282,42 @@ Deno.test("GameScreen side panel: acting-side highlight follows state.turn.playe
     `highlight follows turn flip to ${idle}`,
   );
 });
+
+Deno.test("GameScreen access popup: only the human's own access decision pops the zoom", async () => {
+  const { state } = createTestFixture(42, "corp");
+  // A runner access-decision prompt on a real card (corp grip card resolves
+  // via findCardIn for the test; the engine always sets player: "runner").
+  const accessedId = state.corp.hand[0]!.id;
+  const withAccess = (player: "corp" | "runner") => {
+    const s = structuredClone(state);
+    s.prompts = [{ kind: "access-decision", id: 999, player, cardId: accessedId } as never];
+    return s;
+  };
+
+  // Human is corp, AI runner is accessing: no notice, and transitioning into
+  // the access must not auto-open the zoom (the old flash-then-close).
+  const opp = mount(GameScreen, { props: { state, humanSide: "corp" } });
+  await opp.setProps({ state: withAccess("runner") });
+  assertEquals(
+    opp.find('[data-testid="access-notice"]').exists(),
+    false,
+    "no access notice for the opponent's access",
+  );
+  assertEquals(
+    opp.find('[data-testid="card-zoom"]').exists(),
+    false,
+    "no auto zoom for the opponent's access",
+  );
+
+  // Human is the runner accessing: the notice shows and the zoom auto-opens.
+  const own = mount(GameScreen, { props: { state, humanSide: "runner" } });
+  await own.setProps({ state: withAccess("runner") });
+  assert(
+    own.find('[data-testid="access-notice"]').exists(),
+    "access notice for the human's own access",
+  );
+  assert(
+    own.find('[data-testid="card-zoom"]').exists(),
+    "auto zoom for the human's own access",
+  );
+});

@@ -77,9 +77,8 @@ is listed under "documented simplifications", it is a deliberate, safe-to-keep d
     actually remains, and never log a click that was not spent.
 17. **"You cannot run the same central server twice in a turn" applies to run-creating abilities
     too** (Red Team's paid ability), not just the basic action — the ability's run must be recorded
-    in `ranServersThisTurn` like `runner.run` is.
-    hypotheses only; the corp's rez window during runs is the only in-run rez opportunity (rule
-    6.9.4e nuance not modelled).
+    in `ranServersThisTurn` like `runner.run` is. hypotheses only; the corp's rez window during runs
+    is the only in-run rez opportunity (rule 6.9.4e nuance not modelled).
 18. **Remote-server rendering is viewer-agnostic CSS, not code.** The corp area renders the same
     template for both viewers (no `humanSide` branch), so "ice grows toward the Corp" was a CSS
     illusion: the old `.ice-slot` was a 92×66 landscape slot with `rotate(90deg)`, which laid the
@@ -90,23 +89,43 @@ is listed under "documented simplifications", it is a deliberate, safe-to-keep d
     with only unrezzed ice must still render — the public status redacts the card identities but
     keeps `unrezzedIceCount`, so visibility must key on that count too, not just `s.ice.length`.
 19. **A prompt option's meaning is its `effect.kind`, never "corp + targetId" (1.18.2, 8.1.2d,
-    8.5.14).** `answerPrompt`'s `choose-one` branch used to dispatch on `option.targetId &&
-    prompt.player === "corp"` and rezz the named card — so every corp choose-one option became a rez
-    instruction. Seamless Launch's multi-target prompt (which only *places* 2 advancement counters)
-    rezzed the chosen card and placed zero counters, and Brân 1.0's install-inward option was
-    constructed without a `targetId` in its `corp-install-ice-inward` effect, so its handler ran
-    with `undefined` and installed nothing. Both `answerPrompt` (apply.ts) and `movesForPrompt`
-    (legal-moves.ts) must dispatch on the explicit effect kind (`rez-card-free`, `rez-card-paid`,
-    `corp-install-ice-inward`, `place-2-advancement`), and a paid rez must carry `rez-card-paid` so
-    `rezCard` stays the single payment point. Corollary: a `corp-install-ice-inward` effect needs
-    BOTH `iceId` (the source ice, which must have a position per 8.5.14) and `targetId` (the ice to
-    install). Was wrong / now correct — don't reintroduce. Tests: `tests/prompts_dispatch_test.ts`.
+    8.5.14).** `answerPrompt`'s `choose-one` branch used to dispatch on
+    `option.targetId &&
+    prompt.player === "corp"` and rezz the named card — so every corp
+    choose-one option became a rez instruction. Seamless Launch's multi-target prompt (which only
+    _places_ 2 advancement counters) rezzed the chosen card and placed zero counters, and Brân 1.0's
+    install-inward option was constructed without a `targetId` in its `corp-install-ice-inward`
+    effect, so its handler ran with `undefined` and installed nothing. Both `answerPrompt`
+    (apply.ts) and `movesForPrompt` (legal-moves.ts) must dispatch on the explicit effect kind
+    (`rez-card-free`, `rez-card-paid`, `corp-install-ice-inward`, `place-2-advancement`), and a paid
+    rez must carry `rez-card-paid` so `rezCard` stays the single payment point. Corollary: a
+    `corp-install-ice-inward` effect needs BOTH `iceId` (the source ice, which must have a position
+    per 8.5.14) and `targetId` (the ice to install). Was wrong / now correct — don't reintroduce.
+    Tests: `tests/prompts_dispatch_test.ts`.
 
 20. **A card effect's printed amount is the amount — never the net delta.** `resolveCorpOperation`
-    hardcoded `hedge_fund` → +5 and `government_subsidy` → +10, which is the *net* after the play
-    cost (5 and 10 respectively). The printed text is "Gain 9 credits." and "Gain 15 credits.",
-    so the resolver must gain the printed amount; `playCorpOperation` already spends the cost
+    hardcoded `hedge_fund` → +5 and `government_subsidy` → +10, which is the _net_ after the play
+    cost (5 and 10 respectively). The printed text is "Gain 9 credits." and "Gain 15 credits.", so
+    the resolver must gain the printed amount; `playCorpOperation` already spends the cost
     separately via `spendCredits`. A hardcoded net amount silently refunds the cost and makes the
-    card worse than printed. Was wrong / now correct — don't reintroduce. Tests: `tests/event_texts_test.ts`.
+    card worse than printed. Was wrong / now correct — don't reintroduce. Tests:
+    `tests/event_texts_test.ts`.
 
+21. **Side docks must never drive page height; the play grid must not absorb it.** `.log-dock` once
+    grew with the game log (its inner panel's `overflow: auto` never engaged because no ancestor had
+    a capped height), and `.game { align-items: stretch }` forced `.game-main` to the same height.
+    The grid's default row stretching then inflated `.servers`, `.action-row`, and `.hand-area` far
+    beyond their content — a tall black void opened between the action panel and the hand (the void
+    sat _inside_ `.action-row`, whose panel is only as tall as its buttons). The 50/50 status-dock
+    split had the same disease: the halves divided a log-driven page height instead of the viewport.
+    Now: `.game` aligns to `flex-start`, `.game-main` uses `align-content: start` (leftover space
+    stays below the column), and both docks are `position: sticky` capped to `100vh - 24px` with
+    internal scroll. Don't reintroduce stretch-driven heights — re-measure
+    `actionRowH == actionPanelH` in the browser after touching this layout.
 
+22. **The access zoom is the human's decision prompt, not any access.** `accessedCard` resolved
+    every `access-decision` prompt, so during the AI Runner's turn the zoom auto-opened on each
+    access and closed ~60ms later when the AI answered — a dialog flashing with no possible input.
+    It now only resolves prompts with `player === humanSide` (same gate in `accessActions`), so
+    opponent accesses surface via the breach banner and log only. Tests:
+    `tests/ui/game_screen_test.ts` ("only the human's own access decision pops the zoom").

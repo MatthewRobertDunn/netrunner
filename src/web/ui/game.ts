@@ -160,7 +160,12 @@ export default defineComponent({
     const breach = computed(() => status.value.breach);
     const accessedCard = computed(() => {
       for (const p of props.state.prompts) {
-        if (p.kind === "access-decision") return findCardIn(props.state, p.cardId);
+        // Only the human's own access decision pops the zoom: the AI answers
+        // its accesses in ~60ms, so auto-opening on the opponent's prompt
+        // just flashes a dialog the human can never act on.
+        if (p.kind === "access-decision" && p.player === props.humanSide) {
+          return findCardIn(props.state, p.cardId);
+        }
       }
       return null;
     });
@@ -173,7 +178,7 @@ export default defineComponent({
     const accessActions = computed(() => {
       const actions: { label: string; move: Move }[] = [];
       for (const p of props.state.prompts) {
-        if (p.kind !== "access-decision") continue;
+        if (p.kind !== "access-decision" || p.player !== props.humanSide) continue;
         const found = findCardIn(props.state, p.cardId);
         const trashCost = found ? cardDef(found.cardId).trashCost : null;
         if (
@@ -213,9 +218,12 @@ export default defineComponent({
       },
     );
 
-    // When the runner accesses a card, pop it up automatically so it's easy
-    // to read before deciding to trash or finish access. Close it when the
-    // access ends (the card was trashed or the access finished).
+    // When the human runner accesses a card, pop it up automatically so
+    // it's easy to read before deciding to trash or finish access. Close
+    // it when the access ends (the card was trashed or the access
+    // finished). Opponent (AI) accesses never pop: accessedCard only
+    // resolves the human's own prompt, so the dialog can't flash open for
+    // ~one AI tick and close itself.
     watch(
       accessedCard,
       (card: CardInstance | null) => {

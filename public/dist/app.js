@@ -23752,14 +23752,16 @@ var game_default = defineComponent({
     const breach = computed2(() => status.value.breach);
     const accessedCard = computed2(() => {
       for (const p2 of props.state.prompts) {
-        if (p2.kind === "access-decision") return findCardIn(props.state, p2.cardId);
+        if (p2.kind === "access-decision" && p2.player === props.humanSide) {
+          return findCardIn(props.state, p2.cardId);
+        }
       }
       return null;
     });
     const accessActions = computed2(() => {
       const actions = [];
       for (const p2 of props.state.prompts) {
-        if (p2.kind !== "access-decision") continue;
+        if (p2.kind !== "access-decision" || p2.player !== props.humanSide) continue;
         const found = findCardIn(props.state, p2.cardId);
         const trashCost = found ? cardDef(found.cardId).trashCost : null;
         if (trashCost !== null && trashCost > 0 && props.state.runner.credits >= trashCost) {

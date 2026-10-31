@@ -163,16 +163,21 @@ body {
 
 .game {
   display: flex;
-  align-items: stretch;
+  align-items: flex-start;
   gap: 10px;
   min-height: calc(100vh - 24px);
 }
-/* The play column takes all remaining width; the log docks to the right. */
+/* The play column takes all remaining width; the log docks to the right.
+   Rows size to their content (align-content: start): the side docks are
+   viewport-capped and sticky, so a long game log must never stretch the
+   servers/action/hand rows apart — leftover space stays below the column,
+   not between panels. */
 .game-main {
   flex: 1;
   min-width: 0;
   display: grid;
   gap: 10px;
+  align-content: start;
 }
 /* Perspective classes remain as seat hooks (server ice flip uses
    .corp-seat); the old in-flow strip order scheme is gone since both
@@ -251,7 +256,13 @@ body {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  align-self: stretch;
+  /* Viewport-capped and sticky: the 50/50 half split below divides the
+     viewport, not a log-driven page height, and the dock stays visible
+     while the play column scrolls. */
+  position: sticky;
+  top: 12px;
+  height: calc(100vh - 24px);
+  overflow: auto;
 }
 .status-title {
   flex: none;
@@ -744,6 +755,12 @@ button.primary-stat:disabled {
   align-items: stretch;
   gap: 0;
   width: 250px;
+  /* Viewport-capped and sticky: a long game log scrolls inside the dock
+     instead of stretching the whole page (which used to pull the play
+     column's grid rows apart, leaving black gaps between panels). */
+  position: sticky;
+  top: 12px;
+  max-height: calc(100vh - 24px);
 }
 .log-dock.collapsed {
   width: 20px;
@@ -773,6 +790,7 @@ button.primary-stat:disabled {
   border-radius: 0 10px 10px 0;
   padding: 10px 12px;
   overflow: auto;
+  max-height: calc(100vh - 24px);
 }
 .log-panel h3 {
   margin: 0 0 8px;
@@ -1128,9 +1146,14 @@ button.primary-stat:disabled {
   }
   .log-dock {
     width: 100%;
+    position: static;
+    max-height: none;
   }
   .status-dock {
     width: 100%;
+    position: static;
+    height: auto;
+    max-height: none;
   }
   .log-dock.collapsed {
     width: 100%;
