@@ -165,6 +165,7 @@ body {
   display: flex;
   align-items: stretch;
   gap: 10px;
+  min-height: calc(100vh - 24px);
 }
 /* The play column takes all remaining width; the log docks to the right. */
 .game-main {
@@ -326,7 +327,8 @@ body {
   color: var(--dim);
   text-transform: lowercase;
 }
-/* Credits + agenda points are the prominent stats; the rest is secondary. */
+/* Credits + agenda points are the prominent stats; the rest is secondary.
+   The own credits tile is the gain-credit button (emits the basic action). */
 .status-primary {
   display: flex;
   gap: 10px;
@@ -341,6 +343,21 @@ body {
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 10px 6px;
+  font: inherit;
+  color: inherit;
+}
+button.primary-stat.clickable {
+  cursor: pointer;
+}
+button.primary-stat.clickable:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+button.primary-stat.clickable:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+button.primary-stat:disabled {
+  cursor: default;
 }
 .primary-stat .sym {
   width: 22px;
@@ -396,10 +413,13 @@ body {
   display: flex;
   gap: 28px;
   justify-content: flex-start;
+  align-items: stretch;
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 10px;
   padding: 10px;
+  min-height: 340px;
+  overflow-x: auto;
 }
 /* Each server is a vertical card stack drawn from the human player's seat
    (own side at the bottom). The DOM order is server card/label -> root row
@@ -802,7 +822,8 @@ body {
 /* The human player's hand: bigger cards with their actions underneath. */
 .runner-hand {
   align-items: flex-start;
-  min-height: 190px;
+  align-content: flex-start;
+  min-height: 220px;
   padding: 14px;
   gap: 14px;
 }

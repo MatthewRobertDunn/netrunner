@@ -192,6 +192,20 @@ export default defineComponent({
 
     const serverRows = computed(() => status.value.servers);
 
+    /** The "gain 1 credit" basic action, when the human can take it. It lives
+     *  on the own credits tile in the side panel instead of the action panel. */
+    const gainCreditsMove = computed<Move | null>(() => {
+      if (!isHumanTurn.value || prompt.value || accessedCard.value) return null;
+      return legal.value.find((m: Move) =>
+        m.kind === "corp.gainCredits" || m.kind === "runner.gainCredits"
+      ) ?? null;
+    });
+
+    /** Click the own credits tile: take the gain-credit basic action. */
+    function playGainCredits() {
+      if (gainCreditsMove.value) play(gainCreditsMove.value);
+    }
+
     watch(
       () => props.state,
       () => {
@@ -308,11 +322,17 @@ export default defineComponent({
         m.kind === "corp.install" || m.kind === "corp.playOperation";
     }
 
-    /** Generic moves for the action panel (credits, jack out, …). Runs are
+    /** Generic moves for the action panel (jack out, …). Runs are
      *  deliberately excluded: every server already has its own Run button
-     *  under it, so listing them here too only duplicates the row. */
+     *  under it, so listing them here too only duplicates the row. The
+     *  gain-credit move lives on the own credits tile in the side panel,
+     *  so it is excluded here too. */
     const generalMoves = computed<Move[]>(
-      () => legal.value.filter((m: Move) => !isCardMove(m) && m.kind !== "runner.run"),
+      () =>
+        legal.value.filter((m: Move) =>
+          !isCardMove(m) && m.kind !== "runner.run" &&
+          m.kind !== "corp.gainCredits" && m.kind !== "runner.gainCredits"
+        ),
     );
 
     /** Legal play/install moves for a card with this definition id. */
@@ -408,6 +428,7 @@ export default defineComponent({
       accessActions,
       zoomActions,
       serverRows,
+      gainCreditsMove,
       // methods
       label,
       name,
@@ -415,6 +436,7 @@ export default defineComponent({
       toggleDiscard,
       submitDiscard,
       play,
+      playGainCredits,
       playFromZoom,
       zoom,
       zoomHand,
@@ -509,10 +531,17 @@ export default defineComponent({
             <span v-if="state.turn.player === ownSide" class="acting-tag">acting</span>
           </div>
           <div class="status-primary">
-            <div class="primary-stat credits">
+            <button
+              class="primary-stat credits"
+              :class="{ clickable: !!gainCreditsMove }"
+              :disabled="!gainCreditsMove"
+              data-testid="gain-credit"
+              title="Gain 1 credit"
+              @click="playGainCredits"
+            >
               <img class="sym" src="assets/svg/credit.svg" alt="Credits" />
               <span class="primary-val">{{ own.credits }}</span>
-            </div>
+            </button>
             <div class="primary-stat agenda">
               <img class="sym" src="assets/svg/agenda.svg" alt="Agenda points" />
               <span class="primary-val">{{ own.agendaPoints }}/{{ status.agendaPointTarget }}</span>
@@ -534,8 +563,8 @@ export default defineComponent({
       </aside>
       <!-- Perspective class stays for seat-specific tweaks (server ice flip
            uses .corp-seat); the old in-flow strip order scheme is gone since
-           both statuses now live in the left dock. .game-main holds header,
-           servers, banner, action panel, hand, warnings top to bottom. -->
+           both statuses now live in the left dock. .game-main holds servers,
+           banner, action panel, hand, warnings top to bottom. -->
       <div class="game-main" :class="'perspective-' + humanSide">
       <!-- ================= SERVERS ================= -->
         <div class="servers" data-testid="servers" :class="{ 'corp-seat': humanSide === 'corp' }">

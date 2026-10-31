@@ -208,6 +208,54 @@ Deno.test("GameScreen side panel: both statuses render values, Archives/Heap lab
   }
 });
 
+Deno.test("GameScreen side panel: own credits tile takes the gain-credit action", async () => {
+  for (const humanSide of ["corp", "runner"] as const) {
+    // Seed 42 opens on the Corp turn: three gains spend its clicks, then a
+    // one-card discard clears the discard phase to reach the Runner turn.
+    // (Corp opens over max hand size after the mandatory draw.)
+    let fx = createTestFixture(42, humanSide);
+    if (humanSide === "runner") {
+      const gains = [{ kind: "corp.gainCredits" }, { kind: "corp.gainCredits" }, {
+        kind: "corp.gainCredits",
+      }];
+      fx = createTestFixture(42, humanSide, gains as never[]);
+      const drop = fx.state.corp.hand[0]!.id;
+      fx = createTestFixture(
+        42,
+        humanSide,
+        [...gains, { kind: "discard", player: "corp", cardInstanceIds: [drop] }] as never[],
+      );
+    }
+    const { state } = fx;
+    assertEquals(state.turn.player, humanSide, `it is ${humanSide}'s turn`);
+    const wrapper = mount(GameScreen, { props: { state, humanSide } });
+    const dock = wrapper.find('[data-testid="status-dock"]');
+    const own = dock.find('[data-testid="status-own"]');
+
+    // The gain-credit move left the action panel for the credits tile.
+    const moves = wrapper.find('[data-testid="action-moves"]');
+    if (moves.exists()) {
+      assertEquals(
+        moves.findAll("button").filter((b) => b.text() === "Gain 1 credit").length,
+        0,
+        `no Gain button in the action panel (${humanSide})`,
+      );
+    }
+
+    const gain = own.find('[data-testid="gain-credit"]');
+    assert(gain.exists(), `own credits tile is the gain button (${humanSide})`);
+    assertEquals(gain.element.tagName.toLowerCase(), "button", "gain tile is a real button");
+
+    assertEquals(gain.attributes("disabled"), undefined, "gain enabled on the human turn");
+
+    await gain.trigger("click");
+    const emitted = wrapper.emitted("move") as unknown[][] | undefined;
+    assert(emitted && emitted.length === 1, `click emits one move (${humanSide})`);
+    const move = emitted[0]![0] as { kind: string };
+    assertEquals(move.kind, `${humanSide}.gainCredits`, "emits the gain-credit move");
+  }
+});
+
 Deno.test("GameScreen side panel: acting-side highlight follows state.turn.player", () => {
   const { state, humanSide } = createTestFixture(42, "corp");
   const acting = state.turn.player;

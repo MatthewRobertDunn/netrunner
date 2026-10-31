@@ -23781,6 +23781,13 @@ var game_default = defineComponent({
       return actions;
     });
     const serverRows = computed2(() => status.value.servers);
+    const gainCreditsMove = computed2(() => {
+      if (!isHumanTurn.value || prompt.value || accessedCard.value) return null;
+      return legal.value.find((m) => m.kind === "corp.gainCredits" || m.kind === "runner.gainCredits") ?? null;
+    });
+    function playGainCredits() {
+      if (gainCreditsMove.value) play(gainCreditsMove.value);
+    }
     watch2(() => props.state, () => {
       discardSelected.value = [];
     });
@@ -23856,7 +23863,7 @@ var game_default = defineComponent({
     function isCardMove(m) {
       return m.kind === "runner.install" || m.kind === "runner.playEvent" || m.kind === "corp.install" || m.kind === "corp.playOperation";
     }
-    const generalMoves = computed2(() => legal.value.filter((m) => !isCardMove(m) && m.kind !== "runner.run"));
+    const generalMoves = computed2(() => legal.value.filter((m) => !isCardMove(m) && m.kind !== "runner.run" && m.kind !== "corp.gainCredits" && m.kind !== "runner.gainCredits"));
     function cardMoves(cardId) {
       if (!isHumanTurn.value || prompt.value) return [];
       return legal.value.filter((m) => {
@@ -23935,6 +23942,7 @@ var game_default = defineComponent({
       accessActions,
       zoomActions,
       serverRows,
+      gainCreditsMove,
       // methods
       label,
       name,
@@ -23942,6 +23950,7 @@ var game_default = defineComponent({
       toggleDiscard,
       submitDiscard,
       play,
+      playGainCredits,
       playFromZoom,
       zoom,
       zoomHand,
@@ -24036,10 +24045,17 @@ var game_default = defineComponent({
             <span v-if="state.turn.player === ownSide" class="acting-tag">acting</span>
           </div>
           <div class="status-primary">
-            <div class="primary-stat credits">
+            <button
+              class="primary-stat credits"
+              :class="{ clickable: !!gainCreditsMove }"
+              :disabled="!gainCreditsMove"
+              data-testid="gain-credit"
+              title="Gain 1 credit"
+              @click="playGainCredits"
+            >
               <img class="sym" src="assets/svg/credit.svg" alt="Credits" />
               <span class="primary-val">{{ own.credits }}</span>
-            </div>
+            </button>
             <div class="primary-stat agenda">
               <img class="sym" src="assets/svg/agenda.svg" alt="Agenda points" />
               <span class="primary-val">{{ own.agendaPoints }}/{{ status.agendaPointTarget }}</span>
@@ -24061,8 +24077,8 @@ var game_default = defineComponent({
       </aside>
       <!-- Perspective class stays for seat-specific tweaks (server ice flip
            uses .corp-seat); the old in-flow strip order scheme is gone since
-           both statuses now live in the left dock. .game-main holds header,
-           servers, banner, action panel, hand, warnings top to bottom. -->
+           both statuses now live in the left dock. .game-main holds servers,
+           banner, action panel, hand, warnings top to bottom. -->
       <div class="game-main" :class="'perspective-' + humanSide">
       <!-- ================= SERVERS ================= -->
         <div class="servers" data-testid="servers" :class="{ 'corp-seat': humanSide === 'corp' }">
