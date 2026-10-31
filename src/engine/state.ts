@@ -214,6 +214,19 @@ export function spendClicks(state: GameState, side: PlayerSide, amount: number):
   return spent;
 }
 
+/**
+ * Lose clicks (rule 1.11.3b). "Lose" and "spend" are not synonymous for the
+ * purposes of card abilities, and a lose is not a payment for an action. Card
+ * text like "If you have any click remaining, lose click" (VRcation, Creative
+ * Commission) uses this, charged only when a click was actually available.
+ */
+export function loseClicks(state: GameState, side: PlayerSide, amount: number): void {
+  const p = player(state, side);
+  const lost = Math.min(p.clicks, amount);
+  p.clicks -= lost;
+  if (lost > 0) state.log.push({ type: "lose-clicks", player: side, amount: lost });
+}
+
 // ---------------------------------------------------------------------------
 // Zone movement
 // ---------------------------------------------------------------------------

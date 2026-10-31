@@ -309,8 +309,19 @@ function runnerActionMoves(state: GameState): Move[] {
     if (def.type !== "event") continue;
     if (def.cost !== null && def.cost > runner.credits) continue;
     if (def.minimumDeckSize !== null) continue;
-    if (card.cardId === "jailbreak" || card.cardId === "overclock") {
-      for (const server of ["hq", "rd"] as ServerId[]) {
+    if (
+      card.cardId === "jailbreak" || card.cardId === "overclock" || card.cardId === "tread_lightly"
+    ) {
+      // These events initiate a run as part of their resolution (rule 5.2.2b),
+      // so the Runner must choose the attacked server when playing them.
+      // Jailbreak names "HQ or R&D"; Overclock and Tread Lightly name "any
+      // server", so they enumerate every server that could be run (central or
+      // existing remote), subject to the same Red Team restriction as a basic
+      // run (the event's run is still a run).
+      const servers: ServerId[] = card.cardId === "jailbreak"
+        ? ["hq", "rd"]
+        : allServers(state).filter((s) => !cardRestrictsRun(state, s));
+      for (const server of servers) {
         moves.push({ kind: "runner.playEvent", cardId: card.cardId, server });
       }
     } else {
