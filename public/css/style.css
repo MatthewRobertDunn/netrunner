@@ -513,20 +513,18 @@ body {
   grid-template-columns: 1fr;
   gap: 10px;
   align-items: start;
-  min-height: 190px;
 }
 .action-panel {
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 10px;
   padding: 12px;
-  min-height: 190px;
 }
 .banner-win,
 .banner-wait {
   display: grid;
   place-items: center;
-  min-height: 165px;
+  padding: 8px 0;
   font-size: 15px;
   color: var(--dim);
 }
