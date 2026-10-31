@@ -26,4 +26,4 @@ EXPOSE 8000
 # Entrypoint is `tini -- deno run`; CMD carries the deno args.
 # Scoped permissions: read only /app/public, allow the PORT env var, allow
 # binding the listen socket. No network access is needed at runtime.
-CMD ["run", "--allow-read=/app/public", "--allow-env=PORT", "--allow-net", "serve.ts"]
+CMD ["run", "--allow-read=/app/public", "--allow-env=PORT,AUTO_PORT", "--allow-net", "serve.ts"]
