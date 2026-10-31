@@ -106,13 +106,30 @@ function movesForPrompt(state: GameState, playerSide: PlayerSide, prompt: Prompt
       for (const option of prompt.options) {
         if (option.creditCost && availableCredits(state, playerSide) < option.creditCost) continue;
         if (option.clickCost && player(state, playerSide).clicks < option.clickCost) continue;
-        if (option.effect?.kind === "rez-card-free" && option.targetId) {
+        // Dispatch on the option's effect kind, mirroring answerPrompt in
+        // apply.ts (BUG B1: the old "corp + targetId ⇒ rez" heuristic offered
+        // rez moves for Seamless Launch and misfiltered Brân's install option).
+        const kind = option.effect?.kind;
+        if (kind === "rez-card-free" && option.targetId) {
           const found = findCard(state, option.targetId);
           if (!found || found.card.rezzed === true) continue;
-        }
-        if (option.effect?.kind === "corp-install-ice-inward") {
-          const found = findCard(state, option.effect.targetId);
+        } else if (kind === "rez-card-paid" && option.targetId) {
+          const found = findCard(state, option.targetId);
+          if (!found || found.card.rezzed === true) continue;
+          if (rezCostFor(state, found.card) > state.corp.credits) continue;
+        } else if (kind === "corp-install-ice-inward" && option.targetId) {
+          // The effect's targetId is the ice to install (from HQ/Archives);
+          // it must exist in the corp's hand or discard, and the `from` ice
+          // (effect.iceId) must be installed and protecting a server so that
+          // "directly inward" has a position (rule 8.5.14).
+          const found = findCard(state, option.targetId);
           if (!found) continue;
+          const from = findCard(state, option.effect.iceId);
+          if (!from || from.card.zone !== "play-area" || !from.card.server) continue;
+          if (found.card.zone !== "hand" && found.card.zone !== "discard") continue;
+        } else if (kind === "place-2-advancement" && option.targetId) {
+          const found = findCard(state, option.targetId);
+          if (!found || found.card.zone !== "play-area") continue;
         }
         moves.push({
           kind: "prompt.answer",

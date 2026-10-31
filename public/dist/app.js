@@ -4,7 +4,7 @@ var __export = (target, all) => {
     __defProp(target, name, { get: all[name], enumerable: true });
 };
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-dom/3.5.13/dist/runtime-dom.esm-bundler.js
+// ../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-dom/3.5.13/dist/runtime-dom.esm-bundler.js
 var runtime_dom_esm_bundler_exports = {};
 __export(runtime_dom_esm_bundler_exports, {
   BaseTransition: () => BaseTransition,
@@ -177,7 +177,7 @@ __export(runtime_dom_esm_bundler_exports, {
   withScopeId: () => withScopeId
 });
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/shared/3.5.13/dist/shared.esm-bundler.js
+// ../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/shared/3.5.13/dist/shared.esm-bundler.js
 // @__NO_SIDE_EFFECTS__
 function makeMap(str) {
   const map2 = /* @__PURE__ */ Object.create(null);
@@ -523,7 +523,7 @@ var stringifySymbol = (v, i = "") => {
   );
 };
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/reactivity/3.5.13/dist/reactivity.esm-bundler.js
+// ../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/reactivity/3.5.13/dist/reactivity.esm-bundler.js
 function warn(msg, ...args) {
   console.warn(`[Vue warn] ${msg}`, ...args);
 }
@@ -2200,7 +2200,7 @@ function traverse(value, depth = Infinity, seen2) {
   return value;
 }
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-core/3.5.13/dist/runtime-core.esm-bundler.js
+// ../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-core/3.5.13/dist/runtime-core.esm-bundler.js
 var stack = [];
 function pushWarningContext(vnode) {
   stack.push(vnode);
@@ -9588,7 +9588,7 @@ var resolveFilter = null;
 var compatUtils = null;
 var DeprecationTypes = null;
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-dom/3.5.13/dist/runtime-dom.esm-bundler.js
+// ../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-dom/3.5.13/dist/runtime-dom.esm-bundler.js
 var policy = void 0;
 var tt = typeof window !== "undefined" && window.trustedTypes;
 if (tt) {
@@ -11384,7 +11384,7 @@ var initDirectivesForSSR = () => {
   }
 };
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/compiler-core/3.5.13/dist/compiler-core.esm-bundler.js
+// ../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/compiler-core/3.5.13/dist/compiler-core.esm-bundler.js
 var FRAGMENT = Symbol(true ? `Fragment` : ``);
 var TELEPORT = Symbol(true ? `Teleport` : ``);
 var SUSPENSE = Symbol(true ? `Suspense` : ``);
@@ -16216,7 +16216,7 @@ var noopDirectiveTransform = () => ({
   props: []
 });
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/compiler-dom/3.5.13/dist/compiler-dom.esm-bundler.js
+// ../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/compiler-dom/3.5.13/dist/compiler-dom.esm-bundler.js
 var V_MODEL_RADIO = Symbol(true ? `vModelRadio` : ``);
 var V_MODEL_CHECKBOX = Symbol(true ? `vModelCheckbox` : ``);
 var V_MODEL_TEXT = Symbol(true ? `vModelText` : ``);
@@ -16852,7 +16852,7 @@ function compile2(src, options = {}) {
   }));
 }
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/vue/3.5.13/dist/vue.esm-bundler.js
+// ../../../usr/local/share/deno/npm/registry.npmjs.org/vue/3.5.13/dist/vue.esm-bundler.js
 function initDev() {
   {
     initCustomFormatter();
@@ -19668,7 +19668,8 @@ function resolveSubroutine(state, ice, index) {
             targetId: c.id,
             effect: {
               kind: "corp-install-ice-inward",
-              iceId: ice.id
+              iceId: ice.id,
+              targetId: c.id
             }
           })),
           ...state.corp.discard.filter((c) => cardDef(c.cardId).type === "ice").map((c) => ({
@@ -19677,7 +19678,8 @@ function resolveSubroutine(state, ice, index) {
             targetId: c.id,
             effect: {
               kind: "corp-install-ice-inward",
-              iceId: ice.id
+              iceId: ice.id,
+              targetId: c.id
             }
           })),
           {
@@ -19702,6 +19704,14 @@ function oddCostTrashed(state, trashed) {
   }
   return false;
 }
+function addTwoAdvancement(state, card) {
+  card.advancement = (card.advancement ?? 0) + 2;
+  state.log.push({
+    type: "advance",
+    cardId: card.id,
+    amount: 2
+  });
+}
 function applyChoice(state, effect2) {
   if (!effect2) return;
   switch (effect2.kind) {
@@ -19719,6 +19729,16 @@ function applyChoice(state, effect2) {
     case "rez-card-free": {
       const found = findCard(state, effect2.targetId);
       if (found) rezCard(state, found.card, true);
+      break;
+    }
+    case "rez-card-paid": {
+      const found = findCard(state, effect2.targetId);
+      if (found) rezCard(state, found.card);
+      break;
+    }
+    case "place-2-advancement": {
+      const found = findCard(state, effect2.targetId);
+      if (found) addTwoAdvancement(state, found.card);
       break;
     }
     case "corp-draw":
@@ -20569,13 +20589,23 @@ function movesForPrompt(state, playerSide, prompt) {
       for (const option of prompt.options) {
         if (option.creditCost && availableCredits(state, playerSide) < option.creditCost) continue;
         if (option.clickCost && player(state, playerSide).clicks < option.clickCost) continue;
-        if (option.effect?.kind === "rez-card-free" && option.targetId) {
+        const kind = option.effect?.kind;
+        if (kind === "rez-card-free" && option.targetId) {
           const found = findCard(state, option.targetId);
           if (!found || found.card.rezzed === true) continue;
-        }
-        if (option.effect?.kind === "corp-install-ice-inward") {
-          const found = findCard(state, option.effect.targetId);
+        } else if (kind === "rez-card-paid" && option.targetId) {
+          const found = findCard(state, option.targetId);
+          if (!found || found.card.rezzed === true) continue;
+          if (rezCostFor(state, found.card) > state.corp.credits) continue;
+        } else if (kind === "corp-install-ice-inward" && option.targetId) {
+          const found = findCard(state, option.targetId);
           if (!found) continue;
+          const from = findCard(state, option.effect.iceId);
+          if (!from || from.card.zone !== "play-area" || !from.card.server) continue;
+          if (found.card.zone !== "hand" && found.card.zone !== "discard") continue;
+        } else if (kind === "place-2-advancement" && option.targetId) {
+          const found = findCard(state, option.targetId);
+          if (!found || found.card.zone !== "play-area") continue;
         }
         moves.push({
           kind: "prompt.answer",
@@ -21270,14 +21300,10 @@ function answerPrompt(state, promptId, optionId) {
       if (option.clickCost) spendClicks(state, prompt.player, option.clickCost);
       if (option.effect?.kind === "rez-card-free" && option.targetId) {
         const found = findCard(state, option.targetId);
-        if (found) {
-          rezCard(state, found.card, true);
-        }
-      } else if (option.targetId && prompt.player === "corp") {
+        if (found) rezCard(state, found.card, true);
+      } else if (option.effect?.kind === "rez-card-paid" && option.targetId) {
         const found = findCard(state, option.targetId);
-        if (found) {
-          rezCard(state, found.card);
-        }
+        if (found) rezCard(state, found.card);
       } else {
         applyChoice(state, option.effect);
       }
@@ -21394,7 +21420,8 @@ function resolveCorpOperation(state, cardId, card) {
           label: `Place 2 on ${cardDef(c.cardId).title}`,
           targetId: c.id,
           effect: {
-            kind: "no-op"
+            kind: "place-2-advancement",
+            targetId: c.id
           }
         }))
       });
@@ -21548,14 +21575,6 @@ function resolveEncounter(state) {
   run.phase = "movement";
   run.jackOutOffered = false;
   expireIcebreakerPumps(state);
-}
-function addTwoAdvancement(state, card) {
-  card.advancement = (card.advancement ?? 0) + 2;
-  state.log.push({
-    type: "advance",
-    cardId: card.id,
-    amount: 2
-  });
 }
 function addAdvancementCounter(state, card) {
   card.advancement = (card.advancement ?? 0) + 1;
@@ -22087,9 +22106,15 @@ function promptCardIds(prompt) {
       if (option.effect?.kind === "rez-card-free" && option.effect.targetId !== void 0) {
         ids.push(option.effect.targetId);
       }
+      if (option.effect?.kind === "rez-card-paid" && option.effect.targetId !== void 0) {
+        ids.push(option.effect.targetId);
+      }
       if (option.effect?.kind === "corp-install-ice-inward") {
         if (option.effect.iceId !== void 0) ids.push(option.effect.iceId);
         if (option.effect.targetId !== void 0) ids.push(option.effect.targetId);
+      }
+      if (option.effect?.kind === "place-2-advancement" && option.effect.targetId !== void 0) {
+        ids.push(option.effect.targetId);
       }
     }
   }

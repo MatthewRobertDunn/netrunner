@@ -219,13 +219,21 @@ export function resolveSubroutine(state: GameState, ice: CardInstance, index: nu
             id: `install-${c.id}`,
             label: `Install ${cardDef(c.cardId).title} from HQ`,
             targetId: c.id,
-            effect: { kind: "corp-install-ice-inward", iceId: ice.id } as ChoiceEffect,
+            effect: {
+              kind: "corp-install-ice-inward",
+              iceId: ice.id,
+              targetId: c.id,
+            } as ChoiceEffect,
           })),
           ...state.corp.discard.filter((c) => cardDef(c.cardId).type === "ice").map((c) => ({
             id: `install-${c.id}`,
             label: `Install ${cardDef(c.cardId).title} from Archives`,
             targetId: c.id,
-            effect: { kind: "corp-install-ice-inward", iceId: ice.id } as ChoiceEffect,
+            effect: {
+              kind: "corp-install-ice-inward",
+              iceId: ice.id,
+              targetId: c.id,
+            } as ChoiceEffect,
           })),
           { id: "pass", label: "Pass", effect: { kind: "no-op" } as ChoiceEffect },
         ],
@@ -244,6 +252,18 @@ function oddCostTrashed(state: GameState, trashed: CardInstanceId[]): boolean {
     if (cost !== null && cost % 2 === 1) return true;
   }
   return false;
+}
+
+/**
+ * Place exactly 2 advancement counters on `card`. Seamless Launch's text is
+ * "Place 2 advancement counters on 1 installed card that you did not install
+ * this turn" — rule 1.18.2 keeps this distinct from advancing (no click, no
+ * credit, no rez). Shared by the single-target path (apply.ts) and the
+ * multi-target choose-one option (`place-2-advancement`).
+ */
+export function addTwoAdvancement(state: GameState, card: CardInstance): void {
+  card.advancement = (card.advancement ?? 0) + 2;
+  state.log.push({ type: "advance", cardId: card.id, amount: 2 });
 }
 
 // ---------------------------------------------------------------------------
@@ -267,6 +287,20 @@ export function applyChoice(state: GameState, effect: ChoiceEffect | undefined):
     case "rez-card-free": {
       const found = findCard(state, effect.targetId);
       if (found) rezCard(state, found.card, true);
+      break;
+    }
+    case "rez-card-paid": {
+      // A genuine paid-rez instruction (rule 8.1.2d): rezCard is the single
+      // payment point, so the cost is charged there, not here.
+      const found = findCard(state, effect.targetId);
+      if (found) rezCard(state, found.card);
+      break;
+    }
+    case "place-2-advancement": {
+      // Seamless Launch (rule 1.18.2): placing counters directly is not
+      // advancing, so no cost is paid and nothing is rezzed.
+      const found = findCard(state, effect.targetId);
+      if (found) addTwoAdvancement(state, found.card);
       break;
     }
     case "corp-draw":
