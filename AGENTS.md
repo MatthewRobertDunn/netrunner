@@ -50,8 +50,8 @@ deno task publish
   claiming green.
 - Publish needs `ssh` (openssh-client) and `crane` in the sandbox; install via
   `apt-get install -y openssh-client` and the crane release tarball if missing.
-- **Passwordless `sudo` exists in this sandbox** for setup steps (`apt-get install`, port
-  release, service restarts).
+- **Passwordless `sudo` exists in this sandbox** for setup steps (`apt-get install`, port release,
+  service restarts).
 
 ## Secrets
 
