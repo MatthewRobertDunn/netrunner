@@ -3,6 +3,12 @@
  * advancement/strength counter overlays. Falls back to a text-only face when
  * the image is missing, and to a facedown "card back" when `facedown` is set.
  *
+ * A `clickable` tile renders as a real `<button type="button">` (keyboard
+ * focusable, Enter/Space activate it); every other tile stays a `<div>`. The
+ * root element is chosen with `<component :is>`, so the single template body
+ * keeps the shared `.card-tile` classes and children identical in both forms —
+ * the button reset in public/css/style.css keeps the look unchanged.
+ *
  * Uses `setup()` (Composition API) so `deno check` gets full typing: the
  * Options API's `this` is untyped in plain object literals.
  */
@@ -33,16 +39,19 @@ export default defineComponent({
     corp: { type: Boolean, default: false },
   },
   emits: ["zoom"],
-  setup(props: {
-    card: CardInfo | null;
-    facedown: boolean;
-    ice: boolean;
-    highlight: boolean;
-    badge: string;
-    small: boolean;
-    clickable: boolean;
-    corp: boolean;
-  }) {
+  setup(
+    props: {
+      card: CardInfo | null;
+      facedown: boolean;
+      ice: boolean;
+      highlight: boolean;
+      badge: string;
+      small: boolean;
+      clickable: boolean;
+      corp: boolean;
+    },
+    { emit }: { emit: (event: "zoom", cardId: string) => void },
+  ) {
     const def = computed(() => {
       const card = props.card;
       return card && card.cardId !== "hidden" ? cardOf(card.cardId) : null;
@@ -53,15 +62,26 @@ export default defineComponent({
     });
     const typeTag = computed(() => (def.value ? def.value.type : ""));
     const isAgenda = computed(() => typeTag.value === "agenda");
+    /** A tile zooms only when it is clickable and shows a known card face. */
+    const isZoomable = computed(() =>
+      Boolean(props.clickable && props.card && props.card.cardId !== "hidden")
+    );
 
-    return { def, img, typeTag, isAgenda };
+    function onClick(): void {
+      const card = props.card;
+      if (isZoomable.value && card) emit("zoom", card.cardId);
+    }
+
+    return { def, img, typeTag, isAgenda, isZoomable, onClick };
   },
   template: `
-    <div
+    <component
+      :is="isZoomable ? 'button' : 'div'"
+      :type="isZoomable ? 'button' : undefined"
       class="card-tile"
       :class="{ facedown, ice, highlight, small, 'is-agenda': isAgenda, clickable }"
       :title="def ? def.title + '\\n' + def.strippedText : 'Facedown card'"
-      @click="clickable && card && card.cardId !== 'hidden' && $emit('zoom', card.cardId)"
+      @click="onClick"
     >
       <img v-if="img" class="card-img" :src="img" :alt="def ? def.title : ''" loading="lazy" />
       <div v-else class="card-face-fallback">
@@ -81,6 +101,6 @@ export default defineComponent({
       <div v-if="badge" class="counter badge-counter">{{ badge }}</div>
       <div v-if="card && card.rezzed === false && !facedown" class="unrezzed-flag">D</div>
       <div v-if="facedown && !corp" class="facedown-label">?</div>
-    </div>
+    </component>
   `,
 });
