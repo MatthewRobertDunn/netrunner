@@ -52,15 +52,6 @@ export function fireInstall(state: GameState, card: CardInstance): void {
   }
 }
 
-/** "When you rez this asset, load N credits onto it." */
-export function fireRez(state: GameState, card: CardInstance): void {
-  const b = behaviors.get(card.cardId);
-  if (!b) return;
-  for (const t of b.triggers ?? []) {
-    if (t.kind === "on-rez-load-credits") addHostedCredits(state, card, t.amount ?? 0);
-  }
-}
-
 /**
  * "When the Runner accesses this card while it is installed, do N net damage
  * plus 1 per hosted advancement counter" (Urtica Cipher). Dispatched from the
@@ -627,17 +618,4 @@ export function checkEmpty(state: GameState, card: CardInstance): void {
   const draw = trigger.kind === "empty-then-trash-and-draw";
   toDiscard(state, card, "emptied"); // logs the trash event
   if (draw) drawCards(state, "corp", 1);
-}
-
-/**
- * "When this run ends, trash this program" (Mayfly) — dispatched from the
- * card's `run-trash-program` trigger. Every run end funnels through
- * `finishRun`, which calls this.
- */
-export function trashMayfly(state: GameState): void {
-  for (const card of [...state.runner.installed]) {
-    if (triggersOf(card.cardId).some((t) => t.kind === "run-trash-program")) {
-      toDiscard(state, card, "run ends"); // logs the trash event
-    }
-  }
 }

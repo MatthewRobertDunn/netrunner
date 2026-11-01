@@ -1,13 +1,22 @@
 /**
  * Run phases: initiation, approach/encounter/movement progression and end
- * (rules 6.1–6.9). Functions here only navigate phases; subroutine effects are
- * resolved in `settle.ts`.
+ * (rules 6.1–6.9). Functions here navigate phases and dispatch the run-scoped
+ * triggers (rez-load, Mayfly); subroutine effects are resolved in `settle.ts`.
+ *
+ * This module must not import `effects.ts`: `effects.ts` resolves card effects
+ * that themselves start/end runs, so it imports this module — keeping the
+ * dependency one-way (`effects.ts → runs.ts`) is what keeps that cycle cut.
  */
 
 import { cardDef, isIce } from "../cards/catalogue.ts";
-import { triggersOf } from "../cards/effects.ts";
-import { fireRez, trashMayfly } from "./effects.ts";
-import { expireIcebreakerPumps, serverById, spendCredits } from "./state.ts";
+import { behaviors, triggersOf } from "../cards/effects.ts";
+import {
+  addHostedCredits,
+  expireIcebreakerPumps,
+  serverById,
+  spendCredits,
+  toDiscard,
+} from "./state.ts";
 import type { CardInstance, GameState, ServerId } from "../types.ts";
 
 export function iceAt(state: GameState, server: ServerId): CardInstance[] {
@@ -29,6 +38,19 @@ export function rezCostFor(state: GameState, card: CardInstance): number {
   let cost = def.cost ?? 0;
   if (isIce(def) && state.run?.rezCostIncrease) cost += state.run.rezCostIncrease;
   return cost;
+}
+
+/**
+ * "When you rez this asset, load N credits onto it" (e.g. Nico Campaign,
+ * Regolith Mining License). Lives next to `rezCard`, its only caller, so the
+ * rez choke point and its trigger can never drift apart.
+ */
+export function fireRez(state: GameState, card: CardInstance): void {
+  const b = behaviors.get(card.cardId);
+  if (!b) return;
+  for (const t of b.triggers ?? []) {
+    if (t.kind === "on-rez-load-credits") addHostedCredits(state, card, t.amount ?? 0);
+  }
 }
 
 /**
@@ -229,6 +251,19 @@ export function endRun(state: GameState): void {
   const run = state.run;
   if (!run) return;
   run.phase = "run-ends";
+}
+
+/**
+ * "When this run ends, trash this program" (Mayfly) — dispatched from the
+ * card's `run-trash-program` trigger. Lives next to `finishRun`, its only
+ * caller. Every run end funnels through `finishRun`, which calls this.
+ */
+export function trashMayfly(state: GameState): void {
+  for (const card of [...state.runner.installed]) {
+    if (triggersOf(card.cardId).some((t) => t.kind === "run-trash-program")) {
+      toDiscard(state, card, "run ends"); // logs the trash event
+    }
+  }
 }
 
 /** Finish the run entirely and clear run state (rule 6.8/6.9.6). */
