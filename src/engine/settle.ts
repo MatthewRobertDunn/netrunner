@@ -4,6 +4,7 @@
  */
 
 import { cardDef } from "../cards/catalogue.ts";
+import { behavior, triggersOf } from "../cards/effects.ts";
 import {
   fireAccessBegin,
   fireScore,
@@ -224,12 +225,20 @@ export function beginBreach(state: GameState, server: ServerId): void {
   const run = state.run!;
   let limit = 1;
   if (server === "hq" || server === "rd") {
-    if (run.source === "jailbreak") limit += 1;
-    // Docklands Pass: "The first time each turn you breach HQ, access 1
-    // additional card" — only HQ breaches count toward that once-per-turn,
+    // Run-sourcing events can add access on breach (Jailbreak: "when you
+    // breach the attacked server, access 1 additional card", rule 7.3.5). The
+    // run's `source` carries the event's card id.
+    const ee = run.source ? behavior(run.source)?.eventEffect : undefined;
+    if (ee?.kind === "run" && ee.breachAccessBonus) limit += ee.breachAccessBonus;
+    // "The first time each turn you breach HQ, access 1 additional card"
+    // (Docklands Pass) — only HQ breaches count toward that once-per-turn,
     // so a prior R&D/Archives/remote breach must not consume the bonus.
     if (server === "hq" && state.runner.hqBreachesThisTurn === 0) {
-      if (state.runner.installed.some((c) => c.cardId === "docklands_pass")) limit += 1;
+      for (const c of state.runner.installed) {
+        for (const t of triggersOf(c.cardId)) {
+          if (t.kind === "first-hq-breach-extra-access") limit += t.amount ?? 1;
+        }
+      }
     }
   }
   // The counter tracks HQ breaches only (it exists for Docklands Pass).

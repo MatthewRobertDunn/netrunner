@@ -5,6 +5,7 @@
  */
 
 import { cardDef, isIce } from "../cards/catalogue.ts";
+import { triggersOf } from "../cards/effects.ts";
 import { fireRez, trashMayfly } from "./effects.ts";
 import { expireIcebreakerPumps, serverById, spendCredits } from "./state.ts";
 import type { CardInstance, GameState, ServerId } from "../types.ts";
@@ -171,36 +172,42 @@ export function continueMovement(state: GameState): boolean {
   return false;
 }
 
-/** Manegarm Skunkworks toll when the Runner approaches the server (rule 6.9.4g). */
+/** Approach toll on the attacked server's root (Manegarm, rule 6.9.4g). */
 function approachToll(state: GameState): boolean {
   const run = state.run!;
   if (run.tollPaid) return false;
-  const manegarm = serverById(state, run.server).root.find((c) =>
-    c.cardId === "manegarm_skunkworks" && c.rezzed === true
-  );
-  if (!manegarm) return false;
-  state.prompts.push({
-    kind: "choose-one",
-    id: state.nextPromptId++,
-    player: "runner",
-    title: "Manegarm Skunkworks: end the run unless you spend [click][click] or pay 5[credit]",
-    options: [
-      {
-        id: "toll-credits",
-        label: "Pay 5 credits",
-        creditCost: 5,
-        effect: { kind: "pay-toll-credits" },
-      },
-      {
-        id: "toll-clicks",
-        label: "Spend [click][click]",
-        clickCost: 2,
-        effect: { kind: "pay-toll-clicks" },
-      },
-      { id: "toll-end", label: "End the run", effect: { kind: "end-run" } },
-    ],
-  });
-  return true;
+  for (const card of serverById(state, run.server).root) {
+    if (card.rezzed !== true) continue;
+    const toll = triggersOf(card.cardId).find((t) => t.kind === "approach-toll");
+    if (!toll) continue;
+    const creditCost = toll.creditCost ?? 5;
+    const clickCost = toll.clickCost ?? 2;
+    state.prompts.push({
+      kind: "choose-one",
+      id: state.nextPromptId++,
+      player: "runner",
+      title: `${cardDef(card.cardId).title}: end the run unless you spend ${
+        "[click]".repeat(clickCost)
+      } or pay ${creditCost}[credit]`,
+      options: [
+        {
+          id: "toll-credits",
+          label: `Pay ${creditCost} credits`,
+          creditCost,
+          effect: { kind: "pay-toll-credits" },
+        },
+        {
+          id: "toll-clicks",
+          label: `Spend ${"[click]".repeat(clickCost)}`,
+          clickCost,
+          effect: { kind: "pay-toll-clicks" },
+        },
+        { id: "toll-end", label: "End the run", effect: { kind: "end-run" } },
+      ],
+    });
+    return true;
+  }
+  return false;
 }
 
 /** The Runner reaches the server: declare the run successful. */

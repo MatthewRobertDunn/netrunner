@@ -16936,7 +16936,9 @@ __export(mod_exports, {
   supportWarningsOf: () => supportWarningsOf,
   tryCardDef: () => tryCardDef,
   validateDeck: () => validateDeck,
-  verifyFixtureAgainstSnapshot: () => verifyFixtureAgainstSnapshot
+  verifyFixtureAgainstSnapshot: () => verifyFixtureAgainstSnapshot,
+  viewCard: () => viewCard,
+  visiblePrompt: () => visiblePrompt
 });
 
 // data/cards.json
@@ -19036,6 +19038,12 @@ function findCard(state, instanceId) {
   }
   return null;
 }
+function corpInstalled(state) {
+  return state.servers.flatMap((s) => [
+    ...s.root,
+    ...s.ice
+  ]);
+}
 function cardVisibleTo(state, instanceId, viewer) {
   const found = findCard(state, instanceId);
   if (!found) return false;
@@ -20110,56 +20118,13 @@ function settle(state) {
       continue;
     }
     if (state.turn.phase === "action" && player(state, state.turn.player).clicks === 0) {
-      state.turn.phase = "discard";
-      promptOrFinishDiscard(state);
+      enterDiscardPhase(state);
       if (state.prompts.length > 0) return;
       continue;
     }
     return;
   }
   state.supportWarnings.push("settle loop guard reached 1000 steps \u2014 the phase machine may be wedged");
-}
-function promptOrFinishDiscard(state) {
-  const side = state.turn.player;
-  const p2 = player(state, side);
-  if (side === "runner" && maxHandSize2(state, "runner") < 0) {
-    setGameOver(state, "corp", "Runner's maximum hand size dropped below 0");
-    return;
-  }
-  const max = maxHandSize2(state, side);
-  if (p2.hand.length > max) {
-    state.prompts.push({
-      kind: "discard",
-      id: state.nextPromptId++,
-      player: side,
-      count: p2.hand.length - max
-    });
-    return;
-  }
-  finishTurn2(state);
-}
-function finishTurn2(state) {
-  if (state.winner) return;
-  const side = state.turn.player;
-  const leftover = player(state, side).clicks;
-  if (leftover > 0) state.log.push({
-    type: "lose-clicks",
-    player: side,
-    amount: leftover
-  });
-  player(state, side).clicks = 0;
-  state.log.push({
-    type: "turn-end",
-    player: side,
-    turn: state.turn.number
-  });
-  if (side === "corp") beginRunnerTurn(state);
-  else beginCorpTurn(state);
-}
-function maxHandSize2(state, side) {
-  const p2 = player(state, side);
-  const hubBonus = side === "corp" && state.corp.score.some((c) => c.cardId === "superconducting_hub") ? 2 : 0;
-  return p2.baseHandSize + p2.maxHandSizeMod + hubBonus;
 }
 function stepRun(state) {
   const run = state.run;
@@ -20223,9 +20188,9 @@ function corpRezOptions(state) {
   if (ice && ice.rezzed !== true) {
     options.push({
       id: `rez-${ice.id}`,
-      label: `Rez ${cardDef(ice.cardId).title} (${rezSafeCost(state, ice)}[credit])`,
+      label: `Rez ${cardDef(ice.cardId).title} (${rezCostFor(state, ice)}[credit])`,
       targetId: ice.id,
-      creditCost: rezSafeCost(state, ice)
+      creditCost: rezCostFor(state, ice)
     });
   }
   for (const c of corpRootCards(state, run.server)) {
@@ -20234,15 +20199,12 @@ function corpRezOptions(state) {
     if (def2.type !== "asset" && def2.type !== "upgrade") continue;
     options.push({
       id: `rez-${c.id}`,
-      label: `Rez ${def2.title} (${rezSafeCost(state, c)}[credit])`,
+      label: `Rez ${def2.title} (${rezCostFor(state, c)}[credit])`,
       targetId: c.id,
-      creditCost: rezSafeCost(state, c)
+      creditCost: rezCostFor(state, c)
     });
   }
   return options;
-}
-function rezSafeCost(state, card) {
-  return rezCostFor(state, card);
 }
 function encounterStep(state) {
   const run = state.run;
@@ -20725,7 +20687,7 @@ function corpActionMoves(state) {
       cardId: card.cardId
     });
   }
-  for (const card of corpInstalledCardsLocal(state)) {
+  for (const card of corpInstalled(state)) {
     const def2 = cardDef(card.cardId);
     const isAdvanceable = def2.type === "agenda" || card.cardId === "urtica_cipher";
     if (isAdvanceable && state.corp.credits >= 1) {
@@ -20743,7 +20705,7 @@ function corpActionMoves(state) {
       });
     }
   }
-  for (const card of corpInstalledCardsLocal(state)) {
+  for (const card of corpInstalled(state)) {
     const def2 = cardDef(card.cardId);
     if (def2.type !== "asset" && def2.type !== "upgrade") continue;
     if (card.rezzed === true) continue;
@@ -20754,7 +20716,7 @@ function corpActionMoves(state) {
       });
     }
   }
-  addAbilityMoves(state, "corp", corpInstalledCardsLocal(state), moves);
+  addAbilityMoves(state, "corp", corpInstalled(state), moves);
   return moves;
 }
 function installServersFor(state, card) {
@@ -20988,12 +20950,6 @@ function addAbilityMoves(state, side, cards2, moves) {
     }
   }
 }
-function corpInstalledCardsLocal(state) {
-  return state.servers.flatMap((s) => [
-    ...s.root,
-    ...s.ice
-  ]);
-}
 function combinations(ids, size) {
   if (size <= 0) return [
     []
@@ -21030,7 +20986,7 @@ function applyMove(state, playerSide, move, opts = {}) {
   if (!ok) {
     return {
       kind: "illegal-move",
-      reason: explainIllegal(state, playerSide, move),
+      reason: explainIllegal(playerSide, move),
       move
     };
   }
@@ -21069,7 +21025,7 @@ function sameMove(a, b) {
   }
   return true;
 }
-function explainIllegal(_state, playerSide, move) {
+function explainIllegal(playerSide, move) {
   switch (move.kind) {
     case "mulligan.take":
     case "mulligan.decline":
@@ -21411,10 +21367,10 @@ function playCorpOperation(state, cardId) {
     cardId: card.id,
     player: "corp"
   });
-  resolveCorpOperation(state, cardId, card);
+  resolveCorpOperation(state, cardId);
   pruneEmptyRemotes(state);
 }
-function resolveCorpOperation(state, cardId, card) {
+function resolveCorpOperation(state, cardId) {
   switch (cardId) {
     case "hedge_fund":
       gainCredits(state, "corp", 9);
@@ -21423,7 +21379,7 @@ function resolveCorpOperation(state, cardId, card) {
       gainCredits(state, "corp", 15);
       break;
     case "seamless_launch": {
-      const candidates = corpInstalledCards(state).filter((c) => !state.corp.installedThisTurn.includes(c.id));
+      const candidates = corpInstalled(state).filter((c) => !state.corp.installedThisTurn.includes(c.id));
       const targets = candidates;
       if (targets.length === 0) {
         state.supportWarnings.push("Seamless Launch found no legal target; it resolves without placing counters");
@@ -21453,7 +21409,6 @@ function resolveCorpOperation(state, cardId, card) {
     default:
       break;
   }
-  void card;
 }
 function playRunnerEvent(state, cardId, server) {
   const card = state.runner.hand.find((c) => c.cardId === cardId);
@@ -21599,12 +21554,6 @@ function enterEndOfTurn(state) {
 function startFirstTurn(state) {
   state.turn.phase = "action";
   beginCorpTurn(state);
-}
-function corpInstalledCards(state) {
-  return state.servers.flatMap((s) => [
-    ...s.root,
-    ...s.ice
-  ]);
 }
 
 // src/ai/fast-clone.ts
@@ -22183,7 +22132,8 @@ function assertSize(actual, expected, what, expectedDesc) {
 
 // src/engine/public-status.ts
 var HIDDEN2 = "hidden";
-function viewCard(card, hidden, position) {
+function viewCard(card, opts = {}) {
+  const hidden = opts.hidden === true;
   return {
     id: card.id,
     cardId: hidden ? HIDDEN2 : card.cardId,
@@ -22194,17 +22144,18 @@ function viewCard(card, hidden, position) {
     strength: hidden ? void 0 : cardDef(card.cardId).strength ?? void 0,
     strengthBoost: hidden ? void 0 : card.strengthBoost,
     iceIndex: card.iceIndex,
-    position,
+    position: opts.position,
     zone: card.zone,
     server: card.server
   };
 }
+function visiblePrompt(prompt, viewer) {
+  if (prompt.player === viewer) return prompt;
+  return promptStub(prompt);
+}
 function installedCards(state, side) {
   if (side === "runner") return state.runner.installed;
-  return state.servers.flatMap((s) => [
-    ...s.root,
-    ...s.ice
-  ]);
+  return corpInstalled(state);
 }
 function publicPlayer(state, side, viewer) {
   const p2 = player(state, side);
@@ -22219,9 +22170,11 @@ function publicPlayer(state, side, viewer) {
     handSize: maxHandSize(state, side),
     deckCount: p2.deck.length,
     discardCount: p2.discard.length,
-    identity: viewCard(p2.identity, false),
-    score: p2.score.map((c) => viewCard(c, false)),
-    installed: installedCards(state, side).map((c) => viewCard(c, hideInstalled && c.rezzed !== true))
+    identity: viewCard(p2.identity),
+    score: p2.score.map((c) => viewCard(c)),
+    installed: installedCards(state, side).map((c) => viewCard(c, {
+      hidden: hideInstalled && c.rezzed !== true
+    }))
   };
 }
 function serverStatus(state, id, hideInstalled) {
@@ -22229,8 +22182,13 @@ function serverStatus(state, id, hideInstalled) {
   const iceVisible = s.ice.filter((c) => !hideInstalled || c.rezzed === true);
   return {
     id,
-    root: s.root.map((c) => viewCard(c, hideInstalled && c.rezzed !== true, "root")),
-    ice: iceVisible.map((c) => viewCard(c, false, "ice")),
+    root: s.root.map((c) => viewCard(c, {
+      hidden: hideInstalled && c.rezzed !== true,
+      position: "root"
+    })),
+    ice: iceVisible.map((c) => viewCard(c, {
+      position: "ice"
+    })),
     unrezzedIceCount: s.ice.length - iceVisible.length
   };
 }
@@ -22244,7 +22202,11 @@ function publicRun(state, hideCorpInstalled) {
   let currentIce2 = null;
   if (iceId) {
     const found = findCard(state, iceId);
-    if (found) currentIce2 = viewCard(found.card, hideCorpInstalled && found.card.rezzed !== true);
+    if (found) {
+      currentIce2 = viewCard(found.card, {
+        hidden: hideCorpInstalled && found.card.rezzed !== true
+      });
+    }
   }
   return {
     server: run.server,
@@ -22962,31 +22924,14 @@ function accessedId(state) {
 
 // src/mod.ts
 var HIDDEN3 = "hidden";
-function viewCard2(card, opts = {}) {
-  const hidden = opts.hidden === true;
-  return {
-    id: card.id,
-    cardId: hidden ? HIDDEN3 : card.cardId,
-    owner: card.owner,
-    rezzed: card.rezzed,
-    advancement: card.advancement,
-    hostedCredits: card.hostedCredits,
-    strength: hidden ? void 0 : cardDef(card.cardId).strength ?? void 0,
-    strengthBoost: hidden ? void 0 : card.strengthBoost,
-    iceIndex: card.iceIndex,
-    position: opts.position,
-    zone: card.zone,
-    server: card.server
-  };
-}
 function corpInstalledView(state, viewer) {
   const hide = viewer !== "corp";
   return state.servers.flatMap((s) => [
-    ...s.root.map((c) => viewCard2(c, {
+    ...s.root.map((c) => viewCard(c, {
       hidden: hide && c.rezzed !== true,
       position: "root"
     })),
-    ...s.ice.map((c) => viewCard2(c, {
+    ...s.ice.map((c) => viewCard(c, {
       hidden: hide && c.rezzed !== true,
       position: "ice"
     }))
@@ -23023,12 +22968,12 @@ function turnStateOf(state, side) {
   };
 }
 function handView(state, side, viewer) {
-  return side === viewer ? player(state, side).hand.map((c) => viewCard2(c)) : [];
+  return side === viewer ? player(state, side).hand.map((c) => viewCard(c)) : [];
 }
 function discardView(state, side, viewer) {
   const p2 = player(state, side);
-  if (side === "runner" || side === viewer) return p2.discard.map((c) => viewCard2(c));
-  return p2.discard.map((c) => viewCard2(c, {
+  if (side === "runner" || side === viewer) return p2.discard.map((c) => viewCard(c));
+  return p2.discard.map((c) => viewCard(c, {
     hidden: true
   }));
 }
@@ -23053,8 +22998,8 @@ function getPlayerView(state, viewer) {
       discardCount: corpSide.discardCount,
       agendaPoints: state.corp.agendaPoints,
       tags: state.corp.tags,
-      identity: viewCard2(state.corp.identity),
-      score: corpSide.score.map((c) => viewCard2(c)),
+      identity: viewCard(state.corp.identity),
+      score: corpSide.score.map((c) => viewCard(c)),
       installed: corpInstalledView(state, viewer),
       hand: handView(state, "corp", viewer),
       discard: discardView(state, "corp", viewer),
@@ -23068,9 +23013,9 @@ function getPlayerView(state, viewer) {
       deckCount: runnerSide.deckCount,
       discardCount: runnerSide.discardCount,
       agendaPoints: state.runner.agendaPoints,
-      identity: viewCard2(state.runner.identity),
-      score: runnerSide.score.map((c) => viewCard2(c)),
-      installed: runnerSide.installed.map((c) => viewCard2(c)),
+      identity: viewCard(state.runner.identity),
+      score: runnerSide.score.map((c) => viewCard(c)),
+      installed: runnerSide.installed.map((c) => viewCard(c)),
       hand: handView(state, "runner", viewer),
       discard: discardView(state, "runner", viewer),
       tags: state.runner.tags,
@@ -23080,7 +23025,7 @@ function getPlayerView(state, viewer) {
       server: state.run.server,
       phase: state.run.phase,
       position: state.run.position,
-      currentIce: state.run.currentIceId ? viewCard2(findCard(state, state.run.currentIceId)?.card ?? state.corp.identity, {
+      currentIce: state.run.currentIceId ? viewCard(findCard(state, state.run.currentIceId)?.card ?? state.corp.identity, {
         // The ice being approached is public once rezzed (rules 1.21.1a,
         // 4.6.3): every player reads Rezzed ice off the table.
         hidden: viewer !== "corp" && findCard(state, state.run.currentIceId)?.card.rezzed !== true,
@@ -23104,21 +23049,13 @@ function getPlayerView(state, viewer) {
       chosen: [
         ...state.breach.chosen
       ],
-      accessing: state.breach.accessing ? viewCard2(findCard(state, state.breach.accessing)?.card ?? state.corp.identity) : void 0
+      accessing: state.breach.accessing ? viewCard(findCard(state, state.breach.accessing)?.card ?? state.corp.identity) : void 0
     } : null,
     prompts: state.prompts.map((p2) => visiblePrompt(p2, viewer)),
     events: state.log.map((e) => visibleEvent(state, e, viewer)),
     warnings: [
       ...state.supportWarnings
     ]
-  };
-}
-function visiblePrompt(prompt, viewer) {
-  if (prompt.player === viewer) return prompt;
-  return {
-    kind: prompt.kind,
-    id: prompt.id,
-    player: prompt.player
   };
 }
 function visibleEvent(state, event, viewer) {
@@ -23202,8 +23139,8 @@ var engine = {
   getLegalMoves(state, player2) {
     return getLegalMoves(state, player2);
   },
-  applyMove(state, player2, move, opts = {}) {
-    return applyMove(state, player2, move, opts);
+  applyMove(state, player2, move) {
+    return applyMove(state, player2, move);
   },
   /**
    * Public game status (rules 10.2.2/10.2.3): only information both players

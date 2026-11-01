@@ -6,8 +6,9 @@
  */
 
 import { checkEmpty } from "./effects.ts";
-import { drawCards, player, toDiscard } from "./state.ts";
-import type { CardInstance, GameState, PlayerSide } from "../types.ts";
+import { drawCards, player } from "./state.ts";
+import { handSizeBonusOf, triggersOf } from "../cards/effects.ts";
+import type { GameState, PlayerSide } from "../types.ts";
 
 export const CORP_CLICKS = 3;
 export const RUNNER_CLICKS = 4;
@@ -37,18 +38,19 @@ export function beginCorpTurn(state: GameState): void {
   state.log.push({ type: "turn-start", player: "corp", turn: state.turn.number });
   if (state.winner) return;
 
-  // Nico Campaign: "When your turn begins, take 3 credits from this asset."
-  const nicos = state.servers.flatMap((s) => s.root).filter((c) =>
-    c.cardId === "nico_campaign" && c.rezzed
-  );
-  for (const nico of nicos) {
-    const taken = Math.min(nico.hostedCredits ?? 0, 3);
-    nico.hostedCredits = (nico.hostedCredits ?? 0) - taken;
+  // "When your turn begins, take N credits from this card" (Nico Campaign) —
+  // dispatched from each rezzed root card's trigger.
+  for (const card of state.servers.flatMap((s) => s.root)) {
+    if (!card.rezzed) continue;
+    const t = triggersOf(card.cardId).find((tr) => tr.kind === "turn-start-take-credits");
+    if (!t) continue;
+    const taken = Math.min(card.hostedCredits ?? 0, t.amount ?? 3);
+    card.hostedCredits = (card.hostedCredits ?? 0) - taken;
     state.corp.credits += taken;
     if (taken > 0) {
-      state.log.push({ type: "take-credits", targetId: nico.id, amount: taken, player: "corp" });
+      state.log.push({ type: "take-credits", targetId: card.id, amount: taken, player: "corp" });
     }
-    checkEmptyAsset(state, nico, true);
+    checkEmpty(state, card);
   }
   if (state.winner) return;
 
@@ -74,10 +76,12 @@ export function beginRunnerTurn(state: GameState): void {
   state.runner.clicks = RUNNER_CLICKS;
   state.log.push({ type: "turn-start", player: "runner", turn: state.turn.number });
 
-  // Smartware Distributor: "When your turn begins, take 1 credit from this resource."
+  // "When your turn begins, take N credits from this card" (Smartware
+  // Distributor) — dispatched from each installed card's trigger.
   for (const card of [...state.runner.installed]) {
-    if (card.cardId !== "smartware_distributor") continue;
-    const taken = Math.min(card.hostedCredits ?? 0, 1);
+    const t = triggersOf(card.cardId).find((tr) => tr.kind === "runner-turn-start-take-credits");
+    if (!t) continue;
+    const taken = Math.min(card.hostedCredits ?? 0, t.amount ?? 1);
     card.hostedCredits = (card.hostedCredits ?? 0) - taken;
     state.runner.credits += taken;
     if (taken > 0) {
@@ -126,17 +130,12 @@ export function finishTurn(state: GameState): void {
 
 export function maxHandSize(state: GameState, side: PlayerSide): number {
   const p = player(state, side);
-  // Superconducting Hub: +2 maximum hand size while in the Corp's score area.
-  const hubBonus =
-    side === "corp" && state.corp.score.some((c) => c.cardId === "superconducting_hub") ? 2 : 0;
-  return p.baseHandSize + p.maxHandSizeMod + hubBonus;
-}
-
-/** "When it is empty, trash it" for hosted-credit assets. */
-export function checkEmptyAsset(state: GameState, card: CardInstance, drawOne: boolean): void {
-  if ((card.hostedCredits ?? 0) > 0) return;
-  toDiscard(state, card, "emptied"); // logs the trash event
-  if (drawOne) drawCards(state, "corp", 1);
+  // Scored agendas can grant a hand-size bonus. Superconducting Hub: "+2
+  // maximum hand size while in the Corp's score area" — modelled as a bonus
+  // over the CORP's own score area (summed from the registry, never a card id
+  // comparison), which is how the engine has always interpreted the card.
+  const bonus = side === "corp" ? handSizeBonusOf(state.corp.score.map((c) => c.cardId)) : 0;
+  return p.baseHandSize + p.maxHandSizeMod + bonus;
 }
 
 export function setGameOver(state: GameState, winner: PlayerSide | "draw", reason: string): void {

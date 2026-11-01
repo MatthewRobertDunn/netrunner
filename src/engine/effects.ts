@@ -6,9 +6,10 @@
  */
 
 import { cardDef } from "../cards/catalogue.ts";
-import { behaviors } from "../cards/effects.ts";
+import { behavior, behaviors, triggersOf } from "../cards/effects.ts";
 import {
   addHostedCredits,
+  corpInstalled,
   dealDamage,
   drawCards,
   findCard,
@@ -57,11 +58,16 @@ export function fireRez(state: GameState, card: CardInstance): void {
   }
 }
 
-/** Urtica Cipher: damage while installed when accessed. */
+/**
+ * "When the Runner accesses this card while it is installed, do N net damage
+ * plus 1 per hosted advancement counter" (Urtica Cipher). Dispatched from the
+ * card's `access-damage-installed` trigger.
+ */
 export function fireAccessBegin(state: GameState, card: CardInstance): void {
-  if (card.cardId !== "urtica_cipher") return;
+  const t = triggersOf(card.cardId).find((tr) => tr.kind === "access-damage-installed");
+  if (!t) return;
   if (card.zone !== "play-area") return; // only "while it is installed"
-  const amount = 2 + (card.advancement ?? 0);
+  const amount = (t.amount ?? 2) + (card.advancement ?? 0);
   dealDamage(state, amount, "net", () => rngNext(state));
 }
 
@@ -76,11 +82,11 @@ export function fireScore(state: GameState, card: CardInstance): void {
         kind: "choose-one",
         id: state.nextPromptId++,
         player: "corp",
-        title: `${cardDef(card.cardId).title}: draw ${t.amount} cards?`,
+        title: `${cardDef(card.cardId).title}: draw ${t.amount ?? 2} cards?`,
         options: [
           {
             id: "draw",
-            label: "Draw 2 cards",
+            label: `Draw ${t.amount ?? 2} cards`,
             effect: { kind: "corp-draw", amount: t.amount ?? 2 },
           },
           { id: "pass", label: "Pass", effect: { kind: "no-op" } },
@@ -100,14 +106,19 @@ export function fireSteal(state: GameState, card: CardInstance): void {
   }
 }
 
+/**
+ * "You may rez 1 installed piece of ice, ignoring all costs" — queued when a
+ * card with the `scored-or-stolen-optional-rez-ice` trigger is scored or
+ * stolen (Send a Message). Callers already filtered on the trigger, so this
+ * does not name the card.
+ */
 function queueFreeRezPrompt(state: GameState, card: CardInstance): void {
-  if (card.cardId !== "send_a_message") return;
   const unrezzedIce = iceAtAllServers(state).filter((c) => c.rezzed !== true);
   queuePrompt(state, {
     kind: "choose-one",
     id: state.nextPromptId++,
     player: "corp",
-    title: "Send a Message: rez 1 installed piece of ice, ignoring all costs?",
+    title: `${cardDef(card.cardId).title}: rez 1 installed piece of ice, ignoring all costs?`,
     options: [
       ...unrezzedIce.map((c) => ({
         id: `rez-${c.id}`,
@@ -129,21 +140,35 @@ export function fireSuccessfulRun(state: GameState): void {
   const run = state.run;
   if (!run) return;
   const runner = state.runner;
-  // Pennyshaver: "Whenever you make a successful run, place 1 credit on this hardware."
+  // "Whenever you make a successful run, place N credits on this hardware"
+  // (Pennyshaver) — dispatched from each installed card's trigger.
   for (const c of runner.installed) {
-    if (c.cardId === "pennyshaver") addHostedCredits(state, c, 1);
+    const t = triggersOf(c.cardId).find((tr) => tr.kind === "successful-run-place-credit");
+    if (t) addHostedCredits(state, c, t.amount ?? 1);
   }
-  // Jailbreak: "If successful, draw 1 card."
-  if (run.source === "jailbreak") drawCards(state, "runner", 1);
-  // Red Team ability: "If successful, take 3 credits from this resource."
-  if (run.source?.startsWith("red-team:")) {
-    const id = run.source.slice("red-team:".length);
-    const found = runner.installed.find((c) => c.id === id);
-    if (found) {
-      const taken = takeCreditsFrom(state, found, 3);
-      if (taken > 0) {
-        runner.credits += taken;
-        checkEmpty(state, found);
+  // Run-sourced effects (rule 5.2.2b): an event run sources the event's card
+  // id, a paid-ability run sources `${prefix}:${instanceId}`.
+  const src = run.source;
+  if (src) {
+    // "If successful, draw N cards" on the run the event initiated (Jailbreak).
+    const ee = behavior(src)?.eventEffect;
+    if (ee?.kind === "run" && ee.onSuccessfulRunDraw) {
+      drawCards(state, "runner", ee.onSuccessfulRunDraw);
+    }
+    // "If successful, take N credits from this resource" on the ability's run
+    // (Red Team) — the instance id after the prefix names the resource.
+    const sep = src.indexOf(":");
+    if (sep > 0) {
+      const found = runner.installed.find((c) => c.id === src.slice(sep + 1));
+      if (found) {
+        const t = triggersOf(found.cardId).find((tr) => tr.kind === "successful-run-take-credits");
+        if (t) {
+          const taken = takeCreditsFrom(state, found, t.amount ?? 3);
+          if (taken > 0) {
+            runner.credits += taken;
+            checkEmpty(state, found);
+          }
+        }
       }
     }
   }
@@ -263,6 +288,121 @@ function oddCostTrashed(state: GameState, trashed: CardInstanceId[]): boolean {
 export function addTwoAdvancement(state: GameState, card: CardInstance): void {
   card.advancement = (card.advancement ?? 0) + 2;
   state.log.push({ type: "advance", cardId: card.id, amount: 2 });
+}
+
+/**
+ * Place N advancement counters on an installed card, subject to the
+ * operation's own restriction (rule 1.18.2: "1 installed card that you did not
+ * install this turn"). When more than one card is legal the Corp chooses; the
+ * chosen option carries a `place-2-advancement` effect, which calls
+ * `addTwoAdvancement` on the target. This is the single implementation of the
+ * operation's effect, so the choice effect and the one-target path agree.
+ */
+export function placeAdvancementOnInstalled(
+  state: GameState,
+  card: CardInstance,
+  amount: number,
+): void {
+  card.advancement = (card.advancement ?? 0) + amount;
+  state.log.push({ type: "advance", cardId: card.id, amount });
+}
+
+/**
+ * Resolve what playing a Corp operation does, beyond paying its cost. The
+ * operation's effect is declared in the registry (`operationEffect`), so the
+ * engine dispatches on it — never on the card id.
+ *
+ * For "place-advancement-on-installed" (rule 1.18.2: "Place N advancement
+ * counters on 1 installed card that you did not install this turn"), the
+ * target selection is part of the effect: a single legal target places
+ * directly; multiple targets offer a choose-one prompt whose options carry a
+ * `place-2-advancement` effect, so the choice effect and the one-target path
+ * both land on `placeAdvancementOnInstalled` and can never disagree.
+ */
+export function resolveOperationEffect(
+  state: GameState,
+  card: CardInstance,
+): void {
+  const eff = behavior(card.cardId)?.operationEffect;
+  if (!eff) return;
+  switch (eff.kind) {
+    case "gain-credits":
+      gainCredits(state, "corp", eff.amount ?? 0);
+      break;
+    case "place-advancement-on-installed": {
+      const amount = eff.amount ?? 2;
+      const candidates = corpInstalled(state).filter((c) =>
+        !state.corp.installedThisTurn.includes(c.id)
+      );
+      if (candidates.length === 0) {
+        state.supportWarnings.push(
+          `${
+            cardDef(card.cardId).title
+          } found no legal target; it resolves without placing counters`,
+        );
+        break;
+      }
+      if (candidates.length === 1) {
+        placeAdvancementOnInstalled(state, candidates[0]!, amount);
+        break;
+      }
+      queuePrompt(state, {
+        kind: "choose-one",
+        id: state.nextPromptId++,
+        player: "corp",
+        title: `${
+          cardDef(card.cardId).title
+        }: place ${amount} advancement counters on 1 installed card`,
+        options: candidates.map((c) => ({
+          id: `advance-${c.id}`,
+          label: `Place ${amount} on ${cardDef(c.cardId).title}`,
+          targetId: c.id,
+          effect: { kind: "place-2-advancement", targetId: c.id } as ChoiceEffect,
+        })),
+      });
+      break;
+    }
+  }
+}
+
+/**
+ * Resolve what playing a Runner event does, beyond paying its cost (rule
+ * 5.2.2). The event's effect is declared in the registry (`eventEffect`), so
+ * the engine dispatches on it — never on the card id. Run-sourcing events
+ * (rule 5.2.2b) initiate the run themselves; the run's `source` carries the
+ * event id so the success-phase triggers can find the event's bonuses.
+ */
+export function resolveEventEffect(
+  state: GameState,
+  card: CardInstance,
+  server?: ServerId,
+): void {
+  const eff = behavior(card.cardId)?.eventEffect;
+  if (!eff) return;
+  switch (eff.kind) {
+    case "gain-credits":
+      gainCredits(state, "runner", eff.amount ?? 0);
+      break;
+    case "draw":
+      drawCards(state, "runner", eff.amount ?? 1);
+      break;
+    case "run": {
+      // Rule 5.2.2b: the run is part of the event's resolution — the action is
+      // not complete until the new timing structure (the run) is complete.
+      const target = server ?? "hq";
+      initiateRun(state, target, card.cardId);
+      if (eff.fundCredits) state.run!.fundCredits = eff.fundCredits;
+      if (eff.rezCostIncrease) state.run!.rezCostIncrease = eff.rezCostIncrease;
+      state.runner.ranServersThisTurn.push(target);
+      break;
+    }
+  }
+  if (eff.thenLoseClickIfAny && state.runner.clicks > 0) {
+    // Rule 5.2.2a / 1.11.3b: "lose" is not "spend", so only an available click
+    // is lost — playing it as the last action of the turn loses nothing.
+    state.runner.clicks -= 1;
+    state.log.push({ type: "lose-clicks", player: "runner", amount: 1 });
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -437,45 +577,41 @@ export function applyPaidAbility(
   }
   const runner = state.runner;
 
-  if (card.cardId === "smartware_distributor") {
-    // click: Place 3 credits on this resource (from the bank).
-    addHostedCredits(state, card, 3);
-    return true;
-  }
-  if (card.cardId === "telework_contract") {
-    // click: Take 3 credits from this resource.
-    const taken = takeCreditsFrom(state, card, 3);
-    runner.credits += taken;
-    checkEmpty(state, card);
-    return true;
-  }
-  if (card.cardId === "pennyshaver") {
-    // click: Place 1 credit on this hardware, then take all credits from it.
-    addHostedCredits(state, card, 1);
-    const taken = takeCreditsFrom(state, card, 999);
-    runner.credits += taken;
-    checkEmpty(state, card);
-    return true;
-  }
-  if (card.cardId === "red_team" && ability.id === "run-central") {
-    if (!server) return false;
-    // Rule 6.3.2a: the ability announces a central server "you have not run this
-    // turn" (Red Team). That run counts toward the same-central-twice
-    // restriction exactly like a basic `runner.run` move (apply.ts), so the
-    // Runner cannot then legally `runner.run` the same central again.
-    initiateRun(state, server, `red-team:${card.id}`);
-    if (server === "hq" || server === "rd" || server === "archives") {
-      state.runner.ranServersThisTurn.push(server);
+  // The effect is declared in the registry; the engine dispatches on it.
+  const effect = ability.effect;
+  switch (effect.kind) {
+    case "load-credits":
+      // "[click]: Place N credits on this card" (from the bank).
+      addHostedCredits(state, card, effect.amount);
+      return true;
+    case "take-credits": {
+      // "[click]: Take N credits from this card."
+      const taken = takeCreditsFrom(state, card, effect.amount);
+      player(state, side).credits += taken;
+      checkEmpty(state, card);
+      return true;
     }
-    return true;
+    case "load-then-take-all": {
+      // "[click]: Place N credits on this hardware, then take all credits from it."
+      addHostedCredits(state, card, effect.amount);
+      const taken = takeCreditsFrom(state, card, 999);
+      runner.credits += taken;
+      checkEmpty(state, card);
+      return true;
+    }
+    case "run-server": {
+      if (!server) return false;
+      // Rule 6.3.2a: the ability announces a central server "you have not run this
+      // turn" (Red Team). That run counts toward the same-central-twice
+      // restriction exactly like a basic `runner.run` move (apply.ts), so the
+      // Runner cannot then legally `runner.run` the same central again.
+      initiateRun(state, server, `${effect.sourcePrefix}:${card.id}`);
+      if (server === "hq" || server === "rd" || server === "archives") {
+        state.runner.ranServersThisTurn.push(server);
+      }
+      return true;
+    }
   }
-  if (card.cardId === "regolith_mining_license" && ability.id === "take-3") {
-    const taken = takeCreditsFrom(state, card, 3);
-    state.corp.credits += taken;
-    checkEmpty(state, card);
-    return true;
-  }
-  return false;
 }
 
 /** "When it is empty, trash it" (and draw for Nico Campaign). */
@@ -492,10 +628,14 @@ export function checkEmpty(state: GameState, card: CardInstance): void {
   if (draw) drawCards(state, "corp", 1);
 }
 
-/** Mayfly: trashed at the end of any run. */
+/**
+ * "When this run ends, trash this program" (Mayfly) — dispatched from the
+ * card's `run-trash-program` trigger. Every run end funnels through
+ * `finishRun`, which calls this.
+ */
 export function trashMayfly(state: GameState): void {
   for (const card of [...state.runner.installed]) {
-    if (card.cardId === "mayfly") {
+    if (triggersOf(card.cardId).some((t) => t.kind === "run-trash-program")) {
       toDiscard(state, card, "run ends"); // logs the trash event
     }
   }

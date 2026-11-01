@@ -5,6 +5,18 @@
  * defined here as typed data that the rules engine interprets. Never parse
  * English card text at runtime.
  *
+ * The engine NEVER compares a card id string (`cardId === "..."`) to decide a
+ * rule: it looks the card up here and consults the typed hook. A card with a
+ * new engine-level rule is implemented by adding the hook to its entry — the
+ * engine stays generic. Hooks fall into three groups:
+ *
+ *  - keyword hooks (`subroutines`, `breakAbility`, `pumpAbility`,
+ *    `staticStrength`) — ice, icebreaker and virtual-card behaviors;
+ *  - ability/trigger hooks (`paidAbilities`, `triggers`) — announced abilities
+ *    and delayed/activated abilities the engine dispatches at a fixed point;
+ *  - effect hooks (`operationEffect`, `eventEffect`) — what playing the card
+ *    resolves beyond paying its cost.
+ *
  * Support status:
  *  - "supported": the effect is fully implemented.
  *  - "partial": implemented with a documented simplification (see the note).
@@ -41,9 +53,35 @@ export interface BreakAbilityDef {
 
 export interface PumpAbilityDef {
   creditCost: number;
-  /** Fixed amount, or a function marker for Unity's +X. */
-  amount: number | "icebreakers-installed";
+  /**
+   * Strength gained per activation. A value here is always a real pump; a card
+   * whose strength is STATIC (Unity's "+X = installed icebreakers") declares
+   * that in `staticStrength` instead and the engine refuses to pump it.
+   */
+  amount: number;
 }
+
+/**
+ * Static strength modifiers, consulted wherever current strength is computed.
+ * They are recomputed from the board and never stored in `strengthBoost`, so
+ * the pump-expiry sweep (rule 3.9.5b) cannot clobber them.
+ */
+export type StaticStrengthDef =
+  /** Strength equals the number of installed icebreakers (Unity). */
+  | { kind: "icebreakers-installed" }
+  /** +amount while installed protecting a remote server (Palisade). */
+  | { kind: "bonus-if-remote"; amount: number };
+
+/** What a card's paid ability does once its click cost is paid. */
+export type PaidAbilityEffectDef =
+  /** "Place N credits on this card" (Smartware Distributor). */
+  | { kind: "load-credits"; amount: number }
+  /** "Take N credits from this card" into the owner's credit pool (Telework Contract, Regolith). */
+  | { kind: "take-credits"; amount: number }
+  /** "Place N credits on this card, then take all credits from it" (Pennyshaver). */
+  | { kind: "load-then-take-all"; amount: number }
+  /** "Run a server you have not run this turn" (Red Team, rule 6.3.2a). */
+  | { kind: "run-server"; sourcePrefix: string };
 
 export interface PaidAbilityDef {
   id: string;
@@ -56,10 +94,21 @@ export interface PaidAbilityDef {
   needsServer?: "central-not-run-this-turn";
   /** Needs hosted credits >= amount to be useful; used for legality display. */
   requiresHostedCredits?: number;
+  /** The registered effect the engine dispatches to when the ability is paid. */
+  effect: PaidAbilityEffectDef;
 }
 
 export interface TriggerDef {
   id: string;
+  /**
+   * Delayed/activated ability the engine dispatches at its trigger point.
+   *
+   * Doc-only kinds — the engine has no generic dispatch point for them, so the
+   * registry stays honest by saying which hook implements the printed text:
+   *  - "corp-click-take-credits", "runner-click-take-credits",
+   *    "runner-click-load-credits": not dispatched — the "[click]:" ability is
+   *    the card's `paidAbilities` entry (see `PaidAbilityEffectDef`).
+   */
   kind:
     | "on-install-load-credits"
     | "on-rez-load-credits"
@@ -84,6 +133,40 @@ export interface TriggerDef {
     | "identity";
   amount?: number;
   optional?: boolean;
+  /** For approach-toll: what the Runner must pay or the run ends (Manegarm). */
+  creditCost?: number;
+  /** For approach-toll: how many clicks the Runner may spend instead. */
+  clickCost?: number;
+}
+
+/** What playing a Corp operation resolves, beyond paying its cost. */
+export interface OperationEffectDef {
+  kind: "gain-credits" | "place-advancement-on-installed";
+  /** Credits gained, or advancement counters placed. */
+  amount?: number;
+}
+
+/** What playing a Runner event resolves, beyond paying its cost (rule 5.2.2). */
+export interface EventEffectDef {
+  kind: "gain-credits" | "draw" | "run";
+  /** Credits gained (gain-credits) or cards drawn (draw). */
+  amount?: number;
+  /** Only for run events: which servers the event names ("HQ or R&D" / "any"). */
+  runServers?: "hq-or-rd" | "any";
+  /** Credits banked on the run the event initiates (Overclock, rule 5.2.2b). */
+  fundCredits?: number;
+  /** Rez-cost increase on the ice of the run the event initiates (Tread Lightly). */
+  rezCostIncrease?: number;
+  /** Cards drawn when the initiated run becomes successful (Jailbreak, rule 6.7.2). */
+  onSuccessfulRunDraw?: number;
+  /** Access N additional cards when breaching the initiated run's server (rule 7.3.5). */
+  breachAccessBonus?: number;
+  /**
+   * The resolution loses 1 click when the player still has one. Printed as
+   * "If you have any [click] remaining, lose [click]" (rule 5.2.2a) — rule
+   * 1.11.3b says "lose" is not "spend", so only an available click is lost.
+   */
+  thenLoseClickIfAny?: boolean;
 }
 
 export interface CardBehavior {
@@ -96,6 +179,26 @@ export interface CardBehavior {
   pumpAbility?: PumpAbilityDef;
   paidAbilities?: PaidAbilityDef[];
   triggers?: TriggerDef[];
+  // ------------------------------------------------------------------
+  // Static engine hooks. The engine consults these instead of comparing
+  // card ids; adding a card with a new engine rule is a matter of filling in
+  // the hook here (and, if the rule is novel, teaching the engine's single
+  // dispatch point to read it).
+  // ------------------------------------------------------------------
+  /** The Corp can advance this non-agenda card (rule 1.18.3 — Urtica Cipher). */
+  advanceable?: boolean;
+  /** Install-cost discount (Carmen: 2 less after a successful run this turn). */
+  installDiscount?: { kind: "after-successful-run"; amount: number };
+  /** Static strength modifier (Unity / Palisade) — never a pump. */
+  staticStrength?: StaticStrengthDef;
+  /** Restriction this card imposes on all runs (Red Team, rule 6.3.2a). */
+  runRestriction?: { kind: "central-once-per-turn" };
+  /** Maximum-hand-size bonus while the card sits in the Corp's score area. */
+  handSizeBonus?: { kind: "while-scored"; amount: number };
+  /** What playing this operation resolves. */
+  operationEffect?: OperationEffectDef;
+  /** What playing this event resolves. */
+  eventEffect?: EventEffectDef;
 }
 
 const B: CardBehavior[] = [
@@ -111,7 +214,9 @@ const B: CardBehavior[] = [
     support: "supported",
     breakAbility: { breaks: ["sentry"], count: 1, creditCost: 1 },
     pumpAbility: { creditCost: 2, amount: 3 },
-    note: "Install discount (2 credits) when a successful run was made this turn is supported.",
+    installDiscount: { kind: "after-successful-run", amount: 2 },
+    note:
+      "Install discount (2 credits) when a successful run was made this turn is supported (installDiscount hook).",
   },
   {
     cardId: "cleaver",
@@ -132,31 +237,50 @@ const B: CardBehavior[] = [
     cardId: "unity",
     support: "supported",
     breakAbility: { breaks: ["code_gate"], count: 1, creditCost: 1 },
-    pumpAbility: { creditCost: 1, amount: "icebreakers-installed" },
+    pumpAbility: { creditCost: 1, amount: 1 },
+    // Unity prints "1[credit]: +1 strength", but its strength is STATIC
+    // ("+X = installed icebreakers"), so the pump entry only serves to offer
+    // the (no-op) pump move; the engine computes strength from staticStrength
+    // and refuses to pump a card that has it (rule 3.9.5b).
+    staticStrength: { kind: "icebreakers-installed" },
   },
   {
     cardId: "sure_gamble",
     support: "supported",
+    eventEffect: { kind: "gain-credits", amount: 9 },
+    note: "Printed: 'Gain 9[credit].' (cost 5, net +4).",
   },
   {
     cardId: "creative_commission",
     support: "supported",
+    eventEffect: { kind: "gain-credits", amount: 5, thenLoseClickIfAny: true },
   },
   {
     cardId: "vrcation",
     support: "supported",
+    eventEffect: { kind: "draw", amount: 4, thenLoseClickIfAny: true },
   },
   {
     cardId: "jailbreak",
     support: "supported",
+    eventEffect: {
+      kind: "run",
+      runServers: "hq-or-rd",
+      onSuccessfulRunDraw: 1,
+      breachAccessBonus: 1,
+    },
+    note:
+      "Rule 5.2.2b: the run is part of the event's resolution, so its bonuses ride the run it initiates (rule 6.7.2, 7.3.5).",
   },
   {
     cardId: "overclock",
     support: "supported",
+    eventEffect: { kind: "run", runServers: "any", fundCredits: 5 },
   },
   {
     cardId: "tread_lightly",
     support: "supported",
+    eventEffect: { kind: "run", runServers: "any", rezCostIncrease: 3 },
   },
   {
     cardId: "docklands_pass",
@@ -183,6 +307,7 @@ const B: CardBehavior[] = [
       id: "place-and-take-all",
       title: "Place 1 credit on this, then take all credits from it",
       clickCost: 1,
+      effect: { kind: "load-then-take-all", amount: 1 },
     }],
   },
   {
@@ -193,11 +318,13 @@ const B: CardBehavior[] = [
       { id: "empty-then-trash", kind: "empty-then-trash" },
       { id: "successful-run-take-credits", kind: "successful-run-take-credits", amount: 3 },
     ],
+    runRestriction: { kind: "central-once-per-turn" },
     paidAbilities: [{
       id: "run-central",
       title: "Run a central server you have not run this turn",
       clickCost: 1,
       needsServer: "central-not-run-this-turn",
+      effect: { kind: "run-server", sourcePrefix: "red-team" },
     }],
   },
   {
@@ -205,9 +332,16 @@ const B: CardBehavior[] = [
     support: "supported",
     triggers: [
       { id: "runner-turn-start-take-credits", kind: "runner-turn-start-take-credits", amount: 1 },
+      // The printed "[click]: Place 3[credit] on this resource" is the
+      // paidAbilities entry below; the trigger records it and is not dispatched.
       { id: "click-load-credits", kind: "runner-click-load-credits", amount: 3 },
     ],
-    paidAbilities: [{ id: "place-3", title: "Place 3 credits on this resource", clickCost: 1 }],
+    paidAbilities: [{
+      id: "place-3",
+      title: "Place 3 credits on this resource",
+      clickCost: 1,
+      effect: { kind: "load-credits", amount: 3 },
+    }],
   },
   {
     cardId: "telework_contract",
@@ -215,12 +349,16 @@ const B: CardBehavior[] = [
     triggers: [
       { id: "on-install-load-credits", kind: "on-install-load-credits", amount: 9 },
       { id: "empty-then-trash", kind: "empty-then-trash" },
+      // The printed "Once per turn -> [click]: Take 3[credit] from this
+      // resource" is the paidAbilities entry below; not dispatched here.
+      { id: "click-take-3", kind: "runner-click-take-credits", amount: 3 },
     ],
     paidAbilities: [{
       id: "take-3",
       title: "Take 3 credits from this resource",
       clickCost: 1,
       oncePerTurn: true,
+      effect: { kind: "take-credits", amount: 3 },
     }],
   },
   {
@@ -239,15 +377,20 @@ const B: CardBehavior[] = [
   {
     cardId: "hedge_fund",
     support: "supported",
+    operationEffect: { kind: "gain-credits", amount: 9 },
   },
   {
     cardId: "government_subsidy",
     support: "supported",
+    operationEffect: { kind: "gain-credits", amount: 15 },
+    note: "Printed: 'Gain 15[credit].' (cost 10, net +5).",
   },
   {
     cardId: "seamless_launch",
     support: "supported",
-    note: "Requires choosing an installed card not installed this turn (enforced).",
+    operationEffect: { kind: "place-advancement-on-installed", amount: 2 },
+    note:
+      "Rule 1.18.2: placing counters directly is not advancing — requires choosing an installed card not installed this turn (enforced).",
   },
   {
     cardId: "nico_campaign",
@@ -263,20 +406,38 @@ const B: CardBehavior[] = [
     support: "supported",
     triggers: [
       { id: "on-rez-load-credits", kind: "on-rez-load-credits", amount: 15 },
+      // The printed "[click]: Take 3[credit] from this asset" is the
+      // paidAbilities entry below; not dispatched here.
       { id: "corp-click-take-credits", kind: "corp-click-take-credits", amount: 3 },
       { id: "empty-then-trash", kind: "empty-then-trash" },
     ],
-    paidAbilities: [{ id: "take-3", title: "Take 3 credits from this asset", clickCost: 1 }],
+    paidAbilities: [{
+      id: "take-3",
+      title: "Take 3 credits from this asset",
+      clickCost: 1,
+      effect: { kind: "take-credits", amount: 3 },
+    }],
   },
   {
     cardId: "urtica_cipher",
     support: "supported",
-    triggers: [{ id: "access-damage-installed", kind: "access-damage-installed" }],
+    advanceable: true,
+    triggers: [{
+      id: "access-damage-installed",
+      kind: "access-damage-installed",
+      amount: 2,
+    }],
+    note: "Damage is 2 plus 1 per hosted advancement counter while installed.",
   },
   {
     cardId: "manegarm_skunkworks",
     support: "supported",
-    triggers: [{ id: "approach-toll", kind: "approach-toll" }],
+    triggers: [{
+      id: "approach-toll",
+      kind: "approach-toll",
+      creditCost: 5,
+      clickCost: 2,
+    }],
   },
   {
     cardId: "offworld_office",
@@ -287,6 +448,7 @@ const B: CardBehavior[] = [
     cardId: "superconducting_hub",
     support: "supported",
     triggers: [{ id: "score-optional-draw-2", kind: "score-optional-draw", amount: 2 }],
+    handSizeBonus: { kind: "while-scored", amount: 2 },
     note: "+2 maximum hand size while in the Corp score area is a static effect (supported).",
   },
   {
@@ -310,6 +472,7 @@ const B: CardBehavior[] = [
     cardId: "palisade",
     support: "supported",
     subroutines: [{ id: "etr", kind: "end-run" }],
+    staticStrength: { kind: "bonus-if-remote", amount: 2 },
     note: "+2 strength while protecting a remote server (static, supported).",
   },
   {
@@ -379,6 +542,20 @@ export function triggersOf(cardId: string): TriggerDef[] {
 
 export function supportStatus(cardId: string): SupportStatus {
   return behaviors.get(cardId)?.support ?? "unsupported";
+}
+
+/**
+ * "While scored" maximum-hand-size bonus across a set of scored card ids
+ * (Superconducting Hub: "+2 maximum hand size while in the Corp's score
+ * area"). Totalled over the score area, so the engine never names a card.
+ */
+export function handSizeBonusOf(cardIds: string[]): number {
+  let bonus = 0;
+  for (const id of cardIds) {
+    const b = behaviors.get(id);
+    if (b?.handSizeBonus?.kind === "while-scored") bonus += b.handSizeBonus.amount;
+  }
+  return bonus;
 }
 
 /** Aggregate support status across a set of card ids. */

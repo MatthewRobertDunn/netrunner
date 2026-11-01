@@ -176,7 +176,12 @@ export function availableCredits(state: GameState, side: PlayerSide): number {
  */
 export function runnerInstallCost(state: GameState, cardId: CardId): number {
   let cost = cardDef(cardId).cost ?? 0;
-  if (cardId === "carmen" && state.runner.successfulRunThisTurn) cost = Math.max(0, cost - 2);
+  // "If you made a successful run this turn, this program costs 2[credit]
+  // less to install" — the discount is declared in the registry.
+  const discount = behaviors.get(cardId)?.installDiscount;
+  if (discount?.kind === "after-successful-run" && state.runner.successfulRunThisTurn) {
+    cost = Math.max(0, cost - discount.amount);
+  }
   return cost;
 }
 

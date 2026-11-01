@@ -4,12 +4,19 @@
  */
 
 import { cardDef, isIce } from "../cards/catalogue.ts";
-import { behaviors } from "../cards/effects.ts";
 import {
-  addTwoAdvancement,
+  behavior,
+  breakAbilityDef,
+  pumpAbilityDef,
+  subroutinesOf,
+  triggersOf,
+} from "../cards/effects.ts";
+import {
   applyChoice,
   applyPaidAbility,
   fireInstall,
+  resolveEventEffect,
+  resolveOperationEffect,
   resolveSubroutine,
 } from "./effects.ts";
 import { beginEncounter, continueMovement, endRun, initiateRun, passIce, rezCard } from "./runs.ts";
@@ -23,13 +30,11 @@ import {
 } from "./settle.ts";
 import {
   availableCredits,
-  corpInstalled,
   createRemote,
   drawCards,
   expireIcebreakerPumps,
   findCard,
   gainCredits,
-  loseClicks,
   memoryLimit,
   memoryUsed,
   moveCardTo,
@@ -248,7 +253,11 @@ function applyResolvedMove(state: GameState, playerSide: PlayerSide, move: Move)
     case "runner.draw": {
       spendClicks(state, "runner", 1);
       const runner = state.runner;
-      const verbal = runner.installed.some((c) => c.cardId === "verbal_plasticity");
+      // Verbal Plasticity: "The first time each turn you take the basic action
+      // to draw 1 card, instead draw 2 cards." Consulted from the trigger.
+      const verbal = runner.installed.some((c) =>
+        triggersOf(c.cardId).some((t) => t.kind === "first-basic-draw-double")
+      );
       if (runner.deck.length === 0) {
         state.winner = "corp";
         state.winReason = "Runner drew from an empty Stack";
@@ -486,55 +495,10 @@ function playCorpOperation(state: GameState, cardId: string): void {
   card.zone = "discard";
   state.corp.discard.unshift(card);
   state.log.push({ type: "play", cardId: card.id, player: "corp" });
-  resolveCorpOperation(state, cardId);
+  // The operation's effect is declared in the registry (operationEffect); the
+  // engine dispatches on it — never on the card id.
+  resolveOperationEffect(state, card);
   pruneEmptyRemotes(state);
-}
-
-function resolveCorpOperation(state: GameState, cardId: string): void {
-  switch (cardId) {
-    case "hedge_fund":
-      // Printed: "Gain 9 credits." (cost 5, net +4).
-      gainCredits(state, "corp", 9);
-      break;
-    case "government_subsidy":
-      // Printed: "Gain 15 credits." (cost 10, net +5).
-      gainCredits(state, "corp", 15);
-      break;
-    case "seamless_launch": {
-      // Printed text: "Place 2 advancement counters on 1 installed card that
-      // you did not install this turn." — any installed card, including
-      // upgrades (rule 1.18.2: placing counters directly is not "advancing").
-      const candidates = corpInstalled(state).filter((c) =>
-        !state.corp.installedThisTurn.includes(c.id)
-      );
-      const targets = candidates;
-      if (targets.length === 0) {
-        state.supportWarnings.push(
-          "Seamless Launch found no legal target; it resolves without placing counters",
-        );
-        break;
-      }
-      if (targets.length === 1) {
-        addTwoAdvancement(state, targets[0]!);
-        break;
-      }
-      state.prompts.push({
-        kind: "choose-one",
-        id: state.nextPromptId++,
-        player: "corp",
-        title: "Seamless Launch: place 2 advancement counters on 1 installed card",
-        options: targets.map((c) => ({
-          id: `advance-${c.id}`,
-          label: `Place 2 on ${cardDef(c.cardId).title}`,
-          targetId: c.id,
-          effect: { kind: "place-2-advancement", targetId: c.id } as const,
-        })),
-      });
-      break;
-    }
-    default:
-      break;
-  }
 }
 
 function playRunnerEvent(state: GameState, cardId: string, server?: ServerId): void {
@@ -547,71 +511,9 @@ function playRunnerEvent(state: GameState, cardId: string, server?: ServerId): v
   card.zone = "discard";
   state.runner.discard.unshift(card);
   state.log.push({ type: "play", cardId: card.id, player: "runner" });
-
-  switch (cardId) {
-    case "sure_gamble":
-      gainCredits(state, "runner", 9);
-      break;
-    case "creative_commission": {
-      // Printed: "Gain 5[credit]. If you have any [click] remaining, lose [click]."
-      // Rule 5.2.2a: the event's trigger cost (1 click, rule 5.2.7e) is paid
-      // first, then the conditional clause is evaluated against the Runner's
-      // remaining clicks (rule 1.11.3b: "lose" and "spend" are not synonyms).
-      // Only a click that was actually available is lost — playing it as the
-      // last action of the turn loses nothing.
-      gainCredits(state, "runner", 5);
-      if (state.runner.clicks > 0) loseClicks(state, "runner", 1);
-      break;
-    }
-    case "vrcation": {
-      // Printed: "Draw 4 cards. If you have any [click] remaining, lose [click]."
-      // Rule 5.2.2a: pay the event's trigger cost, draw 4, then evaluate the
-      // conditional clause (rule 1.11.3b). No discard prompt — the old
-      // "draw 3 then discard 1" implemented the wrong card.
-      drawCards(state, "runner", 4);
-      if (state.runner.clicks > 0) loseClicks(state, "runner", 1);
-      break;
-    }
-    case "jailbreak": {
-      // "Run HQ or R&D. If successful, draw 1 card and when you breach the
-      // attacked server, access 1 additional card."
-      // Rule 5.2.2b: the run is part of the event's resolution — the action is
-      // not complete until the new timing structure (the run) is complete.
-      const target = server ?? "hq";
-      initiateRun(state, target, "jailbreak");
-      state.runner.ranServersThisTurn.push(target);
-      break;
-    }
-    case "overclock": {
-      // Printed: "Place 5[credit] on this event, then run any server. You can
-      // spend hosted credits during that run."
-      // Rule 5.2.2b: the run is part of the event's resolution (see
-      // docs/rules-gotchas.md #8 — splitting "bank credits" from "run" left
-      // "that run" unenforceable). The 5 hosted credits ride on the run state
-      // as `fundCredits`: `spendCredits` draws from the fund first, and
-      // `initiateRun` clears `pendingRunFund`, so the fund can never leak to a
-      // later turn's run.
-      const target = server ?? "hq";
-      initiateRun(state, target, "overclock");
-      state.run!.fundCredits = 5;
-      state.runner.ranServersThisTurn.push(target);
-      break;
-    }
-    case "tread_lightly": {
-      // "Run any server. During that run, the rez cost of each piece of ice is
-      // increased by 3[credit]."
-      // Rule 5.2.2b: the run is part of the event's resolution, and the +3
-      // applies to the run actually initiated (runs.ts `rezCostFor` reads
-      // `state.run.rezCostIncrease`).
-      const target = server ?? "hq";
-      initiateRun(state, target, "tread_lightly");
-      state.run!.rezCostIncrease = 3;
-      state.runner.ranServersThisTurn.push(target);
-      break;
-    }
-    default:
-      break;
-  }
+  // The event's effect is declared in the registry (eventEffect); the engine
+  // dispatches on it — never on the card id.
+  resolveEventEffect(state, card, server);
 }
 
 // ---------------------------------------------------------------------------
@@ -628,8 +530,9 @@ function breakSubroutine(state: GameState, programId: string, subIndex: number):
   const run = state.run!;
   if (run.resolved.includes(subIndex) || run.broken.includes(subIndex)) return;
 
-  if (ice.cardId === "bran_1_0") {
-    // Bran 1.0: "lose [click]: Break 1 subroutine" (no strength requirement).
+  if (breakAbilityDef(ice.cardId)?.bioroid) {
+    // Brân 1.0 style: "lose [click]: Break 1 subroutine" (no strength
+    // requirement) — the ice's `bioroid` break declaration, not its id.
     if (state.runner.clicks < 1) return;
     spendClicks(state, "runner", 1);
     run.broken.push(subIndex);
@@ -637,7 +540,7 @@ function breakSubroutine(state: GameState, programId: string, subIndex: number):
     return;
   }
 
-  const breakDef = behaviors.get(program.cardId)?.breakAbility;
+  const breakDef = breakAbilityDef(program.cardId);
   if (!breakDef) return;
   const cost = breakDef.creditCost;
   if (availableCredits(state, "runner") < cost) return;
@@ -649,18 +552,21 @@ function breakSubroutine(state: GameState, programId: string, subIndex: number):
 function pumpIcebreaker(state: GameState, programId: string): void {
   const program = findCard(state, programId)?.card;
   if (!program) return;
-  if (program.cardId === "unity") {
-    // Unity's strength is static (+X = installed icebreakers); not a pump.
-    state.supportWarnings.push("Unity's +X strength is static, not a pump");
+  const pump = pumpAbilityDef(program.cardId);
+  if (!pump) return;
+  if (behavior(program.cardId)?.staticStrength) {
+    // A static "+X" strength (Unity's "installed icebreakers") is recomputed
+    // from the board, never stored in `strengthBoost` (rule 3.9.5b) — pumping
+    // it is a no-op that says so.
+    state.supportWarnings.push(
+      `${cardDef(program.cardId).title}'s +X strength is static, not a pump`,
+    );
     return;
   }
-  const pump = behaviors.get(program.cardId)?.pumpAbility;
-  if (!pump) return;
   if (availableCredits(state, "runner") < pump.creditCost) return;
   spendCredits(state, "runner", pump.creditCost);
-  const amount = typeof pump.amount === "number" ? pump.amount : 1;
-  program.strengthBoost = (program.strengthBoost ?? 0) + amount;
-  state.log.push({ type: "pump-strength", cardId: program.id, amount });
+  program.strengthBoost = (program.strengthBoost ?? 0) + pump.amount;
+  state.log.push({ type: "pump-strength", cardId: program.id, amount: pump.amount });
 }
 
 /** Resolve unbroken subroutines in order, stopping for prompts. */
@@ -676,7 +582,7 @@ export function resolveEncounter(state: GameState): void {
     run.phase = "movement";
     return;
   }
-  const subs = behaviors.get(ice.cardId)?.subroutines ?? [];
+  const subs = subroutinesOf(ice.cardId);
   for (let i = 0; i < subs.length; i++) {
     if (run.broken.includes(i) || run.resolved.includes(i)) continue;
     resolveSubroutine(state, ice, i);
