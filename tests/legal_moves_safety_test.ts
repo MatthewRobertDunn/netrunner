@@ -1,10 +1,12 @@
 /**
  * Regression tests for `getLegalMoves` soundness: every move it returns must
- * apply, and every applied move must change the game state.
+ * apply, every applied move must change the game state, and every random game
+ * must reach a winner.
  *
  * These are the properties the fuzz audit checks across 20 full games. They
  * are kept as tests so a future change that makes `getLegalMoves` offer an
- * illegal move or a no-op move fails loudly.
+ * illegal move or a no-op move fails loudly. Each property is a step of one
+ * top-level test, so a failure still names which invariant broke.
  */
 
 import { engine, RandomAI, starterDeckConfigs } from "../src/mod.ts";
@@ -48,29 +50,28 @@ function playRandomGame(
   return { state, illegalOffered, noopMoves };
 }
 
-Deno.test("legal moves: every offered move applies across 20 random games", () => {
-  let illegalOffered = 0;
-  for (let seed = 1; seed <= 20; seed++) {
-    const r = playRandomGame(seed, 500);
-    illegalOffered += r.illegalOffered;
-  }
-  assert(illegalOffered === 0, "getLegalMoves never offers a move applyMove rejects");
-});
+Deno.test("legal moves: every offered move applies, changes state, and reaches a winner", async (t) => {
+  await t.step("getLegalMoves never offers a move applyMove rejects", () => {
+    let illegalOffered = 0;
+    for (let seed = 1; seed <= 20; seed++) {
+      illegalOffered += playRandomGame(seed, 500).illegalOffered;
+    }
+    assert(illegalOffered === 0, "getLegalMoves never offers a move applyMove rejects");
+  });
 
-Deno.test("legal moves: no offered move is a no-op across 20 random games", () => {
-  let noopMoves = 0;
-  for (let seed = 1; seed <= 20; seed++) {
-    const r = playRandomGame(seed, 500);
-    noopMoves += r.noopMoves;
-  }
-  assert(noopMoves === 0, "every offered move changes the game state");
-});
+  await t.step("every offered move changes the game state", () => {
+    let noopMoves = 0;
+    for (let seed = 1; seed <= 20; seed++) {
+      noopMoves += playRandomGame(seed, 500).noopMoves;
+    }
+    assert(noopMoves === 0, "every offered move changes the game state");
+  });
 
-Deno.test("legal moves: no game gets stuck without a winner", () => {
-  let stuck = 0;
-  for (let seed = 1; seed <= 20; seed++) {
-    const r = playRandomGame(seed, 500);
-    if (!r.state.winner) stuck++;
-  }
-  assert(stuck === 0, "every random game reaches a winner");
+  await t.step("every random game reaches a winner", () => {
+    let stuck = 0;
+    for (let seed = 1; seed <= 20; seed++) {
+      if (!playRandomGame(seed, 500).state.winner) stuck++;
+    }
+    assert(stuck === 0, "every random game reaches a winner");
+  });
 });

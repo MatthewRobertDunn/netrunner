@@ -160,19 +160,37 @@ Deno.test("purity: getLegalMoves never mutates the state across random games", (
   }
 });
 
-Deno.test("purity: HQ breach state with random candidates stays identical", () => {
-  const state = hqBreachState();
-  assertPure(state, "runner");
-  assertPure(state, "corp");
+Deno.test("purity: breach states with random candidates stay identical", async (t) => {
+  await t.step("HQ breach (random-only candidates)", () => {
+    const state = hqBreachState();
+    assertPure(state, "runner");
+    assertPure(state, "corp");
 
-  const legal = engine.getLegalMoves(state, "runner");
-  assert(
-    legal.some((m) => m.kind === "runner.accessRandom"),
-    "accessRandom is offered whenever random candidates exist",
-  );
-  // Repeated enumeration yields the same moves (no hidden state advance).
-  const again = engine.getLegalMoves(state, "runner");
-  assertEquals(again, legal, "enumeration is stable across calls");
+    const legal = engine.getLegalMoves(state, "runner");
+    assert(
+      legal.some((m) => m.kind === "runner.accessRandom"),
+      "accessRandom is offered whenever random candidates exist",
+    );
+    // Repeated enumeration yields the same moves (no hidden state advance).
+    const again = engine.getLegalMoves(state, "runner");
+    assertEquals(again, legal, "enumeration is stable across calls");
+  });
+
+  await t.step("R&D breach (a specific and a random candidate)", () => {
+    const state = rdChoiceState();
+    assertPure(state, "runner");
+    assertPure(state, "corp");
+
+    const legal = engine.getLegalMoves(state, "runner");
+    assert(
+      legal.some((m) => m.kind === "runner.accessCard"),
+      "the specific (root) candidate is offered",
+    );
+    assert(
+      legal.some((m) => m.kind === "runner.accessRandom"),
+      "the random (top of R&D) candidate is offered",
+    );
+  });
 });
 
 Deno.test("purity: every offered move is accepted by applyMove (offered ⇒ applies)", () => {
@@ -206,22 +224,6 @@ Deno.test("purity: every offered move is accepted by applyMove (offered ⇒ appl
       state = applied.state;
     }
   }
-});
-
-Deno.test("purity: R&D breach state with a specific and a random candidate stays identical", () => {
-  const state = rdChoiceState();
-  assertPure(state, "runner");
-  assertPure(state, "corp");
-
-  const legal = engine.getLegalMoves(state, "runner");
-  assert(
-    legal.some((m) => m.kind === "runner.accessCard"),
-    "the specific (root) candidate is offered",
-  );
-  assert(
-    legal.some((m) => m.kind === "runner.accessRandom"),
-    "the random (top of R&D) candidate is offered",
-  );
 });
 
 Deno.test("purity: getLegalMoves is pure even in random-draw simulations", () => {
