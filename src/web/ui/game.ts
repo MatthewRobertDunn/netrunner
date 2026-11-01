@@ -211,6 +211,19 @@ export default defineComponent({
       if (gainCreditsMove.value) play(gainCreditsMove.value);
     }
 
+    /** The "draw 1 card" basic action, when the human can take it. It lives
+     *  on the own hand stat in the side panel instead of the action panel. */
+    const drawMove = computed<Move | null>(() => {
+      if (!isHumanTurn.value || prompt.value || accessedCard.value) return null;
+      return legal.value.find((m: Move) => m.kind === "corp.draw" || m.kind === "runner.draw") ??
+        null;
+    });
+
+    /** Click the own hand stat: take the draw-1-card basic action. */
+    function playDraw() {
+      if (drawMove.value) play(drawMove.value);
+    }
+
     watch(
       () => props.state,
       () => {
@@ -333,13 +346,14 @@ export default defineComponent({
     /** Generic moves for the action panel (jack out, …). Runs are
      *  deliberately excluded: every server already has its own Run button
      *  under it, so listing them here too only duplicates the row. The
-     *  gain-credit move lives on the own credits tile in the side panel,
-     *  so it is excluded here too. */
+     *  gain-credit and draw moves live on the own credits/hand tiles in
+     *  the side panel, so they are excluded here too. */
     const generalMoves = computed<Move[]>(
       () =>
         legal.value.filter((m: Move) =>
           !isCardMove(m) && m.kind !== "runner.run" &&
-          m.kind !== "corp.gainCredits" && m.kind !== "runner.gainCredits"
+          m.kind !== "corp.gainCredits" && m.kind !== "runner.gainCredits" &&
+          m.kind !== "corp.draw" && m.kind !== "runner.draw"
         ),
     );
 
@@ -437,6 +451,7 @@ export default defineComponent({
       zoomActions,
       serverRows,
       gainCreditsMove,
+      drawMove,
       // methods
       label,
       name,
@@ -445,6 +460,7 @@ export default defineComponent({
       submitDiscard,
       play,
       playGainCredits,
+      playDraw,
       playFromZoom,
       zoom,
       zoomHand,
@@ -557,7 +573,16 @@ export default defineComponent({
           </div>
           <div class="status-secondary">
             <span class="stat"><img class="sym" src="assets/svg/click.svg" alt="Clicks" />{{ own.clicks }}</span>
-            <span class="stat">hand {{ own.handCount }}/{{ own.handSize }}</span>
+            <button
+              class="stat hand-draw"
+              :class="{ clickable: !!drawMove }"
+              :disabled="!drawMove"
+              data-testid="draw-card"
+              title="Draw 1 card"
+              @click="playDraw"
+            >
+              hand {{ own.handCount }}/{{ own.handSize }}
+            </button>
             <span class="stat">deck {{ own.deckCount }}</span>
             <span class="stat">{{ discardName(ownSide) }} {{ own.discardCount }}</span>
             <span v-if="ownSide === 'runner' && own.tags" class="stat"><img class="sym" src="assets/svg/tag.svg" alt="Tags" />{{ own.tags }}</span>
