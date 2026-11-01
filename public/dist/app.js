@@ -18346,7 +18346,11 @@ var B = [
       creditCost: 2,
       amount: 3
     },
-    note: "Install discount (2 credits) when a successful run was made this turn is supported."
+    installDiscount: {
+      kind: "after-successful-run",
+      amount: 2
+    },
+    note: "Install discount (2 credits) when a successful run was made this turn is supported (installDiscount hook)."
   },
   {
     cardId: "cleaver",
@@ -18395,32 +18399,71 @@ var B = [
     },
     pumpAbility: {
       creditCost: 1,
-      amount: "icebreakers-installed"
+      amount: 1
+    },
+    // Unity prints "1[credit]: +1 strength", but its strength is STATIC
+    // ("+X = installed icebreakers"), so the pump entry only serves to offer
+    // the (no-op) pump move; the engine computes strength from staticStrength
+    // and refuses to pump a card that has it (rule 3.9.5b).
+    staticStrength: {
+      kind: "icebreakers-installed"
     }
   },
   {
     cardId: "sure_gamble",
-    support: "supported"
+    support: "supported",
+    eventEffect: {
+      kind: "gain-credits",
+      amount: 9
+    },
+    note: "Printed: 'Gain 9[credit].' (cost 5, net +4)."
   },
   {
     cardId: "creative_commission",
-    support: "supported"
+    support: "supported",
+    eventEffect: {
+      kind: "gain-credits",
+      amount: 5,
+      thenLoseClickIfAny: true
+    }
   },
   {
     cardId: "vrcation",
-    support: "supported"
+    support: "supported",
+    eventEffect: {
+      kind: "draw",
+      amount: 4,
+      thenLoseClickIfAny: true
+    }
   },
   {
     cardId: "jailbreak",
-    support: "supported"
+    support: "supported",
+    eventEffect: {
+      kind: "run",
+      runServers: "hq-or-rd",
+      onSuccessfulRunDraw: 1,
+      breachAccessBonus: 1
+    },
+    note: "Rule 5.2.2b: the run is part of the event's resolution, so its bonuses ride the run it initiates (rule 6.7.2, 7.3.5)."
   },
   {
     cardId: "overclock",
-    support: "supported"
+    support: "supported",
+    eventEffect: {
+      kind: "run",
+      runServers: "any",
+      fundCredits: 5
+    }
   },
   {
     cardId: "tread_lightly",
-    support: "supported"
+    support: "supported",
+    eventEffect: {
+      kind: "run",
+      runServers: "any",
+      rezCostIncrease: 3
+    }
   },
   {
     cardId: "docklands_pass",
@@ -18457,7 +18500,11 @@ var B = [
       {
         id: "place-and-take-all",
         title: "Place 1 credit on this, then take all credits from it",
-        clickCost: 1
+        clickCost: 1,
+        effect: {
+          kind: "load-then-take-all",
+          amount: 1
+        }
       }
     ]
   },
@@ -18480,12 +18527,19 @@ var B = [
         amount: 3
       }
     ],
+    runRestriction: {
+      kind: "central-once-per-turn"
+    },
     paidAbilities: [
       {
         id: "run-central",
         title: "Run a central server you have not run this turn",
         clickCost: 1,
-        needsServer: "central-not-run-this-turn"
+        needsServer: "central-not-run-this-turn",
+        effect: {
+          kind: "run-server",
+          sourcePrefix: "red-team"
+        }
       }
     ]
   },
@@ -18498,6 +18552,8 @@ var B = [
         kind: "runner-turn-start-take-credits",
         amount: 1
       },
+      // The printed "[click]: Place 3[credit] on this resource" is the
+      // paidAbilities entry below; the trigger records it and is not dispatched.
       {
         id: "click-load-credits",
         kind: "runner-click-load-credits",
@@ -18508,7 +18564,11 @@ var B = [
       {
         id: "place-3",
         title: "Place 3 credits on this resource",
-        clickCost: 1
+        clickCost: 1,
+        effect: {
+          kind: "load-credits",
+          amount: 3
+        }
       }
     ]
   },
@@ -18524,6 +18584,13 @@ var B = [
       {
         id: "empty-then-trash",
         kind: "empty-then-trash"
+      },
+      // The printed "Once per turn -> [click]: Take 3[credit] from this
+      // resource" is the paidAbilities entry below; not dispatched here.
+      {
+        id: "click-take-3",
+        kind: "runner-click-take-credits",
+        amount: 3
       }
     ],
     paidAbilities: [
@@ -18531,7 +18598,11 @@ var B = [
         id: "take-3",
         title: "Take 3 credits from this resource",
         clickCost: 1,
-        oncePerTurn: true
+        oncePerTurn: true,
+        effect: {
+          kind: "take-credits",
+          amount: 3
+        }
       }
     ]
   },
@@ -18559,16 +18630,29 @@ var B = [
   },
   {
     cardId: "hedge_fund",
-    support: "supported"
+    support: "supported",
+    operationEffect: {
+      kind: "gain-credits",
+      amount: 9
+    }
   },
   {
     cardId: "government_subsidy",
-    support: "supported"
+    support: "supported",
+    operationEffect: {
+      kind: "gain-credits",
+      amount: 15
+    },
+    note: "Printed: 'Gain 15[credit].' (cost 10, net +5)."
   },
   {
     cardId: "seamless_launch",
     support: "supported",
-    note: "Requires choosing an installed card not installed this turn (enforced)."
+    operationEffect: {
+      kind: "place-advancement-on-installed",
+      amount: 2
+    },
+    note: "Rule 1.18.2: placing counters directly is not advancing \u2014 requires choosing an installed card not installed this turn (enforced)."
   },
   {
     cardId: "nico_campaign",
@@ -18599,6 +18683,8 @@ var B = [
         kind: "on-rez-load-credits",
         amount: 15
       },
+      // The printed "[click]: Take 3[credit] from this asset" is the
+      // paidAbilities entry below; not dispatched here.
       {
         id: "corp-click-take-credits",
         kind: "corp-click-take-credits",
@@ -18613,19 +18699,26 @@ var B = [
       {
         id: "take-3",
         title: "Take 3 credits from this asset",
-        clickCost: 1
+        clickCost: 1,
+        effect: {
+          kind: "take-credits",
+          amount: 3
+        }
       }
     ]
   },
   {
     cardId: "urtica_cipher",
     support: "supported",
+    advanceable: true,
     triggers: [
       {
         id: "access-damage-installed",
-        kind: "access-damage-installed"
+        kind: "access-damage-installed",
+        amount: 2
       }
-    ]
+    ],
+    note: "Damage is 2 plus 1 per hosted advancement counter while installed."
   },
   {
     cardId: "manegarm_skunkworks",
@@ -18633,7 +18726,9 @@ var B = [
     triggers: [
       {
         id: "approach-toll",
-        kind: "approach-toll"
+        kind: "approach-toll",
+        creditCost: 5,
+        clickCost: 2
       }
     ]
   },
@@ -18658,6 +18753,10 @@ var B = [
         amount: 2
       }
     ],
+    handSizeBonus: {
+      kind: "while-scored",
+      amount: 2
+    },
     note: "+2 maximum hand size while in the Corp score area is a static effect (supported)."
   },
   {
@@ -18696,6 +18795,10 @@ var B = [
         kind: "end-run"
       }
     ],
+    staticStrength: {
+      kind: "bonus-if-remote",
+      amount: 2
+    },
     note: "+2 strength while protecting a remote server (static, supported)."
   },
   {
@@ -18771,8 +18874,31 @@ var behaviors = new Map(B.map((b) => [
   b.cardId,
   b
 ]));
+function behavior(cardId) {
+  return behaviors.get(cardId);
+}
+function breakAbilityDef(cardId) {
+  return behaviors.get(cardId)?.breakAbility;
+}
+function pumpAbilityDef(cardId) {
+  return behaviors.get(cardId)?.pumpAbility;
+}
+function subroutinesOf(cardId) {
+  return behaviors.get(cardId)?.subroutines ?? [];
+}
+function triggersOf(cardId) {
+  return behaviors.get(cardId)?.triggers ?? [];
+}
 function supportStatus(cardId) {
   return behaviors.get(cardId)?.support ?? "unsupported";
+}
+function handSizeBonusOf(cardIds) {
+  let bonus = 0;
+  for (const id of cardIds) {
+    const b = behaviors.get(id);
+    if (b?.handSizeBonus?.kind === "while-scored") bonus += b.handSizeBonus.amount;
+  }
+  return bonus;
 }
 function cardSupportReport(cardIds) {
   const supported2 = [];
@@ -19087,7 +19213,10 @@ function availableCredits(state, side) {
 }
 function runnerInstallCost(state, cardId) {
   let cost = cardDef(cardId).cost ?? 0;
-  if (cardId === "carmen" && state.runner.successfulRunThisTurn) cost = Math.max(0, cost - 2);
+  const discount = behaviors.get(cardId)?.installDiscount;
+  if (discount?.kind === "after-successful-run" && state.runner.successfulRunThisTurn) {
+    cost = Math.max(0, cost - discount.amount);
+  }
   return cost;
 }
 function spendCredits(state, side, amount) {
@@ -19134,16 +19263,6 @@ function spendClicks(state, side, amount) {
     amount: spent
   });
   return spent;
-}
-function loseClicks(state, side, amount) {
-  const p2 = player(state, side);
-  const lost = Math.min(p2.clicks, amount);
-  p2.clicks -= lost;
-  if (lost > 0) state.log.push({
-    type: "lose-clicks",
-    player: side,
-    amount: lost
-  });
 }
 function detachFromPlayer(p2, card) {
   if (p2.identity.id === card.id) return;
@@ -19437,40 +19556,46 @@ function continueMovement(state) {
 function approachToll(state) {
   const run = state.run;
   if (run.tollPaid) return false;
-  const manegarm = serverById(state, run.server).root.find((c) => c.cardId === "manegarm_skunkworks" && c.rezzed === true);
-  if (!manegarm) return false;
-  state.prompts.push({
-    kind: "choose-one",
-    id: state.nextPromptId++,
-    player: "runner",
-    title: "Manegarm Skunkworks: end the run unless you spend [click][click] or pay 5[credit]",
-    options: [
-      {
-        id: "toll-credits",
-        label: "Pay 5 credits",
-        creditCost: 5,
-        effect: {
-          kind: "pay-toll-credits"
+  for (const card of serverById(state, run.server).root) {
+    if (card.rezzed !== true) continue;
+    const toll = triggersOf(card.cardId).find((t) => t.kind === "approach-toll");
+    if (!toll) continue;
+    const creditCost = toll.creditCost ?? 5;
+    const clickCost = toll.clickCost ?? 2;
+    state.prompts.push({
+      kind: "choose-one",
+      id: state.nextPromptId++,
+      player: "runner",
+      title: `${cardDef(card.cardId).title}: end the run unless you spend ${"[click]".repeat(clickCost)} or pay ${creditCost}[credit]`,
+      options: [
+        {
+          id: "toll-credits",
+          label: `Pay ${creditCost} credits`,
+          creditCost,
+          effect: {
+            kind: "pay-toll-credits"
+          }
+        },
+        {
+          id: "toll-clicks",
+          label: `Spend ${"[click]".repeat(clickCost)}`,
+          clickCost,
+          effect: {
+            kind: "pay-toll-clicks"
+          }
+        },
+        {
+          id: "toll-end",
+          label: "End the run",
+          effect: {
+            kind: "end-run"
+          }
         }
-      },
-      {
-        id: "toll-clicks",
-        label: "Spend [click][click]",
-        clickCost: 2,
-        effect: {
-          kind: "pay-toll-clicks"
-        }
-      },
-      {
-        id: "toll-end",
-        label: "End the run",
-        effect: {
-          kind: "end-run"
-        }
-      }
-    ]
-  });
-  return true;
+      ]
+    });
+    return true;
+  }
+  return false;
 }
 function declareSuccess(state) {
   const run = state.run;
@@ -19519,9 +19644,10 @@ function fireRez(state, card) {
   }
 }
 function fireAccessBegin(state, card) {
-  if (card.cardId !== "urtica_cipher") return;
+  const t = triggersOf(card.cardId).find((tr) => tr.kind === "access-damage-installed");
+  if (!t) return;
   if (card.zone !== "play-area") return;
-  const amount = 2 + (card.advancement ?? 0);
+  const amount = (t.amount ?? 2) + (card.advancement ?? 0);
   dealDamage(state, amount, "net", () => rngNext(state));
 }
 function fireScore(state, card) {
@@ -19534,11 +19660,11 @@ function fireScore(state, card) {
         kind: "choose-one",
         id: state.nextPromptId++,
         player: "corp",
-        title: `${cardDef(card.cardId).title}: draw ${t.amount} cards?`,
+        title: `${cardDef(card.cardId).title}: draw ${t.amount ?? 2} cards?`,
         options: [
           {
             id: "draw",
-            label: "Draw 2 cards",
+            label: `Draw ${t.amount ?? 2} cards`,
             effect: {
               kind: "corp-draw",
               amount: t.amount ?? 2
@@ -19565,13 +19691,12 @@ function fireSteal(state, card) {
   }
 }
 function queueFreeRezPrompt(state, card) {
-  if (card.cardId !== "send_a_message") return;
   const unrezzedIce = iceAtAllServers(state).filter((c) => c.rezzed !== true);
   queuePrompt(state, {
     kind: "choose-one",
     id: state.nextPromptId++,
     player: "corp",
-    title: "Send a Message: rez 1 installed piece of ice, ignoring all costs?",
+    title: `${cardDef(card.cardId).title}: rez 1 installed piece of ice, ignoring all costs?`,
     options: [
       ...unrezzedIce.map((c) => ({
         id: `rez-${c.id}`,
@@ -19600,17 +19725,27 @@ function fireSuccessfulRun(state) {
   if (!run) return;
   const runner = state.runner;
   for (const c of runner.installed) {
-    if (c.cardId === "pennyshaver") addHostedCredits(state, c, 1);
+    const t = triggersOf(c.cardId).find((tr) => tr.kind === "successful-run-place-credit");
+    if (t) addHostedCredits(state, c, t.amount ?? 1);
   }
-  if (run.source === "jailbreak") drawCards(state, "runner", 1);
-  if (run.source?.startsWith("red-team:")) {
-    const id = run.source.slice("red-team:".length);
-    const found = runner.installed.find((c) => c.id === id);
-    if (found) {
-      const taken = takeCreditsFrom(state, found, 3);
-      if (taken > 0) {
-        runner.credits += taken;
-        checkEmpty(state, found);
+  const src = run.source;
+  if (src) {
+    const ee = behavior(src)?.eventEffect;
+    if (ee?.kind === "run" && ee.onSuccessfulRunDraw) {
+      drawCards(state, "runner", ee.onSuccessfulRunDraw);
+    }
+    const sep = src.indexOf(":");
+    if (sep > 0) {
+      const found = runner.installed.find((c) => c.id === src.slice(sep + 1));
+      if (found) {
+        const t = triggersOf(found.cardId).find((tr) => tr.kind === "successful-run-take-credits");
+        if (t) {
+          const taken = takeCreditsFrom(state, found, t.amount ?? 3);
+          if (taken > 0) {
+            runner.credits += taken;
+            checkEmpty(state, found);
+          }
+        }
       }
     }
   }
@@ -19734,6 +19869,79 @@ function addTwoAdvancement(state, card) {
     cardId: card.id,
     amount: 2
   });
+}
+function placeAdvancementOnInstalled(state, card, amount) {
+  card.advancement = (card.advancement ?? 0) + amount;
+  state.log.push({
+    type: "advance",
+    cardId: card.id,
+    amount
+  });
+}
+function resolveOperationEffect(state, card) {
+  const eff = behavior(card.cardId)?.operationEffect;
+  if (!eff) return;
+  switch (eff.kind) {
+    case "gain-credits":
+      gainCredits(state, "corp", eff.amount ?? 0);
+      break;
+    case "place-advancement-on-installed": {
+      const amount = eff.amount ?? 2;
+      const candidates = corpInstalled(state).filter((c) => !state.corp.installedThisTurn.includes(c.id));
+      if (candidates.length === 0) {
+        state.supportWarnings.push(`${cardDef(card.cardId).title} found no legal target; it resolves without placing counters`);
+        break;
+      }
+      if (candidates.length === 1) {
+        placeAdvancementOnInstalled(state, candidates[0], amount);
+        break;
+      }
+      queuePrompt(state, {
+        kind: "choose-one",
+        id: state.nextPromptId++,
+        player: "corp",
+        title: `${cardDef(card.cardId).title}: place ${amount} advancement counters on 1 installed card`,
+        options: candidates.map((c) => ({
+          id: `advance-${c.id}`,
+          label: `Place ${amount} on ${cardDef(c.cardId).title}`,
+          targetId: c.id,
+          effect: {
+            kind: "place-2-advancement",
+            targetId: c.id
+          }
+        }))
+      });
+      break;
+    }
+  }
+}
+function resolveEventEffect(state, card, server) {
+  const eff = behavior(card.cardId)?.eventEffect;
+  if (!eff) return;
+  switch (eff.kind) {
+    case "gain-credits":
+      gainCredits(state, "runner", eff.amount ?? 0);
+      break;
+    case "draw":
+      drawCards(state, "runner", eff.amount ?? 1);
+      break;
+    case "run": {
+      const target = server ?? "hq";
+      initiateRun(state, target, card.cardId);
+      if (eff.fundCredits) state.run.fundCredits = eff.fundCredits;
+      if (eff.rezCostIncrease) state.run.rezCostIncrease = eff.rezCostIncrease;
+      state.runner.ranServersThisTurn.push(target);
+      break;
+    }
+  }
+  if (eff.thenLoseClickIfAny && state.runner.clicks > 0) {
+    state.runner.clicks -= 1;
+    state.log.push({
+      type: "lose-clicks",
+      player: "runner",
+      amount: 1
+    });
+  }
 }
 function applyChoice(state, effect2) {
   if (!effect2) return;
@@ -19891,38 +20099,33 @@ function applyPaidAbility(state, side, card, abilityIndex, server) {
     player(state, side).usedOncePerTurn.push(`${card.id}:${abilityIndex}`);
   }
   const runner = state.runner;
-  if (card.cardId === "smartware_distributor") {
-    addHostedCredits(state, card, 3);
-    return true;
-  }
-  if (card.cardId === "telework_contract") {
-    const taken = takeCreditsFrom(state, card, 3);
-    runner.credits += taken;
-    checkEmpty(state, card);
-    return true;
-  }
-  if (card.cardId === "pennyshaver") {
-    addHostedCredits(state, card, 1);
-    const taken = takeCreditsFrom(state, card, 999);
-    runner.credits += taken;
-    checkEmpty(state, card);
-    return true;
-  }
-  if (card.cardId === "red_team" && ability.id === "run-central") {
-    if (!server) return false;
-    initiateRun(state, server, `red-team:${card.id}`);
-    if (server === "hq" || server === "rd" || server === "archives") {
-      state.runner.ranServersThisTurn.push(server);
+  const effect2 = ability.effect;
+  switch (effect2.kind) {
+    case "load-credits":
+      addHostedCredits(state, card, effect2.amount);
+      return true;
+    case "take-credits": {
+      const taken = takeCreditsFrom(state, card, effect2.amount);
+      player(state, side).credits += taken;
+      checkEmpty(state, card);
+      return true;
     }
-    return true;
+    case "load-then-take-all": {
+      addHostedCredits(state, card, effect2.amount);
+      const taken = takeCreditsFrom(state, card, 999);
+      runner.credits += taken;
+      checkEmpty(state, card);
+      return true;
+    }
+    case "run-server": {
+      if (!server) return false;
+      initiateRun(state, server, `${effect2.sourcePrefix}:${card.id}`);
+      if (server === "hq" || server === "rd" || server === "archives") {
+        state.runner.ranServersThisTurn.push(server);
+      }
+      return true;
+    }
   }
-  if (card.cardId === "regolith_mining_license" && ability.id === "take-3") {
-    const taken = takeCreditsFrom(state, card, 3);
-    state.corp.credits += taken;
-    checkEmpty(state, card);
-    return true;
-  }
-  return false;
 }
 function checkEmpty(state, card) {
   if ((card.hostedCredits ?? 0) > 0) return;
@@ -19938,7 +20141,7 @@ function trashMayfly(state) {
   for (const card of [
     ...state.runner.installed
   ]) {
-    if (card.cardId === "mayfly") {
+    if (triggersOf(card.cardId).some((t) => t.kind === "run-trash-program")) {
       toDiscard(state, card, "run ends");
     }
   }
@@ -19973,20 +20176,22 @@ function beginCorpTurn(state) {
     turn: state.turn.number
   });
   if (state.winner) return;
-  const nicos = state.servers.flatMap((s) => s.root).filter((c) => c.cardId === "nico_campaign" && c.rezzed);
-  for (const nico of nicos) {
-    const taken = Math.min(nico.hostedCredits ?? 0, 3);
-    nico.hostedCredits = (nico.hostedCredits ?? 0) - taken;
+  for (const card of state.servers.flatMap((s) => s.root)) {
+    if (!card.rezzed) continue;
+    const t = triggersOf(card.cardId).find((tr) => tr.kind === "turn-start-take-credits");
+    if (!t) continue;
+    const taken = Math.min(card.hostedCredits ?? 0, t.amount ?? 3);
+    card.hostedCredits = (card.hostedCredits ?? 0) - taken;
     state.corp.credits += taken;
     if (taken > 0) {
       state.log.push({
         type: "take-credits",
-        targetId: nico.id,
+        targetId: card.id,
         amount: taken,
         player: "corp"
       });
     }
-    checkEmptyAsset(state, nico, true);
+    checkEmpty(state, card);
   }
   if (state.winner) return;
   state.log.push({
@@ -20020,8 +20225,9 @@ function beginRunnerTurn(state) {
   for (const card of [
     ...state.runner.installed
   ]) {
-    if (card.cardId !== "smartware_distributor") continue;
-    const taken = Math.min(card.hostedCredits ?? 0, 1);
+    const t = triggersOf(card.cardId).find((tr) => tr.kind === "runner-turn-start-take-credits");
+    if (!t) continue;
+    const taken = Math.min(card.hostedCredits ?? 0, t.amount ?? 1);
     card.hostedCredits = (card.hostedCredits ?? 0) - taken;
     state.runner.credits += taken;
     if (taken > 0) {
@@ -20076,13 +20282,8 @@ function finishTurn(state) {
 }
 function maxHandSize(state, side) {
   const p2 = player(state, side);
-  const hubBonus = side === "corp" && state.corp.score.some((c) => c.cardId === "superconducting_hub") ? 2 : 0;
-  return p2.baseHandSize + p2.maxHandSizeMod + hubBonus;
-}
-function checkEmptyAsset(state, card, drawOne) {
-  if ((card.hostedCredits ?? 0) > 0) return;
-  toDiscard(state, card, "emptied");
-  if (drawOne) drawCards(state, "corp", 1);
+  const bonus = side === "corp" ? handSizeBonusOf(state.corp.score.map((c) => c.cardId)) : 0;
+  return p2.baseHandSize + p2.maxHandSizeMod + bonus;
 }
 function setGameOver(state, winner, reason) {
   if (state.winner) return;
@@ -20241,9 +20442,14 @@ function beginBreach(state, server) {
   const run = state.run;
   let limit = 1;
   if (server === "hq" || server === "rd") {
-    if (run.source === "jailbreak") limit += 1;
+    const ee = run.source ? behavior(run.source)?.eventEffect : void 0;
+    if (ee?.kind === "run" && ee.breachAccessBonus) limit += ee.breachAccessBonus;
     if (server === "hq" && state.runner.hqBreachesThisTurn === 0) {
-      if (state.runner.installed.some((c) => c.cardId === "docklands_pass")) limit += 1;
+      for (const c of state.runner.installed) {
+        for (const t of triggersOf(c.cardId)) {
+          if (t.kind === "first-hq-breach-extra-access") limit += t.amount ?? 1;
+        }
+      }
     }
   }
   if (server === "hq") state.runner.hqBreachesThisTurn += 1;
@@ -20694,7 +20900,7 @@ function corpActionMoves(state) {
   }
   for (const card of corpInstalled(state)) {
     const def2 = cardDef(card.cardId);
-    const isAdvanceable = def2.type === "agenda" || card.cardId === "urtica_cipher";
+    const isAdvanceable = def2.type === "agenda" || behavior(card.cardId)?.advanceable === true;
     if (isAdvanceable && state.corp.credits >= 1) {
       moves.push({
         kind: "corp.advance",
@@ -20783,8 +20989,9 @@ function runnerActionMoves(state) {
     if (def2.cost !== null && def2.cost > runner.credits) continue;
     if (def2.minimumDeckSize !== null) continue;
     evented.add(card.cardId);
-    if (card.cardId === "jailbreak" || card.cardId === "overclock" || card.cardId === "tread_lightly") {
-      const servers = card.cardId === "jailbreak" ? [
+    const eventEffect = behavior(card.cardId)?.eventEffect;
+    if (eventEffect?.kind === "run") {
+      const servers = eventEffect.runServers === "hq-or-rd" ? [
         "hq",
         "rd"
       ] : allServers(state).filter((s) => !cardRestrictsRun(state, s));
@@ -20814,7 +21021,9 @@ function runnerActionMoves(state) {
 }
 function cardRestrictsRun(state, server) {
   if (!server.startsWith("remote-") && state.runner.ranServersThisTurn.includes(server)) {
-    if (state.runner.installed.some((c) => c.cardId === "red_team")) return true;
+    if (state.runner.installed.some((c) => behavior(c.cardId)?.runRestriction !== void 0)) {
+      return true;
+    }
   }
   return false;
 }
@@ -20857,7 +21066,7 @@ function addBreakMoves(state, ice, moves) {
     if (!isIcebreaker(program)) continue;
     const strengthOk = currentIceStrength(state, program) >= iceStrength;
     for (const subIndex of unbroken) {
-      if (ice.cardId === "bran_1_0") {
+      if (breakAbilityDef(ice.cardId)?.bioroid) {
         if (state.runner.clicks >= 1) {
           moves.push({
             kind: "runner.breakSubroutine",
@@ -20868,7 +21077,7 @@ function addBreakMoves(state, ice, moves) {
         continue;
       }
       if (strengthOk) {
-        const breakDef = behaviors.get(program.cardId)?.breakAbility;
+        const breakDef = breakAbilityDef(program.cardId);
         const cost = breakDef?.creditCost ?? 1;
         const breaks = breakDef?.breaks ?? [];
         const iceSubtypes = cardDef(ice.cardId).subtypes;
@@ -20882,7 +21091,7 @@ function addBreakMoves(state, ice, moves) {
         }
       }
     }
-    const pumpDef = behaviors.get(program.cardId)?.pumpAbility;
+    const pumpDef = pumpAbilityDef(program.cardId);
     if (pumpDef && availableCredits(state, "runner") >= pumpDef.creditCost) {
       moves.push({
         kind: "runner.pumpIcebreaker",
@@ -20894,12 +21103,13 @@ function addBreakMoves(state, ice, moves) {
 function currentIceStrength(state, card) {
   const printed = cardDef(card.cardId).strength ?? 0;
   let extra = card.strengthBoost ?? 0;
-  if (card.cardId === "unity") {
+  const ss = behavior(card.cardId)?.staticStrength;
+  if (ss?.kind === "icebreakers-installed") {
     const count = state.runner.installed.filter((c) => isIcebreaker(c)).length;
     extra = count - 1;
   }
-  if (card.cardId === "palisade" && (card.server?.startsWith("remote-") ?? false)) {
-    return printed + 2 + (card.strengthBoost ?? 0);
+  if (ss?.kind === "bonus-if-remote" && (card.server?.startsWith("remote-") ?? false)) {
+    return printed + (ss.amount ?? 0) + (card.strengthBoost ?? 0);
   }
   return printed + extra;
 }
@@ -21159,7 +21369,7 @@ function applyResolvedMove(state, playerSide, move) {
     case "runner.draw": {
       spendClicks(state, "runner", 1);
       const runner = state.runner;
-      const verbal = runner.installed.some((c) => c.cardId === "verbal_plasticity");
+      const verbal = runner.installed.some((c) => triggersOf(c.cardId).some((t) => t.kind === "first-basic-draw-double"));
       if (runner.deck.length === 0) {
         state.winner = "corp";
         state.winReason = "Runner drew from an empty Stack";
@@ -21372,48 +21582,8 @@ function playCorpOperation(state, cardId) {
     cardId: card.id,
     player: "corp"
   });
-  resolveCorpOperation(state, cardId);
+  resolveOperationEffect(state, card);
   pruneEmptyRemotes(state);
-}
-function resolveCorpOperation(state, cardId) {
-  switch (cardId) {
-    case "hedge_fund":
-      gainCredits(state, "corp", 9);
-      break;
-    case "government_subsidy":
-      gainCredits(state, "corp", 15);
-      break;
-    case "seamless_launch": {
-      const candidates = corpInstalled(state).filter((c) => !state.corp.installedThisTurn.includes(c.id));
-      const targets = candidates;
-      if (targets.length === 0) {
-        state.supportWarnings.push("Seamless Launch found no legal target; it resolves without placing counters");
-        break;
-      }
-      if (targets.length === 1) {
-        addTwoAdvancement(state, targets[0]);
-        break;
-      }
-      state.prompts.push({
-        kind: "choose-one",
-        id: state.nextPromptId++,
-        player: "corp",
-        title: "Seamless Launch: place 2 advancement counters on 1 installed card",
-        options: targets.map((c) => ({
-          id: `advance-${c.id}`,
-          label: `Place 2 on ${cardDef(c.cardId).title}`,
-          targetId: c.id,
-          effect: {
-            kind: "place-2-advancement",
-            targetId: c.id
-          }
-        }))
-      });
-      break;
-    }
-    default:
-      break;
-  }
 }
 function playRunnerEvent(state, cardId, server) {
   const card = state.runner.hand.find((c) => c.cardId === cardId);
@@ -21429,43 +21599,7 @@ function playRunnerEvent(state, cardId, server) {
     cardId: card.id,
     player: "runner"
   });
-  switch (cardId) {
-    case "sure_gamble":
-      gainCredits(state, "runner", 9);
-      break;
-    case "creative_commission": {
-      gainCredits(state, "runner", 5);
-      if (state.runner.clicks > 0) loseClicks(state, "runner", 1);
-      break;
-    }
-    case "vrcation": {
-      drawCards(state, "runner", 4);
-      if (state.runner.clicks > 0) loseClicks(state, "runner", 1);
-      break;
-    }
-    case "jailbreak": {
-      const target = server ?? "hq";
-      initiateRun(state, target, "jailbreak");
-      state.runner.ranServersThisTurn.push(target);
-      break;
-    }
-    case "overclock": {
-      const target = server ?? "hq";
-      initiateRun(state, target, "overclock");
-      state.run.fundCredits = 5;
-      state.runner.ranServersThisTurn.push(target);
-      break;
-    }
-    case "tread_lightly": {
-      const target = server ?? "hq";
-      initiateRun(state, target, "tread_lightly");
-      state.run.rezCostIncrease = 3;
-      state.runner.ranServersThisTurn.push(target);
-      break;
-    }
-    default:
-      break;
-  }
+  resolveEventEffect(state, card, server);
 }
 function breakSubroutine(state, programId, subIndex) {
   const program = findCard(state, programId)?.card;
@@ -21476,7 +21610,7 @@ function breakSubroutine(state, programId, subIndex) {
   if (!ice) return;
   const run = state.run;
   if (run.resolved.includes(subIndex) || run.broken.includes(subIndex)) return;
-  if (ice.cardId === "bran_1_0") {
+  if (breakAbilityDef(ice.cardId)?.bioroid) {
     if (state.runner.clicks < 1) return;
     spendClicks(state, "runner", 1);
     run.broken.push(subIndex);
@@ -21487,7 +21621,7 @@ function breakSubroutine(state, programId, subIndex) {
     });
     return;
   }
-  const breakDef = behaviors.get(program.cardId)?.breakAbility;
+  const breakDef = breakAbilityDef(program.cardId);
   if (!breakDef) return;
   const cost = breakDef.creditCost;
   if (availableCredits(state, "runner") < cost) return;
@@ -21502,20 +21636,19 @@ function breakSubroutine(state, programId, subIndex) {
 function pumpIcebreaker(state, programId) {
   const program = findCard(state, programId)?.card;
   if (!program) return;
-  if (program.cardId === "unity") {
-    state.supportWarnings.push("Unity's +X strength is static, not a pump");
+  const pump = pumpAbilityDef(program.cardId);
+  if (!pump) return;
+  if (behavior(program.cardId)?.staticStrength) {
+    state.supportWarnings.push(`${cardDef(program.cardId).title}'s +X strength is static, not a pump`);
     return;
   }
-  const pump = behaviors.get(program.cardId)?.pumpAbility;
-  if (!pump) return;
   if (availableCredits(state, "runner") < pump.creditCost) return;
   spendCredits(state, "runner", pump.creditCost);
-  const amount = typeof pump.amount === "number" ? pump.amount : 1;
-  program.strengthBoost = (program.strengthBoost ?? 0) + amount;
+  program.strengthBoost = (program.strengthBoost ?? 0) + pump.amount;
   state.log.push({
     type: "pump-strength",
     cardId: program.id,
-    amount
+    amount: pump.amount
   });
 }
 function resolveEncounter(state) {
@@ -21530,7 +21663,7 @@ function resolveEncounter(state) {
     run.phase = "movement";
     return;
   }
-  const subs = behaviors.get(ice.cardId)?.subroutines ?? [];
+  const subs = subroutinesOf(ice.cardId);
   for (let i = 0; i < subs.length; i++) {
     if (run.broken.includes(i) || run.resolved.includes(i)) continue;
     resolveSubroutine(state, ice, i);
@@ -21737,7 +21870,7 @@ function hiddenInstance(id, cardId, side, zone) {
 }
 function basePlayerState(view, side) {
   const section = view[side];
-  const hubBonus = side === "corp" && view.corp.score.some((c) => c.cardId === "superconducting_hub") ? 2 : 0;
+  const hubBonus = side === "corp" ? handSizeBonusOf(view.corp.score.map((c) => c.cardId)) : 0;
   return {
     side,
     identity: instanceOf(section.identity, section.identity.cardId),
