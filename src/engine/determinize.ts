@@ -36,7 +36,7 @@
  */
 
 import { cardDef, isIce } from "../cards/catalogue.ts";
-import { fastCloneState } from "../ai/fast-clone.ts";
+import { fastCloneState } from "./clone.ts";
 import type { Rng } from "./rng.ts";
 import type {
   AIDecisionContext,

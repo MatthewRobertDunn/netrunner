@@ -8,6 +8,7 @@
  * tree search.
  */
 
+import { fnv1aHex } from "../engine/hash.ts";
 import { other, player } from "../engine/state.ts";
 import type { AIDecisionContext, CardId, GameState, PlayerSide, PlayerView } from "../types.ts";
 
@@ -112,14 +113,4 @@ function stableStringify(value: unknown): string {
   const obj = value as Record<string, unknown>;
   const keys = Object.keys(obj).sort();
   return `{${keys.map((k) => `${JSON.stringify(k)}:${stableStringify(obj[k])}`).join(",")}}`;
-}
-
-/** 32-bit FNV-1a hash of a string, as 8 lowercase hex digits. */
-function fnv1aHex(text: string): string {
-  let hash = 0x811c9dc5;
-  for (let i = 0; i < text.length; i++) {
-    hash ^= text.charCodeAt(i);
-    hash = Math.imul(hash, 0x01000193);
-  }
-  return (hash >>> 0).toString(16).padStart(8, "0");
 }

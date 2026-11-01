@@ -29,10 +29,11 @@
  */
 
 import { applyMove } from "../engine/apply.ts";
+import { fastCloneState } from "../engine/clone.ts";
+import { hashSeed } from "../engine/hash.ts";
 import { determinize } from "../engine/determinize.ts";
 import { makeRng } from "../engine/rng.ts";
 import { evaluate, WIN } from "./eval.ts";
-import { fastCloneState } from "./fast-clone.ts";
 import type { AIDecisionContext, GameAI, GameState, Move, PlayerView } from "../types.ts";
 
 export interface EvalAIOptions {
@@ -49,15 +50,6 @@ const DEFAULT_TEMPERATURE = 2;
 
 /** Score for a move that turned out illegal in a hypothetical world. */
 const FLOOR = -0.9 * WIN;
-
-/** Mix two 32-bit values into a well-distributed seed. */
-function hashSeed(h1: number, h2: number): number {
-  let h = (h1 | 0) ^ Math.imul(h2 | 0, 0x9e3779b9);
-  h = Math.imul(h ^ (h >>> 16), 0x7feb352d);
-  h = Math.imul(h ^ (h >>> 15), 0x846ca68b);
-  h ^= h >>> 16;
-  return h >>> 0;
-}
 
 // ---------------------------------------------------------------------------
 // The AI player
