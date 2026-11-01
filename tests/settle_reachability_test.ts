@@ -82,7 +82,13 @@ function assertParksSurfaced(state: GameState, seed: number, step: number): void
         `both continueRun and jackOut (rules 6.9.4c, 6.6.3): ${JSON.stringify(runnerMoves)}`,
     );
   }
-  if (state.run && state.run.phase === "encounter-ice") {
+  if (
+    state.run && state.run.phase === "encounter-ice" &&
+    // A pending prompt owns the decision (e.g. Brân's on-break corp install
+    // choice mid-encounter): the prompt branch above already asserted the
+    // prompt owner has moves; the runner must not act mid-prompt.
+    state.prompts.length === 0
+  ) {
     const ice = state.run.currentIceId
       ? state.servers.find((s) => s.id === state.run!.server)?.ice.find(
         (c) => c.id === state.run!.currentIceId,
