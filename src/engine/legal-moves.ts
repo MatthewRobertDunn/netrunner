@@ -52,17 +52,7 @@ export function getLegalMoves(state: GameState, playerSide: PlayerSide): Move[] 
   // --- Discard phase decisions ---------------------------------------------
   if (state.turn.phase === "discard") {
     const prompt = state.prompts.find((pr) => pr.kind === "discard" && pr.player === playerSide);
-    if (prompt && prompt.kind === "discard") {
-      const cards = player(state, playerSide).hand;
-      // Offer all legally-sized subsets of hand cards (bounded to `count` cards).
-      const count = Math.min(prompt.count, cards.length);
-      const combos = combinations(cards.map((c) => c.id), count);
-      for (const combo of combos) {
-        moves.push({ kind: "discard", player: playerSide, cardInstanceIds: combo });
-      }
-      return moves;
-    }
-    return [];
+    return prompt && prompt.kind === "discard" ? discardMoves(state, playerSide, prompt) : [];
   }
 
   // --- Prompts (one actionable prompt at a time) ---------------------------
@@ -100,15 +90,8 @@ function movesForPrompt(state: GameState, playerSide: PlayerSide, prompt: Prompt
         { kind: "mulligan.take", player: playerSide },
         { kind: "mulligan.decline", player: playerSide },
       ];
-    case "discard": {
-      const cards = player(state, playerSide).hand;
-      const count = Math.min(prompt.count, cards.length);
-      return combinations(cards.map((c) => c.id), count).map((combo) => ({
-        kind: "discard" as const,
-        player: playerSide,
-        cardInstanceIds: combo,
-      }));
-    }
+    case "discard":
+      return discardMoves(state, playerSide, prompt);
     case "choose-one": {
       const moves: Move[] = [];
       for (const option of prompt.options) {
@@ -538,6 +521,28 @@ function addAbilityMoves(
       }
     }
   }
+}
+
+/**
+ * Every legal discard move for `playerSide` in response to `prompt`.
+ *
+ * Offer all subsets of the hand of size `min(prompt.count, hand.length)` —
+ * the discard phase (rule 5.7.2a) asks the player to discard down to its hand
+ * size, and any subset of that size is a legal answer. Used by BOTH the
+ * phase-driven path and the prompt-driven path, so the two can never drift.
+ */
+function discardMoves(
+  state: GameState,
+  playerSide: PlayerSide,
+  prompt: Extract<Prompt, { kind: "discard" }>,
+): Move[] {
+  const cards = player(state, playerSide).hand;
+  const count = Math.min(prompt.count, cards.length);
+  return combinations(cards.map((c) => c.id), count).map((combo) => ({
+    kind: "discard" as const,
+    player: playerSide,
+    cardInstanceIds: combo,
+  }));
 }
 
 function combinations(ids: string[], size: number): string[][] {
