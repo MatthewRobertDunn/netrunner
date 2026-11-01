@@ -424,6 +424,20 @@ button.stat.clickable {
   border: 1px solid var(--line);
   border-radius: 3px;
 }
+/* Text fallback for a scored agenda whose art failed to load (same footprint
+   as the image mini-card, tiny centred title). */
+.mini-card-text {
+  display: inline-grid;
+  place-items: center;
+  box-sizing: border-box;
+  padding: 1px 2px;
+  overflow: hidden;
+  font-size: 6px;
+  line-height: 1.15;
+  text-align: center;
+  color: var(--text);
+  overflow-wrap: break-word;
+}
 
 /* Servers ------------------------------------------------------------ */
 
@@ -460,39 +474,26 @@ button.stat.clickable {
   gap: 7px;
   padding: 6px 4px;
 }
-/* Corp seat: central servers show ice on the runner side (top), so the
-   column reads ice stack -> root row -> server card -> Run button. The
-   WITHIN-STACK order (outermost farthest from the server card) is not CSS —
-   ServerColumn reverses the engine's innermost-first ice array in its
-   `iceSlots` computed for the corp seat. */
-.servers.corp-seat .server.central .server-ice-stack {
+/* Corp seat: ice on the runner side (top), so every column — central or
+   remote — reads ice stack -> root row -> server card/label -> Run button.
+   The WITHIN-STACK order (outermost farthest from the server card) is not
+   CSS — ServerColumn reverses the engine's innermost-first ice array in its
+   `iceSlots` computed for the corp seat. The label stays nearest the corp
+   side (bottom), mirroring the runner seat where it sits on top. The run-btn
+   rule is belt-and-braces (Run buttons only render for the human Runner,
+   which never sees the corp seat): without it the button's default order 0
+   would jump above the ice. */
+.servers.corp-seat .server .server-ice-stack {
   order: 1;
 }
-.servers.corp-seat .server.central .server-root-row {
+.servers.corp-seat .server .server-root-row {
   order: 2;
 }
-.servers.corp-seat .server.central .server-card {
+.servers.corp-seat .server .server-card,
+.servers.corp-seat .server .server-label {
   order: 3;
 }
-.servers.corp-seat .server.central .run-btn {
-  order: 4;
-}
-/* Corp seat: remotes flip the same way — ice on the runner side (top), so
-   the column reads ice stack -> root row -> label -> Run button. The label
-   stays nearest the corp side (bottom), mirroring the runner seat where it
-   sits on top. The run-btn rule is belt-and-braces (Run buttons only render
-   for the human Runner, which never sees the corp seat): without it the
-   button's default order 0 would jump above the ice. */
-.servers.corp-seat .server.remote .server-ice-stack {
-  order: 1;
-}
-.servers.corp-seat .server.remote .server-root-row {
-  order: 2;
-}
-.servers.corp-seat .server.remote .server-label {
-  order: 3;
-}
-.servers.corp-seat .server.remote .run-btn {
+.servers.corp-seat .server .run-btn {
   order: 4;
 }
 /* Small server name label for remotes: nearest the corp side in both seats
@@ -1029,10 +1030,22 @@ button.card-tile {
   right: 2px;
   color: var(--warn);
 }
+/* Hosted credits (loaded Nico Campaign et al) share the advancement slot:
+   the starter pool never puts both counters on one card. */
+.credit-counter {
+  top: 2px;
+  right: 2px;
+  color: var(--accent);
+}
 .str-counter {
   bottom: 2px;
   right: 2px;
   color: var(--ice);
+}
+/* A live pump (rule 3.9.5b): the counter reads effective strength, so tint
+   it to the success green while the boost is up. */
+.str-counter.boosted {
+  color: var(--win);
 }
 .badge-counter {
   bottom: 2px;

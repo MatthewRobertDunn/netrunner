@@ -25,7 +25,12 @@ import { cardOf, imageFor } from "./util.ts";
  */
 export type CardTileCard = Pick<
   ViewCard,
-  "cardId" | "rezzed" | "advancement" | "strength"
+  | "cardId"
+  | "rezzed"
+  | "advancement"
+  | "hostedCredits"
+  | "strength"
+  | "strengthBoost"
 >;
 
 export default defineComponent({
@@ -100,9 +105,26 @@ export default defineComponent({
         </template>
       </div>
       <div v-if="card && card.advancement" class="counter adv-counter">{{ card.advancement }}</div>
-      <div v-if="card && card.strength !== undefined" class="counter str-counter">{{ card.strength }}</div>
+      <!-- Hosted credits (Nico Campaign et al): open information (rule 10.2),
+           mirrored after the advancement counter. -->
+      <div v-if="card && card.hostedCredits" class="counter credit-counter">{{ card.hostedCredits }}</div>
+      <!-- Effective strength: printed + the live pump. During an encounter the
+           pump is exactly what the Runner is deciding on, so the counter must
+           not understate it (the rule 3.9.5b boost rides in strengthBoost). -->
+      <div
+        v-if="card && card.strength !== undefined"
+        class="counter str-counter"
+        :class="{ boosted: !!card.strengthBoost }"
+        :title="card.strengthBoost
+          ? 'Strength ' + (card.strength + card.strengthBoost) + ' (printed ' + card.strength + ' +' + card.strengthBoost + ' this encounter)'
+          : undefined"
+      >{{ card.strength + (card.strengthBoost ?? 0) }}</div>
       <div v-if="badge" class="counter badge-counter">{{ badge }}</div>
-      <div v-if="card && card.rezzed === false && !facedown" class="unrezzed-flag">D</div>
+      <div
+        v-if="card && card.rezzed === false && !facedown"
+        class="unrezzed-flag"
+        title="installed facedown"
+      >D</div>
       <div v-if="facedown && !corp" class="facedown-label">?</div>
     </component>
   `,

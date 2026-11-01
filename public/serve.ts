@@ -22,9 +22,10 @@ const TYPES: Record<string, string> = {
 };
 
 function resolve(path: string): string | null {
-  const clean = decodeURIComponent(path.replace(/^\/+/, ""));
+  const clean = path.replace(/^\/+/, "");
   const file = clean === "" ? "index.html" : clean;
-  // Reject traversal.
+  // Reject traversal. Runs on the DECODED path (the caller decodes first), so
+  // encoded dots ("%2e%2e") cannot slip past this check.
   if (file.includes("..") || file.startsWith("/")) return null;
   return PUBLIC + file;
 }
@@ -41,7 +42,15 @@ async function listen(port: number): Promise<void> {
     },
     async (req) => {
       const url = new URL(req.url);
-      const fsPath = resolve(url.pathname);
+      // decodeURIComponent throws on malformed escapes ("%zz"): a bad path is
+      // a 404 ("Not found"), never a crashed request.
+      let pathname: string;
+      try {
+        pathname = decodeURIComponent(url.pathname);
+      } catch {
+        return new Response("Not found", { status: 404 });
+      }
+      const fsPath = resolve(pathname);
       if (!fsPath) return new Response("Forbidden", { status: 403 });
       try {
         const body = await Deno.readFile(fsPath);

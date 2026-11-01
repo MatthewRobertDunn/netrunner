@@ -21,17 +21,17 @@ import { computed, defineComponent } from "vue";
 import type { PropType } from "vue";
 import type { Move, PublicServerStatus, ViewCard } from "../../types.ts";
 import CardTile from "./card-tile.ts";
-import { cardTitle } from "./util.ts";
+import { cardTitle, serverLabel } from "./util.ts";
 
 /**
- * Server glyphs for the central servers that still render a glyph: R&D,
- * Archives, and any remote server (which falls back to the generic
- * "set-sysgw" glyph via serverGlyphFor()). HQ no longer uses its glyph here —
- * the HQ server card renders the Corp's identity card instead (see the `hq`
- * branch in the template). The identity is public information to both players
- * (rule 10.2.3), so it is read from the public status DTO.
+ * Server glyphs for the central server cards that render one: R&D, Archives,
+ * and HQ. HQ's glyph is the fallback face shown when the Corp's identity art
+ * is missing — without an entry here `serverGlyphFor("hq")` returned `""`
+ * and the card rendered a broken `<img src="">`. Remotes never reach this
+ * map: they draw a text label instead (see the template's `v-else` branch).
  */
 const SERVER_GLYPH: Record<string, string> = {
+  hq: "assets/svg/hq.svg",
   rd: "assets/svg/rd.svg",
   archives: "assets/svg/archives.svg",
 };
@@ -42,16 +42,10 @@ function serverGlyphFor(id: string): string {
 
 /** Central servers keep their dedicated server card; everything else is a
  *  remote (id "remote-N"), drawn as a label + root/ice columns. Note: this
- *  is deliberately NOT `id in SERVER_GLYPH` — the glyph map only holds the
- *  servers that render one (the HQ branch shows the identity card instead,
- *  and is no longer in the map). */
+ *  is deliberately NOT `id in SERVER_GLYPH` — the glyph map holds the
+ *  servers that render a glyph face, which is not the same set. */
 function isCentralId(id: string): boolean {
   return id === "hq" || id === "rd" || id === "archives";
-}
-
-/** Label for a remote server: "remote-3" reads as "remote 3" (rule 4.6.8). */
-function remoteLabelFor(id: string): string {
-  return id.replace("-", " ");
 }
 
 export default defineComponent({
@@ -114,7 +108,7 @@ export default defineComponent({
     return {
       isCentralId,
       serverGlyphFor,
-      remoteLabelFor,
+      serverLabel,
       isCurrentIce,
       iceSlots,
       hqClickable,
@@ -148,8 +142,13 @@ export default defineComponent({
             <span class="server-name">{{ cardTitle(identityCardId) }}</span>
           </div>
           <div v-else class="server-card-face">
-            <img class="server-glyph" :src="serverGlyphFor(server.id)" :alt="cardTitle(server.id)" />
-            <span class="server-name">{{ cardTitle(server.id) }}</span>
+            <img
+              v-if="serverGlyphFor(server.id)"
+              class="server-glyph"
+              :src="serverGlyphFor(server.id)"
+              :alt="serverLabel(server.id)"
+            />
+            <span class="server-name">{{ serverLabel(server.id) }}</span>
           </div>
         </component>
       </template>
@@ -159,7 +158,7 @@ export default defineComponent({
         <div
           v-if="server.root.length || server.ice.length"
           class="server-label"
-        >{{ remoteLabelFor(server.id) }}</div>
+        >{{ serverLabel(server.id) }}</div>
       </template>
       <!-- Root row and ice stack render for BOTH kinds. Remotes with only
            ice reserve a one-card root-slot space (blank, no glyph/back) so

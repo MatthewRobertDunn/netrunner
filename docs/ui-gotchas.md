@@ -12,8 +12,9 @@ and the test that pins the fix.
    beyond their content — a tall black void opened between the action panel and the hand (the void
    sat _inside_ `.action-row`, whose panel is only as tall as its buttons). The 50/50 status-dock
    split had the same disease: the halves divided a log-driven page height instead of the viewport.
-   Now: `.game` aligns to `flex-start`, `.game-main` uses `align-content: start` (leftover space
-   stays below the column), and both docks are `position: sticky` capped to `100vh - 24px` with
+   Now: `.game` aligns to `flex-start`, and `.game-main` hands its leftover height to `.servers`
+   (`flex: 1 0 auto` with `min-height: 340px` — the play area grows, while the action panel and
+   hand keep their content sizes). Both docks are `position: sticky` capped to `100vh - 24px` with
    internal scroll. **Manual check only — no `deno test` pins this.** Re-measure
    `actionRowH == actionPanelH` and confirm the action→hand gap is exactly the 10px grid gap in the
    browser after touching this layout. Files: `public/css/style.css`.

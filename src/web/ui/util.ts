@@ -10,6 +10,7 @@
 
 import type { CardDef } from "../../cards/catalogue.ts";
 import { cardVisibleTo, tryCardDef } from "../../mod.ts";
+import { PASS_OPTION_ID } from "../../types.ts";
 import type {
   CardId,
   CardInstance,
@@ -19,6 +20,7 @@ import type {
   Move,
   PlayerSide,
   Prompt,
+  TurnPhase,
 } from "../../types.ts";
 
 // "The player who may act right now" is engine state machinery (also used by
@@ -73,9 +75,30 @@ export function serverLabel(server: string): string {
       return "Archives";
     case "new-remote":
       return "new remote";
-    default:
-      return server;
+    default: {
+      // Remotes: "remote-3" reads as "remote 3" (rule 4.6.8) — the board
+      // label's form, so every surface (log, move buttons, run banner,
+      // server cards) names a remote the same way.
+      const remote = /^remote-(\d+)$/.exec(server);
+      return remote ? `remote ${remote[1]}` : server;
+    }
   }
+}
+
+/** Status-badge wording for a turn phase: the raw enum ("action") is engine
+ *  jargon, so each phase maps to the wording the rest of the UI uses. The
+ *  record is keyed by `TurnPhase`, so adding a phase fails to compile until
+ *  it gets a label. */
+const PHASE_LABELS: Record<TurnPhase, string> = {
+  action: "acting",
+  discard: "discard",
+  mulligans: "mulligans",
+  "game-over": "game over",
+};
+
+/** Human-readable label for a turn phase (see `PHASE_LABELS`). */
+export function phaseLabel(phase: TurnPhase): string {
+  return PHASE_LABELS[phase];
 }
 
 /** One line of log text for a game event, as seen by `viewer`. */
@@ -286,6 +309,11 @@ export function describeMove(state: GameState, move: Move): string {
         if (option.clickCost) costs.push(`${option.clickCost} [click]`);
         return option.label + (costs.length ? ` (${costs.join(", ")})` : "");
       }
+      // The reserved "pass" answer (see `PromptOption.id`) is the engine's
+      // decline/cancel — it has no option entry to look up in some prompts
+      // (the rez window enumerates it without listing it in `options`), and
+      // the raw lowercase id must never render as a button.
+      if (move.optionId === PASS_OPTION_ID) return "Decline";
       return move.optionId;
     }
     default:

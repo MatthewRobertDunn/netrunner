@@ -13,10 +13,13 @@ import { engine } from "../../src/mod.ts";
 import type { Move, PlayerSide } from "../../src/types.ts";
 import GameScreen from "../../src/web/ui/game.ts";
 import {
+  continueRun,
   corpDeckStartingWith,
   endCorpTurn,
   installInNewRemoteAndEndTurn,
+  newGameWithCorpHand,
   play,
+  rezWindowState,
   runnerDeckStartingWith,
   starterDeckPair,
 } from "../helpers/fixtures.ts";
@@ -634,4 +637,109 @@ Deno.test("GameScreen approached facedown ice carries the RUN badge", () => {
     "the approached facedown ice is highlighted",
   );
   assertEquals(tile.find(".badge-counter").text(), "RUN", "RUN badge on the facedown ice");
+});
+
+Deno.test("GameScreen truthful labels, banner wording, and hosted counters", async (t) => {
+  await t.step("turn badge labels the phase instead of the raw enum", () => {
+    const { wrapper } = mountGame(42, "corp");
+    assertEquals(
+      wrapper.find(".turn-player").text().trim(),
+      "Corp · acting",
+      "the action phase reads 'acting', not the raw 'action' enum",
+    );
+  });
+
+  await t.step("a loaded Nico Campaign shows its hosted-credit counter", () => {
+    // The Nico fixture (see tests/toll_test.ts): install in a new remote and
+    // rez it — the on-rez trigger loads 9 credits onto the asset.
+    let state = newGameWithCorpHand(["nico_campaign", "manegarm_skunkworks"], 3);
+    const install = assertDefined(
+      engine.getLegalMoves(state, "corp").find(
+        (m) =>
+          m.kind === "corp.install" && m.cardId === "nico_campaign" && m.server === "new-remote",
+      ),
+    );
+    state = play(state, "corp", install);
+    const nico = assertDefined(
+      state.servers.find((s) => s.id === "remote-1")?.root.find((c) =>
+        c.cardId === "nico_campaign"
+      ),
+    );
+    const rez = assertDefined(
+      engine.getLegalMoves(state, "corp").find(
+        (m) => m.kind === "corp.rez" && m.targetId === nico.id,
+      ),
+    );
+    state = play(state, "corp", rez);
+    const loaded = state.servers.find((s) => s.id === "remote-1")!.root
+      .find((c) => c.id === nico.id)!;
+    assertEquals(loaded.hostedCredits, 9, "test setup: the rez loaded 9 credits");
+
+    const wrapper = mount(GameScreen, { props: { state, humanSide: "corp" } });
+    const counter = wrapper.find(".server.remote .server-root-row .credit-counter");
+    assert(counter.exists(), "the hosted-credits counter renders on the Nico tile");
+    assertEquals(counter.text(), "9", "the counter shows the loaded total");
+  });
+
+  await t.step("the run banner uses the board's server labels and facedown wording", () => {
+    // Approaching facedown remote ice: the banner must say "remote 1" (the
+    // board label's form) and "a facedown card" — never the raw server id,
+    // and never the `cardId: "hidden"` redaction sentinel (rule 4.6.3).
+    const state0 = installInNewRemoteAndEndTurn("tithe", 42);
+    const run = assertDefined(
+      engine.getLegalMoves(state0, "runner").find(
+        (m) => m.kind === "runner.run" && m.server === "remote-1",
+      ),
+    );
+    const state = play(state0, "runner", run);
+    assert(state.run?.currentIceId, "test setup: the run parks on the approached ice");
+
+    const wrapper = mount(GameScreen, { props: { state, humanSide: "runner" } });
+    const banner = wrapper.find('[data-testid="run-banner"]');
+    assert(banner.exists(), "run banner renders");
+    const text = banner.text();
+    assert(text.includes("RUN"), "run tag present");
+    assert(text.includes("on remote 1"), `board label form, got: ${text}`);
+    assertEquals(text.includes("remote-1"), false, "no raw server id in the banner");
+    assert(text.includes("approached a facedown card"), `facedown wording, got: ${text}`);
+    assertEquals(text.includes("hidden"), false, "no redaction sentinel in the banner");
+  });
+
+  await t.step("the breach banner names HQ and counts real candidates", () => {
+    // No ice protects HQ in the opening board, so a run breaches immediately.
+    const { state: base } = createTestFixture(42, "corp");
+    let state = endCorpTurn(base);
+    const run = assertDefined(
+      engine.getLegalMoves(state, "runner").find(
+        (m) => m.kind === "runner.run" && m.server === "hq",
+      ),
+    );
+    state = play(state, "runner", run);
+    // The run parks in the movement phase (rule 6.9.4c) before reaching HQ.
+    state = continueRun(state);
+    assert(state.breach !== null, "test setup: the run breaches HQ");
+
+    const wrapper = mount(GameScreen, { props: { state, humanSide: "runner" } });
+    const text = wrapper.find('[data-testid="run-banner"]').text();
+    assert(text.includes("BREACH HQ"), `server label form, got: ${text}`);
+    assertEquals(text.includes("hq"), false, "no raw server id in the banner");
+    // The old "limit - used access(es) left" overstated HQ: the real
+    // candidate pool is the corp's unchosen hand cards (rule 7.3.4a).
+    const expected = state.corp.hand.length;
+    assert(
+      text.includes(`${expected} of ${state.breach!.randomAccessLimit} accesses`),
+      `real candidate count, got: ${text}`,
+    );
+  });
+
+  await t.step("the rez-window decline answer is sentence-case", () => {
+    // The reserved "pass" answer (rule: see PASS_OPTION_ID) is enumerated for
+    // rez windows without an option entry, so it used to render the raw
+    // lowercase id as the button text.
+    const state = rezWindowState(3);
+    const wrapper = mount(GameScreen, { props: { state, humanSide: "corp" } });
+    const texts = wrapper.findAll(".prompt-box .moves button").map((b) => b.text());
+    assert(texts.includes("Decline"), `a Decline button renders, got: ${texts.join(" | ")}`);
+    assertEquals(texts.includes("pass"), false, "the raw reserved id never renders");
+  });
 });
