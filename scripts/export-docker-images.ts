@@ -8,7 +8,10 @@
  * where dockerd cannot mount(2)/unshare(2) (e.g. unprivileged containers).
  *
  * Deno (not sh) so the script is portable to any host that runs `deno`;
- * `crane` and GNU `tar` are still required. Safe to run from any directory.
+ * `crane` and GNU `tar` are still required. The repo root (`public/`,
+ * `./release/`) is derived from this file's own location (`import.meta.url`),
+ * so it runs from any working directory — the same location-independent
+ * contract `scripts/publish.ts` follows.
  *
  *   deno run --allow-read --allow-write --allow-run --allow-env scripts/export-docker-images.ts
  */

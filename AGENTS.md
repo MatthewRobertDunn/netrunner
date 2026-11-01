@@ -6,14 +6,17 @@ the build/verify loop, the engine invariants, and the mistakes I keep repeating.
 ## Build & verify loop
 
 ```sh
-# Type-check (prints nothing and exits 0 on success). FULL PATH.
-/usr/local/bin/deno check src/mod.ts
-/usr/local/bin/deno check src/web/entry.ts   # the Vue UI; src/mod.ts does not import it
+# Type-check (prints nothing and exits 0 on success).
+deno check src/mod.ts
+deno check src/web/entry.ts   # the Vue UI; src/mod.ts does not import it
+# (deno not on PATH? it lives at /usr/local/bin/deno — see the note below)
 
-# Format check, lint, check, and test suite in one task (97 tests, ~20s)
+# Format check, lint, check, and test suite in one task (97 tests / 135 steps;
+# ~27 s measured 2026-11-01)
 deno task verify
 
-# AI sanity: EvalAI vs RandomAI win rates + move variety (~1 min)
+# AI sanity: EvalAI vs RandomAI win rates + move variety (~18 s measured
+# 2026-11-01: 24 full games — 12 seeds x both sides)
 deno run --allow-read scripts/check-ai.ts
 
 # Rebuild the web bundle (committed to git; the Docker image ships it as-is)
@@ -110,8 +113,9 @@ or commits.
    UI's `findCardIn(state, id)` in `src/web/ui/util.ts` returns the `CardInstance` directly. Do not
    write `found.card.cardId` when using the UI helper — it's `found.cardId`. This crashed the render
    once.
-3. **`deno task check` covers both entry points** (`src/mod.ts` + `src/web/entry.ts`). The bare
-   `/usr/local/bin/deno check src/mod.ts` form only checks the engine.
+3. **`deno task check` covers both entry points plus the AI script** (`src/mod.ts` +
+   `src/web/entry.ts` + `scripts/check-ai.ts`). The bare `deno check src/mod.ts` form only checks
+   the engine.
 4. **Forgetting that the browser tool's `browser_snapshot` returns a string,** not an object — regex
    it directly, don't `JSON.stringify` first.
 5. **Clicking a card tile in the discard picker opens the zoom popup**, which intercepts pointer

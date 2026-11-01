@@ -64,9 +64,8 @@ The API returns the following fields for each card. The engine's `CardDef` inter
    normalisation, not a runtime mutation.
 
 2. **`num_cards` excludes the identity.** The decklist API reports `num_cards` without the identity
-   card, while `card_slots` includes it. The engine's `starter-decks.json` follows the API
-   convention; the `starter-deck-cyberclick-v1.ts` fixture adds 1 to the card count when reporting
-   total deck size.
+   card, while `cards` includes it. `src/decks/starter-decks-cyberclick-v1.ts` therefore drops the
+   identity entry from `cards` when building a `DeckConfig` and re-adds it as `identity`.
 
 3. **Identity cards have no printed abilities.** Both starter identities are plain "Starter game
    only" cards (min deck 30, base link 0, no abilities). The engine treats them as such and does not
@@ -74,17 +73,21 @@ The API returns the following fields for each card. The engine's `CardDef` inter
 
 ## Decklist snapshot fields
 
-`data/starter-decks.json` contains, per deck:
+`data/starter-decks.json` has a top-level `_source` block (provider, `retrieved_at`, fixture ids)
+and a `decks` object with `runner` and `corp` entries, each containing:
 
-| Field                           | Meaning                                    |
-| ------------------------------- | ------------------------------------------ |
-| `id`                            | Decklist id (UUID)                         |
-| `name`                          | Display name                               |
-| `identity`                      | Identity card id                           |
-| `card_slots`                    | `{ cardId: count }` including the identity |
-| `num_cards`                     | Total excluding the identity               |
-| `date_creation` / `date_update` | Decklist timestamps                        |
-| `cards_url`                     | API endpoint used to fetch the card list   |
+| Field                              | Meaning                                      |
+| ---------------------------------- | -------------------------------------------- |
+| `decklist_id`                      | Decklist id (UUID)                           |
+| `name`                             | Display name                                 |
+| `user_id`                          | NetrunnerDB user id of the decklist owner    |
+| `side`                             | `runner` / `corp`                            |
+| `identity`                         | Identity card id                             |
+| `cards`                            | `{ cardId: count }` including the identity   |
+| `num_cards`                        | Total excluding the identity                 |
+| `influence_spent`                  | Total influence used by the decklist         |
+| `follows_basic_deckbuilding_rules` | NetrunnerDB basic-deckbuilding validity flag |
 
 The engine's `DeckConfig` shape is `{ identity, cards: { cardId, count }[] }`; the fixture loader
-strips the identity from `card_slots` and re-adds it as `identity`.
+(`src/decks/starter-decks-cyberclick-v1.ts`) drops the identity entry from `cards` and re-adds it
+as `identity`.
