@@ -112,20 +112,23 @@ export function beginEncounter(state: GameState): void {
   state.log.push({ type: "encounter-ice", cardId: current.id });
 }
 
-/** Runner passes the current ice and moves inward, or approaches the server. */
-export function passIce(state: GameState): void {
+/**
+ * The shared body of passing the ice at the Runner's current position and
+ * moving inward (rule 6.9.4a/d): log the pass, decrement the position, and log
+ * the approach of the next ice. When the innermost piece was passed (or the
+ * Runner is already at the server), the run parks in the movement phase at the
+ * server and the CALLER owns what happens next — `passIce` leaves success to
+ * the movement phase (toll, then `declareSuccess`, rule 6.7.2), while
+ * `continueMovement` pays the approach toll and declares success itself.
+ */
+function passCurrentIce(state: GameState): void {
   const run = state.run!;
   const ice = iceAt(state, run.server);
   const current = run.position !== null ? ice[run.position] : null;
   if (current) state.log.push({ type: "pass-ice", cardId: current.id });
-  // A passed piece of ice gives a fresh jack-out chance in the next movement
-  // phase (rule 6.1.5a).
-  run.jackOutOffered = false;
+  run.currentIceId = undefined;
   if (run.position === null || run.position === 0) {
     run.position = null;
-    run.currentIceId = undefined;
-    // The movement phase decides success (toll, then declareSuccess) — it must
-    // not bypass declareSuccess, or "run-successful" never fires (rule 6.7.2).
     run.phase = "movement";
     return;
   }
@@ -134,6 +137,16 @@ export function passIce(state: GameState): void {
   run.currentIceId = ice[run.position]!.id;
   run.encounterStarted = false;
   state.log.push({ type: "approach-ice", cardId: run.currentIceId });
+}
+
+/** Runner passes the current ice and moves inward, or approaches the server. */
+export function passIce(state: GameState): void {
+  const run = state.run!;
+  // A passed piece of ice gives a fresh jack-out chance in the next movement
+  // phase (rule 6.1.5a). `continueMovement` deliberately does NOT reset this:
+  // there the Runner has already declined the chance for this movement.
+  run.jackOutOffered = false;
+  passCurrentIce(state);
 }
 
 /**
@@ -148,7 +161,6 @@ export function passIce(state: GameState): void {
  */
 export function continueMovement(state: GameState): boolean {
   const run = state.run!;
-  const ice = iceAt(state, run.server);
   if (run.position === null) {
     // The Runner approaches the server (rule 6.9.4g).
     if (approachToll(state)) return true;
@@ -156,19 +168,12 @@ export function continueMovement(state: GameState): boolean {
     return false;
   }
   // Passing the ice at the current position and moving inward (rule 6.9.4a/d).
-  const current = ice[run.position];
-  if (current) state.log.push({ type: "pass-ice", cardId: current.id });
-  run.currentIceId = undefined;
-  if (run.position === 0) {
-    run.position = null;
+  // No jack-out reset here: the Runner just declined it (see `passIce`).
+  passCurrentIce(state);
+  if (run.position === null) {
     if (approachToll(state)) return true;
     declareSuccess(state);
-    return false;
   }
-  run.position -= 1;
-  run.currentIceId = ice[run.position]!.id;
-  run.phase = "approach-ice";
-  state.log.push({ type: "approach-ice", cardId: run.currentIceId });
   return false;
 }
 

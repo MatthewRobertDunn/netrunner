@@ -130,7 +130,6 @@ Deno.test("fastClone matches JSON round-trip and stays isolated", async (t) => {
     card.hostedCredits = 3;
     card.strengthBoost = 1;
     card.server = state.servers[0]!.id;
-    card.iceIndex = 0;
     checkState(state, 7, -1);
   });
 });

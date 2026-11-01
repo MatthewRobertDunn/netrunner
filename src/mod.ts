@@ -38,7 +38,7 @@
  */
 
 import { cardDef, tryCardDef } from "./cards/catalogue.ts";
-import { behaviors, cardSupportReport, supportStatus } from "./cards/effects.ts";
+import { cardSupportReport, supportStatus } from "./cards/effects.ts";
 import {
   starterDeckConfigs,
   starterPoolCardIds,
@@ -47,15 +47,9 @@ import {
 import { applyMove } from "./engine/apply.ts";
 import { determinize } from "./engine/determinize.ts";
 import { getLegalMoves } from "./engine/legal-moves.ts";
-import {
-  getPublicGameStatus,
-  getPublicGameStatusFor,
-  viewCard,
-  visiblePrompt,
-} from "./engine/public-status.ts";
+import { getPublicGameStatus, getPublicGameStatusFor } from "./engine/public-status.ts";
 import { makeRng } from "./engine/rng.ts";
 import { startGame, validateDeck } from "./engine/setup.ts";
-import type { CardId, GameState } from "./types.ts";
 import type { Rng } from "./engine/rng.ts";
 
 export * from "./types.ts";
@@ -69,10 +63,6 @@ export {
   makeRng,
   startGame,
   validateDeck,
-  // Redaction primitives (canonical home: engine/public-status.ts — "views are
-  // a redaction contract").
-  viewCard,
-  visiblePrompt,
 };
 
 // The view projection and the GameEngine facade live in the engine; the
@@ -101,25 +91,6 @@ export type { EvalAIOptions, GameOutcome } from "./ai/mod.ts";
 // barrel because tests import it from here.
 export { fastCloneState } from "./engine/clone.ts";
 
-/** Card ids in the runner starter deck (corp equivalents follow the same API). */
-export function starterDeckCardIds(): { runner: CardId[]; corp: CardId[] } {
-  const s = starterDeckConfigs();
-  return {
-    runner: [s.runner.identity, ...s.runner.cards.map((e) => e.cardId)],
-    corp: [s.corp.identity, ...s.corp.cards.map((e) => e.cardId)],
-  };
-}
-
-export function cardSupport(cardId: CardId): {
-  supported: boolean;
-  status: "supported" | "partial" | "unsupported";
-  note?: string;
-} {
-  const status = supportStatus(cardId);
-  const note = behaviors.get(cardId)?.note;
-  return status === "supported" ? { supported: true, status } : { supported: false, status, note };
-}
-
 /** Aggregate support report for the complete starter-deck card pool. */
 export function starterDeckSupport() {
   const ids = starterPoolCardIds();
@@ -136,7 +107,3 @@ export {
   tryCardDef,
   verifyFixtureAgainstSnapshot,
 };
-
-export type { ApplyMoveOptions, CardInstance, CardInstanceId } from "./types.ts";
-
-export const supportWarningsOf = (state: GameState): string[] => [...state.supportWarnings];

@@ -27,6 +27,17 @@ export function other(side: PlayerSide): PlayerSide {
   return side === "corp" ? "runner" : "corp";
 }
 
+/**
+ * The player who may act in `state`: the prompted player while any prompt is
+ * pending (prompts belong to their owner even during the opponent's turn —
+ * rules 5.3-5.7, 6.9.2, 7.5), otherwise the turn player.
+ */
+export function actorOf(state: GameState): PlayerSide {
+  const prompt = state.prompts[0];
+  if (prompt) return prompt.player;
+  return state.turn.player;
+}
+
 const CENTRAL_IDS: ServerId[] = ["hq", "rd", "archives"];
 
 export function isCentral(id: ServerId): boolean {
@@ -249,8 +260,7 @@ export function moveCardTo(
   card: CardInstance,
   zone: "hand" | "deck" | "discard" | "score" | "play-area",
   side: PlayerSide,
-  opts: { topOfDeck?: boolean; bottomOfDiscard?: boolean; server?: ServerId; iceIndex?: number } =
-    {},
+  opts: { topOfDeck?: boolean; bottomOfDiscard?: boolean; server?: ServerId } = {},
 ): void {
   const from = findCard(state, card.id);
   if (from) detachFromPlayer(player(state, from.side), card);
@@ -262,7 +272,6 @@ export function moveCardTo(
   }
   card.zone = zone;
   if (zone !== "play-area") card.server = undefined;
-  card.iceIndex = undefined;
   const p = player(state, side);
   switch (zone) {
     case "hand":
@@ -327,7 +336,7 @@ export function dealDamage(
       trashed: trashed.map((c) => c.id),
     });
     state.log.push({ type: "flatline" });
-    setWinner(state, "corp", "Runner was flatlined by damage");
+    setGameOver(state, "corp", "Runner was flatlined by damage");
     return trashed.map((c) => c.id);
   }
   const trashed: CardInstance[] = [];
@@ -351,7 +360,12 @@ export function dealDamage(
   return trashed.map((c) => c.id);
 }
 
-export function setWinner(state: GameState, winner: PlayerSide | "draw", reason: string): void {
+/**
+ * End the game (rules 1.7, 10.4): record the winner and reason, flip the turn
+ * to the game-over phase, and log the terminal event. A no-op once a winner
+ * exists, so the first end condition reached wins.
+ */
+export function setGameOver(state: GameState, winner: PlayerSide | "draw", reason: string): void {
   if (state.winner) return;
   state.winner = winner;
   state.winReason = reason;
@@ -362,10 +376,6 @@ export function setWinner(state: GameState, winner: PlayerSide | "draw", reason:
 // ---------------------------------------------------------------------------
 // Strength, memory, counters
 // ---------------------------------------------------------------------------
-
-export function baseStrength(card: CardInstance): number {
-  return cardDef(card.cardId).strength ?? 0;
-}
 
 /**
  * Expire every temporary strength pump on the Runner's installed programs.
@@ -426,13 +436,4 @@ export function takeCreditsFrom(state: GameState, card: CardInstance, amount: nu
   card.hostedCredits = have - taken;
   state.log.push({ type: "take-credits", targetId: card.id, amount: taken, player: card.owner });
   return taken;
-}
-
-/** Total credits available on installed Corp cards with hosted credits. */
-export function hostedCreditsOf(state: GameState, side: PlayerSide): number {
-  const p = player(state, side);
-  let total = 0;
-  for (const c of p.installed) total += c.hostedCredits ?? 0;
-  if (side === "corp") { for (const c of corpInstalled(state)) total += c.hostedCredits ?? 0; }
-  return total;
 }
