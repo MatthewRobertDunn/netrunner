@@ -6,8 +6,8 @@
  * this one.
  */
 
+import { tryCardDef } from "../cards/catalogue.ts";
 import decksRaw from "../../data/starter-decks.json" with { type: "json" };
-import catalogueRaw from "../../data/cards.json" with { type: "json" };
 import type { DeckConfig } from "../types.ts";
 
 interface StarterDeckEntry {
@@ -33,11 +33,6 @@ interface DecksFile {
 export const FIXTURE_NAME = "starter-decks-cyberclick-v1";
 
 const data = decksRaw as unknown as DecksFile;
-
-/** Card ids that this decklist is allowed to contain (verified at import time). */
-const importedCardIds: ReadonlySet<string> = new Set(
-  (catalogueRaw as unknown as { cards: { id: string }[] }).cards.map((c) => c.id),
-);
 
 export function starterDeckConfigs(): { corp: DeckConfig; runner: DeckConfig } {
   const toConfig = (entry: StarterDeckEntry): DeckConfig => ({
@@ -66,21 +61,15 @@ export function starterPoolCardIds(): string[] {
   return [...new Set(ids)];
 }
 
-export function starterDecklistMetadata(side: "runner" | "corp"): StarterDeckEntry {
-  return data.decks[side];
-}
-
-export function importMeta() {
-  return { ...data._source };
-}
-
-/** Sanity check used by tests: fixture quantities match the imported decklist. */
+/** Sanity check used by tests: fixture quantities match the imported decklist.
+ * Card existence is checked through the cards layer (`tryCardDef`), not by
+ * re-parsing the raw `cards.json` here. */
 export function verifyFixtureAgainstSnapshot(): string[] {
   const problems: string[] = [];
   for (const side of ["runner", "corp"] as const) {
     const entry = data.decks[side];
     for (const [cardId, count] of Object.entries(entry.cards)) {
-      if (!importedCardIds.has(cardId)) {
+      if (!tryCardDef(cardId)) {
         problems.push(`${side}: ${cardId} missing from card catalogue`);
       }
       if (count < 1) problems.push(`${side}: ${cardId} has count ${count}`);

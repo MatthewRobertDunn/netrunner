@@ -19,7 +19,7 @@
 
 import { decisionSeedFor, makeAIDecisionContext } from "./context.ts";
 import { engine } from "../engine/facade.ts";
-import type { ApplyMoveResult, GameAI, GameState, Move, PlayerSide } from "../types.ts";
+import type { GameAI, GameState, Move, PlayerSide } from "../types.ts";
 
 export interface GameConfig {
   corp: GameAI;
@@ -94,7 +94,7 @@ export function playGame(config: GameConfig): GameOutcome {
         move,
       );
     }
-    state = (result as ApplyMoveResult).state;
+    state = result.state;
     moves++;
   }
 
