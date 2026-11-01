@@ -23,6 +23,7 @@ import {
 import { beginEncounter, continueMovement, endRun, initiateRun, passIce, rezCard } from "./runs.ts";
 import {
   chooseRandomAccess,
+  corpRezOptions,
   doAccessChoice,
   finishAccess,
   scoreAgenda,
@@ -284,7 +285,14 @@ function applyResolvedMove(state: GameState, playerSide: PlayerSide, move: Move)
 
     case "runner.continueRun": {
       // Decline to jack out: continue the movement phase (rule 6.9.4d-g).
-      continueMovement(state);
+      // The Corp's (R) rez options ride along so that, when the movement step
+      // arrives at the attacked server (rule 6.9.4e, before the approach toll
+      // of 6.9.4g), its rez window can park the run — e.g. rezzing a facedown
+      // Manegarm Skunkworks in an ice-less remote so its toll can fire. This
+      // is the only caller that supplies options, so the window opens exactly
+      // once per server approach; settle's re-drives call `continueMovement`
+      // without them and never re-open it.
+      continueMovement(state, corpRezOptions(state));
       break;
     }
     case "runner.jackOut": {
@@ -375,26 +383,39 @@ function answerPrompt(state: GameState, promptId: number, optionId: string): voi
     case "choose-one": {
       if (optionId === PASS_OPTION_ID) {
         state.prompts.shift();
-        return;
-      }
-      const option = prompt.options.find((o) => o.id === optionId);
-      if (!option) return;
-      if (option.creditCost) spendCredits(state, prompt.player, option.creditCost);
-      if (option.clickCost) spendClicks(state, prompt.player, option.clickCost);
-      // Dispatch on what the OPTION MEANS, never on "corp + targetId ⇒ rez":
-      // that heuristic rezzed Seamless Launch targets and misrouted Brân's
-      // install-inward option (BUG B1). Every rez path still funnels through
-      // rezCard, the single payment point (rule 8.1.2d).
-      if (option.effect?.kind === "rez-card-free" && option.targetId) {
-        const found = findCard(state, option.targetId);
-        if (found) rezCard(state, found.card, true);
-      } else if (option.effect?.kind === "rez-card-paid" && option.targetId) {
-        const found = findCard(state, option.targetId);
-        if (found) rezCard(state, found.card);
       } else {
-        applyChoice(state, option.effect);
+        const option = prompt.options.find((o) => o.id === optionId);
+        if (!option) return;
+        if (option.creditCost) spendCredits(state, prompt.player, option.creditCost);
+        if (option.clickCost) spendClicks(state, prompt.player, option.clickCost);
+        // Dispatch on what the OPTION MEANS, never on "corp + targetId ⇒ rez":
+        // that heuristic rezzed Seamless Launch targets and misrouted Brân's
+        // install-inward option (BUG B1). Every rez path still funnels through
+        // rezCard, the single payment point (rule 8.1.2d).
+        if (option.effect?.kind === "rez-card-free" && option.targetId) {
+          const found = findCard(state, option.targetId);
+          if (found) rezCard(state, found.card, true);
+        } else if (option.effect?.kind === "rez-card-paid" && option.targetId) {
+          const found = findCard(state, option.targetId);
+          if (found) rezCard(state, found.card);
+        } else {
+          applyChoice(state, option.effect);
+        }
+        state.prompts.shift();
       }
-      state.prompts.shift();
+      // Rule 6.9.3c-d: a mid-encounter choice (Brân 1.0's install-inward,
+      // Karuna's optional jack-out) is not a second break window. The 6.9.3b
+      // window occurred exactly once, before any subroutine resolved; once
+      // the choice resolves, the next unbroken subroutine resolves
+      // immediately. Re-driving the encounter loop here is what keeps settle
+      // from re-parking the encounter with break moves re-offered — which let
+      // the Runner break unbroken ETR subroutines for clicks AFTER the choice.
+      // The phase guard skips the re-drive when the answer ended the run
+      // (Karuna's jack-out option, an ETR subroutine); a newly queued prompt
+      // parks instead, and its own answer re-drives.
+      if (state.run?.phase === "encounter-ice" && state.prompts.length === 0) {
+        resolveEncounter(state);
+      }
       break;
     }
     default:
@@ -408,6 +429,12 @@ function answerPrompt(state: GameState, promptId: number, optionId: string): voi
     const ice = run.currentIceId ? findCard(state, run.currentIceId)?.card ?? null : null;
     if (ice && ice.rezzed === true) {
       beginEncounter(state);
+    } else if (run.phase === "movement" && run.position === null) {
+      // The Corp's (R) rez window at the server approach (6.9.4e, opened by
+      // `continueMovement`) just closed: resume the approach — the toll of
+      // anything the Corp rezzed (6.9.4g), then success. Called WITHOUT rez
+      // options, so the window does not re-open.
+      continueMovement(state);
     } else if (run.phase === "approach-ice") {
       // Unrezzed ice is passed (rule 6.9.2c).
       passIce(state);

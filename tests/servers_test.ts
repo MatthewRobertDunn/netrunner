@@ -55,6 +55,18 @@ Deno.test("servers: remote lifecycle and public status", async (t) => {
     );
     assertDefined(run, "the Runner can run the new remote");
     state = continueRun(play(state, "runner", run!));
+    // Continuing to the server opens the Corp's (R) rez window (6.9.4e — the
+    // facedown root card); the Corp passes it so the breach can trash it.
+    const windowPrompt = state.prompts[0];
+    if (windowPrompt?.kind === "rez-window") {
+      const pass = assertDefined(
+        engine.getLegalMoves(state, "corp").find(
+          (m) => m.kind === "prompt.answer" && m.optionId === "pass",
+        ),
+        "corp can pass the server-approach rez window",
+      );
+      state = play(state, "corp", pass);
+    }
     assert(state.breach !== null, "the run breaches the remote");
 
     // Access the card (with a single candidate the engine auto-accesses it),

@@ -55,7 +55,18 @@ function rdChoiceState(seed = 3): GameState {
     (m) => m.kind === "runner.run" && m.server === "rd",
   );
   assert(run && run.kind === "runner.run", "runner can run R&D");
-  const after = continueRun(play(state, "runner", run));
+  let after = continueRun(play(state, "runner", run));
+  // Continuing to the server opens the Corp's (R) rez window (6.9.4e — the
+  // facedown upgrade in the root); the Corp passes it so the breach below
+  // sees the same facedown candidate the test pins.
+  const windowPrompt = after.prompts[0];
+  if (windowPrompt?.kind === "rez-window") {
+    const pass = engine.getLegalMoves(after, "corp").find(
+      (m) => m.kind === "prompt.answer" && m.optionId === "pass",
+    );
+    assert(pass !== undefined, "corp can pass the server-approach rez window");
+    after = play(after, "corp", pass!);
+  }
   assert(after.breach !== null, "the R&D run reaches a breach");
   assert(after.breach!.accessing === undefined, "the access choice is pending");
   return after;

@@ -74,7 +74,11 @@ function assertParksSurfaced(state: GameState, seed: number, step: number): void
       `${label}: a ${state.prompts[0]!.kind} prompt is pending for ${owner} but they have no moves`,
     );
   }
-  if (state.run && state.run.phase === "movement") {
+  // A pending prompt owns the decision and the prompt branch above already
+  // asserted its owner has moves — the corp's rez windows (6.9.2b/6.9.4e)
+  // and the runner's toll prompt park the run in the movement phase while
+  // the runner must not act mid-prompt.
+  if (state.run && state.run.phase === "movement" && state.prompts.length === 0) {
     const runnerMoves = legalFor(state, "runner");
     assert(
       hasMove(runnerMoves, "runner.continueRun") && hasMove(runnerMoves, "runner.jackOut"),

@@ -70,10 +70,12 @@ function tollState(seed = 3): GameState {
   assertDefined(run, "runner can run remote-1");
   state = play(state, "runner", run!);
   // The run parks in the movement phase (rule 6.9.4c); continuing reaches the
-  // server, where the rezzed Manegarm raises its toll prompt.
+  // server. The Corp's rez window (6.9.4e — facedown Nico Campaign in the
+  // root) opens before the approach toll; the Corp passes it, and the rezzed
+  // Manegarm raises its toll prompt.
   const cont = engine.getLegalMoves(state, "runner").find((m) => m.kind === "runner.continueRun");
   assertDefined(cont, "continueRun is offered in the movement phase");
-  state = play(state, "runner", cont!);
+  state = corpPassesServerRezWindow(play(state, "runner", cont!));
 
   assert(tollPrompt(state) !== undefined, "the Manegarm toll prompt is pending");
   return state;
@@ -84,6 +86,23 @@ function tollPrompt(state: GameState) {
   const p = state.prompts[0];
   if (p && p.kind === "choose-one" && p.options.some((o) => o.id === "toll-credits")) return p;
   return undefined;
+}
+
+/**
+ * The Corp's (R) rez window at the server approach (rule 6.9.4e): with
+ * nico_campaign unrezzed in the remote's root, continuing to the server parks
+ * the run on the Corp's window BEFORE the approach toll (6.9.4g). The Corp
+ * passes it here so the facedown Nico stays facedown for the breach.
+ */
+function corpPassesServerRezWindow(state: GameState): GameState {
+  const prompt = state.prompts[0];
+  if (!prompt || prompt.kind !== "rez-window") return state;
+  assert(prompt.player === "corp", "the server-approach rez window belongs to the corp");
+  const pass = engine.getLegalMoves(state, "corp").find(
+    (m) => m.kind === "prompt.answer" && m.optionId === "pass",
+  );
+  assertDefined(pass, "the corp can pass the server-approach rez window");
+  return play(state, "corp", pass!);
 }
 
 /** Option ids currently offered for the pending prompt (runner side). */
@@ -281,11 +300,12 @@ Deno.test("toll: the prompt appears once per run — a second run re-prompts, a 
   );
   assertDefined(run2, "the runner can run remote-1 again");
   state = play(state, "runner", run2!);
-  // The run parks in the movement phase; continuing approaches the server and
-  // raises the toll prompt again.
+  // The run parks in the movement phase; continuing approaches the server.
+  // The Corp passes the 6.9.4e rez window (Nico Campaign still unrezzed), and
+  // the rezzed upgrade raises the toll prompt again.
   const cont = engine.getLegalMoves(state, "runner").find((m) => m.kind === "runner.continueRun");
   assertDefined(cont, "run 2 parks in the movement phase");
-  state = play(state, "runner", cont!);
+  state = corpPassesServerRezWindow(play(state, "runner", cont!));
   assert(tollPrompt(state) !== undefined, "run 2 approaches the rezzed upgrade: toll prompts");
   // With 0 clicks left after initiating run 2, only the credit option is offered.
   assertEquals(offeredOptionIds(state), ["toll-credits", "toll-end"]);
