@@ -10,7 +10,8 @@
  */
 
 import { cardDef } from "../cards/catalogue.ts";
-import { behaviors } from "../cards/effects.ts";
+import { behavior, behaviors } from "../cards/effects.ts";
+import { isIcebreaker } from "../engine/state.ts";
 import type { CardInstance, CardInstanceId, GameState, PlayerSide } from "../types.ts";
 
 /** Terminal bonus: the eval short-circuits to ±WIN when a winner exists. */
@@ -351,6 +352,18 @@ function advancementOf(card: CardInstance): number {
   return card.advancement ?? 0;
 }
 
+/** Printed-strength bonus from the ice's static modifier hook, if any.
+ * Palisade's +2 while protecting a remote is a `bonus-if-remote` hook; the
+ * engine (legal-moves.ts) and the eval read the same shape, so the rule lives
+ * once. */
+function staticBonus(ice: CardInstance, server: GameState["servers"][number]): number {
+  const ss = behavior(ice.cardId)?.staticStrength;
+  if (ss?.kind === "bonus-if-remote") {
+    return server.id.startsWith("remote-") ? (ss.amount ?? 0) : 0;
+  }
+  return 0;
+}
+
 /** Entry bill for one piece of ice still ahead on a run (positive number, it
  * is subtracted from the runner-own term by the caller). Determinized worlds
  * know the ice id, so breaker matching can be priced honestly. */
@@ -361,11 +374,11 @@ function iceAheadPenalty(
 ): number {
   const def = cardDef(ice.cardId);
   let penalty = W_RUN_ICE_ENTRY;
-  // Corridor strength: palisade grows on remotes (engine static modifier).
+  // Corridor strength: the engine's static modifier (Palisade's +2 on
+  // remotes) is read from the registry hook — never by card id.
   const strength = Math.min(
-    (def.strength ?? 0) +
-      (ice.cardId === "palisade" && server.id.startsWith("remote-") ? 2 : 0),
-    8,
+    (def.strength ?? 0) + staticBonus(ice, server),
+    ICE_STRENGTH_CAP,
   );
   penalty += 0.25 * strength;
   penalty += iceCovered(state, def) ? W_RUN_BREAKABLE_BILL : W_RUN_UNBREAKABLE;
@@ -375,22 +388,36 @@ function iceAheadPenalty(
 /** Does the runner's board cover breaking this ice? Printed data only. */
 function iceCovered(state: GameState, def: ReturnType<typeof cardDef>): boolean {
   const iceSubtypes = def.subtypes;
+  // Bran 1.0 breaks any ice with any icebreaker (clicks, not credits): the
+  // `bioroid` flag on its breakAbility hook says so — no card id here.
+  const targetBran = behavior(def.id)?.breakAbility?.bioroid === true;
   for (const program of state.runner.installed) {
     const pd = cardDef(program.cardId);
-    if (pd.type !== "program" || !pd.subtypes.includes("icebreaker")) continue;
-    if (def.id === "bran_1_0") return true; // any icebreaker, clicks not credits
+    if (!isIcebreaker(program)) continue;
+    if (targetBran) return true;
     const breakDef = behaviors.get(program.cardId)?.breakAbility;
     if (!breakDef) continue;
     const match = breakDef.breaks.length === 0 ||
       iceSubtypes.some((s) => breakDef.breaks.includes(s));
     if (!match) continue;
-    // Unity's effective strength grows with the board; pumpable breakers can
-    // pay their way up — so being a bit weaker still counts as cover.
-    const effective = (pd.strength ?? 0) + (pd.id === "unity" ? 2 : 0);
+    // Unity's effective strength grows with the board (staticStrength
+    // `icebreakers-installed`); pumpable breakers can pay their way up — so
+    // being a bit weaker still counts as cover. The +2 is an eval heuristic
+    // approximating the hook: it is not the engine's current-strength formula
+    // (which is count-1), it is a "pumpable breakers cover weaker ice" discount.
+    const effective = (pd.strength ?? 0) + unityEvalBonus(program);
     const canPump = behaviors.get(program.cardId)?.pumpAbility !== undefined;
     if (effective >= (def.strength ?? 0) || canPump) return true;
   }
   return false;
+}
+
+/** Eval-only approximation of Unity's static strength: +2 per installed
+ * icebreaker. The hook is `staticStrength: { kind: "icebreakers-installed" }`
+ * (engine current strength = printed 1 + count - 1); this +2 is a hand-tuned
+ * discount so a pumpable breaker counts as cover for weaker ice. */
+function unityEvalBonus(program: CardInstance): number {
+  return behavior(program.cardId)?.staticStrength?.kind === "icebreakers-installed" ? 2 : 0;
 }
 
 /** What the card currently being accessed is worth to the accessing runner. */
