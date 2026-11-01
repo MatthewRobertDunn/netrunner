@@ -4,7 +4,7 @@ var __export = (target, all) => {
     __defProp(target, name, { get: all[name], enumerable: true });
 };
 
-// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-dom/3.5.13/dist/runtime-dom.esm-bundler.js
+// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-dom/3.5.13/dist/runtime-dom.esm-bundler.js
 var runtime_dom_esm_bundler_exports = {};
 __export(runtime_dom_esm_bundler_exports, {
   BaseTransition: () => BaseTransition,
@@ -177,7 +177,7 @@ __export(runtime_dom_esm_bundler_exports, {
   withScopeId: () => withScopeId
 });
 
-// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/shared/3.5.13/dist/shared.esm-bundler.js
+// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/shared/3.5.13/dist/shared.esm-bundler.js
 // @__NO_SIDE_EFFECTS__
 function makeMap(str) {
   const map2 = /* @__PURE__ */ Object.create(null);
@@ -523,7 +523,7 @@ var stringifySymbol = (v, i = "") => {
   );
 };
 
-// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/reactivity/3.5.13/dist/reactivity.esm-bundler.js
+// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/reactivity/3.5.13/dist/reactivity.esm-bundler.js
 function warn(msg, ...args) {
   console.warn(`[Vue warn] ${msg}`, ...args);
 }
@@ -2200,7 +2200,7 @@ function traverse(value, depth = Infinity, seen2) {
   return value;
 }
 
-// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-core/3.5.13/dist/runtime-core.esm-bundler.js
+// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-core/3.5.13/dist/runtime-core.esm-bundler.js
 var stack = [];
 function pushWarningContext(vnode) {
   stack.push(vnode);
@@ -9588,7 +9588,7 @@ var resolveFilter = null;
 var compatUtils = null;
 var DeprecationTypes = null;
 
-// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-dom/3.5.13/dist/runtime-dom.esm-bundler.js
+// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-dom/3.5.13/dist/runtime-dom.esm-bundler.js
 var policy = void 0;
 var tt = typeof window !== "undefined" && window.trustedTypes;
 if (tt) {
@@ -11384,7 +11384,7 @@ var initDirectivesForSSR = () => {
   }
 };
 
-// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/compiler-core/3.5.13/dist/compiler-core.esm-bundler.js
+// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/compiler-core/3.5.13/dist/compiler-core.esm-bundler.js
 var FRAGMENT = Symbol(true ? `Fragment` : ``);
 var TELEPORT = Symbol(true ? `Teleport` : ``);
 var SUSPENSE = Symbol(true ? `Suspense` : ``);
@@ -16216,7 +16216,7 @@ var noopDirectiveTransform = () => ({
   props: []
 });
 
-// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/compiler-dom/3.5.13/dist/compiler-dom.esm-bundler.js
+// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/compiler-dom/3.5.13/dist/compiler-dom.esm-bundler.js
 var V_MODEL_RADIO = Symbol(true ? `vModelRadio` : ``);
 var V_MODEL_CHECKBOX = Symbol(true ? `vModelCheckbox` : ``);
 var V_MODEL_TEXT = Symbol(true ? `vModelText` : ``);
@@ -16852,7 +16852,7 @@ function compile2(src, options = {}) {
   }));
 }
 
-// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/vue/3.5.13/dist/vue.esm-bundler.js
+// ../usr/local/share/deno/npm/registry.npmjs.org/vue/3.5.13/dist/vue.esm-bundler.js
 function initDev() {
   {
     initCustomFormatter();
@@ -18337,7 +18337,6 @@ var B = [
       breaks: [
         "sentry"
       ],
-      count: 1,
       creditCost: 1
     },
     pumpAbility: {
@@ -18353,11 +18352,14 @@ var B = [
   {
     cardId: "cleaver",
     support: "supported",
+    // Printed "1[credit]: Break up to 2 barrier subroutines" — implemented
+    // per-subroutine (one break move per sub, 1[credit] each); a multi-sub
+    // "up to N" break needs a combined move in legal-moves.ts/apply.ts, so
+    // there is deliberately no count field to trust (see BreakAbilityDef).
     breakAbility: {
       breaks: [
         "barrier"
       ],
-      count: 2,
       creditCost: 1
     },
     pumpAbility: {
@@ -18370,7 +18372,6 @@ var B = [
     support: "supported",
     breakAbility: {
       breaks: [],
-      count: 1,
       creditCost: 1
     },
     pumpAbility: {
@@ -18392,7 +18393,6 @@ var B = [
       breaks: [
         "code_gate"
       ],
-      count: 1,
       creditCost: 1
     },
     pumpAbility: {
@@ -18861,7 +18861,6 @@ var B = [
     ],
     breakAbility: {
       breaks: [],
-      count: 1,
       creditCost: 0,
       bioroid: true
     },
@@ -19292,6 +19291,7 @@ function cardVisibleTo(state, instanceId, viewer) {
     if (p2.kind === "access-decision" && p2.cardId === instanceId) return true;
   }
   if (state.breach?.accessing === instanceId) return true;
+  if (state.breach?.chosen.includes(instanceId)) return true;
   return false;
 }
 function drawCards(state, side, count) {
@@ -19650,18 +19650,26 @@ function passIce(state) {
   run.jackOutOffered = false;
   passCurrentIce(state);
 }
-function continueMovement(state) {
+function continueMovement(state, rezOptions) {
   const run = state.run;
-  if (run.position === null) {
-    if (approachToll(state)) return true;
-    declareSuccess(state);
-    return false;
+  if (run.position !== null) {
+    passCurrentIce(state);
+    if (run.position !== null) return false;
   }
-  passCurrentIce(state);
-  if (run.position === null) {
-    if (approachToll(state)) return true;
-    declareSuccess(state);
+  return approachServerStep(state, rezOptions);
+}
+function approachServerStep(state, rezOptions) {
+  if (rezOptions && rezOptions.length > 0) {
+    state.prompts.push({
+      kind: "rez-window",
+      id: state.nextPromptId++,
+      player: "corp",
+      options: rezOptions
+    });
+    return true;
   }
+  if (approachToll(state)) return true;
+  declareSuccess(state);
   return false;
 }
 function approachToll(state) {
@@ -19925,7 +19933,7 @@ function resolveSubroutine(state, ice, index) {
       break;
     }
     case "lose-credits-then-conditional-end-run": {
-      loseCredits(state, "runner", sub.amount ?? 3);
+      if (sub.amount !== void 0) loseCredits(state, "runner", sub.amount);
       if ((sub.creditsAtMost ?? 6) >= state.runner.credits) endRun(state);
       break;
     }
@@ -20112,6 +20120,10 @@ function installIceInward(state, targetId, fromIceId) {
   const fromIndex = iceList.findIndex((c) => c.id === fromIceId);
   if (fromIndex < 0) return;
   iceList.splice(fromIndex, 0, card);
+  const run = state.run;
+  if (run && run.server === server && run.position !== null && run.position >= fromIndex) {
+    run.position += 1;
+  }
   state.log.push({
     type: "install",
     cardId: card.id,
@@ -20141,6 +20153,14 @@ function abilityLegality(state, side, card, abilityIndex) {
     return {
       ok: false,
       reason: "Not enough clicks",
+      title: ability.title,
+      index: abilityIndex
+    };
+  }
+  if (ability.creditCost !== void 0 && availableCredits(state, side) < ability.creditCost) {
+    return {
+      ok: false,
+      reason: "Not enough credits",
       title: ability.title,
       index: abilityIndex
     };
@@ -20190,6 +20210,9 @@ function applyPaidAbility(state, side, card, abilityIndex, server) {
   const legality = abilityLegality(state, side, card, abilityIndex);
   if (!legality.ok) return false;
   const ability = behaviors.get(card.cardId)?.paidAbilities?.[abilityIndex];
+  const effect2 = ability.effect;
+  if (effect2.kind === "run-server" && !server) return false;
+  if (ability.creditCost) spendCredits(state, side, ability.creditCost);
   if (ability.clickCost) {
     state.log.push({
       type: "spend-clicks",
@@ -20202,7 +20225,6 @@ function applyPaidAbility(state, side, card, abilityIndex, server) {
     player(state, side).usedOncePerTurn.push(`${card.id}:${abilityIndex}`);
   }
   const runner = state.runner;
-  const effect2 = ability.effect;
   switch (effect2.kind) {
     case "load-credits":
       addHostedCredits(state, card, effect2.amount);
@@ -20558,6 +20580,7 @@ function stepBreach(state) {
   }
   if (remaining.length === 1) {
     doAccessChoice(state, remaining[0].instanceId);
+    if (state.winner) return false;
     return Boolean(state.breach?.accessing) || state.prompts.length > 0;
   }
   return true;
@@ -20717,8 +20740,10 @@ function checkVictory(state) {
   }
 }
 function takeMulligan(state) {
-  if (state.prompts.length > 0) state.prompts.shift();
-  const side = pendingMulliganPlayer(state);
+  const prompt = state.prompts[0];
+  if (prompt?.kind !== "mulligan") return;
+  state.prompts.shift();
+  const side = prompt.player;
   const p2 = player(state, side);
   for (const card of p2.hand) {
     card.zone = "deck";
@@ -20746,9 +20771,6 @@ function takeMulligan(state) {
     count: drawn
   });
 }
-function pendingMulliganPlayer(state) {
-  return state.prompts.find((p2) => p2.kind === "mulligan")?.player ?? "corp";
-}
 
 // src/engine/legal-moves.ts
 function getLegalMoves(state, playerSide) {
@@ -20771,20 +20793,7 @@ function getLegalMoves(state, playerSide) {
   }
   if (state.turn.phase === "discard") {
     const prompt2 = state.prompts.find((pr) => pr.kind === "discard" && pr.player === playerSide);
-    if (prompt2 && prompt2.kind === "discard") {
-      const cards2 = player(state, playerSide).hand;
-      const count = Math.min(prompt2.count, cards2.length);
-      const combos = combinations(cards2.map((c) => c.id), count);
-      for (const combo of combos) {
-        moves.push({
-          kind: "discard",
-          player: playerSide,
-          cardInstanceIds: combo
-        });
-      }
-      return moves;
-    }
-    return [];
+    return prompt2 && prompt2.kind === "discard" ? discardMoves(state, playerSide, prompt2) : [];
   }
   const prompt = state.prompts[0];
   if (prompt) {
@@ -20815,15 +20824,8 @@ function movesForPrompt(state, playerSide, prompt) {
           player: playerSide
         }
       ];
-    case "discard": {
-      const cards2 = player(state, playerSide).hand;
-      const count = Math.min(prompt.count, cards2.length);
-      return combinations(cards2.map((c) => c.id), count).map((combo) => ({
-        kind: "discard",
-        player: playerSide,
-        cardInstanceIds: combo
-      }));
-    }
+    case "discard":
+      return discardMoves(state, playerSide, prompt);
     case "choose-one": {
       const moves = [];
       for (const option of prompt.options) {
@@ -21223,6 +21225,15 @@ function addAbilityMoves(state, side, cards2, moves) {
     }
   }
 }
+function discardMoves(state, playerSide, prompt) {
+  const cards2 = player(state, playerSide).hand;
+  const count = Math.min(prompt.count, cards2.length);
+  return combinations(cards2.map((c) => c.id), count).map((combo) => ({
+    kind: "discard",
+    player: playerSide,
+    cardInstanceIds: combo
+  }));
+}
 function combinations(ids, size) {
   if (size <= 0) return [
     []
@@ -21462,7 +21473,7 @@ function applyResolvedMove(state, playerSide, move) {
       break;
     }
     case "runner.continueRun": {
-      continueMovement(state);
+      continueMovement(state, corpRezOptions(state));
       break;
     }
     case "runner.jackOut": {
@@ -21541,22 +21552,25 @@ function answerPrompt(state, promptId, optionId) {
     case "choose-one": {
       if (optionId === PASS_OPTION_ID) {
         state.prompts.shift();
-        return;
-      }
-      const option = prompt.options.find((o) => o.id === optionId);
-      if (!option) return;
-      if (option.creditCost) spendCredits(state, prompt.player, option.creditCost);
-      if (option.clickCost) spendClicks(state, prompt.player, option.clickCost);
-      if (option.effect?.kind === "rez-card-free" && option.targetId) {
-        const found = findCard(state, option.targetId);
-        if (found) rezCard(state, found.card, true);
-      } else if (option.effect?.kind === "rez-card-paid" && option.targetId) {
-        const found = findCard(state, option.targetId);
-        if (found) rezCard(state, found.card);
       } else {
-        applyChoice(state, option.effect);
+        const option = prompt.options.find((o) => o.id === optionId);
+        if (!option) return;
+        if (option.creditCost) spendCredits(state, prompt.player, option.creditCost);
+        if (option.clickCost) spendClicks(state, prompt.player, option.clickCost);
+        if (option.effect?.kind === "rez-card-free" && option.targetId) {
+          const found = findCard(state, option.targetId);
+          if (found) rezCard(state, found.card, true);
+        } else if (option.effect?.kind === "rez-card-paid" && option.targetId) {
+          const found = findCard(state, option.targetId);
+          if (found) rezCard(state, found.card);
+        } else {
+          applyChoice(state, option.effect);
+        }
+        state.prompts.shift();
       }
-      state.prompts.shift();
+      if (state.run?.phase === "encounter-ice" && state.prompts.length === 0) {
+        resolveEncounter(state);
+      }
       break;
     }
     default:
@@ -21569,6 +21583,8 @@ function answerPrompt(state, promptId, optionId) {
     const ice = run.currentIceId ? findCard(state2, run.currentIceId)?.card ?? null : null;
     if (ice && ice.rezzed === true) {
       beginEncounter(state2);
+    } else if (run.phase === "movement" && run.position === null) {
+      continueMovement(state2);
     } else if (run.phase === "approach-ice") {
       passIce(state2);
     }
