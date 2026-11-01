@@ -18,8 +18,9 @@ import {
   newStarterGame,
   play,
   rezWindowState,
+  runnerDeckStartingWith,
 } from "./helpers/fixtures.ts";
-import type { GameState, Move } from "../src/types.ts";
+import type { GameEvent, GameState, Move } from "../src/types.ts";
 import { describeMove } from "../src/web/ui/util.ts";
 import { assert, assertDefined, assertEquals, deepClone } from "./helpers/assert.ts";
 
@@ -402,6 +403,77 @@ Deno.test("visibility: the event log is redacted per viewer", async (t) => {
       assert(rezEvent && rezEvent.type === "rez", "a rez event was logged");
       assertEquals(rezEvent.cardId, ice.id, `rezzed cards are public to ${viewer}`);
     }
+  });
+});
+
+Deno.test("visibility: announced Runner actions are open to the Corp (rules 10.2, 4.4.7b)", async (t) => {
+  await t.step("a Runner install event names the installed card to the Corp viewer", () => {
+    // Carmen costs exactly the runner's 5 starting credits, so the install is
+    // offered on a fresh runner turn without any fixture tweak.
+    const state = endCorpTurn(newStarterGame(1, { runner: runnerDeckStartingWith(["carmen"]) }));
+    const install = engine.getLegalMoves(state, "runner").find(
+      (m) => m.kind === "runner.install" && m.cardId === "carmen",
+    );
+    assert(install && install.kind === "runner.install", "the runner can install carmen");
+    const after = play(state, "runner", install);
+
+    for (const viewer of ["corp", "runner"] as const) {
+      const view = engine.getPlayerView(after, viewer);
+      const listed = assertDefined(
+        view.runner.installed.find((c) => c.cardId === "carmen"),
+        `${viewer} sees the installed card in runner.installed`,
+      );
+      const installEvents = view.events.filter((e) => e.type === "install");
+      assert(
+        installEvents.some((e) => e.cardId === listed.id),
+        `the ${viewer} log names the announced install (rule 10.2)`,
+      );
+    }
+  });
+
+  await t.step("a play event names the card once it sits in the open heap", () => {
+    // Jailbreak costs 0 credits: playable on a fresh runner turn; when played
+    // it lands in the Runner's heap, which is open information (rule 4.4.7b).
+    const state = endCorpTurn(newStarterGame(1, { runner: runnerDeckStartingWith(["jailbreak"]) }));
+    const eventMove = engine.getLegalMoves(state, "runner").find(
+      (m) => m.kind === "runner.playEvent" && m.cardId === "jailbreak",
+    );
+    assert(eventMove && eventMove.kind === "runner.playEvent", "the runner can play jailbreak");
+    const after = play(state, "runner", eventMove);
+    const inHeap = assertDefined(
+      after.runner.discard.find((c) => c.cardId === "jailbreak"),
+      "test setup: the played event is in the heap",
+    );
+
+    const corpView = engine.getPlayerView(after, "corp");
+    const listed = assertDefined(
+      corpView.runner.discard.find((c) => c.id === inHeap.id),
+      "the corp reads the heap's real ids (rule 4.4.7b)",
+    );
+    const playEvents = corpView.events.filter((e) => e.type === "play");
+    assert(
+      playEvents.some((e) => e.cardId === listed.id),
+      "the Corp's log names the played event from the open heap",
+    );
+  });
+
+  await t.step("the Corp's Archives discard event stays hidden from the Runner", () => {
+    // Negative control: opening the Runner's zones must not over-open the
+    // Corp's facedown Archives (the documented conservative deviation).
+    const withDiscard = endCorpTurn(newStarterGame(3));
+    assertEquals(withDiscard.corp.discard.length, 1, "test setup: one card was discarded");
+
+    const forRunner = engine.getPlayerView(withDiscard, "runner");
+    const discardEvents = forRunner.events.filter(
+      (e): e is Extract<GameEvent, { type: "discard" }> =>
+        e.type === "discard" && e.player === "corp",
+    );
+    assertEquals(discardEvents.length, 1, "the discard event was logged");
+    assertEquals(
+      discardEvents.map((e) => e.cardId),
+      ["hidden"],
+      "the facedown Archives entry stays hidden from the Runner",
+    );
   });
 });
 
