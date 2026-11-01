@@ -16914,6 +16914,7 @@ __export(mod_exports, {
   applyMove: () => applyMove,
   cardDef: () => cardDef,
   cardSupportReport: () => cardSupportReport,
+  cardVisibleTo: () => cardVisibleTo,
   decisionSeedFor: () => decisionSeedFor,
   determinize: () => determinize,
   engine: () => engine,
@@ -19281,6 +19282,9 @@ function cardVisibleTo(state, instanceId, viewer) {
   if (!found) return false;
   const card = found.card;
   if (card.owner === viewer) return true;
+  if (card.owner === "runner" && (card.zone === "play-area" || card.zone === "discard")) {
+    return true;
+  }
   if (card.zone === "score") return true;
   if (card.rezzed === true) return true;
   for (const p2 of state.prompts) {
@@ -20883,7 +20887,7 @@ function movesForPrompt(state, playerSide, prompt) {
         }
       ];
       const trashCost = cardDef(found.card.cardId).trashCost;
-      if (trashCost !== null && trashCost > 0 && state.runner.credits >= trashCost) {
+      if (trashCost !== null && trashCost > 0 && availableCredits(state, "runner") >= trashCost) {
         moves.push({
           kind: "runner.trashAccessed"
         });
@@ -23318,7 +23322,7 @@ function serverLabel(server) {
 }
 function formatEvent(state, e, viewer) {
   const side = (p2) => p2 === "corp" ? "Corp" : "Runner";
-  const visible = (id) => cardVisibleTo2(state, id, viewer) ? cardTitle(cardIdOfInstance(state, id)) : "a card";
+  const visible = (id) => cardVisibleTo(state, id, viewer) ? cardTitle(cardIdOfInstance(state, id)) : "a card";
   switch (e.type) {
     case "game-started":
       return "Game started";
@@ -23416,18 +23420,6 @@ function cardIdOfInstance(state, id) {
   const card = findCardIn(state, id);
   return card ? card.cardId : String(id);
 }
-function cardVisibleTo2(state, id, viewer) {
-  const card = findCardIn(state, id);
-  if (!card) return false;
-  if (card.owner === viewer) return true;
-  if (card.zone === "score") return true;
-  if (card.rezzed === true) return true;
-  for (const p2 of state.prompts) {
-    if (p2.kind === "access-decision" && p2.cardId === id) return true;
-  }
-  if (state.breach?.accessing === id) return true;
-  return false;
-}
 function moveKey(m) {
   return JSON.stringify(m);
 }
@@ -23486,7 +23478,7 @@ function describeMove(state, move) {
       return "Let subroutines resolve";
     case "runner.accessCard": {
       const card = findCardIn(state, move.targetId);
-      const named = card && cardVisibleTo2(state, move.targetId, "runner");
+      const named = card && cardVisibleTo(state, move.targetId, "runner");
       return `Access ${named ? cardTitle(card.cardId) : "a card"}`;
     }
     case "runner.accessRandom":

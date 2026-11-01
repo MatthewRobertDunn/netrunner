@@ -85,9 +85,10 @@ export function formatEvent(
   viewer: PlayerSide,
 ): string {
   const side = (p: PlayerSide) => (p === "corp" ? "Corp" : "Runner");
-  // A card id is visible to the viewer when it is rezzed, owned by the
-  // viewer, or currently being accessed by the Runner. Everything else
-  // (facedown Corp installs, the opponent's hand/deck/discard) is hidden.
+  // Visibility is the engine's single predicate (`cardVisibleTo`): owned
+  // cards, installed Runner cards, the Runner's heap, rezzed Corp cards,
+  // scored agendas, and the card being accessed. Everything else (facedown
+  // Corp installs, the opponent's hand/deck, facedown Archives) is hidden.
   const visible = (id: CardInstanceId) =>
     cardVisibleTo(state, id, viewer) ? cardTitle(cardIdOfInstance(state, id)) : "a card";
   switch (e.type) {
