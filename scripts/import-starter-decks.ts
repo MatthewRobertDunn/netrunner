@@ -11,9 +11,10 @@
  * Usage:
  *   deno run --allow-net --allow-read --allow-write scripts/import-starter-decks.ts
  *
- * The script never silently overwrites a curated snapshot: if `data/cards.json`
- * already exists, it writes the fresh import alongside it (see output paths)
- * and prints a diff summary for manual review.
+ * The script OVERWRITES `data/cards.json` and `data/starter-decks.json` in place —
+ * there is no alongside-write and no diff summary. Safety is the review-then-commit
+ * model instead: after running, inspect the regenerated files with `git diff` and
+ * commit them yourself. The script never auto-commits a refresh (see its closing note).
  */
 
 const RUNNER_DECK_ID = "4b9cf488-5bd9-4415-a57a-0864d4d0e600";

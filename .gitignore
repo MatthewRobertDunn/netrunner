@@ -1,6 +1,3 @@
-# Engine artifacts
-deno.lock
-
 # User work: PDF/OCR extraction scratch material (not part of this project)
 extraction/
 
