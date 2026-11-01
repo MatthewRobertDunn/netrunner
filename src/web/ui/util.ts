@@ -310,20 +310,21 @@ export function promptFor(state: GameState, side: PlayerSide): Prompt | null {
   return prompt && prompt.player === side ? prompt : null;
 }
 
+/**
+ * Short prompt title for the action panel, keyed by prompt kind. A
+ * choose-one prompt's own `title` takes precedence over the map entry;
+ * unknown kinds fall back to the raw kind string.
+ */
+export const PROMPT_TITLES: Record<string, string> = {
+  mulligan: "Mulligan?",
+  discard: "Discard phase",
+  "rez-window": "Rez window",
+  "choose-one": "Choose one",
+  "access-decision": "Accessed card",
+};
+
 /** Short prompt title for the action panel. */
 export function promptTitle(prompt: Prompt): string {
-  switch (prompt.kind) {
-    case "mulligan":
-      return "Mulligan?";
-    case "discard":
-      return `Discard ${prompt.count} card(s)`;
-    case "rez-window":
-      return "Corp rez window";
-    case "choose-one":
-      return prompt.title;
-    case "access-decision":
-      return "Accessed card";
-    default:
-      return "Decision";
-  }
+  if (prompt.kind === "choose-one" && prompt.title) return prompt.title;
+  return PROMPT_TITLES[prompt.kind] ?? prompt.kind;
 }
