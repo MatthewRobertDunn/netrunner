@@ -4,7 +4,7 @@ var __export = (target, all) => {
     __defProp(target, name, { get: all[name], enumerable: true });
 };
 
-// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-dom/3.5.13/dist/runtime-dom.esm-bundler.js
+// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-dom/3.5.13/dist/runtime-dom.esm-bundler.js
 var runtime_dom_esm_bundler_exports = {};
 __export(runtime_dom_esm_bundler_exports, {
   BaseTransition: () => BaseTransition,
@@ -177,7 +177,7 @@ __export(runtime_dom_esm_bundler_exports, {
   withScopeId: () => withScopeId
 });
 
-// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/shared/3.5.13/dist/shared.esm-bundler.js
+// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/shared/3.5.13/dist/shared.esm-bundler.js
 // @__NO_SIDE_EFFECTS__
 function makeMap(str) {
   const map2 = /* @__PURE__ */ Object.create(null);
@@ -523,7 +523,7 @@ var stringifySymbol = (v, i = "") => {
   );
 };
 
-// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/reactivity/3.5.13/dist/reactivity.esm-bundler.js
+// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/reactivity/3.5.13/dist/reactivity.esm-bundler.js
 function warn(msg, ...args) {
   console.warn(`[Vue warn] ${msg}`, ...args);
 }
@@ -2200,7 +2200,7 @@ function traverse(value, depth = Infinity, seen2) {
   return value;
 }
 
-// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-core/3.5.13/dist/runtime-core.esm-bundler.js
+// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-core/3.5.13/dist/runtime-core.esm-bundler.js
 var stack = [];
 function pushWarningContext(vnode) {
   stack.push(vnode);
@@ -9588,7 +9588,7 @@ var resolveFilter = null;
 var compatUtils = null;
 var DeprecationTypes = null;
 
-// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-dom/3.5.13/dist/runtime-dom.esm-bundler.js
+// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-dom/3.5.13/dist/runtime-dom.esm-bundler.js
 var policy = void 0;
 var tt = typeof window !== "undefined" && window.trustedTypes;
 if (tt) {
@@ -11384,7 +11384,7 @@ var initDirectivesForSSR = () => {
   }
 };
 
-// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/compiler-core/3.5.13/dist/compiler-core.esm-bundler.js
+// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/compiler-core/3.5.13/dist/compiler-core.esm-bundler.js
 var FRAGMENT = Symbol(true ? `Fragment` : ``);
 var TELEPORT = Symbol(true ? `Teleport` : ``);
 var SUSPENSE = Symbol(true ? `Suspense` : ``);
@@ -16216,7 +16216,7 @@ var noopDirectiveTransform = () => ({
   props: []
 });
 
-// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/compiler-dom/3.5.13/dist/compiler-dom.esm-bundler.js
+// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/compiler-dom/3.5.13/dist/compiler-dom.esm-bundler.js
 var V_MODEL_RADIO = Symbol(true ? `vModelRadio` : ``);
 var V_MODEL_CHECKBOX = Symbol(true ? `vModelCheckbox` : ``);
 var V_MODEL_TEXT = Symbol(true ? `vModelText` : ``);
@@ -16852,7 +16852,7 @@ function compile2(src, options = {}) {
   }));
 }
 
-// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/vue/3.5.13/dist/vue.esm-bundler.js
+// ../usr/local/share/deno/npm/registry.npmjs.org/vue/3.5.13/dist/vue.esm-bundler.js
 function initDev() {
   {
     initCustomFormatter();
@@ -16922,7 +16922,6 @@ __export(mod_exports, {
   getPlayerView: () => getPlayerView,
   getPublicGameStatus: () => getPublicGameStatus,
   getPublicGameStatusFor: () => getPublicGameStatusFor,
-  infoSetKey: () => infoSetKey,
   makeAIDecisionContext: () => makeAIDecisionContext,
   makeRng: () => makeRng,
   playGame: () => playGame,
@@ -18913,12 +18912,20 @@ function verifyFixtureAgainstSnapshot() {
 }
 
 // src/engine/rng.ts
-function rngNext(state) {
-  state.rngState = state.rngState + 1831565813 | 0;
-  let t = state.rngState;
+function mulberry32Step(state) {
+  const s = state + 1831565813 | 0;
+  let t = s;
   t = Math.imul(t ^ t >>> 15, t | 1);
   t ^= t + Math.imul(t ^ t >>> 7, t | 61);
-  return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  return [
+    s,
+    ((t ^ t >>> 14) >>> 0) / 4294967296
+  ];
+}
+function rngNext(state) {
+  const [s, out] = mulberry32Step(state.rngState);
+  state.rngState = s;
+  return out;
 }
 function rngInt(state, n) {
   return Math.floor(rngNext(state) * n);
@@ -18936,11 +18943,9 @@ function makeRng(seed) {
   let s = seed | 0;
   return {
     next() {
-      s = s + 1831565813 | 0;
-      let t = s;
-      t = Math.imul(t ^ t >>> 15, t | 1);
-      t ^= t + Math.imul(t ^ t >>> 7, t | 61);
-      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+      const [ns, out] = mulberry32Step(s);
+      s = ns;
+      return out;
     },
     get state() {
       return s;
@@ -21556,7 +21561,7 @@ function startFirstTurn(state) {
   beginCorpTurn(state);
 }
 
-// src/ai/fast-clone.ts
+// src/engine/clone.ts
 function fastCloneState(state) {
   return {
     ...state,
@@ -22499,6 +22504,231 @@ function drawInitial(state, side, count) {
   });
 }
 
+// src/engine/view.ts
+var HIDDEN3 = "hidden";
+function corpInstalledView(state, viewer) {
+  const hide = viewer !== "corp";
+  return state.servers.flatMap((s) => [
+    ...s.root.map((c) => viewCard(c, {
+      hidden: hide && c.rezzed !== true,
+      position: "root"
+    })),
+    ...s.ice.map((c) => viewCard(c, {
+      hidden: hide && c.rezzed !== true,
+      position: "ice"
+    }))
+  ]);
+}
+function sideCards(state, side) {
+  const p2 = player(state, side);
+  return {
+    handCount: p2.hand.length,
+    handSize: maxHandSize(state, side),
+    deckCount: p2.deck.length,
+    discardCount: p2.discard.length,
+    installed: p2.installed,
+    identity: p2.identity,
+    score: p2.score
+  };
+}
+function turnStateOf(state, side) {
+  const p2 = player(state, side);
+  return {
+    installedThisTurn: [
+      ...p2.installedThisTurn
+    ],
+    basicDrawThisTurn: p2.basicDrawThisTurn,
+    successfulRunThisTurn: p2.successfulRunThisTurn,
+    ranServersThisTurn: [
+      ...p2.ranServersThisTurn
+    ],
+    hqBreachesThisTurn: p2.hqBreachesThisTurn,
+    usedOncePerTurn: [
+      ...p2.usedOncePerTurn
+    ],
+    pendingRunFund: p2.pendingRunFund
+  };
+}
+function handView(state, side, viewer) {
+  return side === viewer ? player(state, side).hand.map((c) => viewCard(c)) : [];
+}
+function discardView(state, side, viewer) {
+  const p2 = player(state, side);
+  if (side === "runner" || side === viewer) return p2.discard.map((c) => viewCard(c));
+  return p2.discard.map((c) => viewCard(c, {
+    hidden: true
+  }));
+}
+function getPlayerView(state, viewer) {
+  const corpSide = sideCards(state, "corp");
+  const runnerSide = sideCards(state, "runner");
+  return {
+    viewer,
+    turn: {
+      ...state.turn
+    },
+    winner: state.winner,
+    winReason: state.winReason,
+    agendaPointTarget: state.agendaPointTarget,
+    mode: state.mode,
+    corp: {
+      credits: state.corp.credits,
+      clicks: state.corp.clicks,
+      handSize: corpSide.handSize,
+      handCount: corpSide.handCount,
+      deckCount: corpSide.deckCount,
+      discardCount: corpSide.discardCount,
+      agendaPoints: state.corp.agendaPoints,
+      tags: state.corp.tags,
+      identity: viewCard(state.corp.identity),
+      score: corpSide.score.map((c) => viewCard(c)),
+      installed: corpInstalledView(state, viewer),
+      hand: handView(state, "corp", viewer),
+      discard: discardView(state, "corp", viewer),
+      turnState: turnStateOf(state, "corp")
+    },
+    runner: {
+      credits: state.runner.credits,
+      clicks: state.runner.clicks,
+      handSize: runnerSide.handSize,
+      handCount: runnerSide.handCount,
+      deckCount: runnerSide.deckCount,
+      discardCount: runnerSide.discardCount,
+      agendaPoints: state.runner.agendaPoints,
+      identity: viewCard(state.runner.identity),
+      score: runnerSide.score.map((c) => viewCard(c)),
+      installed: runnerSide.installed.map((c) => viewCard(c)),
+      hand: handView(state, "runner", viewer),
+      discard: discardView(state, "runner", viewer),
+      tags: state.runner.tags,
+      turnState: turnStateOf(state, "runner")
+    },
+    run: state.run ? {
+      server: state.run.server,
+      phase: state.run.phase,
+      position: state.run.position,
+      currentIce: state.run.currentIceId ? viewCard(findCard(state, state.run.currentIceId)?.card ?? state.corp.identity, {
+        // The ice being approached is public once rezzed (rules 1.21.1a,
+        // 4.6.3): every player reads Rezzed ice off the table.
+        hidden: viewer !== "corp" && findCard(state, state.run.currentIceId)?.card.rezzed !== true,
+        position: "ice"
+      }) : void 0,
+      broken: [
+        ...state.run.broken
+      ],
+      resolved: [
+        ...state.run.resolved
+      ],
+      source: state.run.source,
+      fundCredits: state.run.fundCredits,
+      rezCostIncrease: state.run.rezCostIncrease,
+      tollPaid: state.run.tollPaid
+    } : null,
+    breach: state.breach ? {
+      server: state.breach.server,
+      randomAccessLimit: state.breach.randomAccessLimit,
+      remaining: Math.max(0, state.breach.randomAccessLimit - state.breach.randomAccessesUsed),
+      chosen: [
+        ...state.breach.chosen
+      ],
+      accessing: state.breach.accessing ? viewCard(findCard(state, state.breach.accessing)?.card ?? state.corp.identity) : void 0
+    } : null,
+    prompts: state.prompts.map((p2) => visiblePrompt(p2, viewer)),
+    events: state.log.map((e) => visibleEvent(state, e, viewer)),
+    warnings: [
+      ...state.supportWarnings
+    ]
+  };
+}
+function visibleEvent(state, event, viewer) {
+  const vis = (id) => cardVisibleTo(state, id, viewer) ? id : HIDDEN3;
+  switch (event.type) {
+    case "load-credits":
+    case "take-credits":
+      return {
+        ...event,
+        targetId: vis(event.targetId)
+      };
+    case "install":
+    case "play":
+    case "rez":
+    case "derez":
+    case "advance":
+    case "score":
+    case "steal":
+    case "trash":
+    case "discard":
+    case "approach-ice":
+    case "encounter-ice":
+    case "resolve-subroutine":
+    case "break-subroutine":
+    case "pass-ice":
+    case "access":
+    case "pump-strength":
+      return {
+        ...event,
+        cardId: vis(event.cardId)
+      };
+    case "damage":
+      return {
+        ...event,
+        trashed: event.trashed.map(vis)
+      };
+    default:
+      return event;
+  }
+}
+
+// src/engine/facade.ts
+var engine = {
+  validateDeck(deck, side, mode) {
+    return validateDeck(deck, side, mode);
+  },
+  startGame(config) {
+    return startGame(config);
+  },
+  getLegalMoves(state, player2) {
+    return getLegalMoves(state, player2);
+  },
+  applyMove(state, player2, move) {
+    return applyMove(state, player2, move);
+  },
+  /**
+   * Public game status (rules 10.2.2/10.2.3): only information both players
+   * are always entitled to see, so this returns the same value for either viewer.
+   */
+  getPublicGameStatus(state) {
+    return getPublicGameStatus(state);
+  },
+  /**
+   * Public game status as seen by `viewer`. Identical to `getPublicGameStatus`
+   * except the Corp additionally sees the ids of its own installed cards.
+   */
+  getPublicGameStatusFor(state, viewer) {
+    return getPublicGameStatusFor(state, viewer);
+  },
+  getPlayerView(state, player2) {
+    return getPlayerView(state, player2);
+  }
+};
+
+// src/engine/hash.ts
+function hashSeed(h1, h2) {
+  let h3 = (h1 | 0) ^ Math.imul(h2 | 0, 2654435769);
+  h3 = Math.imul(h3 ^ h3 >>> 16, 2146121005);
+  h3 = Math.imul(h3 ^ h3 >>> 15, 2221713035);
+  h3 ^= h3 >>> 16;
+  return h3 >>> 0;
+}
+function fnv1aHex(text) {
+  let hash = 2166136261;
+  for (let i = 0; i < text.length; i++) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(16).padStart(8, "0");
+}
+
 // src/ai/context.ts
 function makeAIDecisionContext(state, side, seed) {
   const opponent = other(side);
@@ -22543,14 +22773,6 @@ function stableStringify(value) {
   const obj = value;
   const keys = Object.keys(obj).sort();
   return `{${keys.map((k) => `${JSON.stringify(k)}:${stableStringify(obj[k])}`).join(",")}}`;
-}
-function fnv1aHex(text) {
-  let hash = 2166136261;
-  for (let i = 0; i < text.length; i++) {
-    hash ^= text.charCodeAt(i);
-    hash = Math.imul(hash, 16777619);
-  }
-  return (hash >>> 0).toString(16).padStart(8, "0");
 }
 
 // src/ai/play.ts
@@ -22610,10 +22832,7 @@ var RandomAI = class {
 var randomAI = new RandomAI();
 
 // src/ai/eval.ts
-var DEFAULT_SAMPLES = 32;
-var DEFAULT_TEMPERATURE = 2;
 var WIN = 1e4;
-var FLOOR = -0.9 * WIN;
 var DRAW = 0;
 var W_TARGET_PROXIMITY = 2;
 var W_AGENDA_POINT = 13;
@@ -22665,76 +22884,6 @@ var W_ACCESS_ASSET = 0.6;
 var W_ACCESS_UPGRADE = 0.3;
 var W_ACCESS_AMBUSH = 3;
 var W_ACCESS_AMBUSH_PER_ADVANCE = 1.2;
-function hashSeed(h1, h2) {
-  let h3 = (h1 | 0) ^ Math.imul(h2 | 0, 2654435769);
-  h3 = Math.imul(h3 ^ h3 >>> 16, 2146121005);
-  h3 = Math.imul(h3 ^ h3 >>> 15, 2221713035);
-  h3 ^= h3 >>> 16;
-  return h3 >>> 0;
-}
-var EvalAI = class {
-  name = "eval";
-  samples;
-  temperature;
-  seedSalt;
-  constructor(opts = {}) {
-    this.samples = opts.samples ?? DEFAULT_SAMPLES;
-    this.temperature = opts.temperature ?? DEFAULT_TEMPERATURE;
-    this.seedSalt = opts.seedSalt ?? 0;
-  }
-  chooseMove(view, legal, ctx) {
-    const moves = legal.some((m) => m.kind === "runner.continueRun") ? legal.filter((m) => m.kind !== "runner.jackOut") : legal;
-    if (moves.length === 1) return moves[0];
-    const baseSeed = hashSeed(ctx.seed, this.seedSalt);
-    const sums = new Float64Array(moves.length);
-    let worlds = 0;
-    for (let k = 1; k <= this.samples; k++) {
-      const worldRng = makeRng(hashSeed(baseSeed, k));
-      let world;
-      try {
-        world = determinize(view, ctx, worldRng);
-      } catch {
-        continue;
-      }
-      worlds++;
-      for (let i = 0; i < moves.length; i++) {
-        const clone = fastCloneState(world);
-        const result = applyMove(clone, ctx.side, moves[i], {
-          mutate: true
-        });
-        const score = result.kind === "applied" ? evaluate(result.state, ctx.side) : FLOOR;
-        sums[i] = sums[i] + score;
-      }
-    }
-    if (worlds === 0) {
-      const rng = makeRng(baseSeed ^ 1542469173);
-      const idx = Math.floor(rng.next() * moves.length) % moves.length;
-      return moves[idx] ?? moves[0];
-    }
-    const avgs = new Float64Array(moves.length);
-    for (let i = 0; i < moves.length; i++) avgs[i] = sums[i] / worlds;
-    const pickRng = makeRng(hashSeed(baseSeed, 7919));
-    return moves[softmaxIndex(avgs, this.temperature, pickRng)];
-  }
-};
-function softmaxIndex(avgs, temperature, rng) {
-  let max = -Infinity;
-  for (const a of avgs) if (a > max) max = a;
-  let total = 0;
-  const weights = new Float64Array(avgs.length);
-  for (let i = 0; i < avgs.length; i++) {
-    const w = Math.exp((avgs[i] - max) / Math.max(temperature, 1e-9));
-    weights[i] = w;
-    total += w;
-  }
-  const roll = rng.next() * total;
-  let acc = 0;
-  for (let i = 0; i < weights.length; i++) {
-    acc += weights[i];
-    if (roll < acc) return i;
-  }
-  return weights.length - 1;
-}
 function evaluate(state, side) {
   if (state.winner === side) return WIN;
   if (state.winner === "draw") return DRAW;
@@ -22922,180 +23071,75 @@ function accessedId(state) {
   return state.breach?.accessing;
 }
 
-// src/mod.ts
-var HIDDEN3 = "hidden";
-function corpInstalledView(state, viewer) {
-  const hide = viewer !== "corp";
-  return state.servers.flatMap((s) => [
-    ...s.root.map((c) => viewCard(c, {
-      hidden: hide && c.rezzed !== true,
-      position: "root"
-    })),
-    ...s.ice.map((c) => viewCard(c, {
-      hidden: hide && c.rezzed !== true,
-      position: "ice"
-    }))
-  ]);
-}
-function sideCards(state, side) {
-  const p2 = player(state, side);
-  return {
-    handCount: p2.hand.length,
-    handSize: maxHandSize(state, side),
-    deckCount: p2.deck.length,
-    discardCount: p2.discard.length,
-    installed: p2.installed,
-    identity: p2.identity,
-    score: p2.score
-  };
-}
-function turnStateOf(state, side) {
-  const p2 = player(state, side);
-  return {
-    installedThisTurn: [
-      ...p2.installedThisTurn
-    ],
-    basicDrawThisTurn: p2.basicDrawThisTurn,
-    successfulRunThisTurn: p2.successfulRunThisTurn,
-    ranServersThisTurn: [
-      ...p2.ranServersThisTurn
-    ],
-    hqBreachesThisTurn: p2.hqBreachesThisTurn,
-    usedOncePerTurn: [
-      ...p2.usedOncePerTurn
-    ],
-    pendingRunFund: p2.pendingRunFund
-  };
-}
-function handView(state, side, viewer) {
-  return side === viewer ? player(state, side).hand.map((c) => viewCard(c)) : [];
-}
-function discardView(state, side, viewer) {
-  const p2 = player(state, side);
-  if (side === "runner" || side === viewer) return p2.discard.map((c) => viewCard(c));
-  return p2.discard.map((c) => viewCard(c, {
-    hidden: true
-  }));
-}
-function getPlayerView(state, viewer) {
-  const corpSide = sideCards(state, "corp");
-  const runnerSide = sideCards(state, "runner");
-  return {
-    viewer,
-    turn: {
-      ...state.turn
-    },
-    winner: state.winner,
-    winReason: state.winReason,
-    agendaPointTarget: state.agendaPointTarget,
-    mode: state.mode,
-    corp: {
-      credits: state.corp.credits,
-      clicks: state.corp.clicks,
-      handSize: corpSide.handSize,
-      handCount: corpSide.handCount,
-      deckCount: corpSide.deckCount,
-      discardCount: corpSide.discardCount,
-      agendaPoints: state.corp.agendaPoints,
-      tags: state.corp.tags,
-      identity: viewCard(state.corp.identity),
-      score: corpSide.score.map((c) => viewCard(c)),
-      installed: corpInstalledView(state, viewer),
-      hand: handView(state, "corp", viewer),
-      discard: discardView(state, "corp", viewer),
-      turnState: turnStateOf(state, "corp")
-    },
-    runner: {
-      credits: state.runner.credits,
-      clicks: state.runner.clicks,
-      handSize: runnerSide.handSize,
-      handCount: runnerSide.handCount,
-      deckCount: runnerSide.deckCount,
-      discardCount: runnerSide.discardCount,
-      agendaPoints: state.runner.agendaPoints,
-      identity: viewCard(state.runner.identity),
-      score: runnerSide.score.map((c) => viewCard(c)),
-      installed: runnerSide.installed.map((c) => viewCard(c)),
-      hand: handView(state, "runner", viewer),
-      discard: discardView(state, "runner", viewer),
-      tags: state.runner.tags,
-      turnState: turnStateOf(state, "runner")
-    },
-    run: state.run ? {
-      server: state.run.server,
-      phase: state.run.phase,
-      position: state.run.position,
-      currentIce: state.run.currentIceId ? viewCard(findCard(state, state.run.currentIceId)?.card ?? state.corp.identity, {
-        // The ice being approached is public once rezzed (rules 1.21.1a,
-        // 4.6.3): every player reads Rezzed ice off the table.
-        hidden: viewer !== "corp" && findCard(state, state.run.currentIceId)?.card.rezzed !== true,
-        position: "ice"
-      }) : void 0,
-      broken: [
-        ...state.run.broken
-      ],
-      resolved: [
-        ...state.run.resolved
-      ],
-      source: state.run.source,
-      fundCredits: state.run.fundCredits,
-      rezCostIncrease: state.run.rezCostIncrease,
-      tollPaid: state.run.tollPaid
-    } : null,
-    breach: state.breach ? {
-      server: state.breach.server,
-      randomAccessLimit: state.breach.randomAccessLimit,
-      remaining: Math.max(0, state.breach.randomAccessLimit - state.breach.randomAccessesUsed),
-      chosen: [
-        ...state.breach.chosen
-      ],
-      accessing: state.breach.accessing ? viewCard(findCard(state, state.breach.accessing)?.card ?? state.corp.identity) : void 0
-    } : null,
-    prompts: state.prompts.map((p2) => visiblePrompt(p2, viewer)),
-    events: state.log.map((e) => visibleEvent(state, e, viewer)),
-    warnings: [
-      ...state.supportWarnings
-    ]
-  };
-}
-function visibleEvent(state, event, viewer) {
-  const vis = (id) => cardVisibleTo(state, id, viewer) ? id : HIDDEN3;
-  switch (event.type) {
-    case "load-credits":
-    case "take-credits":
-      return {
-        ...event,
-        targetId: vis(event.targetId)
-      };
-    case "install":
-    case "play":
-    case "rez":
-    case "derez":
-    case "advance":
-    case "score":
-    case "steal":
-    case "trash":
-    case "discard":
-    case "approach-ice":
-    case "encounter-ice":
-    case "resolve-subroutine":
-    case "break-subroutine":
-    case "pass-ice":
-    case "access":
-    case "pump-strength":
-      return {
-        ...event,
-        cardId: vis(event.cardId)
-      };
-    case "damage":
-      return {
-        ...event,
-        trashed: event.trashed.map(vis)
-      };
-    default:
-      return event;
+// src/ai/policy.ts
+var DEFAULT_SAMPLES = 32;
+var DEFAULT_TEMPERATURE = 2;
+var FLOOR = -0.9 * WIN;
+var EvalAI = class {
+  name = "eval";
+  samples;
+  temperature;
+  seedSalt;
+  constructor(opts = {}) {
+    this.samples = opts.samples ?? DEFAULT_SAMPLES;
+    this.temperature = opts.temperature ?? DEFAULT_TEMPERATURE;
+    this.seedSalt = opts.seedSalt ?? 0;
   }
+  chooseMove(view, legal, ctx) {
+    const moves = legal.some((m) => m.kind === "runner.continueRun") ? legal.filter((m) => m.kind !== "runner.jackOut") : legal;
+    if (moves.length === 1) return moves[0];
+    const baseSeed = hashSeed(ctx.seed, this.seedSalt);
+    const sums = new Float64Array(moves.length);
+    let worlds = 0;
+    for (let k = 1; k <= this.samples; k++) {
+      const worldRng = makeRng(hashSeed(baseSeed, k));
+      let world;
+      try {
+        world = determinize(view, ctx, worldRng);
+      } catch {
+        continue;
+      }
+      worlds++;
+      for (let i = 0; i < moves.length; i++) {
+        const clone = fastCloneState(world);
+        const result = applyMove(clone, ctx.side, moves[i], {
+          mutate: true
+        });
+        const score = result.kind === "applied" ? evaluate(result.state, ctx.side) : FLOOR;
+        sums[i] = sums[i] + score;
+      }
+    }
+    if (worlds === 0) {
+      const rng = makeRng(baseSeed ^ 1542469173);
+      const idx = Math.floor(rng.next() * moves.length) % moves.length;
+      return moves[idx] ?? moves[0];
+    }
+    const avgs = new Float64Array(moves.length);
+    for (let i = 0; i < moves.length; i++) avgs[i] = sums[i] / worlds;
+    const pickRng = makeRng(hashSeed(baseSeed, 7919));
+    return moves[softmaxIndex(avgs, this.temperature, pickRng)];
+  }
+};
+function softmaxIndex(avgs, temperature, rng) {
+  let max = -Infinity;
+  for (const a of avgs) if (a > max) max = a;
+  let total = 0;
+  const weights = new Float64Array(avgs.length);
+  for (let i = 0; i < avgs.length; i++) {
+    const w = Math.exp((avgs[i] - max) / Math.max(temperature, 1e-9));
+    weights[i] = w;
+    total += w;
+  }
+  const roll = rng.next() * total;
+  let acc = 0;
+  for (let i = 0; i < weights.length; i++) {
+    acc += weights[i];
+    if (roll < acc) return i;
+  }
+  return weights.length - 1;
 }
+
+// src/mod.ts
 function starterDeckCardIds() {
   const s = starterDeckConfigs();
   return {
@@ -23129,37 +23173,6 @@ function starterDeckSupport() {
     all: ids
   };
 }
-var engine = {
-  validateDeck(deck, side, mode) {
-    return validateDeck(deck, side, mode);
-  },
-  startGame(config) {
-    return startGame(config);
-  },
-  getLegalMoves(state, player2) {
-    return getLegalMoves(state, player2);
-  },
-  applyMove(state, player2, move) {
-    return applyMove(state, player2, move);
-  },
-  /**
-   * Public game status (rules 10.2.2/10.2.3): only information both players
-   * are always entitled to see, so this returns the same value for either viewer.
-   */
-  getPublicGameStatus(state) {
-    return getPublicGameStatus(state);
-  },
-  /**
-   * Public game status as seen by `viewer`. Identical to `getPublicGameStatus`
-   * except the Corp additionally sees the ids of its own installed cards.
-   */
-  getPublicGameStatusFor(state, viewer) {
-    return getPublicGameStatusFor(state, viewer);
-  },
-  getPlayerView(state, player2) {
-    return getPlayerView(state, player2);
-  }
-};
 var supportWarningsOf = (state) => [
   ...state.supportWarnings
 ];
