@@ -6,7 +6,7 @@
  */
 
 import { checkEmpty } from "./effects.ts";
-import { drawCards, player, takeCreditsFrom, toDiscard } from "./state.ts";
+import { drawCards, player, toDiscard } from "./state.ts";
 import type { CardInstance, GameState, PlayerSide } from "../types.ts";
 
 export const CORP_CLICKS = 3;
@@ -139,12 +139,10 @@ export function checkEmptyAsset(state: GameState, card: CardInstance, drawOne: b
   if (drawOne) drawCards(state, "corp", 1);
 }
 
-function setGameOver(state: GameState, winner: PlayerSide | "draw", reason: string): void {
+export function setGameOver(state: GameState, winner: PlayerSide | "draw", reason: string): void {
   if (state.winner) return;
   state.winner = winner;
   state.winReason = reason;
   state.turn.phase = "game-over";
   state.log.push({ type: "game-end", winner, reason });
 }
-
-export { setGameOver, takeCreditsFrom };

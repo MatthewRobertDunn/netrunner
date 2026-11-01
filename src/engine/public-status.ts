@@ -12,10 +12,11 @@
  */
 
 import { cardDef } from "../cards/catalogue.ts";
-import { findCard, player } from "./state.ts";
+import { corpInstalled, findCard, player } from "./state.ts";
 import { maxHandSize } from "./turns.ts";
 import type {
   CardInstance,
+  PlayerSide,
   Prompt,
   PromptStub,
   PublicBreachStatus,
@@ -30,7 +31,24 @@ import type { GameState } from "../types.ts";
 
 const HIDDEN = "hidden" as const;
 
-function viewCard(card: CardInstance, hidden: boolean, position?: ViewCard["position"]): ViewCard {
+/**
+ * Build a safe view of a card, hiding identity when required.
+ *
+ * Hiding must cover every field that fingerprints a card, strength included:
+ * most starter ice are uniquely identified by their printed strength (rules
+ * 10.2.2, 4.6.3). Temporary boosts (`strengthBoost`) are open counters but are
+ * suppressed alongside the id for the same reason. `owner` and `position`
+ * (ice-vs-root placement, rule 4.6.2) are always open information.
+ *
+ * This is the canonical redaction primitive: both `getPlayerView` (mod.ts) and
+ * the public-status DTO below go through it, so their redaction can never
+ * drift.
+ */
+export function viewCard(
+  card: CardInstance,
+  opts: { hidden?: boolean; position?: ViewCard["position"] } = {},
+): ViewCard {
+  const hidden = opts.hidden === true;
   return {
     id: card.id,
     cardId: hidden ? HIDDEN : card.cardId,
@@ -41,10 +59,21 @@ function viewCard(card: CardInstance, hidden: boolean, position?: ViewCard["posi
     strength: hidden ? undefined : cardDef(card.cardId).strength ?? undefined,
     strengthBoost: hidden ? undefined : card.strengthBoost,
     iceIndex: card.iceIndex,
-    position,
+    position: opts.position,
     zone: card.zone,
     server: card.server,
   };
+}
+
+/**
+ * A prompt as `viewer` may see it: full detail for the player who must answer
+ * (their own prompts never hide information from them), a stub for anyone else
+ * — option labels and target ids name hidden cards, so they cannot be shared
+ * (rules 10.2.2, 1.21.3).
+ */
+export function visiblePrompt(prompt: Prompt, viewer: PlayerSide): Prompt | PromptStub {
+  if (prompt.player === viewer) return prompt;
+  return promptStub(prompt);
 }
 
 /**
@@ -53,7 +82,7 @@ function viewCard(card: CardInstance, hidden: boolean, position?: ViewCard["posi
  */
 function installedCards(state: GameState, side: "corp" | "runner"): CardInstance[] {
   if (side === "runner") return state.runner.installed;
-  return state.servers.flatMap((s) => [...s.root, ...s.ice]);
+  return corpInstalled(state);
 }
 
 function publicPlayer(
@@ -73,10 +102,10 @@ function publicPlayer(
     handSize: maxHandSize(state, side),
     deckCount: p.deck.length,
     discardCount: p.discard.length,
-    identity: viewCard(p.identity, false),
-    score: p.score.map((c) => viewCard(c, false)),
+    identity: viewCard(p.identity),
+    score: p.score.map((c) => viewCard(c)),
     installed: installedCards(state, side).map((c) =>
-      viewCard(c, hideInstalled && c.rezzed !== true)
+      viewCard(c, { hidden: hideInstalled && c.rezzed !== true })
     ),
   };
 }
@@ -88,8 +117,10 @@ function serverStatus(state: GameState, id: ServerId, hideInstalled: boolean): P
   const iceVisible = s.ice.filter((c) => !hideInstalled || c.rezzed === true);
   return {
     id,
-    root: s.root.map((c) => viewCard(c, hideInstalled && c.rezzed !== true, "root")),
-    ice: iceVisible.map((c) => viewCard(c, false, "ice")),
+    root: s.root.map((c) =>
+      viewCard(c, { hidden: hideInstalled && c.rezzed !== true, position: "root" })
+    ),
+    ice: iceVisible.map((c) => viewCard(c, { position: "ice" })),
     unrezzedIceCount: s.ice.length - iceVisible.length,
   };
 }
@@ -108,7 +139,11 @@ function publicRun(state: GameState, hideCorpInstalled: boolean): PublicRunStatu
     // The approached ice is public once rezzed (rules 1.21.1a, 4.6.3). The
     // Corp also always knows its own unrezzed cards (4.6.3: facedown cards
     // are examined by the player controlling them).
-    if (found) currentIce = viewCard(found.card, hideCorpInstalled && found.card.rezzed !== true);
+    if (found) {
+      currentIce = viewCard(found.card, {
+        hidden: hideCorpInstalled && found.card.rezzed !== true,
+      });
+    }
   }
   return {
     server: run.server,

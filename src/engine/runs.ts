@@ -21,7 +21,7 @@ export function iceAt(state: GameState, server: ServerId): CardInstance[] {
  * rez cost is increased by `run.rezCostIncrease` (Tread Lightly).
  *
  * This is the single source of truth for what rezzing charges; the corp rez
- * window displays the same value via `rezSafeCost` (settle.ts).
+ * window (settle.ts `corpRezOptions`) displays the same value.
  */
 export function rezCostFor(state: GameState, card: CardInstance): number {
   const def = cardDef(card.cardId);

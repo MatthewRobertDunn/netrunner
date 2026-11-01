@@ -47,7 +47,12 @@ import {
 import { applyMove } from "./engine/apply.ts";
 import { determinize } from "./engine/determinize.ts";
 import { getLegalMoves } from "./engine/legal-moves.ts";
-import { getPublicGameStatus, getPublicGameStatusFor } from "./engine/public-status.ts";
+import {
+  getPublicGameStatus,
+  getPublicGameStatusFor,
+  viewCard,
+  visiblePrompt,
+} from "./engine/public-status.ts";
 import { makeRng } from "./engine/rng.ts";
 import { startGame, validateDeck } from "./engine/setup.ts";
 import { cardVisibleTo, findCard, player } from "./engine/state.ts";
@@ -69,8 +74,6 @@ import type {
   PlayerSide,
   PlayerTurnState,
   PlayerView,
-  Prompt,
-  PromptStub,
   PublicGameStatus,
   ViewCard,
 } from "./types.ts";
@@ -87,6 +90,10 @@ export {
   makeRng,
   startGame,
   validateDeck,
+  // Redaction primitives (canonical home: engine/public-status.ts — "views are
+  // a redaction contract").
+  viewCard,
+  visiblePrompt,
 };
 
 export * from "./ai/mod.ts";
@@ -96,36 +103,6 @@ export * from "./ai/mod.ts";
 // ---------------------------------------------------------------------------
 
 const HIDDEN = "hidden" as const;
-
-/**
- * Build a safe view of a card, hiding identity when required.
- *
- * Hiding must cover every field that fingerprints a card, strength included:
- * most starter ice are uniquely identified by their printed strength (rules
- * 10.2.2, 4.6.3). Temporary boosts (`strengthBoost`) are open counters but are
- * suppressed alongside the id for the same reason. `owner` and `position`
- * (ice-vs-root placement, rule 4.6.2) are always open information.
- */
-function viewCard(
-  card: CardInstance,
-  opts: { hidden?: boolean; position?: ViewCard["position"] } = {},
-): ViewCard {
-  const hidden = opts.hidden === true;
-  return {
-    id: card.id,
-    cardId: hidden ? HIDDEN : card.cardId,
-    owner: card.owner,
-    rezzed: card.rezzed,
-    advancement: card.advancement,
-    hostedCredits: card.hostedCredits,
-    strength: hidden ? undefined : cardDef(card.cardId).strength ?? undefined,
-    strengthBoost: hidden ? undefined : card.strengthBoost,
-    iceIndex: card.iceIndex,
-    position: opts.position,
-    zone: card.zone,
-    server: card.server,
-  };
-}
 
 /**
  * All corp cards installed in servers, preserving state.servers order and,
@@ -286,17 +263,6 @@ export function getPlayerView(state: GameState, viewer: PlayerSide): PlayerView 
 }
 
 /**
- * A prompt as `viewer` may see it: full detail for the player who must answer
- * (their own prompts never hide information from them), a stub for anyone else
- * — option labels and target ids name hidden cards, so they cannot be shared
- * (rules 10.2.2, 1.21.3).
- */
-function visiblePrompt(prompt: Prompt, viewer: PlayerSide): Prompt | PromptStub {
-  if (prompt.player === viewer) return prompt;
-  return { kind: prompt.kind, id: prompt.id, player: prompt.player };
-}
-
-/**
  * A log event as `viewer` may see it. Every card id reference is filtered
  * through `cardVisibleTo`; anything the viewer is not entitled to see (a
  * facedown install, a card trashed from the opponent's hand by damage) becomes
@@ -377,13 +343,11 @@ export const engine: GameEngine = {
   getLegalMoves(state: GameState, player: PlayerSide): Move[] {
     return getLegalMoves(state, player);
   },
-  applyMove(
-    state: GameState,
-    player: PlayerSide,
-    move: Move,
-    opts: ApplyMoveOptions = {},
-  ): ApplyMoveResult | IllegalMove {
-    return applyMove(state, player, move, opts);
+  applyMove(state: GameState, player: PlayerSide, move: Move): ApplyMoveResult | IllegalMove {
+    // The facade never forwards options: `mutate` is for AI playouts that own
+    // their state (src/ai/eval.ts calls engine/apply.ts directly) — a public
+    // caller can never ask the engine to mutate its state.
+    return applyMove(state, player, move);
   },
   /**
    * Public game status (rules 10.2.2/10.2.3): only information both players

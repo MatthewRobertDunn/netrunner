@@ -12,17 +12,8 @@ import {
   fireInstall,
   resolveSubroutine,
 } from "./effects.ts";
+import { beginEncounter, continueMovement, endRun, initiateRun, passIce, rezCard } from "./runs.ts";
 import {
-  beginEncounter,
-  continueMovement,
-  endRun,
-  finishRun,
-  initiateRun,
-  passIce,
-  rezCard,
-} from "./runs.ts";
-import {
-  beginBreach,
   chooseRandomAccess,
   doAccessChoice,
   finishAccess,
@@ -32,6 +23,7 @@ import {
 } from "./settle.ts";
 import {
   availableCredits,
+  corpInstalled,
   createRemote,
   drawCards,
   expireIcebreakerPumps,
@@ -52,6 +44,7 @@ import {
 import { getLegalMoves } from "./legal-moves.ts";
 import { beginCorpTurn, enterDiscardPhase, maxHandSize } from "./turns.ts";
 import type {
+  ApplyMoveOptions,
   ApplyMoveResult,
   CardInstance,
   GameState,
@@ -66,23 +59,6 @@ function copyState(state: GameState): GameState {
   return JSON.parse(JSON.stringify(state)) as GameState;
 }
 
-export interface ApplyMoveOptions {
-  /**
-   * Apply the move directly on `state` without copying it first.
-   *
-   * The engine normally copies the state before applying a move so a rejected
-   * move can never partially mutate the caller's state. AI simulations that
-   * already own their own state (a UCT search clone, a random playout) pay for
-   * that copy on every edge they walk — the dominant cost in a Monte-Carlo
-   * search. Passing `mutate: true` skips the copy and mutates `state` in
-   * place; the returned `ApplyMoveResult.state` is the same object.
-   *
-   * Callers must not reuse the original `state` after a mutated apply. The
-   * public engine API (`engine.applyMove`) never mutates.
-   */
-  mutate?: boolean;
-}
-
 export function applyMove(
   state: GameState,
   playerSide: PlayerSide,
@@ -94,7 +70,7 @@ export function applyMove(
   if (!ok) {
     return {
       kind: "illegal-move",
-      reason: explainIllegal(state, playerSide, move),
+      reason: explainIllegal(playerSide, move),
       move,
     };
   }
@@ -141,7 +117,7 @@ function sameMove(a: Move, b: Move): boolean {
   return true;
 }
 
-function explainIllegal(_state: GameState, playerSide: PlayerSide, move: Move): string {
+function explainIllegal(playerSide: PlayerSide, move: Move): string {
   switch (move.kind) {
     case "mulligan.take":
     case "mulligan.decline":
@@ -510,11 +486,11 @@ function playCorpOperation(state: GameState, cardId: string): void {
   card.zone = "discard";
   state.corp.discard.unshift(card);
   state.log.push({ type: "play", cardId: card.id, player: "corp" });
-  resolveCorpOperation(state, cardId, card);
+  resolveCorpOperation(state, cardId);
   pruneEmptyRemotes(state);
 }
 
-function resolveCorpOperation(state: GameState, cardId: string, card: CardInstance): void {
+function resolveCorpOperation(state: GameState, cardId: string): void {
   switch (cardId) {
     case "hedge_fund":
       // Printed: "Gain 9 credits." (cost 5, net +4).
@@ -528,7 +504,7 @@ function resolveCorpOperation(state: GameState, cardId: string, card: CardInstan
       // Printed text: "Place 2 advancement counters on 1 installed card that
       // you did not install this turn." — any installed card, including
       // upgrades (rule 1.18.2: placing counters directly is not "advancing").
-      const candidates = corpInstalledCards(state).filter((c) =>
+      const candidates = corpInstalled(state).filter((c) =>
         !state.corp.installedThisTurn.includes(c.id)
       );
       const targets = candidates;
@@ -559,7 +535,6 @@ function resolveCorpOperation(state: GameState, cardId: string, card: CardInstan
     default:
       break;
   }
-  void card;
 }
 
 function playRunnerEvent(state: GameState, cardId: string, server?: ServerId): void {
@@ -739,10 +714,3 @@ function startFirstTurn(state: GameState): void {
   state.turn.phase = "action";
   beginCorpTurn(state);
 }
-
-/** All Corp cards installed in servers (root cards and ice). */
-function corpInstalledCards(state: GameState): CardInstance[] {
-  return state.servers.flatMap((s) => [...s.root, ...s.ice]);
-}
-
-export { beginBreach, endRun, finishRun, initiateRun, moveCardTo };

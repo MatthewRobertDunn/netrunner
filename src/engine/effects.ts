@@ -14,7 +14,6 @@ import {
   findCard,
   gainCredits,
   loseCredits,
-  moveCardTo,
   player,
   takeCreditsFrom,
   toDiscard,
@@ -501,5 +500,3 @@ export function trashMayfly(state: GameState): void {
     }
   }
 }
-
-export { moveCardTo };
