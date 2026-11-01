@@ -163,62 +163,67 @@ function seamlessMultiTargetState(): GameState {
   return play(s, "corp", playOp!).state;
 }
 
-Deno.test("seamless launch prompt: every chosen option places 2 counters, never rezzez (1.18.2)", () => {
-  const s0 = seamlessMultiTargetState();
-  const prompt = assertDefined(chooseOnePrompt(s0, "corp"), "the choose-one prompt is pending");
-  assert(prompt.options.length === 2, "both installed cards are legal targets");
-  for (const option of prompt.options) {
-    const target = assertDefined(findInstance(s0, option.targetId!), "the target is installed");
-    const creditsBefore = s0.corp.credits;
-    const clicksBefore = s0.corp.clicks;
-    const after = answerChooseOne(s0, "corp", option.id);
-    const card = assertDefined(findInstance(after, target.id), "the target is still installed");
-    assertEquals(card.advancement ?? 0, 2, "the chosen option placed 2 advancement counters");
-    assertEquals(
-      after.log.filter((e) => e.type === "rez" && e.cardId === card.id).length,
-      0,
-      "answering the option did not rez the card",
-    );
-    assertEquals(card.rezzed, target.rezzed, "the card was not rezzed by the answer");
-    assertEquals(
-      after.corp.credits,
-      creditsBefore,
-      "placing counters directly spends no credits (1.18.2 is not 'advancing')",
-    );
-    assertEquals(after.corp.clicks, clicksBefore, "no click was spent");
-    assertEquals(after.prompts.length, 0, "the prompt was answered and closed");
-  }
-});
+Deno.test("seamless launch prompt: every chosen option places 2 counters, never rezzez (1.18.2)", async (t) => {
+  // The two installed cards are each a distinct target: the first step sweeps
+  // every offered option, the second pins down the non-upgrade target and that
+  // the other installed card is left untouched.
+  await t.step("every offered target places counters and rezzez nothing", () => {
+    const s0 = seamlessMultiTargetState();
+    const prompt = assertDefined(chooseOnePrompt(s0, "corp"), "the choose-one prompt is pending");
+    assert(prompt.options.length === 2, "both installed cards are legal targets");
+    for (const option of prompt.options) {
+      const target = assertDefined(findInstance(s0, option.targetId!), "the target is installed");
+      const creditsBefore = s0.corp.credits;
+      const clicksBefore = s0.corp.clicks;
+      const after = answerChooseOne(s0, "corp", option.id);
+      const card = assertDefined(findInstance(after, target.id), "the target is still installed");
+      assertEquals(card.advancement ?? 0, 2, "the chosen option placed 2 advancement counters");
+      assertEquals(
+        after.log.filter((e) => e.type === "rez" && e.cardId === card.id).length,
+        0,
+        "answering the option did not rez the card",
+      );
+      assertEquals(card.rezzed, target.rezzed, "the card was not rezzed by the answer");
+      assertEquals(
+        after.corp.credits,
+        creditsBefore,
+        "placing counters directly spends no credits (1.18.2 is not 'advancing')",
+      );
+      assertEquals(after.corp.clicks, clicksBefore, "no click was spent");
+      assertEquals(after.prompts.length, 0, "the prompt was answered and closed");
+    }
+  });
 
-Deno.test("seamless launch prompt: the second card is targetable and untouched otherwise", () => {
-  let s = seamlessMultiTargetState();
-  const prompt = assertDefined(chooseOnePrompt(s, "corp"), "the choose-one prompt is pending");
-  // Pick the option for the asset (the card that is not the upgrade).
-  const upgrade = assertDefined(
-    findInstalled(s, "manegarm_skunkworks"),
-    "the upgrade is installed",
-  );
-  const urtica = assertDefined(findInstalled(s, "urtica_cipher"), "the asset is installed");
-  const option = assertDefined(
-    prompt.options.find((o) => o.targetId === urtica.id),
-    "the asset gets its own choose-one option",
-  );
-  const creditsBefore = s.corp.credits;
-  s = answerChooseOne(s, "corp", option.id);
-  const asset = assertDefined(findInstalled(s, "urtica_cipher"), "the asset is still installed");
-  assertEquals(asset.advancement ?? 0, 2, "the asset holds 2 counters");
-  assertEquals(asset.rezzed, urtica.rezzed, "the asset was not rezzed");
-  assertEquals(
-    s.log.filter((e) => e.type === "rez").length,
-    0,
-    "no rez event was logged at all",
-  );
-  assertEquals(s.corp.credits, creditsBefore, "corp credits are unchanged");
-  assertEquals(
-    findInstalled(s, "manegarm_skunkworks")!.advancement ?? 0,
-    upgrade.advancement ?? 0,
-    "the upgrade is untouched by the choice",
-  );
+  await t.step("the second card is targetable and untouched otherwise", () => {
+    let s = seamlessMultiTargetState();
+    const prompt = assertDefined(chooseOnePrompt(s, "corp"), "the choose-one prompt is pending");
+    // Pick the option for the asset (the card that is not the upgrade).
+    const upgrade = assertDefined(
+      findInstalled(s, "manegarm_skunkworks"),
+      "the upgrade is installed",
+    );
+    const urtica = assertDefined(findInstalled(s, "urtica_cipher"), "the asset is installed");
+    const option = assertDefined(
+      prompt.options.find((o) => o.targetId === urtica.id),
+      "the asset gets its own choose-one option",
+    );
+    const creditsBefore = s.corp.credits;
+    s = answerChooseOne(s, "corp", option.id);
+    const asset = assertDefined(findInstalled(s, "urtica_cipher"), "the asset is still installed");
+    assertEquals(asset.advancement ?? 0, 2, "the asset holds 2 counters");
+    assertEquals(asset.rezzed, urtica.rezzed, "the asset was not rezzed");
+    assertEquals(
+      s.log.filter((e) => e.type === "rez").length,
+      0,
+      "no rez event was logged at all",
+    );
+    assertEquals(s.corp.credits, creditsBefore, "corp credits are unchanged");
+    assertEquals(
+      findInstalled(s, "manegarm_skunkworks")!.advancement ?? 0,
+      upgrade.advancement ?? 0,
+      "the upgrade is untouched by the choice",
+    );
+  });
 });
 
 // ---------------------------------------------------------------------------

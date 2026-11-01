@@ -46,86 +46,88 @@ function iceSeed(): { seed: number; cardId: string } | null {
   return null;
 }
 
-Deno.test("install dedup: two copies of an ice yield one install move per server", () => {
-  const found = iceSeed();
-  if (!found) {
-    console.log("no seed has ice in the Corp opening hand — skip");
-    return;
-  }
-  const state = fresh(found.seed);
-  const before = engine.getLegalMoves(state, "corp").filter((m) =>
-    m.kind === "corp.install" && m.cardId === found.cardId
-  );
-  assert(before.length > 0, "the ice is installable before duplication");
-  dupHandCard(state, "corp", (id) => id === found.cardId);
-  const after = engine.getLegalMoves(state, "corp").filter((m) =>
-    m.kind === "corp.install" && m.cardId === found.cardId
-  );
-  assertEquals(after.length, before.length, "a second copy adds no install moves");
-  assertEquals(
-    new Set(after.map(moveKey)).size,
-    after.length,
-    "no exact-duplicate install moves",
-  );
-});
-
-Deno.test("install dedup: two copies of an operation yield one play move", () => {
-  for (let seed = 1; seed <= 60; seed++) {
-    const state = fresh(seed);
-    const op = state.corp.hand.find((c) => cardDef(c.cardId).type === "operation");
-    if (!op) continue;
-    if (
-      engine.getLegalMoves(state, "corp").every((m) =>
-        !(m.kind === "corp.playOperation" && m.cardId === op.cardId)
-      )
-    ) continue;
-    const before = engine.getLegalMoves(state, "corp").filter((m) =>
-      m.kind === "corp.playOperation" && m.cardId === op.cardId
-    );
-    dupHandCard(state, "corp", (id) => id === op.cardId);
-    const after = engine.getLegalMoves(state, "corp").filter((m) =>
-      m.kind === "corp.playOperation" && m.cardId === op.cardId
-    );
-    assertEquals(after.length, before.length, "a second copy adds no play moves");
-    assertEquals(after.length, 1, "exactly one play move for the operation");
-    return;
-  }
-  console.log("no seed has a playable operation in the Corp opening hand — skip");
-});
-
-Deno.test("install dedup: two copies of a runner card yield one install/play move", () => {
-  for (let seed = 1; seed <= 60; seed++) {
-    // Runner moves second: burn through the corp turn with first-legal moves.
-    let s = fresh(seed);
-    for (let i = 0; i < 60 && !s.winner && s.turn.player !== "runner"; i++) {
-      const moves = engine.getLegalMoves(s, s.turn.player);
-      if (moves.length === 0) break;
-      const r = engine.applyMove(s, s.turn.player, moves[0]!);
-      if (r.kind !== "applied") break;
-      s = r.state;
+Deno.test("install dedup: a duplicate hand card adds no install/play move (definition-id keyed)", async (t) => {
+  await t.step("two copies of an ice yield one install move per server", () => {
+    const found = iceSeed();
+    if (!found) {
+      console.log("no seed has ice in the Corp opening hand — skip");
+      return;
     }
-    if (s.winner || s.turn.player !== "runner") continue;
-    const res = s.runner.hand.find((c) =>
-      ["program", "hardware", "resource"].includes(cardDef(c.cardId).type)
+    const state = fresh(found.seed);
+    const before = engine.getLegalMoves(state, "corp").filter((m) =>
+      m.kind === "corp.install" && m.cardId === found.cardId
     );
-    if (!res) continue;
-    const before = engine.getLegalMoves(s, "runner").filter((m) =>
-      (m.kind === "runner.install" || m.kind === "runner.playEvent") &&
-      m.cardId === res.cardId
+    assert(before.length > 0, "the ice is installable before duplication");
+    dupHandCard(state, "corp", (id) => id === found.cardId);
+    const after = engine.getLegalMoves(state, "corp").filter((m) =>
+      m.kind === "corp.install" && m.cardId === found.cardId
     );
-    if (before.length === 0) continue;
-    dupHandCard(s, "runner", (id) => id === res.cardId);
-    const after = engine.getLegalMoves(s, "runner").filter((m) =>
-      (m.kind === "runner.install" || m.kind === "runner.playEvent") &&
-      m.cardId === res.cardId
-    );
-    assertEquals(after.length, before.length, "a second copy adds no moves");
+    assertEquals(after.length, before.length, "a second copy adds no install moves");
     assertEquals(
       new Set(after.map(moveKey)).size,
       after.length,
-      "no exact-duplicate runner moves",
+      "no exact-duplicate install moves",
     );
-    return;
-  }
-  console.log("no seed has an installable runner card on turn 1 — skip");
+  });
+
+  await t.step("two copies of an operation yield one play move", () => {
+    for (let seed = 1; seed <= 60; seed++) {
+      const state = fresh(seed);
+      const op = state.corp.hand.find((c) => cardDef(c.cardId).type === "operation");
+      if (!op) continue;
+      if (
+        engine.getLegalMoves(state, "corp").every((m) =>
+          !(m.kind === "corp.playOperation" && m.cardId === op.cardId)
+        )
+      ) continue;
+      const before = engine.getLegalMoves(state, "corp").filter((m) =>
+        m.kind === "corp.playOperation" && m.cardId === op.cardId
+      );
+      dupHandCard(state, "corp", (id) => id === op.cardId);
+      const after = engine.getLegalMoves(state, "corp").filter((m) =>
+        m.kind === "corp.playOperation" && m.cardId === op.cardId
+      );
+      assertEquals(after.length, before.length, "a second copy adds no play moves");
+      assertEquals(after.length, 1, "exactly one play move for the operation");
+      return;
+    }
+    console.log("no seed has a playable operation in the Corp opening hand — skip");
+  });
+
+  await t.step("two copies of a runner card yield one install/play move", () => {
+    for (let seed = 1; seed <= 60; seed++) {
+      // Runner moves second: burn through the corp turn with first-legal moves.
+      let s = fresh(seed);
+      for (let i = 0; i < 60 && !s.winner && s.turn.player !== "runner"; i++) {
+        const moves = engine.getLegalMoves(s, s.turn.player);
+        if (moves.length === 0) break;
+        const r = engine.applyMove(s, s.turn.player, moves[0]!);
+        if (r.kind !== "applied") break;
+        s = r.state;
+      }
+      if (s.winner || s.turn.player !== "runner") continue;
+      const res = s.runner.hand.find((c) =>
+        ["program", "hardware", "resource"].includes(cardDef(c.cardId).type)
+      );
+      if (!res) continue;
+      const before = engine.getLegalMoves(s, "runner").filter((m) =>
+        (m.kind === "runner.install" || m.kind === "runner.playEvent") &&
+        m.cardId === res.cardId
+      );
+      if (before.length === 0) continue;
+      dupHandCard(s, "runner", (id) => id === res.cardId);
+      const after = engine.getLegalMoves(s, "runner").filter((m) =>
+        (m.kind === "runner.install" || m.kind === "runner.playEvent") &&
+        m.cardId === res.cardId
+      );
+      assertEquals(after.length, before.length, "a second copy adds no moves");
+      assertEquals(
+        new Set(after.map(moveKey)).size,
+        after.length,
+        "no exact-duplicate runner moves",
+      );
+      return;
+    }
+    console.log("no seed has an installable runner card on turn 1 — skip");
+  });
 });

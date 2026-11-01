@@ -20,15 +20,20 @@ function play(state: GameState, side: "corp" | "runner", m: Move): GameState {
   return r.state;
 }
 
+/** A starter-deck game at `seed`. */
+function fresh(seed: number): GameState {
+  return engine.startGame({
+    corp: starterDeckConfigs().corp,
+    runner: starterDeckConfigs().runner,
+    mode: "starter-decks",
+    seed,
+  });
+}
+
 /** Find a seed where the Corp's opening hand contains an asset and an upgrade. */
 function findAssetUpgradeSeed(): { seed: number; assetId: string; upgradeId: string } | null {
   for (let seed = 1; seed <= 50; seed++) {
-    const state = engine.startGame({
-      corp: starterDeckConfigs().corp,
-      runner: starterDeckConfigs().runner,
-      mode: "starter-decks",
-      seed,
-    });
+    const state = fresh(seed);
     let assetId: string | null = null;
     let upgradeId: string | null = null;
     for (const c of state.corp.hand) {
@@ -49,12 +54,7 @@ Deno.test("install: an asset may be installed in a remote whose root holds only 
   }
   const { seed, assetId, upgradeId } = found;
 
-  let state = engine.startGame({
-    corp: starterDeckConfigs().corp,
-    runner: starterDeckConfigs().runner,
-    mode: "starter-decks",
-    seed,
-  });
+  let state = fresh(seed);
 
   // Install the asset in a brand-new remote (assets create remotes).
   const assetInstall = engine.getLegalMoves(state, "corp").find((m) =>
@@ -78,40 +78,32 @@ Deno.test("install: an asset may be installed in a remote whose root holds only 
   assert(secondAsset.length === 0, "a second asset/agenda is rejected");
 });
 
-Deno.test("install: an upgrade may be installed in the root of any server", () => {
-  const found = findAssetUpgradeSeed();
-  if (!found) {
-    console.log("no seed has both an asset and an upgrade in the Corp's opening hand — skip");
-    return;
-  }
-  const { seed, upgradeId } = found;
-  const state = engine.startGame({
-    corp: starterDeckConfigs().corp,
-    runner: starterDeckConfigs().runner,
-    mode: "starter-decks",
-    seed,
+Deno.test("install: central roots accept upgrades but not assets or agendas", async (t) => {
+  await t.step("an upgrade may be installed in the root of any server", () => {
+    const found = findAssetUpgradeSeed();
+    if (!found) {
+      console.log("no seed has both an asset and an upgrade in the Corp's opening hand — skip");
+      return;
+    }
+    const { seed, upgradeId } = found;
+    const state = fresh(seed);
+    for (const server of ["hq", "rd", "archives"] as const) {
+      const moves = engine.getLegalMoves(state, "corp").filter((m) =>
+        m.kind === "corp.install" && m.server === server && m.cardId === upgradeId &&
+        cardDef(m.cardId).type === "upgrade"
+      );
+      assert(moves.length > 0, `an upgrade can be installed in ${server}`);
+    }
   });
-  for (const server of ["hq", "rd", "archives"] as const) {
-    const moves = engine.getLegalMoves(state, "corp").filter((m) =>
-      m.kind === "corp.install" && m.server === server && m.cardId === upgradeId &&
-      cardDef(m.cardId).type === "upgrade"
-    );
-    assert(moves.length > 0, `an upgrade can be installed in ${server}`);
-  }
-});
 
-Deno.test("install: assets and agendas may not be installed in central roots", () => {
-  const state = engine.startGame({
-    corp: starterDeckConfigs().corp,
-    runner: starterDeckConfigs().runner,
-    mode: "starter-decks",
-    seed: 1,
+  await t.step("assets and agendas may not be installed in central roots", () => {
+    const state = fresh(1);
+    for (const server of ["hq", "rd", "archives"] as const) {
+      const moves = engine.getLegalMoves(state, "corp").filter((m) =>
+        m.kind === "corp.install" && m.server === server &&
+        (cardDef(m.cardId).type === "asset" || cardDef(m.cardId).type === "agenda")
+      );
+      assert(moves.length === 0, `no asset/agenda may be installed in ${server}`);
+    }
   });
-  for (const server of ["hq", "rd", "archives"] as const) {
-    const moves = engine.getLegalMoves(state, "corp").filter((m) =>
-      m.kind === "corp.install" && m.server === server &&
-      (cardDef(m.cardId).type === "asset" || cardDef(m.cardId).type === "agenda")
-    );
-    assert(moves.length === 0, `no asset/agenda may be installed in ${server}`);
-  }
 });
