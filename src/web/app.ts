@@ -129,16 +129,20 @@ export default defineComponent({
           thinking.value = false;
           return;
         }
-        apply(actor, move, { fromAi: true });
+        apply(actor, move);
       }, 60);
     }
 
-    function apply(actor: PlayerSide, move: Move, opts: { fromAi?: boolean } = {}) {
+    function apply(actor: PlayerSide, move: Move) {
       const live = state.value;
       if (!live) return;
       const result = engine.applyMove(live, actor, move);
       if (result.kind === "illegal-move") {
-        if (!opts.fromAi) lastWarning.value = `Illegal move: ${result.reason}`;
+        // An AI move that comes back illegal must not leave the "thinking"
+        // banner up forever: clear it and surface the reason for either seat
+        // (silently dropping it under `fromAi` is what used to hang the loop).
+        thinking.value = false;
+        lastWarning.value = `Illegal move: ${result.reason}`;
         return;
       }
       state.value = markRaw(result.state);
@@ -189,11 +193,11 @@ export default defineComponent({
           <div class="setup-block">
             <h2>You play</h2>
             <div class="row">
-              <button class="pick" :class="{ on: humanSide === 'runner' }" @click="humanSide = 'runner'" data-testid="pick-runner">
+              <button class="pick" :class="{ on: humanSide === 'runner' }" @click="humanSide = 'runner'" data-testid="pick-runner" :aria-pressed="String(humanSide === 'runner')">
                 <img class="glyph-side identity" :src="sideGlyph.runner" alt="" />
                 Runner <span class="dim">(AI plays Corp)</span>
               </button>
-              <button class="pick" :class="{ on: humanSide === 'corp' }" @click="humanSide = 'corp'" data-testid="pick-corp">
+              <button class="pick" :class="{ on: humanSide === 'corp' }" @click="humanSide = 'corp'" data-testid="pick-corp" :aria-pressed="String(humanSide === 'corp')">
                 <img class="glyph-side identity" :src="sideGlyph.corp" alt="" />
                 Corp <span class="dim">(AI plays Runner)</span>
               </button>
@@ -209,6 +213,7 @@ export default defineComponent({
                 class="pick"
                 :class="{ on: strength === i }"
                 @click="strength = i"
+                :aria-pressed="String(strength === i)"
               >{{ p.name }} <span class="dim">({{ p.iterations }} worlds)</span></button>
             </div>
           </div>

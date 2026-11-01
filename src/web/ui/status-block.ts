@@ -79,7 +79,23 @@ export default defineComponent({
     const glyph = computed(() =>
       !glyphFailed.value && identityImg.value ? identityImg.value : sideGlyph(props.side)
     );
-    return { glyph, identityImg, glyphFailed, discardName, cardTitle };
+    /** Scored-agenda instance ids whose art failed to load: they fall back to
+     *  a text mini-card instead of a broken image. */
+    const scoreImgFailed = ref<string[]>([]);
+    function onScoreImgError(id: string): void {
+      if (!scoreImgFailed.value.includes(id)) {
+        scoreImgFailed.value = [...scoreImgFailed.value, id];
+      }
+    }
+    return {
+      glyph,
+      identityImg,
+      glyphFailed,
+      discardName,
+      cardTitle,
+      scoreImgFailed,
+      onScoreImgError,
+    };
   },
   template: `
     <section
@@ -143,7 +159,20 @@ export default defineComponent({
         <span v-if="side === 'corp' && stats.tags" class="stat">bad pub {{ stats.tags }}</span>
       </div>
       <span v-if="stats.score.length" class="score-strip" :data-testid="side + '-score'">
-        <img v-for="c in stats.score" :key="c.id" class="mini-card" :src="'images/' + c.cardId + '.webp'" :alt="cardTitle(c.cardId)" />
+        <template v-for="c in stats.score" :key="c.id">
+          <img
+            v-if="!scoreImgFailed.includes(c.id)"
+            class="mini-card"
+            :src="'images/' + c.cardId + '.webp'"
+            :alt="cardTitle(c.cardId)"
+            @error="onScoreImgError(c.id)"
+          />
+          <span
+            v-else
+            class="mini-card mini-card-text"
+            :title="cardTitle(c.cardId)"
+          >{{ cardTitle(c.cardId) }}</span>
+        </template>
       </span>
     </section>
   `,

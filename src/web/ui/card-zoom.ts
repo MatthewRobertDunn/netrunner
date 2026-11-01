@@ -6,7 +6,10 @@
  *
  * The backdrop takes focus on mount (`onMounted`), so the Esc key reaches its
  * `@keydown.escape` handler without a prior click — the popup can always be
- * dismissed from the keyboard as soon as it opens. The backdrop doubles as
+ * dismissed from the keyboard as soon as it opens. A Tab keydown handler on
+ * the backdrop wraps focus inside the dialog (the backdrop plus its buttons),
+ * so keyboard users can never tab out into the page behind the modal. The
+ * backdrop doubles as
  * the dialog element (`role="dialog"` + `aria-modal` + card-title label), so
  * assistive tech announces the popup as the focus lands on it.
  *
@@ -20,6 +23,20 @@
 import { computed, defineComponent, onMounted, onUnmounted, ref } from "vue";
 import type { PropType } from "vue";
 import { cardOf, imageFor, plainCardText } from "./util.ts";
+
+/** Minimal DOM shapes for the focus trap (this repo typechecks without the
+ *  DOM lib — the same structural style as the onMounted bridge below). */
+interface TabTarget {
+  focus(): void;
+  disabled?: boolean;
+}
+interface TabEvent {
+  preventDefault(): void;
+  shiftKey: boolean;
+}
+type TrapRoot = TabTarget & {
+  querySelectorAll(selectors: string): ArrayLike<TabTarget>;
+};
 
 export default defineComponent({
   name: "CardZoom",
@@ -41,7 +58,7 @@ export default defineComponent({
      * The modal backdrop; focused on mount so Esc closes without a click.
      * Typed structurally (this repo typechecks without the DOM lib).
      */
-    const backdropRef = ref<{ focus(): void } | null>(null);
+    const backdropRef = ref<TrapRoot | null>(null);
     /**
      * The element focused before the modal opened. On close (unmount) focus
      * returns to it, so keyboard and screen-reader users are handed back to
@@ -61,7 +78,42 @@ export default defineComponent({
       previousFocus = null;
     });
 
-    return { def, img, text, backdropRef, onClose: () => emit("close") };
+    /**
+     * Focus trap (Tab): keeps keyboard focus cycling INSIDE the dialog —
+     * without it Tab walks straight out into the page behind the modal. The
+     * dialog's tab stops are the focused backdrop itself plus every enabled
+     * button inside it (the Close button, or the access-decision actions);
+     * Tab from the last stop wraps to the backdrop, Shift+Tab from the
+     * backdrop wraps to the last stop. The keydown bubbles up from the
+     * buttons to this backdrop handler, so one listener covers every stop.
+     * Autofocus-on-open, Escape, and the focus restore on unmount are
+     * unchanged.
+     */
+    function trapTab(e: TabEvent): void {
+      const root = backdropRef.value;
+      if (!root) return;
+      const stops: TabTarget[] = [root];
+      const buttons = root.querySelectorAll("button");
+      for (let i = 0; i < buttons.length; i++) {
+        const button = buttons[i]!;
+        if (!button.disabled) stops.push(button);
+      }
+      const doc = globalThis as unknown as {
+        document?: { activeElement?: TabTarget | null };
+      };
+      const current = doc.document?.activeElement;
+      const at = current ? stops.indexOf(current) : -1;
+      // Focus outside the dialog (shouldn't happen: the backdrop takes focus
+      // on mount) is pulled back to the first stop.
+      const from = at === -1 ? 0 : at;
+      e.preventDefault();
+      const next = e.shiftKey
+        ? stops[(from - 1 + stops.length) % stops.length]
+        : stops[(from + 1) % stops.length];
+      next?.focus();
+    }
+
+    return { def, img, text, backdropRef, trapTab, onClose: () => emit("close") };
   },
   template: `
     <transition name="zoom">
@@ -74,6 +126,7 @@ export default defineComponent({
         :aria-label="def ? def.title : cardId"
         @click.self="onClose"
         @keydown.escape="onClose"
+        @keydown.tab="trapTab"
         tabindex="0"
         data-testid="card-zoom"
       >

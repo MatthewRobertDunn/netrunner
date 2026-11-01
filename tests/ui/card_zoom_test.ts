@@ -52,3 +52,63 @@ Deno.test("CardZoom: actions, move emission, and the Close fallback", async (t) 
     assertEquals(closed.length, 1, "close event emitted");
   });
 });
+
+Deno.test("CardZoom: the focus trap keeps Tab inside the dialog", () => {
+  // Structural DOM typing: this repo typechecks without the DOM lib (see
+  // tests/ui/setup.ts, which bridges the same happy-dom globals).
+  const doc = globalThis as unknown as {
+    document?: { activeElement?: { focus(): void } | null };
+  };
+  const active = () => doc.document?.activeElement ?? null;
+
+  const wrapper = mount(CardZoom, {
+    props: { cardId: "palisade" },
+    // Attached to the document so the autofocus actually lands: happy-dom
+    // does not move focus to elements in a detached tree.
+    attachTo: "body",
+  });
+  const backdrop = wrapper.find('[data-testid="card-zoom"]');
+  const close = wrapper.find('[data-testid="zoom-close"]');
+  assertEquals(active(), backdrop.element, "the backdrop takes focus on mount");
+
+  // Tab from the backdrop reaches the Close button (the only other stop)...
+  backdrop.trigger("keydown", { key: "Tab" });
+  assertEquals(active(), close.element, "Tab moves to the Close button");
+  // ...and Tab from the Close button wraps back — never out into the page.
+  close.trigger("keydown", { key: "Tab" });
+  assertEquals(active(), backdrop.element, "Tab from the last stop wraps to the backdrop");
+
+  // Shift+Tab from the backdrop wraps forward to the last stop.
+  backdrop.trigger("keydown", { key: "Tab", shiftKey: true });
+  assertEquals(active(), close.element, "Shift+Tab wraps to the last stop");
+
+  // With access actions the dialog has several stops: Tab cycles through all
+  // of them and wraps at the end.
+  const multi = mount(CardZoom, {
+    props: {
+      cardId: "palisade",
+      actions: [
+        { label: "Trash (3 [credit])", move: { kind: "runner.trashAccessed" } },
+        { label: "Finish access", move: { kind: "runner.finishAccess" } },
+      ],
+    },
+    attachTo: "body",
+  });
+  const modal = multi.find('[data-testid="card-zoom"]');
+  const stops = multi.findAll("button");
+  assertEquals(stops.length, 2, "two action buttons, no Close");
+  modal.trigger("keydown", { key: "Tab" });
+  assertEquals(active(), stops[0]!.element, "first action button");
+  stops[0]!.trigger("keydown", { key: "Tab" });
+  assertEquals(active(), stops[1]!.element, "second action button");
+  stops[1]!.trigger("keydown", { key: "Tab" });
+  assertEquals(active(), modal.element, "wrap back to the backdrop after the last action");
+
+  // Escape still closes, and focus returns to the previously focused element
+  // on unmount.
+  modal.trigger("keydown", { key: "Escape" });
+  const closed = (multi.emitted()["close"] as unknown[][]) ?? [];
+  assertEquals(closed.length, 1, "Escape emits close");
+  multi.unmount();
+  wrapper.unmount();
+});

@@ -39,6 +39,7 @@ import {
   handOf,
   imageFor,
   moveKey,
+  phaseLabel,
   promptFor,
   serverLabel,
 } from "./util.ts";
@@ -150,6 +151,33 @@ export default defineComponent({
     const warnings = computed<string[]>(() => props.state.supportWarnings.slice(-5));
     const run = computed(() => status.value.run);
     const breach = computed(() => status.value.breach);
+    /**
+     * Remaining access candidates for the current breach (rules 7.3.3-7.3.5),
+     * mirroring the engine's `candidatesForBreach`: the breached server's root
+     * cards, plus the random pool while accesses remain (every unchosen HQ
+     * hand card, or R&D's top card), all minus the ids already chosen. The
+     * banner must count CANDIDATES, not the access limit — the two diverge as
+     * soon as a root card or a bigger hand is in play. Computed from the
+     * trusted state here because the public DTO carries only the limit/used
+     * counters, not the chosen ids; the count itself is open information
+     * (the status panel already shows the hand/deck sizes it is derived from).
+     */
+    const breachCandidatesLeft = computed<number>(() => {
+      const b = props.state.breach;
+      if (!b) return 0;
+      const chosen = new Set(b.chosen);
+      const root = props.state.servers.find((s) => s.id === b.server)?.root ?? [];
+      let count = root.filter((c) => !chosen.has(c.id)).length;
+      if (b.server === "hq" && b.randomAccessesUsed < b.randomAccessLimit) {
+        count += props.state.corp.hand.filter((c) => !chosen.has(c.id)).length;
+      } else if (b.server === "rd" && b.randomAccessesUsed < b.randomAccessLimit) {
+        const top = props.state.corp.deck[0];
+        if (top && !chosen.has(top.id)) count += 1;
+      } else if (b.server === "archives") {
+        count += props.state.corp.discard.filter((c) => !chosen.has(c.id)).length;
+      }
+      return count;
+    });
     const accessedCard = computed(() => {
       for (const p of props.state.prompts) {
         // Only the human's own access decision pops the zoom: the AI answers
@@ -194,19 +222,37 @@ export default defineComponent({
 
     const serverRows = computed(() => status.value.servers);
 
-    /** Moves that render on the side-panel status tiles instead of the
-     *  action panel: gain-credit on the own credits tile, draw on the own
-     *  hand stat (see gainCreditsMove / drawMove below). */
-    const TILE_HOSTED_MOVES = new Set([
-      "corp.gainCredits",
-      "runner.gainCredits",
-      "corp.draw",
-      "runner.draw",
-    ]);
+    /**
+     * Move-kind groups used to route moves between the UI surfaces: `card`
+     * kinds render on their hand-card tile (and its popup), `tile` kinds live
+     * on the side-panel status tiles (gain-credit on the credits tile, draw on
+     * the hand stat), and `run` kinds have their own per-server Run buttons.
+     * One map instead of three hand-maintained lists — a new move kind joins
+     * exactly one group. */
+    const MOVE_KIND_GROUPS = {
+      card: new Set<string>([
+        "runner.install",
+        "runner.playEvent",
+        "corp.install",
+        "corp.playOperation",
+      ]),
+      tile: new Set<string>([
+        "corp.gainCredits",
+        "runner.gainCredits",
+        "corp.draw",
+        "runner.draw",
+      ]),
+      run: new Set<string>(["runner.run"]),
+    } as const;
+
+    /** Whether the move renders on a hand-card tile, not the action panel. */
+    function isCardMove(m: Move): boolean {
+      return MOVE_KIND_GROUPS.card.has(m.kind);
+    }
 
     /** Whether the move is hosted on a side-panel tile, not the action panel. */
     function hostedOnTile(m: Move): boolean {
-      return TILE_HOSTED_MOVES.has(m.kind);
+      return MOVE_KIND_GROUPS.tile.has(m.kind);
     }
 
     /** The "gain 1 credit" basic action, when the human can take it. It lives
@@ -249,6 +295,13 @@ export default defineComponent({
 
     function name(cardId: string | null): string {
       return cardTitle(cardId ?? "");
+    }
+
+    /** Wording for the run banner's approached-ice clause. Unrezzed ice
+     *  arrives redacted as `cardId: "hidden"` (rule 4.6.3) — the banner must
+     *  never print the redaction sentinel verbatim. */
+    function approachedLabel(card: { cardId: string }): string {
+      return card.cardId === "hidden" ? "a facedown card" : name(card.cardId);
     }
 
     function toggleDiscard(id: string) {
@@ -310,12 +363,6 @@ export default defineComponent({
       );
     }
 
-    /** Moves that belong to a specific hand card (install / play). */
-    function isCardMove(m: Move): boolean {
-      return m.kind === "runner.install" || m.kind === "runner.playEvent" ||
-        m.kind === "corp.install" || m.kind === "corp.playOperation";
-    }
-
     /** Generic moves for the action panel (jack out, …). Runs are
      *  deliberately excluded: every server already has its own Run button
      *  under it, so listing them here too only duplicates the row. The
@@ -324,24 +371,16 @@ export default defineComponent({
     const generalMoves = computed<Move[]>(
       () =>
         legal.value.filter((m: Move) =>
-          !isCardMove(m) && m.kind !== "runner.run" && !hostedOnTile(m)
+          !isCardMove(m) && !MOVE_KIND_GROUPS.run.has(m.kind) && !hostedOnTile(m)
         ),
     );
 
     /** Legal play/install moves for a card with this definition id. */
     function cardMoves(cardId: string): Move[] {
       if (!isHumanTurn.value || prompt.value) return [];
-      return legal.value.filter((m: Move) => {
-        switch (m.kind) {
-          case "runner.install":
-          case "runner.playEvent":
-          case "corp.install":
-          case "corp.playOperation":
-            return m.cardId === cardId;
-          default:
-            return false;
-        }
-      });
+      return legal.value.filter((m: Move) =>
+        MOVE_KIND_GROUPS.card.has(m.kind) && "cardId" in m && m.cardId === cardId
+      );
     }
 
     /** Legal actions for one card in the human player's hand. */
@@ -434,6 +473,10 @@ export default defineComponent({
       hqIdentity,
       hqIdentityImg,
       name,
+      approachedLabel,
+      phaseLabel,
+      serverLabel,
+      breachCandidatesLeft,
       moveKey,
       toggleDiscard,
       submitDiscard,
@@ -463,7 +506,7 @@ export default defineComponent({
           <div class="turn-badge">
             <span class="turn-num">Turn {{ state.turn.number }}</span>
             <span class="turn-player" :class="state.turn.player">
-              {{ state.turn.player === 'corp' ? 'Corp' : 'Runner' }} acting · {{ state.turn.phase }}
+              {{ state.turn.player === 'corp' ? 'Corp' : 'Runner' }} · {{ phaseLabel(state.turn.phase) }}
             </span>
           </div>
           <button class="ghost-btn" @click="$emit('new-game')">New game</button>
@@ -524,17 +567,17 @@ export default defineComponent({
         <!-- Run / breach banner (run/breach context for the action row). -->
         <section v-if="run || breach" class="run-banner" data-testid="run-banner">
           <template v-if="breach">
-            <span class="run-tag">BREACH</span> {{ name(breach.server) }} ·
+            <span class="run-tag">BREACH</span> {{ serverLabel(breach.server) }} ·
             <span v-if="breach.accessing">accessing a card…</span>
-            <span v-else>{{ breach.randomAccessLimit - breach.randomAccessesUsed }} access(es) left</span>
+            <span v-else>{{ breachCandidatesLeft }} of {{ breach.randomAccessLimit }} accesses</span>
           </template>
           <template v-else-if="run">
-            <span class="run-tag">RUN</span> on {{ name(run.server) }}
+            <span class="run-tag">RUN</span> on {{ serverLabel(run.server) }}
             <template v-if="run.currentIce">
-              · approached {{ name(run.currentIce.cardId) }}
+              · approached {{ approachedLabel(run.currentIce) }}
               <span v-if="run.brokenSubroutines.length"> · {{ run.brokenSubroutines.length }} sub(s) broken</span>
             </template>
-            <template v-else> · at {{ name(run.server) }}</template>
+            <template v-else> · at {{ serverLabel(run.server) }}</template>
           </template>
         </section>
 

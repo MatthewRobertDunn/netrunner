@@ -4,7 +4,7 @@ var __export = (target, all) => {
     __defProp(target, name, { get: all[name], enumerable: true });
 };
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-dom/3.5.13/dist/runtime-dom.esm-bundler.js
+// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-dom/3.5.13/dist/runtime-dom.esm-bundler.js
 var runtime_dom_esm_bundler_exports = {};
 __export(runtime_dom_esm_bundler_exports, {
   BaseTransition: () => BaseTransition,
@@ -177,7 +177,7 @@ __export(runtime_dom_esm_bundler_exports, {
   withScopeId: () => withScopeId
 });
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/shared/3.5.13/dist/shared.esm-bundler.js
+// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/shared/3.5.13/dist/shared.esm-bundler.js
 // @__NO_SIDE_EFFECTS__
 function makeMap(str) {
   const map2 = /* @__PURE__ */ Object.create(null);
@@ -523,7 +523,7 @@ var stringifySymbol = (v, i = "") => {
   );
 };
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/reactivity/3.5.13/dist/reactivity.esm-bundler.js
+// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/reactivity/3.5.13/dist/reactivity.esm-bundler.js
 function warn(msg, ...args) {
   console.warn(`[Vue warn] ${msg}`, ...args);
 }
@@ -2200,7 +2200,7 @@ function traverse(value, depth = Infinity, seen2) {
   return value;
 }
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-core/3.5.13/dist/runtime-core.esm-bundler.js
+// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-core/3.5.13/dist/runtime-core.esm-bundler.js
 var stack = [];
 function pushWarningContext(vnode) {
   stack.push(vnode);
@@ -9588,7 +9588,7 @@ var resolveFilter = null;
 var compatUtils = null;
 var DeprecationTypes = null;
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-dom/3.5.13/dist/runtime-dom.esm-bundler.js
+// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-dom/3.5.13/dist/runtime-dom.esm-bundler.js
 var policy = void 0;
 var tt = typeof window !== "undefined" && window.trustedTypes;
 if (tt) {
@@ -11384,7 +11384,7 @@ var initDirectivesForSSR = () => {
   }
 };
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/compiler-core/3.5.13/dist/compiler-core.esm-bundler.js
+// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/compiler-core/3.5.13/dist/compiler-core.esm-bundler.js
 var FRAGMENT = Symbol(true ? `Fragment` : ``);
 var TELEPORT = Symbol(true ? `Teleport` : ``);
 var SUSPENSE = Symbol(true ? `Suspense` : ``);
@@ -16216,7 +16216,7 @@ var noopDirectiveTransform = () => ({
   props: []
 });
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/compiler-dom/3.5.13/dist/compiler-dom.esm-bundler.js
+// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/compiler-dom/3.5.13/dist/compiler-dom.esm-bundler.js
 var V_MODEL_RADIO = Symbol(true ? `vModelRadio` : ``);
 var V_MODEL_CHECKBOX = Symbol(true ? `vModelCheckbox` : ``);
 var V_MODEL_TEXT = Symbol(true ? `vModelText` : ``);
@@ -16852,7 +16852,7 @@ function compile2(src, options = {}) {
   }));
 }
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/vue/3.5.13/dist/vue.esm-bundler.js
+// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/vue/3.5.13/dist/vue.esm-bundler.js
 function initDev() {
   {
     initCustomFormatter();
@@ -23316,9 +23316,20 @@ function serverLabel(server) {
       return "Archives";
     case "new-remote":
       return "new remote";
-    default:
-      return server;
+    default: {
+      const remote = /^remote-(\d+)$/.exec(server);
+      return remote ? `remote ${remote[1]}` : server;
+    }
   }
+}
+var PHASE_LABELS = {
+  action: "acting",
+  discard: "discard",
+  mulligans: "mulligans",
+  "game-over": "game over"
+};
+function phaseLabel(phase) {
+  return PHASE_LABELS[phase];
 }
 function formatEvent(state, e, viewer) {
   const side = (p2) => p2 === "corp" ? "Corp" : "Runner";
@@ -23496,6 +23507,7 @@ function describeMove(state, move) {
         if (option.clickCost) costs.push(`${option.clickCost} [click]`);
         return option.label + (costs.length ? ` (${costs.join(", ")})` : "");
       }
+      if (move.optionId === PASS_OPTION_ID) return "Decline";
       return move.optionId;
     }
     default:
@@ -23607,9 +23619,26 @@ var card_tile_default = defineComponent({
         </template>
       </div>
       <div v-if="card && card.advancement" class="counter adv-counter">{{ card.advancement }}</div>
-      <div v-if="card && card.strength !== undefined" class="counter str-counter">{{ card.strength }}</div>
+      <!-- Hosted credits (Nico Campaign et al): open information (rule 10.2),
+           mirrored after the advancement counter. -->
+      <div v-if="card && card.hostedCredits" class="counter credit-counter">{{ card.hostedCredits }}</div>
+      <!-- Effective strength: printed + the live pump. During an encounter the
+           pump is exactly what the Runner is deciding on, so the counter must
+           not understate it (the rule 3.9.5b boost rides in strengthBoost). -->
+      <div
+        v-if="card && card.strength !== undefined"
+        class="counter str-counter"
+        :class="{ boosted: !!card.strengthBoost }"
+        :title="card.strengthBoost
+          ? 'Strength ' + (card.strength + card.strengthBoost) + ' (printed ' + card.strength + ' +' + card.strengthBoost + ' this encounter)'
+          : undefined"
+      >{{ card.strength + (card.strengthBoost ?? 0) }}</div>
       <div v-if="badge" class="counter badge-counter">{{ badge }}</div>
-      <div v-if="card && card.rezzed === false && !facedown" class="unrezzed-flag">D</div>
+      <div
+        v-if="card && card.rezzed === false && !facedown"
+        class="unrezzed-flag"
+        title="installed facedown"
+      >D</div>
       <div v-if="facedown && !corp" class="facedown-label">?</div>
     </component>
   `
@@ -23827,11 +23856,31 @@ var card_zoom_default = defineComponent({
       previousFocus?.focus();
       previousFocus = null;
     });
+    function trapTab(e) {
+      const root = backdropRef.value;
+      if (!root) return;
+      const stops = [
+        root
+      ];
+      const buttons = root.querySelectorAll("button");
+      for (let i = 0; i < buttons.length; i++) {
+        const button = buttons[i];
+        if (!button.disabled) stops.push(button);
+      }
+      const doc2 = globalThis;
+      const current = doc2.document?.activeElement;
+      const at = current ? stops.indexOf(current) : -1;
+      const from = at === -1 ? 0 : at;
+      e.preventDefault();
+      const next = e.shiftKey ? stops[(from - 1 + stops.length) % stops.length] : stops[(from + 1) % stops.length];
+      next?.focus();
+    }
     return {
       def: def2,
       img,
       text,
       backdropRef,
+      trapTab,
       onClose: () => emit2("close")
     };
   },
@@ -23846,6 +23895,7 @@ var card_zoom_default = defineComponent({
         :aria-label="def ? def.title : cardId"
         @click.self="onClose"
         @keydown.escape="onClose"
+        @keydown.tab="trapTab"
         tabindex="0"
         data-testid="card-zoom"
       >
@@ -23902,6 +23952,7 @@ var card_zoom_default = defineComponent({
 
 // src/web/ui/server-column.ts
 var SERVER_GLYPH = {
+  hq: "assets/svg/hq.svg",
   rd: "assets/svg/rd.svg",
   archives: "assets/svg/archives.svg"
 };
@@ -23910,9 +23961,6 @@ function serverGlyphFor(id) {
 }
 function isCentralId(id) {
   return id === "hq" || id === "rd" || id === "archives";
-}
-function remoteLabelFor(id) {
-  return id.replace("-", " ");
 }
 var server_column_default = defineComponent({
   name: "ServerColumn",
@@ -23973,7 +24021,7 @@ var server_column_default = defineComponent({
     return {
       isCentralId,
       serverGlyphFor,
-      remoteLabelFor,
+      serverLabel,
       isCurrentIce,
       iceSlots,
       hqClickable,
@@ -24007,8 +24055,13 @@ var server_column_default = defineComponent({
             <span class="server-name">{{ cardTitle(identityCardId) }}</span>
           </div>
           <div v-else class="server-card-face">
-            <img class="server-glyph" :src="serverGlyphFor(server.id)" :alt="cardTitle(server.id)" />
-            <span class="server-name">{{ cardTitle(server.id) }}</span>
+            <img
+              v-if="serverGlyphFor(server.id)"
+              class="server-glyph"
+              :src="serverGlyphFor(server.id)"
+              :alt="serverLabel(server.id)"
+            />
+            <span class="server-name">{{ serverLabel(server.id) }}</span>
           </div>
         </component>
       </template>
@@ -24018,7 +24071,7 @@ var server_column_default = defineComponent({
         <div
           v-if="server.root.length || server.ice.length"
           class="server-label"
-        >{{ remoteLabelFor(server.id) }}</div>
+        >{{ serverLabel(server.id) }}</div>
       </template>
       <!-- Root row and ice stack render for BOTH kinds. Remotes with only
            ice reserve a one-card root-slot space (blank, no glyph/back) so
@@ -24140,12 +24193,23 @@ var status_block_default = defineComponent({
       return id && id !== "hidden" ? imageFor(id) : null;
     });
     const glyph = computed2(() => !glyphFailed.value && identityImg.value ? identityImg.value : sideGlyph(props.side));
+    const scoreImgFailed = ref([]);
+    function onScoreImgError(id) {
+      if (!scoreImgFailed.value.includes(id)) {
+        scoreImgFailed.value = [
+          ...scoreImgFailed.value,
+          id
+        ];
+      }
+    }
     return {
       glyph,
       identityImg,
       glyphFailed,
       discardName,
-      cardTitle
+      cardTitle,
+      scoreImgFailed,
+      onScoreImgError
     };
   },
   template: `
@@ -24210,7 +24274,20 @@ var status_block_default = defineComponent({
         <span v-if="side === 'corp' && stats.tags" class="stat">bad pub {{ stats.tags }}</span>
       </div>
       <span v-if="stats.score.length" class="score-strip" :data-testid="side + '-score'">
-        <img v-for="c in stats.score" :key="c.id" class="mini-card" :src="'images/' + c.cardId + '.webp'" :alt="cardTitle(c.cardId)" />
+        <template v-for="c in stats.score" :key="c.id">
+          <img
+            v-if="!scoreImgFailed.includes(c.id)"
+            class="mini-card"
+            :src="'images/' + c.cardId + '.webp'"
+            :alt="cardTitle(c.cardId)"
+            @error="onScoreImgError(c.id)"
+          />
+          <span
+            v-else
+            class="mini-card mini-card-text"
+            :title="cardTitle(c.cardId)"
+          >{{ cardTitle(c.cardId) }}</span>
+        </template>
       </span>
     </section>
   `
@@ -24300,6 +24377,22 @@ var game_default = defineComponent({
     const warnings = computed2(() => props.state.supportWarnings.slice(-5));
     const run = computed2(() => status.value.run);
     const breach = computed2(() => status.value.breach);
+    const breachCandidatesLeft = computed2(() => {
+      const b = props.state.breach;
+      if (!b) return 0;
+      const chosen = new Set(b.chosen);
+      const root = props.state.servers.find((s) => s.id === b.server)?.root ?? [];
+      let count = root.filter((c) => !chosen.has(c.id)).length;
+      if (b.server === "hq" && b.randomAccessesUsed < b.randomAccessLimit) {
+        count += props.state.corp.hand.filter((c) => !chosen.has(c.id)).length;
+      } else if (b.server === "rd" && b.randomAccessesUsed < b.randomAccessLimit) {
+        const top = props.state.corp.deck[0];
+        if (top && !chosen.has(top.id)) count += 1;
+      } else if (b.server === "archives") {
+        count += props.state.corp.discard.filter((c) => !chosen.has(c.id)).length;
+      }
+      return count;
+    });
     const accessedCard = computed2(() => {
       for (const p2 of props.state.prompts) {
         if (p2.kind === "access-decision" && p2.player === props.humanSide) {
@@ -24334,14 +24427,28 @@ var game_default = defineComponent({
       return actions;
     });
     const serverRows = computed2(() => status.value.servers);
-    const TILE_HOSTED_MOVES = /* @__PURE__ */ new Set([
-      "corp.gainCredits",
-      "runner.gainCredits",
-      "corp.draw",
-      "runner.draw"
-    ]);
+    const MOVE_KIND_GROUPS = {
+      card: /* @__PURE__ */ new Set([
+        "runner.install",
+        "runner.playEvent",
+        "corp.install",
+        "corp.playOperation"
+      ]),
+      tile: /* @__PURE__ */ new Set([
+        "corp.gainCredits",
+        "runner.gainCredits",
+        "corp.draw",
+        "runner.draw"
+      ]),
+      run: /* @__PURE__ */ new Set([
+        "runner.run"
+      ])
+    };
+    function isCardMove(m) {
+      return MOVE_KIND_GROUPS.card.has(m.kind);
+    }
     function hostedOnTile(m) {
-      return TILE_HOSTED_MOVES.has(m.kind);
+      return MOVE_KIND_GROUPS.tile.has(m.kind);
     }
     const gainCreditsMove = computed2(() => {
       if (!isHumanTurn.value || prompt.value || accessedCard.value) return null;
@@ -24360,6 +24467,9 @@ var game_default = defineComponent({
     });
     function name(cardId) {
       return cardTitle(cardId ?? "");
+    }
+    function approachedLabel(card) {
+      return card.cardId === "hidden" ? "a facedown card" : name(card.cardId);
     }
     function toggleDiscard(id) {
       if (discardSelected.value.includes(id)) {
@@ -24403,23 +24513,10 @@ var game_default = defineComponent({
     function runMove(server) {
       return legal.value.find((m) => m.kind === "runner.run" && m.server === server);
     }
-    function isCardMove(m) {
-      return m.kind === "runner.install" || m.kind === "runner.playEvent" || m.kind === "corp.install" || m.kind === "corp.playOperation";
-    }
-    const generalMoves = computed2(() => legal.value.filter((m) => !isCardMove(m) && m.kind !== "runner.run" && !hostedOnTile(m)));
+    const generalMoves = computed2(() => legal.value.filter((m) => !isCardMove(m) && !MOVE_KIND_GROUPS.run.has(m.kind) && !hostedOnTile(m)));
     function cardMoves(cardId) {
       if (!isHumanTurn.value || prompt.value) return [];
-      return legal.value.filter((m) => {
-        switch (m.kind) {
-          case "runner.install":
-          case "runner.playEvent":
-          case "corp.install":
-          case "corp.playOperation":
-            return m.cardId === cardId;
-          default:
-            return false;
-        }
-      });
+      return legal.value.filter((m) => MOVE_KIND_GROUPS.card.has(m.kind) && "cardId" in m && m.cardId === cardId);
     }
     function handActionsFor(c) {
       return cardMoves(c.cardId);
@@ -24487,6 +24584,10 @@ var game_default = defineComponent({
       hqIdentity,
       hqIdentityImg,
       name,
+      approachedLabel,
+      phaseLabel,
+      serverLabel,
+      breachCandidatesLeft,
       moveKey,
       toggleDiscard,
       submitDiscard,
@@ -24516,7 +24617,7 @@ var game_default = defineComponent({
           <div class="turn-badge">
             <span class="turn-num">Turn {{ state.turn.number }}</span>
             <span class="turn-player" :class="state.turn.player">
-              {{ state.turn.player === 'corp' ? 'Corp' : 'Runner' }} acting \xB7 {{ state.turn.phase }}
+              {{ state.turn.player === 'corp' ? 'Corp' : 'Runner' }} \xB7 {{ phaseLabel(state.turn.phase) }}
             </span>
           </div>
           <button class="ghost-btn" @click="$emit('new-game')">New game</button>
@@ -24577,17 +24678,17 @@ var game_default = defineComponent({
         <!-- Run / breach banner (run/breach context for the action row). -->
         <section v-if="run || breach" class="run-banner" data-testid="run-banner">
           <template v-if="breach">
-            <span class="run-tag">BREACH</span> {{ name(breach.server) }} \xB7
+            <span class="run-tag">BREACH</span> {{ serverLabel(breach.server) }} \xB7
             <span v-if="breach.accessing">accessing a card\u2026</span>
-            <span v-else>{{ breach.randomAccessLimit - breach.randomAccessesUsed }} access(es) left</span>
+            <span v-else>{{ breachCandidatesLeft }} of {{ breach.randomAccessLimit }} accesses</span>
           </template>
           <template v-else-if="run">
-            <span class="run-tag">RUN</span> on {{ name(run.server) }}
+            <span class="run-tag">RUN</span> on {{ serverLabel(run.server) }}
             <template v-if="run.currentIce">
-              \xB7 approached {{ name(run.currentIce.cardId) }}
+              \xB7 approached {{ approachedLabel(run.currentIce) }}
               <span v-if="run.brokenSubroutines.length"> \xB7 {{ run.brokenSubroutines.length }} sub(s) broken</span>
             </template>
-            <template v-else> \xB7 at {{ name(run.server) }}</template>
+            <template v-else> \xB7 at {{ serverLabel(run.server) }}</template>
           </template>
         </section>
 
@@ -24754,17 +24855,16 @@ var app_default = defineComponent({
           thinking.value = false;
           return;
         }
-        apply2(actor, move, {
-          fromAi: true
-        });
+        apply2(actor, move);
       }, 60);
     }
-    function apply2(actor, move, opts = {}) {
+    function apply2(actor, move) {
       const live = state.value;
       if (!live) return;
       const result = engine.applyMove(live, actor, move);
       if (result.kind === "illegal-move") {
-        if (!opts.fromAi) lastWarning.value = `Illegal move: ${result.reason}`;
+        thinking.value = false;
+        lastWarning.value = `Illegal move: ${result.reason}`;
         return;
       }
       state.value = markRaw(result.state);
@@ -24813,11 +24913,11 @@ var app_default = defineComponent({
           <div class="setup-block">
             <h2>You play</h2>
             <div class="row">
-              <button class="pick" :class="{ on: humanSide === 'runner' }" @click="humanSide = 'runner'" data-testid="pick-runner">
+              <button class="pick" :class="{ on: humanSide === 'runner' }" @click="humanSide = 'runner'" data-testid="pick-runner" :aria-pressed="String(humanSide === 'runner')">
                 <img class="glyph-side identity" :src="sideGlyph.runner" alt="" />
                 Runner <span class="dim">(AI plays Corp)</span>
               </button>
-              <button class="pick" :class="{ on: humanSide === 'corp' }" @click="humanSide = 'corp'" data-testid="pick-corp">
+              <button class="pick" :class="{ on: humanSide === 'corp' }" @click="humanSide = 'corp'" data-testid="pick-corp" :aria-pressed="String(humanSide === 'corp')">
                 <img class="glyph-side identity" :src="sideGlyph.corp" alt="" />
                 Corp <span class="dim">(AI plays Runner)</span>
               </button>
@@ -24833,6 +24933,7 @@ var app_default = defineComponent({
                 class="pick"
                 :class="{ on: strength === i }"
                 @click="strength = i"
+                :aria-pressed="String(strength === i)"
               >{{ p.name }} <span class="dim">({{ p.iterations }} worlds)</span></button>
             </div>
           </div>
