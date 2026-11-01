@@ -1,6 +1,10 @@
 /**
  * Hand-rolled deep clone for `GameState`.
  *
+ * Shared engine infrastructure: `determinize` clones the view skeleton with
+ * it and AI playouts clone hypothetical worlds with it, so it lives in
+ * `src/engine/` — the engine core must not depend on the AI package.
+ *
  * `structuredClone` spent ~55% of the UCT AI's wall time; a shape-specific
  * clone is ~16x faster because it does no reflection — just property copies.
  *

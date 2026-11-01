@@ -1,5 +1,5 @@
 /**
- * Guards `fastCloneState` (src/ai/fast-clone.ts) against drift from the
+ * Guards `fastCloneState` (src/engine/clone.ts) against drift from the
  * GameState type. Two checks at every state of five full random games:
  *
  * 1. Equality — fastCloneState output is deep-equal to a JSON round-trip.
@@ -12,7 +12,7 @@
 
 import { assertEquals } from "./helpers/assert.ts";
 import { engine, randomAI, starterDeckConfigs, startGame } from "../src/mod.ts";
-import { fastCloneState } from "../src/ai/fast-clone.ts";
+import { fastCloneState } from "../src/engine/clone.ts";
 import type { GameState, Move, PlayerSide } from "../src/types.ts";
 import { decide } from "./helpers/boundary.ts";
 

@@ -17,8 +17,8 @@
  * even during the opponent's turn (rules 5.3-5.7, 6.9.2, 7.5).
  */
 
-import { engine } from "../mod.ts";
 import { decisionSeedFor, makeAIDecisionContext } from "./context.ts";
+import { engine } from "../engine/facade.ts";
 import type { ApplyMoveResult, GameAI, GameState, Move, PlayerSide } from "../types.ts";
 
 export interface GameConfig {
