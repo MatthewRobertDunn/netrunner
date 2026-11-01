@@ -226,8 +226,27 @@ Deno.test("Brân 1.0: install directly inward keeps the encounter on Brân; new 
   assertEquals(server().ice.length, 1, "Brân is the only ice so far");
   assertEquals(server().ice[0]!.id, branId);
 
+  // Rule 6.9.3b: the break window occurs ONCE, before any subroutine resolves;
+  // 6.9.3c-d then resolve the remaining subroutines in order with NO further
+  // break window. So the two ETR subs (1 and 2) must be broken HERE, in that
+  // window (1 click each via Brân's bioroid ability). Leaving either unbroken
+  // would ETR the run at 6.9.3c before sub 0's install could resolve.
+  for (const sub of [1, 2]) {
+    s = play(
+      s,
+      "runner",
+      findMove(
+        s,
+        "runner",
+        (m) => m.kind === "runner.bioroidBreak" && m.subIndex === sub,
+        `break Brân sub ${sub} in the single 6.9.3b window`,
+      ),
+    );
+  }
+  assertEquals(s.runner.clicks, 0, "the two ETR subs cost the two remaining clicks");
+
   // Sub 0 ("install 1 piece of ice from HQ or Archives directly inward from
-  // this ice") queues the corp choice; the encounter pauses for it.
+  // this ice") is the only subroutine left: resolving it queues the corp choice.
   s = play(
     s,
     "runner",
@@ -253,12 +272,13 @@ Deno.test("Brân 1.0: install directly inward keeps the encounter on Brân; new 
     ),
   );
 
-  // Rule 8.5.14c: Tithe takes the position directly INWARD of Brân (the ice
-  // array runs innermost-first: index 0 adjoins the server, and the Runner's
-  // position counts DOWN as it moves inward). Rule 6.2.6: the Runner's
-  // position is an element, not an index — they are still engaged with Brân,
-  // so `ice[run.position]` and `currentIceId` must BOTH name Brân (the array
-  // index shifted; the position did not move).
+  // Rules 8.5.14c + 6.2.6 + 6.9.3d-e: Tithe takes the position directly INWARD
+  // of Brân (the ice array runs innermost-first: index 0 adjoins the server, and
+  // the Runner's position counts DOWN as it moves inward), the Runner's position
+  // is re-pointed to stay on the engaged element (rule 6.2.6: the position is an
+  // element, not an index — the array index shifted, the position did not), and —
+  // every subroutine being broken or resolved — the encounter completes in the
+  // same step rather than re-offering a break window (6.9.3d returns to (c)).
   const run = s.run!;
   const ice = server().ice;
   assertEquals(ice.length, 2, "Tithe installed");
@@ -266,38 +286,14 @@ Deno.test("Brân 1.0: install directly inward keeps the encounter on Brân; new 
   assertEquals(ice[1]!.id, branId, "Brân shifted one step outward");
   assertEquals(run.position, 1, "the Runner's position follows the element (rule 6.2.6)");
   assertEquals(ice[run.position!]!.id, branId, "ice[run.position] is still Brân");
-  assertEquals(run.currentIceId, branId, "the encounter continues against Brân");
-  assertEquals(run.phase, "encounter-ice", "still in Brân's encounter");
-  assertEquals(s.prompts.length, 0, "no spurious rez window for the inward-installed ice");
-
-  // The encounter continues normally: Brân's ETR subroutines (1 and 2) are
-  // broken with the bioroid ability (2 clicks left after install + run).
-  s = play(
-    s,
-    "runner",
-    findMove(
-      s,
-      "runner",
-      (m) => m.kind === "runner.bioroidBreak" && m.iceId === branId && m.subIndex === 1,
-      "break Brân sub 1",
-    ),
+  assertEquals(
+    run.phase,
+    "movement",
+    "all subs broken/resolved: the encounter completes (6.9.3d-e)",
   );
-  s = play(
-    s,
-    "runner",
-    findMove(
-      s,
-      "runner",
-      (m) => m.kind === "runner.bioroidBreak" && m.iceId === branId && m.subIndex === 2,
-      "break Brân sub 2",
-    ),
-  );
-  // Breaking the last subroutine completes the encounter (settle's
-  // encounterStep sees every sub broken/resolved): movement phase directly.
-  assertEquals(s.run!.phase, "movement", "encounter completed against Brân");
-  assertEquals(s.run!.currentIceId, undefined, "encounter closed");
+  assertEquals(s.prompts.length, 0, "no spurious prompt for the inward-installed ice");
 
-  // Rule 6.2.6b: a position inward of the Runner's position is added — the
+  // Rule 6.2.6b: a position inward of the Runner's position was added — the
   // Runner must approach the newly installed ice later in this run.
   s = play(
     s,

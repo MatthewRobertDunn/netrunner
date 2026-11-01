@@ -215,6 +215,21 @@ export function continueRun(state: GameState): GameState {
   return m ? play(state, "runner", m) : state;
 }
 
+/**
+ * The Corp declines the pending rez window (6.9.2b at ice approach, 6.9.4e at
+ * the server approach), leaving the card facedown. No-op when no rez window is
+ * pending. Tests that drive a run to its breach must clear this window first:
+ * a server with a root card parks there before the Success Phase.
+ */
+export function declineRezWindow(state: GameState): GameState {
+  const prompt = state.prompts[0];
+  if (!prompt || prompt.kind !== "rez-window") return state;
+  const pass = engine.getLegalMoves(state, "corp").find(
+    (m) => m.kind === "prompt.answer" && m.optionId === "pass",
+  );
+  return pass ? play(state, "corp", pass) : state;
+}
+
 // ---------------------------------------------------------------------------
 // Scenario setters — the sanctioned escape hatch for fixture tweaking.
 // Each CLONES the state first and mutates only the copy, so the caller's

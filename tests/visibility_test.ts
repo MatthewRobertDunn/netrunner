@@ -13,6 +13,7 @@ import { cardDef, engine } from "../src/mod.ts";
 import {
   continueRun,
   CORP_FILLER,
+  declineRezWindow,
   endCorpTurn,
   installInNewRemoteAndEndTurn,
   newGameWithCorpHand,
@@ -511,7 +512,7 @@ function twoAccessBreachState(seed = 3): GameState {
     (m) => m.kind === "runner.playEvent" && m.cardId === "jailbreak",
   );
   assert(jailbreak && jailbreak.kind === "runner.playEvent", "the runner can play jailbreak");
-  return continueRun(play(after, "runner", jailbreak));
+  return declineRezWindow(continueRun(play(after, "runner", jailbreak)));
 }
 
 /**

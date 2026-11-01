@@ -18,7 +18,13 @@
 import { engine } from "../src/mod.ts";
 import type { GameState } from "../src/types.ts";
 import { assertDefined, assertEquals } from "./helpers/assert.ts";
-import { findInstalled, newGameWithCorpHand, play, setHand } from "./helpers/fixtures.ts";
+import {
+  declineRezWindow,
+  findInstalled,
+  newGameWithCorpHand,
+  play,
+  setHand,
+} from "./helpers/fixtures.ts";
 
 /**
  * Install + advance Urtica Cipher in a new remote, burn the corp turn, and run
@@ -63,10 +69,13 @@ Deno.test("settle: a game won mid-breach leaves no live run/breach (rule 10.4 cl
       engine.getLegalMoves(s, "runner").find((m) => m.kind === "runner.continueRun"),
       "the run parks in the movement phase (rule 6.9.4c)",
     );
-    // Continuing breaches the remote; the single root candidate (the ambush)
-    // is auto-accessed and its access trigger deals 3 net damage at access
-    // begin — 3 > 2 cards in grip, so the runner flatlines mid-settle.
+    // Continuing reaches the server's approach: the Corp gets the 6.9.4e rez
+    // window over the remote's root, then — declining it — the run breaches.
+    // The single root candidate (the ambush) is auto-accessed and its access
+    // trigger deals 3 net damage at access begin — 3 > 2 cards in grip, so the
+    // runner flatlines mid-settle.
     s = play(s, "runner", continueRun);
+    s = declineRezWindow(s);
 
     assertEquals(s.winner, "corp", "a flatlined runner loses");
     assertEquals(s.winReason, "Runner was flatlined by damage");
@@ -145,6 +154,7 @@ Deno.test("settle: a game won mid-breach leaves no live run/breach (rule 10.4 cl
       "the run parks in the movement phase (rule 6.9.4c)",
     );
     s = play(s, "runner", continueRun);
+    s = declineRezWindow(s);
     const access = assertDefined(
       engine.getLegalMoves(s, "runner").find(
         (m) => m.kind === "runner.accessCard" && (m as { targetId: string }).targetId === urtica.id,
