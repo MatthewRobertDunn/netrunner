@@ -6,24 +6,81 @@
  *   2. export the docker image tarball for the target arch
  *   3. docker load it there (tags netrunner:<arch>) — /workspace is mapped to
  *      /home/matty/code/denorunner on the host, so the tarball is already in
- *      place and needs no scp.
+ *      place and needs no scp
  *   4. restart the systemd unit that runs the container
+ *   5. remove the superseded image so disk usage stays flat
+ *   6. poll the health endpoint until it returns 200
+ *
+ * The deployed arch is whatever the systemd unit loads (`netrunner-<arch>.tar`
+ * in systemd/netrunner.service) — publish defaults to it and refuses an
+ * explicit `--arch` that disagrees, since the unit would keep running the old
+ * image. Before overwriting the tarball, the previous one is kept as
+ * `netrunner-<arch>.tar.prev` for rollback (see README "Rollback").
  *
  * The SSH key lives in `secrets/orange` (gitignored via `secrets/`) — it
  * stays on disk, is never installed, and is only referenced here.
  *
- *   deno run --allow-read --allow-write --allow-run --allow-net scripts/publish.ts [--arch arm64|amd64]
+ *   deno run --allow-read --allow-write --allow-run --allow-net scripts/publish.ts [--dry-run]
  */
 
 const args = Deno.args;
-let ARCH = "arm64";
+let ARCH: string | null = null; // null → fall back to the arch the unit loads
+let dryRun = false;
 for (let i = 0; i < args.length; i++) {
   if (args[i] === "--arch" && args[i + 1]) ARCH = args[++i] as string;
+  else if (args[i] === "--dry-run") dryRun = true;
+  else if (args[i] === "--help" || args[i] === "-h") {
+    console.log(
+      "usage: deno task publish [--dry-run]\n" +
+        "  deploys the arch the systemd unit loads; --arch <other> is refused.",
+    );
+    Deno.exit(0);
+  }
 }
+
 const HOST = "matty@192.168.0.2";
 const SSH_KEY = "./secrets/orange"; // gitignored; passed via -i, never installed
 const REMOTE_DIR = "/home/matty/code/denorunner/release";
+
+/**
+ * The arch the systemd unit actually deploys: read it out of ExecStartPre's
+ * `docker load -i .../netrunner-<arch>.tar` so publish cannot drift from the
+ * unit (the unit hardcodes one arch; publishing the other deploys nothing).
+ */
+function unitArch(): string {
+  let unit: string;
+  try {
+    unit = Deno.readTextFileSync("systemd/netrunner.service");
+  } catch {
+    console.error(
+      "error: cannot read systemd/netrunner.service — run publish from the repo root",
+    );
+    Deno.exit(1);
+  }
+  const m = unit.match(/netrunner-([a-z0-9]+)\.tar/);
+  if (!m) {
+    console.error(
+      "error: no netrunner-<arch>.tar reference found in systemd/netrunner.service",
+    );
+    Deno.exit(1);
+  }
+  return m[1]!;
+}
+
+const DEPLOY_ARCH = unitArch();
+if (ARCH === null) ARCH = DEPLOY_ARCH;
+if (ARCH !== DEPLOY_ARCH) {
+  console.error(
+    `\nerror: --arch ${ARCH} would deploy nothing. systemd/netrunner.service loads ` +
+      `netrunner-${DEPLOY_ARCH}.tar, so a netrunner:${ARCH} image is loaded but the ` +
+      `unit keeps restarting the old netrunner:${DEPLOY_ARCH} container.\n` +
+      `  Update the unit to netrunner-${ARCH}.tar first, or drop the flag — publish ` +
+      `defaults to the unit's arch (${DEPLOY_ARCH}).`,
+  );
+  Deno.exit(1);
+}
 const REMOTE_TARBALL = `${REMOTE_DIR}/netrunner-${ARCH}.tar`;
+const LOCAL_TARBALL = `release/netrunner-${ARCH}.tar`;
 
 function cmd(name: string, args: string[]): Deno.Command {
   return new Deno.Command(name, {
@@ -80,10 +137,40 @@ function sshCapture(remoteArgs: string[]): string {
   return new TextDecoder().decode(r.stdout).trim();
 }
 
+if (dryRun) {
+  console.log("==> dry run — no step below is executed. Resolved plan:");
+  console.log(`  arch:          ${ARCH} (deployed arch, from systemd/netrunner.service)`);
+  console.log(`  host:          ${HOST} (ssh -i ${SSH_KEY})`);
+  console.log(`  tarball:       ${REMOTE_TARBALL}`);
+  console.log(`                 (repo release/ is mapped to /home/matty/code/denorunner)`);
+  console.log(`  rollback copy: ${REMOTE_TARBALL}.prev (kept before overwrite)`);
+  console.log(
+    `  1/6 rebuild web bundle (deno run --allow-read --allow-write --allow-net --allow-run scripts/build-web.ts)`,
+  );
+  console.log(
+    `  2/6 export docker images (deno run --allow-read --allow-write --allow-run --allow-env scripts/export-docker-images.ts → ${LOCAL_TARBALL})`,
+  );
+  console.log(`  3/6 docker load -i ${REMOTE_TARBALL} on ${HOST}`);
+  console.log(`  4/6 systemctl --user restart netrunner.service on ${HOST}`);
+  console.log(`  5/6 docker rmi <superseded image id> on ${HOST} (only if the id changed)`);
+  console.log(`  6/6 health check http://127.0.0.1:8000/ on ${HOST}, poll ~15s for HTTP 200`);
+  Deno.exit(0);
+}
+
 console.log(`==> publishing netrunner:${ARCH} to ${HOST}`);
 
+// Keep the previous tarball for rollback before any step overwrites it.
+// release/ is the same directory on disk as the host's release dir, so the
+// .prev copy is loadable there too (see README "Rollback").
+try {
+  await Deno.rename(LOCAL_TARBALL, `${LOCAL_TARBALL}.prev`);
+  console.log(`  ok: previous tarball kept as ${LOCAL_TARBALL}.prev`);
+} catch {
+  // No previous tarball (first publish) — nothing to keep.
+}
+
 // 1. Rebuild the web bundle so the shipped assets are current.
-console.log("==> 1/5 rebuild web bundle");
+console.log("==> 1/6 rebuild web bundle");
 run(
   cmd(Deno.execPath(), [
     "run",
@@ -97,7 +184,7 @@ run(
 );
 
 // 2. Export the docker image tarballs.
-console.log(`==> 2/5 export docker images`);
+console.log("==> 2/6 export docker images");
 run(
   cmd(Deno.execPath(), [
     "run",
@@ -115,25 +202,29 @@ run(
 //    place — no scp needed. Remember the old image id first so the
 //    now-untagged (dangling) previous version can be deleted after the
 //    restart instead of accumulating on the host.
-console.log("==> 3/4 docker load on server");
+console.log("==> 3/6 docker load on server");
 const oldImageId = sshCapture(["docker", "images", "-q", `netrunner:${ARCH}`]).split("\n")[0] ?? "";
 run(sshCmd(["docker", "load", "-i", REMOTE_TARBALL]), "docker load");
 
 // 4. Restart the systemd unit.
-console.log("==> 4/4 restart systemd unit");
+console.log("==> 4/6 restart systemd unit");
 run(sshCmd(["systemctl", "--user", "restart", "netrunner.service"]), "systemctl restart");
 
-// Remove the superseded image so disk usage stays flat across publishes.
-// The unit uses --rm containers, so after the restart nothing references it.
+// 5. Remove the superseded image so disk usage stays flat across publishes.
+//    The unit uses --rm containers, so after the restart nothing references it.
+console.log("==> 5/6 remove superseded image");
 const newImageId = sshCapture(["docker", "images", "-q", `netrunner:${ARCH}`]).split("\n")[0] ?? "";
 if (oldImageId && newImageId && oldImageId !== newImageId) {
   const r = sshCmd(["docker", "rmi", oldImageId]).outputSync();
   if (r.success) console.log("  ok: removed old image " + oldImageId.slice(0, 12));
   else console.log(`  (old image ${oldImageId.slice(0, 12)} still in use — skipped)`);
+} else {
+  console.log("  (image id unchanged — nothing to remove)");
 }
 
-// Sanity check — the container may take a moment to come up after the
-// restart, so poll for up to ~15s.
+// 6. Sanity check — the container may take a moment to come up after the
+//    restart, so poll for up to ~15s.
+console.log("==> 6/6 health check");
 let code = "000";
 for (let attempt = 0; attempt < 15; attempt++) {
   const check = new Deno.Command("ssh", {

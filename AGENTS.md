@@ -10,7 +10,7 @@ the build/verify loop, the engine invariants, and the mistakes I keep repeating.
 /usr/local/bin/deno check src/mod.ts
 /usr/local/bin/deno check src/web/entry.ts   # the Vue UI; src/mod.ts does not import it
 
-# Format check, lint, check, and test suite in one task (81 tests, ~20s)
+# Format check, lint, check, and test suite in one task (86 tests, ~20s)
 deno task verify
 
 # AI sanity: EvalAI vs RandomAI win rates + move variety (~1 min)
@@ -73,7 +73,11 @@ deno task publish
   (a stale doc is a silent lie).
 - **Prompt answers are moves too.** `prompt.answer` is the only way to resolve Seamless Launch,
   Brân, Send a Message, Manegarm, and other decisions — card-effect regressions hide at the prompt
-  boundary, so every choose-one option must be answered end-to-end in a test. See `docs/rules-gotchas.md` #13.
+  boundary, so every choose-one option must be answered end-to-end in a test. See the "Pinned by
+  tests" list in `docs/rules-gotchas.md` and `tests/prompts_dispatch_test.ts`.
+- **UI layout has its own trap file.** CSS-structure, Vue-reactivity, and zoom/prompt gotchas (dock
+  heights, the access zoom as the human's decision prompt) live in `docs/ui-gotchas.md` — read it
+  before touching `public/css` or `src/web/ui/`.
 
 ## Secrets & releases
 

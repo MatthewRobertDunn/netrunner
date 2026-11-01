@@ -4,24 +4,31 @@ A standalone, rules-driven Netrunner card game engine in Deno/TypeScript, target
 CyberClick NetrunnerDB starter decks (Runner `4b9cf488-5bd9-4415-a57a-0864d4d0e600`, Corp
 `382f2e2d-eabf-47c8-ae55-adb93b3df3e9`).
 
+AI agents working in this repo: start with [AGENTS.md](AGENTS.md) — the build/verify loop, engine
+invariants, and the mistakes worth not repeating.
+
 ## Features
 
 - **Typed public API** (`src/mod.ts`): `validateDeck`, `startGame`, `getLegalMoves`, `applyMove`,
   `getPlayerView`, `getPublicGameStatus`, `getPublicGameStatusFor`, `starterDeckConfigs`,
   `starterDeckCardIds`, `cardSupport`, `starterDeckSupport`.
-- **Offline.** Card data is checked in at `data/cards.json` and `data/starter-decks.json`; the only
-  network consumers are the dev-time import script (`deno task import-decks`) and the image fetcher
-  (`deno task fetch-images`), which downloads `data/images/<card-id>.webp` (xlarge, 34 files) from
-  NetrunnerDB's card-images CDN.
+- **Offline-first.** Card data is checked in at `data/cards.json` and `data/starter-decks.json`,
+  and the built web bundle is committed at `public/dist/app.js`, so a fresh clone can serve and play
+  the site (`deno task serve-web`) with no network at all. What does need the network: the dev-time
+  import script (`deno task import-decks`), the image fetcher (`deno task fetch-images`, which
+  downloads `data/images/<card-id>.webp` — xlarge, 34 files — from NetrunnerDB's card-images CDN),
+  and the first `deno task verify` / `deno task build-web` on a cold cache — Vue,
+  `@vue/test-utils`, and `happy-dom` resolve through `npm:` specifiers and are fetched from the npm
+  registry.
 - **Deterministic.** A seeded PRNG stored in state makes replays reproducible. `applyMove` works on
   a deep copy so an illegal move can never mutate the caller's state; it returns either an
   `ApplyMoveResult` or an `IllegalMove` discriminated union.
 - **Visible support status.** Every card has a `CardBehavior` definition keyed by card id (rules
   text is never parsed). `cardSupport` / `starterDeckSupport` report `supported` / `partial` /
   `unsupported` per card.
-- **Tested.** `deno test` runs 81 tests (148 named sub-steps) across setup, cards, runs, servers,
-  visibility, rules-costs, prompts, triggers, pump expiry, determinism, public-status, and AI
-  playthrough suites.
+- **Tested.** `deno task test` runs 86 tests (149 named sub-steps) across setup, cards, runs,
+  servers, visibility, rules-costs, prompts, triggers, pump expiry, determinism, public-status, AI
+  playthrough, and starter-deck playtest suites.
 - **AI players.** `src/ai/mod.ts` exposes a `GameAI` interface (`name`,
   `chooseMove(view: PlayerView, legal: Move[], ctx: AIDecisionContext)` — AIs never receive the
   `GameState`, only a sanitized `PlayerView`, the legal moves, and a per-decision
@@ -39,7 +46,15 @@ CyberClick NetrunnerDB starter decks (Runner `4b9cf488-5bd9-4415-a57a-0864d4d0e6
 # Install Deno 2.9.8 (or later).
 deno --version
 
-# Install dependencies (none — the engine is self-contained).
+# Quick start, works offline on a fresh clone: card data and the built web
+# bundle are committed, so this serves the site immediately.
+deno task serve-web   # then open http://localhost:8000/
+
+# The refresh/build steps below are only needed after changing card data or
+# web source. Verify/build fetch Vue, @vue/test-utils, and happy-dom from the
+# npm registry on a cold cache; dependency versions are pinned in `deno.json`
+# and locked in the committed `deno.lock`, so resolution is reproducible.
+
 # Refresh the offline snapshots from NetrunnerDB (dev only, needs network).
 deno task import-decks
 # Download the xlarge WebP card images (dev only, needs network).
@@ -121,18 +136,38 @@ Then visit `http://<host>:8000/`.
 
 ## Publishing a release
 
-`deno task publish` rebuilds the web bundle, exports the docker image tarball for the target
-architecture, loads it on the server, restarts the systemd unit, and polls the health endpoint until
-it returns 200. The SSH key is `secrets/orange` (the whole `secrets/` directory is gitignored) — it
-is passed via `ssh -i` only and never installed.
+`deno task publish` rebuilds the web bundle, exports the docker image tarballs, loads the one the
+systemd unit runs on the server, restarts the unit, prunes the superseded image, and polls the
+health endpoint until it returns 200. The SSH key is `secrets/orange` (the whole `secrets/`
+directory is gitignored) — it is passed via `ssh -i` only and never installed.
 
 ```sh
-deno task publish                       # defaults to arm64
-deno task publish --arch amd64          # or amd64
+deno task publish                       # deploy the arch the systemd unit loads
+deno task publish --dry-run             # print the resolved plan (host, paths, steps); do nothing
 ```
+
+The architecture is not chosen on the publish command line: publish reads the image the unit loads
+(`netrunner-<arch>.tar` in `systemd/netrunner.service`) and deploys exactly that. Passing
+`--arch <other>` is refused before any work is done — the unit would keep running the old image,
+so the publish would look green while deploying nothing. Both arches' tarballs are still exported
+by `scripts/export-docker-images.ts`, so an amd64 image for manual loading elsewhere is one
+`docker load -i release/netrunner-amd64.tar` away (see the pre-built images section above).
 
 `/workspace` is mapped to `/home/matty/code/denorunner` on the host, so the tarball needs no scp —
 the publish script just runs `docker load -i` and `systemctl --user restart` over SSH.
+
+### Rollback
+
+Before overwriting `release/netrunner-<arch>.tar`, publish renames the existing tarball to
+`release/netrunner-<arch>.tar.prev` (the local `release/` directory is the same one the host loads
+from). To roll the server back to the previous release, run on the host (e.g. over SSH):
+
+```sh
+docker load -i /home/matty/code/denorunner/release/netrunner-arm64.tar.prev
+systemctl --user restart netrunner.service
+```
+
+To go back further, redeploy an older commit: `git checkout <prev-commit> && deno task publish`.
 
 ## Usage
 
@@ -204,7 +239,7 @@ simply not offered as legal, and the game state records a `supportWarning` (visi
 ```
 data/                 Offline card snapshots + raw API responses + images/*.webp
 docs/                 rules-v26.03.txt, sources.md, rules-questions.md,
-                      card-data-audit.md, rules-gotchas.md
+                      card-data-audit.md, rules-gotchas.md, ui-gotchas.md
 src/
   mod.ts              Public facade
   types.ts            All core types (incl. GameAI, AIDecisionContext)
@@ -239,7 +274,7 @@ src/
     app.ts            Vue root: setup screen + game screen (trusted shell)
     ui/               card-tile, card-zoom, game, util
 tests/                Smoke, cards, setup, runs, servers, visibility, determinism,
-                      public-status, AI playthrough suites
+                      public-status, prompts, AI playthrough, starter-deck playtest suites
 scripts/              import-starter-decks.ts, fetch-card-images.ts, build-web.ts,
                       check-ai.ts, publish.ts, export-docker-images.ts (dev only)
 ```

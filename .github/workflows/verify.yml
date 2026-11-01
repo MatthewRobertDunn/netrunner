@@ -1,0 +1,30 @@
+# Format, lint, type-check, and test the engine + web UI. No deployment, no
+# publish — `deno task publish` ships to the server and stays out of CI.
+#
+# deno.lock is committed (reproducible resolution), so setup-deno's cache is
+# keyed on it and no explicit `deno cache` warm-up step is needed.
+name: verify
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: 2.9.8
+          cache: true
+
+      - name: Verify (fmt, lint, check, tests)
+        run: deno task verify
