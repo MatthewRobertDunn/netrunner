@@ -223,10 +223,12 @@ Deno.test("movement: continueRun passes the ice and approaches the next position
 
 Deno.test("movement: Carmen installs for cost-2 after a successful run this turn", () => {
   const seed = findCarmenSeed();
-  if (seed === null) {
-    console.log("no seed has Carmen in the Runner's opening hand — skip");
-    return;
-  }
+  // Fail loudly instead of silently skipping: a changed starter fixture must
+  // not vaporize the install-discount pin (rule 1.11.3b discount modelling).
+  assert(
+    seed !== null,
+    "no seed has Carmen in the Runner's opening hand — the discount pin needs a fixture update",
+  );
   let cur = newStarterGame(seed);
   assert(
     cur.runner.hand.some((c) => c.cardId === "carmen"),

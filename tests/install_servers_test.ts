@@ -41,10 +41,12 @@ function findAssetUpgradeSeed(): { seed: number; assetId: string; upgradeId: str
 
 Deno.test("install: an asset may be installed in a remote whose root holds only an upgrade", () => {
   const found = findAssetUpgradeSeed();
-  if (!found) {
-    console.log("no seed has both an asset and an upgrade in the Corp's opening hand — skip");
-    return;
-  }
+  // Fail loudly instead of silently skipping: a changed starter fixture must
+  // not vaporize the rule-8.5.6a cohabitation pin.
+  assert(
+    found !== null,
+    "no seed has both an asset and an upgrade in the Corp's opening hand — pin needs a fixture update",
+  );
   const { seed, assetId, upgradeId } = found;
 
   let state = fresh(seed);
@@ -74,10 +76,11 @@ Deno.test("install: an asset may be installed in a remote whose root holds only 
 Deno.test("install: central roots accept upgrades but not assets or agendas", async (t) => {
   await t.step("an upgrade may be installed in the root of any server", () => {
     const found = findAssetUpgradeSeed();
-    if (!found) {
-      console.log("no seed has both an asset and an upgrade in the Corp's opening hand — skip");
-      return;
-    }
+    // Fail loudly instead of silently skipping (rule-8.5.6a root pin).
+    assert(
+      found !== null,
+      "no seed has both an asset and an upgrade in the Corp's opening hand — pin needs a fixture update",
+    );
     const { seed, upgradeId } = found;
     const state = fresh(seed);
     for (const server of ["hq", "rd", "archives"] as const) {

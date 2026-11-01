@@ -46,8 +46,11 @@
 ## Implementation
 
 - TypeScript 5.x under Deno 2.9.8, strict mode, `noUncheckedIndexedAccess`.
-- No third-party runtime dependencies; the only test dependency is a hand-written assertion helper
-  at `tests/helpers/assert.ts` (no network).
+- Dependencies: **Vue 3.5** (`npm:vue`) is the single runtime dependency, bundled into
+  `public/dist/app.js` by `deno task build-web`; `@vue/test-utils` + `happy-dom` are the UI test
+  dependencies; the assertion helper (`tests/helpers/assert.ts`) is hand-written — no test
+  framework. All npm packages are pinned in `deno.json` and locked in `deno.lock`, fetched on the
+  first cold-cache `verify`/`build-web`, and everything is offline afterwards (see README).
 - Seeded deterministic PRNG (`src/engine/rng.ts`) — same seed + same moves => same state.
 
 ## Known limitations

@@ -18,7 +18,7 @@
  */
 
 import { engine } from "../src/mod.ts";
-import { endCorpTurn, newGameWithCorpHand, play } from "./helpers/fixtures.ts";
+import { endCorpTurn, newGameWithCorpHand, play, setCredits } from "./helpers/fixtures.ts";
 import type { GameState } from "../src/types.ts";
 import { assert, assertDefined, assertEquals } from "./helpers/assert.ts";
 
@@ -245,9 +245,9 @@ Deno.test("toll: answering the toll prompt (credits, clicks, or end) charges cor
 });
 
 Deno.test("toll: the 5-credit option is not offered when the runner has fewer than 5 credits", () => {
-  const state = tollState();
-  // Deterministic fixture tweak: the runner is short on credits at the toll.
-  state.runner.credits = 2;
+  // Deterministic fixture tweak via the sanctioned clone-first setter: the
+  // runner is short on credits at the toll.
+  const state = setCredits(tollState(), "runner", 2);
   const offered = offeredOptionIds(state);
   assert(!offered.includes("toll-credits"), "toll-credits is filtered out (2 < 5 credits)");
   assertEquals(offered, ["toll-clicks", "toll-end"]);

@@ -40,7 +40,13 @@ import type {
   PlayerSide,
   ServerId,
 } from "../src/types.ts";
-import { countEvents, findInstalled, play, runnerDeckStartingWith } from "./helpers/fixtures.ts";
+import {
+  countEvents,
+  findInstalled,
+  play,
+  runnerDeckStartingWith,
+  setCredits,
+} from "./helpers/fixtures.ts";
 import { burnUntil, corpDeckWithHand } from "./helpers/drive.ts";
 import { assert, assertDefined, assertEquals } from "./helpers/assert.ts";
 
@@ -474,7 +480,8 @@ Deno.test("event texts: overclock's hosted credits pay the Manegarm toll during 
   // Keep only the 1 credit the event needs to be playable: with 1 credit the
   // 5-credit toll is unaffordable from the bank, so the ONLY way to pay it is
   // the Overclock fund (availableCredits counts the fund during the run).
-  s.runner.credits = 1;
+  // Sanctioned clone-first setter (fixtures.ts mutation contract).
+  s = setCredits(s, "runner", 1);
   assertEquals(s.runner.credits, 1, "the runner cannot pay the toll from the bank");
   const overclock = assertDefined(eventMove(s, "overclock", "remote-1"), "remote-1 is offered");
   const after = play(s, "runner", overclock);

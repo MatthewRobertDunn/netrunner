@@ -42,10 +42,12 @@ function findAgendaSeed(): { seed: number; agendaId: string } | null {
 
 Deno.test("access: an accessed agenda is stolen exactly once and cannot be trashed (rules 7.1.6, 7.1.5a)", async (t) => {
   const found = findAgendaSeed();
-  if (!found) {
-    console.log("no seed has an agenda in the Corp's opening hand — skip");
-    return;
-  }
+  // Fail loudly instead of silently skipping: a re-imported decklist that
+  // removes the agenda from every opening hand must not vaporize this pin.
+  assert(
+    found !== null,
+    "no seed has an agenda in the Corp's opening hand — the mandatory-steal pin needs a fixture update",
+  );
   const { seed, agendaId } = found;
 
   await t.step("the accessed agenda is stolen exactly once when the Runner passes", () => {

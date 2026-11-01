@@ -248,6 +248,13 @@ export function setAgendaPoints(state: GameState, side: PlayerSide, n: number): 
   return s;
 }
 
+/** Set `side`'s credits to `n`, in a fresh clone. */
+export function setCredits(state: GameState, side: PlayerSide, n: number): GameState {
+  const s = deepClone(state);
+  s[side].credits = n;
+  return s;
+}
+
 /** Set the advancement counters on an installed card, in a fresh clone. */
 export function setInstalledAdvancement(
   state: GameState,
