@@ -50,13 +50,14 @@ import { getLegalMoves } from "./engine/legal-moves.ts";
 import { getPublicGameStatus, getPublicGameStatusFor } from "./engine/public-status.ts";
 import { makeRng } from "./engine/rng.ts";
 import { startGame, validateDeck } from "./engine/setup.ts";
-import { cardVisibleTo } from "./engine/state.ts";
+import { availableCredits, cardVisibleTo } from "./engine/state.ts";
 import type { Rng } from "./engine/rng.ts";
 
 export * from "./types.ts";
 export type { Rng };
 export {
   applyMove,
+  availableCredits,
   cardVisibleTo,
   determinize,
   getLegalMoves,

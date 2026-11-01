@@ -28,7 +28,7 @@ import CardTile from "./card-tile.ts";
 import CardZoom from "./card-zoom.ts";
 import ServerColumn from "./server-column.ts";
 import StatusBlock from "./status-block.ts";
-import { cardDef, engine } from "../../mod.ts";
+import { availableCredits, cardDef, engine } from "../../mod.ts";
 import type { CardInstance, GameState, Move, PlayerSide, PublicGameStatus } from "../../types.ts";
 import {
   actorOf,
@@ -175,8 +175,11 @@ export default defineComponent({
         if (p.kind !== "access-decision" || p.player !== props.humanSide) continue;
         const found = findCardIn(props.state, p.cardId);
         const trashCost = found ? cardDef(found.cardId).trashCost : null;
+        // Same affordability calculator as the engine's move enumeration
+        // (legal-moves.ts): during a run the Overclock fund pays first.
         if (
-          trashCost !== null && trashCost > 0 && props.state.runner.credits >= trashCost
+          trashCost !== null && trashCost > 0 &&
+          availableCredits(props.state, props.humanSide) >= trashCost
         ) {
           actions.push({
             label: `Trash (${trashCost} [credit])`,
