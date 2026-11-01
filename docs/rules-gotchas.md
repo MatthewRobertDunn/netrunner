@@ -34,9 +34,14 @@ of running the suite is how it goes stale. The two entries that survive here are
    Archives split (whole pile hidden from the Runner); installing over a like card is forbidden
    rather than forcing the trash (8.5.6a); no ice-trash-during-install discount (8.5.6b); memory
    over-limit is prevented rather than resolved by trashing (3.9.3b); `drawMode: "random"` in AI
-   hypotheses only. The corp's in-run non-ice rez window offers only the approached ice and the
-   attacked server's root, whereas the `(R)` window (6.9.2b, 6.9.4e) permits rezzing any installed
-   unrezzed non-ice card — no starter card needs the wider window.
+   hypotheses only. The corp's in-run non-ice rez window exists at BOTH rule timing points: the ice
+   approach (6.9.2b — offers the approached ice plus the attacked server's root) and the server
+   approach (6.9.4e — offers the attacked server's root, opening after the jack-out chance of
+   6.9.4c-d and before the approach toll of 6.9.4g, so a facedown Manegarm Skunkworks on an
+   ice-less server can be rezzed in time for its toll). Both offer only those cards, whereas the
+   `(R)` window permits rezzing any installed unrezzed non-ice card; and each timing point is one
+   prompt (one rez, or pass) rather than a window the players can return to — no starter card needs
+   the wider or re-openable window.
 
 ## Pinned by tests (no entry kept here)
 
@@ -48,6 +53,8 @@ assertions. They live in the test files as the authoritative regression record:
   `tests/prompts_dispatch_test.ts`
 - Jack-out window parks in the Movement Phase — `tests/runs_movement_test.ts`
 - Run success declared only at the Success Phase — `tests/runs_movement_test.ts`
+- One break window per encounter (6.9.3b — a mid-encounter choice does not re-open it), and the
+  Corp rez window at the server approach (6.9.4e) — `tests/run_timing_test.ts`
 - Prompt options don't double-charge a cost — `tests/toll_test.ts`
 - Paid-ability strength pumps expire — `tests/pump_expiry_test.ts`
 - `hqBreachesThisTurn` counts HQ breaches only — `tests/corp_actions_test.ts`

@@ -187,9 +187,20 @@ Deno.test("playtest: Urtica Cipher deals net damage when accessed — and can fl
       engine.getLegalMoves(s, "runner").find((m) => m.kind === "runner.continueRun"),
       "the run parks in the movement phase (rule 6.9.4c)",
     );
-    // Continuing breaches the remote; the single root candidate is auto-
-    // accessed and Urtica's access trigger fires its damage immediately.
+    // Continuing reaches the server; the Corp's (R) rez window (6.9.4e — the
+    // facedown Urtica in the root) opens before the breach, and the Corp
+    // passes it so Urtica stays facedown for the access.
     s = play(s, "runner", continueRun);
+    const windowPrompt = s.prompts[0];
+    if (windowPrompt?.kind === "rez-window") {
+      const pass = assertDefined(
+        engine.getLegalMoves(s, "corp").find(
+          (m) => m.kind === "prompt.answer" && m.optionId === "pass",
+        ),
+        "the corp can pass the server-approach rez window",
+      );
+      s = play(s, "corp", pass);
+    }
     const damage = assertDefined(
       s.log.filter((e) => e.type === "damage").at(-1),
       "a damage event was logged at access begin",
@@ -213,6 +224,19 @@ Deno.test("playtest: Urtica Cipher deals net damage when accessed — and can fl
       "the run parks in the movement phase (rule 6.9.4c)",
     );
     s = play(s, "runner", continueRun);
+    // The Corp's 6.9.4e rez window (facedown Urtica in the root) opens before
+    // the breach; the Corp passes it, the single candidate is auto-accessed,
+    // and the ambush fires.
+    const windowPrompt = s.prompts[0];
+    if (windowPrompt?.kind === "rez-window") {
+      const pass = assertDefined(
+        engine.getLegalMoves(s, "corp").find(
+          (m) => m.kind === "prompt.answer" && m.optionId === "pass",
+        ),
+        "the corp can pass the server-approach rez window",
+      );
+      s = play(s, "corp", pass);
+    }
     assertEquals(s.runner.hand.length, 0, "the grip is empty");
     assertEquals(s.winner, "corp", "a flatlined runner loses");
     assertEquals(s.winReason, "Runner was flatlined by damage");

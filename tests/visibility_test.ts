@@ -96,7 +96,18 @@ function accessChoiceState(seed = 3): GameState {
     (m) => m.kind === "runner.run" && m.server === "remote-1",
   );
   assert(run && run.kind === "runner.run", "runner can run the remote");
-  const after = continueRun(play(state, "runner", run));
+  let after = continueRun(play(state, "runner", run));
+  // Continuing to the server opens the Corp's (R) rez window (6.9.4e — the
+  // unrezzed upgrade in the root); the Corp passes it so the breach keeps
+  // its two specific candidates (rezzed nico + facedown manegarm).
+  const windowPrompt = after.prompts[0];
+  if (windowPrompt?.kind === "rez-window") {
+    const pass = engine.getLegalMoves(after, "corp").find(
+      (m) => m.kind === "prompt.answer" && m.optionId === "pass",
+    );
+    assert(pass !== undefined, "corp can pass the server-approach rez window");
+    after = play(after, "corp", pass!);
+  }
   assert(after.breach !== null, "the run breaches the remote");
   return after;
 }

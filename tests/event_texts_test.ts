@@ -488,10 +488,20 @@ Deno.test("event texts: overclock's hosted credits pay the Manegarm toll during 
   assertEquals(after.run?.server, "remote-1", "the event started a run on remote-1");
   assertEquals(after.run?.fundCredits, 5, "the run carries the 5 hosted credits");
 
-  // Approach the server: the movement phase parks for the jack-out choice.
+  // Approach the server: the movement phase parks for the jack-out choice,
+  // and continuing opens the Corp's 6.9.4e rez window (facedown Nico in the
+  // root) before the approach toll — the Corp passes it, then the toll comes.
   const cont = engine.getLegalMoves(after, "runner").find((m) => m.kind === "runner.continueRun");
   assertDefined(cont, "the run parks in the movement phase");
   let cur = play(after, "runner", cont!);
+  const windowPrompt = cur.prompts[0];
+  if (windowPrompt?.kind === "rez-window") {
+    const pass = engine.getLegalMoves(cur, "corp").find(
+      (m) => m.kind === "prompt.answer" && m.optionId === "pass",
+    );
+    assertDefined(pass, "the corp can pass the server-approach rez window");
+    cur = play(cur, "corp", pass!);
+  }
   const toll = cur.prompts[0];
   assert(toll && toll.kind === "choose-one", "the Manegarm toll prompt is pending");
 
@@ -552,7 +562,17 @@ Deno.test("event texts: overclock's hosted fund pays an access trash the pool ca
   assertEquals(cur.run?.fundCredits, 5, "the run carries the 5 hosted credits");
 
   // No rezzed ice, no toll: continue into the breach and pick the asset.
+  // Continuing opens the Corp's 6.9.4e rez window (two facedown root cards);
+  // the Corp passes it so both stay facedown for the breach.
   cur = play(cur, "runner", { kind: "runner.continueRun" });
+  const windowPrompt = cur.prompts[0];
+  if (windowPrompt?.kind === "rez-window") {
+    const pass = engine.getLegalMoves(cur, "corp").find(
+      (m) => m.kind === "prompt.answer" && m.optionId === "pass",
+    );
+    assertDefined(pass, "the corp can pass the server-approach rez window");
+    cur = play(cur, "corp", pass!);
+  }
   const access = engine.getLegalMoves(cur, "runner").find(
     (m) => m.kind === "runner.accessCard" && m.targetId === nico.id,
   );

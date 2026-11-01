@@ -17,7 +17,7 @@ import {
   spendCredits,
   toDiscard,
 } from "./state.ts";
-import type { CardInstance, GameState, ServerId } from "../types.ts";
+import type { CardInstance, GameState, PromptOption, ServerId } from "../types.ts";
 
 export function iceAt(state: GameState, server: ServerId): CardInstance[] {
   return serverById(state, server).ice;
@@ -174,28 +174,58 @@ export function passIce(state: GameState): void {
 /**
  * The Runner declines to jack out and continues the movement phase
  * (rule 6.9.4d-g): pass the ice at the current position and move inward, or
- * approach the server — paying the Manegarm toll first if it is rezzed
- * (rule 6.9.4g) — and declare the run successful.
+ * approach the server — opening the Corp's (R) rez window (6.9.4e), paying
+ * the Manegarm toll first if one is rezzed (rule 6.9.4g) — and declare the
+ * run successful.
+ *
+ * `rezOptions` carries the Corp's rez options for the server approach,
+ * computed by the caller from settle.ts `corpRezOptions`. They travel in as a
+ * parameter because this module must stay a leaf (settle.ts imports it), and
+ * because it scopes the window to the one decision that may open it: the
+ * Runner's decline-to-jack-out (`runner.continueRun`), which happens exactly
+ * once per movement step. The re-drives that follow a window or toll answer
+ * (settle.ts, and apply.ts `finishCurrentApproach`) call this WITHOUT
+ * options, so the window can never re-open once it has closed.
  *
  * This is the body of the old auto-resolving `movementStep`; it now runs from
  * the `runner.continueRun` move handler (apply.ts) and from settle when the
  * jack-out chance for this movement was already given.
  */
-export function continueMovement(state: GameState): boolean {
+export function continueMovement(
+  state: GameState,
+  rezOptions?: PromptOption[],
+): boolean {
   const run = state.run!;
-  if (run.position === null) {
-    // The Runner approaches the server (rule 6.9.4g).
-    if (approachToll(state)) return true;
-    declareSuccess(state);
-    return false;
+  if (run.position !== null) {
+    // Passing the ice at the current position and moving inward (rule
+    // 6.9.4a/d). No jack-out reset here: the Runner just declined it (see
+    // `passIce`).
+    passCurrentIce(state);
+    if (run.position !== null) return false; // approaching the next ice (6.9.4f)
   }
-  // Passing the ice at the current position and moving inward (rule 6.9.4a/d).
-  // No jack-out reset here: the Runner just declined it (see `passIce`).
-  passCurrentIce(state);
-  if (run.position === null) {
-    if (approachToll(state)) return true;
-    declareSuccess(state);
+  // The Runner is at the attacked server — either straight from the movement
+  // park (an ice-less server) or after passing the innermost ice (6.9.4d→g).
+  return approachServerStep(state, rezOptions);
+}
+
+/**
+ * The movement step has arrived at the attacked server (rule 6.9.4g): the
+ * Corp's (R) rez window opens first (6.9.4e — the only in-run moment a
+ * facedown root card, e.g. Manegarm Skunkworks, can be rezzed on an ice-less
+ * server), then the approach toll, then the run is declared successful.
+ */
+function approachServerStep(state: GameState, rezOptions?: PromptOption[]): boolean {
+  if (rezOptions && rezOptions.length > 0) {
+    state.prompts.push({
+      kind: "rez-window",
+      id: state.nextPromptId++,
+      player: "corp",
+      options: rezOptions,
+    });
+    return true; // park: the Corp answers the window (or passes it)
   }
+  if (approachToll(state)) return true;
+  declareSuccess(state);
   return false;
 }
 
