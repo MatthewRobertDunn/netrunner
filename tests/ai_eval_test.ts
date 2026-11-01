@@ -22,7 +22,8 @@ import {
 } from "../src/mod.ts";
 import { RandomAI } from "../src/ai/random.ts";
 import { playGame } from "../src/ai/play.ts";
-import { evaluate, softmaxIndex } from "../src/ai/eval.ts";
+import { evaluate } from "../src/ai/eval.ts";
+import { softmaxIndex } from "../src/ai/policy.ts";
 import type { AIDecisionContext, GameState, PlayerSide, PlayerView } from "../src/types.ts";
 import {
   endCorpTurn,

@@ -36,7 +36,8 @@ invariants, and the mistakes worth not repeating.
   from `state.rngState`), and an `EvalAI` — a deliberately _fun_ opponent that samples ~32
   determinized worlds per decision via `determinize(view, ctx, rng)`, scores every legal move with a
   1-ply hand-written evaluation, and picks with a softmax over the world-averaged scores (see
-  `src/ai/eval.ts`). `playGame({ corp, runner, state })` runs a full game between any two AIs;
+  `src/ai/policy.ts` for the decision loop and `src/ai/eval.ts` for the evaluation).
+  `playGame({ corp, runner, state })` runs a full game between any two AIs;
   decisions are routed by _who may act_ (the turn player, or the prompted player during rez windows
   and accesses).
 
