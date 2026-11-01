@@ -82,3 +82,11 @@ assertions. They live in the test files as the authoritative regression record:
   lethal mid-access damage (installed Urtica Cipher, 1.7.2d) had already set the winner, so
   game-over states carried a live `run`/`breach` and settle's top-of-loop cleanup (10.4) never ran —
   return false on `state.winner` so the cleanup runs — `tests/settle_game_over_test.ts`
+- A subroutine loses only what its card text says: a `?? 3` default in the resolver invented a loss
+  Whitespace's second sub doesn't have ("If the Runner has 6[credit] or less, end the run" — no
+  loss) and ETR'd runners the rules let survive; resolve subroutines exactly as `data/cards.json`
+  reads, and never default an absent `amount` into an effect — `tests/subroutines_test.ts`
+- Installing ice "directly inward" of the encountered ice (rule 8.5.14c) shifts that ice's ARRAY
+  index (the ice array runs innermost-first) but not the Runner's position — rule 6.2.6 says the
+  position is an element of the position sequence, not an index, so re-point `run.position` at the
+  engaged ice's new index or the encounter reads the wrong card — `tests/subroutines_test.ts`
