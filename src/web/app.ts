@@ -22,6 +22,7 @@ import {
 } from "../mod.ts";
 import type { GameAI, GameState, Move, PlayerSide } from "../types.ts";
 import GameScreen from "./ui/game.ts";
+import { actorOf } from "./ui/util.ts";
 
 interface StrengthPreset {
   name: string;
@@ -88,7 +89,7 @@ export default defineComponent({
     function planAiTurn() {
       const s = state.value;
       if (!s || s.winner || !ai) return;
-      const actor = s.prompts[0]?.player ?? s.turn.player;
+      const actor = actorOf(s);
       if (actor === humanSide.value) return;
       thinking.value = true;
       setTimeout(() => {
@@ -149,7 +150,6 @@ export default defineComponent({
       thinking,
       lastWarning,
       presets: PRESETS,
-      started: () => state.value !== null,
       start,
       onMove,
     };
@@ -171,8 +171,8 @@ export default defineComponent({
       <section v-else class="setup" data-testid="setup">
         <h1>Netrunner — CyberClick Starters</h1>
         <p class="tagline">
-          Human vs. an AI opponent (placeholder random AI for now; a real
-          evaluation AI lands in the next phase). Pick a side and a seed.
+          Human vs. the EvalAI opponent (determinized 1-ply evaluation with
+          softmax move selection). Pick a side and a seed.
         </p>
 
         <div class="setup-grid">

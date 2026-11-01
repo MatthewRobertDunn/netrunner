@@ -33,6 +33,7 @@ import {
   handOf,
   imageFor,
   promptFor,
+  promptTitle,
   serverLabel,
 } from "./util.ts";
 
@@ -47,14 +48,6 @@ import {
 const SERVER_GLYPH: Record<string, string> = {
   rd: "assets/svg/rd.svg",
   archives: "assets/svg/archives.svg",
-};
-
-const PROMPT_TITLES: Record<string, string> = {
-  mulligan: "Mulligan?",
-  discard: "Discard phase",
-  "rez-window": "Rez window",
-  "choose-one": "Choose one",
-  "access-decision": "Accessed card",
 };
 
 function moveKey(m: Move): string {
@@ -196,6 +189,21 @@ export default defineComponent({
     });
 
     const serverRows = computed(() => status.value.servers);
+
+    /** Moves that render on the side-panel status tiles instead of the
+     *  action panel: gain-credit on the own credits tile, draw on the own
+     *  hand stat (see gainCreditsMove / drawMove below). */
+    const TILE_HOSTED_MOVES = new Set([
+      "corp.gainCredits",
+      "runner.gainCredits",
+      "corp.draw",
+      "runner.draw",
+    ]);
+
+    /** Whether the move is hosted on a side-panel tile, not the action panel. */
+    function hostedOnTile(m: Move): boolean {
+      return TILE_HOSTED_MOVES.has(m.kind);
+    }
 
     /** The "gain 1 credit" basic action, when the human can take it. It lives
      *  on the own credits tile in the side panel instead of the action panel. */
@@ -351,9 +359,7 @@ export default defineComponent({
     const generalMoves = computed<Move[]>(
       () =>
         legal.value.filter((m: Move) =>
-          !isCardMove(m) && m.kind !== "runner.run" &&
-          m.kind !== "corp.gainCredits" && m.kind !== "runner.gainCredits" &&
-          m.kind !== "corp.draw" && m.kind !== "runner.draw"
+          !isCardMove(m) && m.kind !== "runner.run" && !hostedOnTile(m)
         ),
     );
 
@@ -412,11 +418,6 @@ export default defineComponent({
         default:
           return describeMove(props.state, m);
       }
-    }
-
-    function promptTitle(p: { kind: string; title?: string }): string {
-      if (p.kind === "choose-one" && p.title) return p.title;
-      return PROMPT_TITLES[p.kind] ?? p.kind;
     }
 
     return {
@@ -482,14 +483,15 @@ export default defineComponent({
     };
   },
   template: `
-    <div class="game" :class="{ 'log-collapsed': !logOpen }">
+    <div class="game">
       <!-- ================= STATUS DOCK (left) =================
-           Mirrors the game-log dock width. Top half carries the title
-           (turn badge style) plus the OPPONENT's status; the bottom half
-           carries the human player's OWN status. data-side marks which
-           side each block shows; active marks state.turn.player. -->
+           Mirrors the game-log dock width. Carries the title (turn badge
+           style) plus the OPPONENT's and the human player's OWN status
+           blocks; .status-block's flex: 1 1 0 splits the dock evenly
+           between them. data-side marks which side each block shows;
+           active marks state.turn.player. -->
       <aside class="status-dock" data-testid="status-dock">
-        <div class="status-half status-top">
+        <div class="status-half">
         <div class="status-title" data-testid="status-title">
           <div class="turn-badge">
             <span class="turn-num">Turn {{ state.turn.number }}</span>
@@ -574,7 +576,7 @@ export default defineComponent({
           <div class="status-secondary">
             <span class="stat"><img class="sym" src="assets/svg/click.svg" alt="Clicks" />{{ own.clicks }}</span>
             <button
-              class="stat hand-draw"
+              class="stat"
               :class="{ clickable: !!drawMove }"
               :disabled="!drawMove"
               data-testid="draw-card"

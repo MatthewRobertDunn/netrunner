@@ -186,26 +186,6 @@ body {
    .corp-seat); the old in-flow strip order scheme is gone since both
    statuses now live in the left dock. .game-main children stack top to
    bottom: servers, banner, action panel, hand, warnings. */
-.game-main.perspective-runner .servers,
-.game-main.perspective-corp .servers {
-  order: 0;
-}
-.game-main.perspective-runner .run-banner,
-.game-main.perspective-corp .run-banner {
-  order: 1;
-}
-.game-main.perspective-runner .action-row,
-.game-main.perspective-corp .action-row {
-  order: 2;
-}
-.game-main.perspective-runner .hand-area,
-.game-main.perspective-corp .hand-area {
-  order: 3;
-}
-.game-main.perspective-runner .support-warnings,
-.game-main.perspective-corp .support-warnings {
-  order: 4;
-}
 
 .status-title .ghost-btn {
   padding: 5px 10px;
@@ -259,7 +239,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  /* Viewport-capped and sticky: the 50/50 half split below divides the
+  /* Viewport-capped and sticky: the block split below divides the
      viewport, not a log-driven page height, and the dock stays visible
      while the play column scrolls. */
   position: sticky;
@@ -278,9 +258,8 @@ body {
   border-radius: 10px;
   padding: 8px 12px;
 }
-/* Even 50/50 split: the top half (title + opponent block) and the own
-   block each take exactly half the dock height. The opponent block fills
-   whatever the title leaves in the top half. */
+/* Fills the dock below the title; the two .status-block children each
+   take flex: 1 1 0, so the blocks split the remaining dock height evenly. */
 .status-half {
   flex: 1 1 0;
   min-height: 0;
@@ -725,27 +704,6 @@ button.stat:disabled {
   color: var(--accent);
   margin-bottom: 10px;
 }
-.accessed-card-strip {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 12px;
-  background: rgba(56, 189, 248, 0.08);
-  border: 1px solid rgba(56, 189, 248, 0.35);
-  border-radius: 8px;
-  padding: 6px 10px;
-}
-.accessed-label {
-  font-size: 11px;
-  color: var(--accent);
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 1.2px;
-}
-.accessed-card-strip .card-tile {
-  width: 66px;
-  height: 92px;
-}
 .hint {
   color: var(--dim);
   font-size: 12px;
@@ -1143,10 +1101,6 @@ button.stat:disabled {
   color: var(--text);
   white-space: pre-wrap;
   margin: 0 0 18px;
-}
-.zoom-text-empty {
-  color: var(--dim);
-  font-style: italic;
 }
 /* Access decision buttons shown on the popup while accessing a card. */
 .zoom-actions {
