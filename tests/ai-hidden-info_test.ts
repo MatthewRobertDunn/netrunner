@@ -28,58 +28,9 @@ import {
   starterDeckConfigs,
 } from "../src/mod.ts";
 import type { AIDecisionContext, GameState, PlayerSide, PlayerView } from "../src/types.ts";
-import { starterFixtures } from "../src/testing/fixtures.ts";
+import { randomGame, reorderHidden } from "./helpers/drive.ts";
 import { decide } from "./helpers/boundary.ts";
 import { assert, assertEquals } from "./helpers/assert.ts";
-
-/** Advance a game `steps` decisions with RandomAI (through the boundary). */
-function randomGame(seed: number, steps: number): GameState {
-  const decks = starterFixtures();
-  let state = engine.startGame({
-    corp: decks.corp,
-    runner: decks.runner,
-    mode: "starter-decks",
-    seed,
-  });
-  const ai = new RandomAI();
-  for (let i = 0; i < steps && !state.winner; i++) {
-    const actor: PlayerSide = state.prompts[0]?.player ?? state.turn.player;
-    const legal = engine.getLegalMoves(state, actor);
-    if (legal.length === 0) break;
-    const result = engine.applyMove(state, actor, decide(ai, state, actor, legal, i));
-    if (result.kind === "illegal-move") break;
-    state = result.state;
-  }
-  return state;
-}
-
-/** Permute an array in place with a fixed xorshift stream (order-only change). */
-function permute<T>(list: T[], streamSeed: number): void {
-  let s = streamSeed | 0;
-  for (let i = list.length - 1; i > 0; i--) {
-    s ^= s << 13;
-    s ^= s >>> 17;
-    s ^= s << 5;
-    const j = Math.abs(s) % (i + 1);
-    const tmp = list[i]!;
-    list[i] = list[j]!;
-    list[j] = tmp;
-  }
-}
-
-/**
- * A copy of `state` that differs ONLY in hidden card order: the opponent's
- * deck, the opponent's hand, and the deciding player's own deck are permuted.
- * Everything visible is untouched.
- */
-function reorderHidden(state: GameState, side: PlayerSide, streamSeed: number): GameState {
-  const s = JSON.parse(JSON.stringify(state)) as GameState;
-  const opponent: PlayerSide = side === "corp" ? "runner" : "corp";
-  permute(s[opponent].deck, streamSeed);
-  permute(s[opponent].hand, streamSeed + 1);
-  permute(s[side].deck, streamSeed + 2);
-  return s;
-}
 
 function actorOf(state: GameState): PlayerSide {
   return state.prompts[0]?.player ?? state.turn.player;
@@ -92,7 +43,7 @@ function actorOf(state: GameState): PlayerSide {
 Deno.test("hidden info: determinization is invariant to hidden order", async (t) => {
   await t.step("determinize ignores the order of every hidden zone", () => {
     for (const seed of [1, 7, 42, 99, 2024]) {
-      const state = randomGame(seed, 6);
+      const state = randomGame(new RandomAI(), seed, 6);
       const actor = actorOf(state);
       const legal = engine.getLegalMoves(state, actor);
       if (legal.length < 2) continue;
@@ -128,7 +79,7 @@ Deno.test("hidden info: determinization is invariant to hidden order", async (t)
   });
 
   await t.step("determinize works for both sides at the same position", () => {
-    const state = randomGame(42, 9);
+    const state = randomGame(new RandomAI(), 42, 9);
     for (const side of ["corp", "runner"] as const) {
       const view = engine.getPlayerView(state, side);
       const ctx = makeAIDecisionContext(state, side, 5);
@@ -149,7 +100,7 @@ Deno.test("hidden info: determinization is invariant to hidden order", async (t)
 Deno.test("hidden info: context and decision seeds carry no hidden state", async (t) => {
   await t.step("the context carries no instance ids and no rngState", () => {
     for (const seed of [3, 11, 77]) {
-      const state = randomGame(seed, 8);
+      const state = randomGame(new RandomAI(), seed, 8);
       for (const side of ["corp", "runner"] as const) {
         const ctx = makeAIDecisionContext(state, side, 123456);
 
@@ -179,7 +130,7 @@ Deno.test("hidden info: context and decision seeds carry no hidden state", async
 
   await t.step("the decision seed is a pure function of the view", () => {
     for (const seed of [3, 11, 77]) {
-      const state = randomGame(seed, 8);
+      const state = randomGame(new RandomAI(), seed, 8);
       const actor = actorOf(state);
       const view = engine.getPlayerView(state, actor);
 
@@ -214,7 +165,7 @@ Deno.test("hidden info: context and decision seeds carry no hidden state", async
   });
 
   await t.step("determinize output never echoes the true rngState", () => {
-    const state = randomGame(7, 5);
+    const state = randomGame(new RandomAI(), 7, 5);
     const actor = actorOf(state);
     const ctx = makeAIDecisionContext(state, actor, 4242);
     const det = determinize(engine.getPlayerView(state, actor), ctx, makeRng(4242));

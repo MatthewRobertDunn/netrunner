@@ -3,7 +3,7 @@
  */
 
 import { engine } from "../src/mod.ts";
-import { newStarterGame } from "../src/testing/fixtures.ts";
+import { newStarterGame } from "./helpers/fixtures.ts";
 import { assert, assertEquals } from "./helpers/assert.ts";
 
 function pickFirst(state: ReturnType<typeof newStarterGame>, side: "corp" | "runner") {

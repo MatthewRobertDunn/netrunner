@@ -5,7 +5,7 @@
  * tests/ui/setup.ts), so no browser or network is needed.
  */
 
-import "./setup.ts";
+import { installRealCss } from "./setup.ts"; // also bridges happy-dom onto globalThis
 import { mount } from "@vue/test-utils";
 import { assert, assertEquals } from "../helpers/assert.ts";
 import { createTestFixture, publicStatusFor } from "./fixture.ts";
@@ -227,15 +227,15 @@ Deno.test("GameScreen status dock side panel", async (t) => {
       // (Corp opens over max hand size after the mandatory draw.)
       let fx = createTestFixture(42, humanSide);
       if (humanSide === "runner") {
-        const gains = [{ kind: "corp.gainCredits" }, { kind: "corp.gainCredits" }, {
+        const gains: Move[] = [{ kind: "corp.gainCredits" }, { kind: "corp.gainCredits" }, {
           kind: "corp.gainCredits",
         }];
-        fx = createTestFixture(42, humanSide, gains as never[]);
+        fx = createTestFixture(42, humanSide, gains);
         const drop = fx.state.corp.hand[0]!.id;
         fx = createTestFixture(
           42,
           humanSide,
-          [...gains, { kind: "discard", player: "corp", cardInstanceIds: [drop] }] as never[],
+          [...gains, { kind: "discard", player: "corp", cardInstanceIds: [drop] }],
         );
       }
       const { state } = fx;
@@ -276,15 +276,15 @@ Deno.test("GameScreen status dock side panel", async (t) => {
       // for the human, so the draw move is legal and the button is enabled.
       let fx = createTestFixture(42, humanSide);
       if (humanSide === "runner") {
-        const gains = [{ kind: "corp.gainCredits" }, { kind: "corp.gainCredits" }, {
+        const gains: Move[] = [{ kind: "corp.gainCredits" }, { kind: "corp.gainCredits" }, {
           kind: "corp.gainCredits",
         }];
-        fx = createTestFixture(42, humanSide, gains as never[]);
+        fx = createTestFixture(42, humanSide, gains);
         const drop = fx.state.corp.hand[0]!.id;
         fx = createTestFixture(
           42,
           humanSide,
-          [...gains, { kind: "discard", player: "corp", cardInstanceIds: [drop] }] as never[],
+          [...gains, { kind: "discard", player: "corp", cardInstanceIds: [drop] }],
         );
       }
       const { state } = fx;
@@ -359,33 +359,23 @@ Deno.test("GameScreen status dock side panel", async (t) => {
 Deno.test("GameScreen remotes: ice sits on the runner side in both seats", () => {
   // Structural DOM types: this repo typechecks without the DOM lib (see
   // tests/ui/setup.ts, which bridges the same happy-dom globals).
-  interface TestDocument {
-    getElementById(id: string): unknown;
-    createElement(tag: string): { id: string; textContent: string | null };
-    head: { appendChild(n: unknown): void };
-  }
   interface TestWindow {
     getComputedStyle(el: unknown): { order: string };
   }
-  const testDom = globalThis as unknown as { document: TestDocument; window: TestWindow };
+  const testDom = globalThis as unknown as { window: TestWindow };
 
   // One <style> with the real shipped CSS, so computed `order` reflects what
   // the browser does (happy-dom resolves stylesheet rules into
-  // getComputedStyle).
-  if (!testDom.document.getElementById("real-ui-css")) {
-    const css = Deno.readTextFileSync(new URL("../../public/css/style.css", import.meta.url));
-    const style = testDom.document.createElement("style");
-    style.id = "real-ui-css";
-    style.textContent = css;
-    testDom.document.head.appendChild(style);
-  }
+  // getComputedStyle). Shared with tests/ui/setup.ts so every UI test that
+  // needs computed styles calls the same idempotent helper.
+  installRealCss();
 
   // Corp installs Palisade then Send a Message in a new remote: remote-1
   // ends up with ice plus a root card.
   const { state } = createTestFixture(42, "corp", [
     { kind: "corp.install", cardId: "palisade", server: "new-remote" },
     { kind: "corp.install", cardId: "send_a_message", server: "remote-1" },
-  ] as never[]);
+  ]);
 
   for (const humanSide of ["corp", "runner"] as const) {
     const wrapper = mount(GameScreen, {

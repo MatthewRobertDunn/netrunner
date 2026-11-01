@@ -20,30 +20,18 @@
  * `docs/rules-v26.03.txt`: 1.18.2, 8.1.2d, 8.5.14.
  *
  * Hands are scripted deterministically via `orderedCards` (see
- * `orderedCorpDeck` in src/testing/fixtures.ts).
+ * `orderedCorpDeck` in tests/helpers/fixtures.ts).
  */
 
 import { engine, starterDeckConfigs } from "../src/mod.ts";
-import type { CardId, DeckConfig, GameState, PlayerSide, Zone } from "../src/types.ts";
-import { orderedCorpDeck, play } from "../src/testing/fixtures.ts";
+import type { CardId, GameState, PlayerSide, Zone } from "../src/types.ts";
+import { play } from "./helpers/fixtures.ts";
+import { corpDeckWithHand, nextTurnOf } from "./helpers/drive.ts";
 import { assert, assertDefined, assertEquals } from "./helpers/assert.ts";
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-/** Corp deck whose opening hand starts with `hand` (in order). */
-function corpDeckWithHand(hand: CardId[]): DeckConfig {
-  const cfg = starterDeckConfigs().corp;
-  const rest = cfg.cards.flatMap((e) => Array<CardId>(e.count).fill(e.cardId));
-  const front: CardId[] = [];
-  for (const id of hand) {
-    const i = rest.indexOf(id);
-    if (i < 0) throw new Error(`${id} is not in the corp starter pool`);
-    front.push(rest.splice(i, 1)[0]!);
-  }
-  return orderedCorpDeck([...front, ...rest]);
-}
 
 function newGame(corpHand: CardId[]): GameState {
   return engine.startGame({
@@ -52,39 +40,6 @@ function newGame(corpHand: CardId[]): GameState {
     mode: "starter-decks",
     seed: 3,
   });
-}
-
-/** Play first-legal moves for `state.turn.player` until the turn passes over. */
-function turnBurn(state: GameState): GameState {
-  let cur = state;
-  const active = cur.turn.player;
-  for (let i = 0; i < 60 && !cur.winner && cur.turn.player === active; i++) {
-    const moves = engine.getLegalMoves(cur, active);
-    if (moves.length === 0) break;
-    cur = play(cur, active, moves[0]!).state;
-  }
-  return cur;
-}
-
-/** Play first-legal moves until it is `side`'s turn. */
-function burnUntil(state: GameState, side: PlayerSide): GameState {
-  let cur = state;
-  for (let i = 0; i < 80 && !cur.winner; i++) {
-    if (cur.turn.player === side) return cur;
-    const active = cur.turn.player;
-    const moves = engine.getLegalMoves(cur, active);
-    if (moves.length === 0) return cur;
-    cur = play(cur, active, moves[0]!).state;
-  }
-  return cur;
-}
-
-/**
- * Play first-legal moves until it is `side`'s turn, then spend the rest of that
- * turn and advance until `side` is on turn again.
- */
-function nextTurnOf(state: GameState, side: PlayerSide): GameState {
-  return burnUntil(turnBurn(state), side);
 }
 
 /** The first installed corp card with the given card id (root or ice). */

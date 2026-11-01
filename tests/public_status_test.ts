@@ -20,7 +20,7 @@ import {
   newStarterGame,
   play,
   rezWindowState,
-} from "../src/testing/fixtures.ts";
+} from "./helpers/fixtures.ts";
 import { assert, assertDefined, assertEquals } from "./helpers/assert.ts";
 
 function cardIds(cards: ViewCard[]): string[] {
@@ -197,11 +197,16 @@ Deno.test("public status: installed Runner cards are always public", () => {
       `Runner program/resource ${card.id} should be public knowledge`,
     );
   }
-  // Installing a runner card keeps its id public to both players.
-  const runnerInstall = engine.getLegalMoves(state, "runner").find(
-    (m) => m.kind === "runner.install",
+  // Installing a runner card keeps its id public to both players. The runner
+  // can only install on its own turn, so finish the Corp's turn first — the old
+  // code looked for a runner.install move while it was still the Corp's turn,
+  // found none, and returned silently.
+  state = endCorpTurn(state);
+  assertEquals(state.turn.player, "runner", "the runner's turn begins");
+  const runnerInstall = assertDefined(
+    engine.getLegalMoves(state, "runner").find((m) => m.kind === "runner.install"),
+    "the runner has an install move (the starter deck's first card is installable)",
   );
-  if (!runnerInstall) return;
   state = play(state, "runner", runnerInstall).state;
   const forCorp = engine.getPublicGameStatusFor(state, "corp");
   const forRunner = engine.getPublicGameStatusFor(state, "runner");

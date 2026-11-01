@@ -9,7 +9,7 @@
  */
 
 import { cardDef, engine, starterDeckConfigs } from "../src/mod.ts";
-import { endCorpTurn, newGameWithCorpHand, newStarterGame, play } from "../src/testing/fixtures.ts";
+import { endCorpTurn, newGameWithCorpHand, newStarterGame, play } from "./helpers/fixtures.ts";
 import type { GameState, Move } from "../src/types.ts";
 import { assert, assertDefined, assertEquals } from "./helpers/assert.ts";
 

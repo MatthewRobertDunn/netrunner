@@ -26,7 +26,7 @@ invariants, and the mistakes worth not repeating.
 - **Visible support status.** Every card has a `CardBehavior` definition keyed by card id (rules
   text is never parsed). `cardSupport` / `starterDeckSupport` report `supported` / `partial` /
   `unsupported` per card.
-- **Tested.** `deno task test` runs 86 tests (149 named sub-steps) across setup, cards, runs,
+- **Tested.** `deno task test` runs 97 tests (135 named sub-steps) across setup, cards, runs,
   servers, visibility, rules-costs, prompts, triggers, pump expiry, determinism, public-status, AI
   playthrough, and starter-deck playtest suites.
 - **AI players.** `src/ai/mod.ts` exposes a `GameAI` interface (`name`,

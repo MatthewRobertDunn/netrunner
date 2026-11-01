@@ -5,7 +5,7 @@
  */
 
 import { engine } from "../src/mod.ts";
-import { newStarterGame, play } from "../src/testing/fixtures.ts";
+import { newStarterGame, play } from "./helpers/fixtures.ts";
 
 function pick<T>(arr: T[]): T | undefined {
   return arr.length > 0 ? arr[0] : undefined;

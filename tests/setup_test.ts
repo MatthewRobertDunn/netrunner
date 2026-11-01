@@ -3,8 +3,8 @@
  */
 
 import { engine, starterDeckConfigs } from "../src/mod.ts";
-import { newStarterGame } from "../src/testing/fixtures.ts";
-import { assert, assertEquals } from "./helpers/assert.ts";
+import { newStarterGame } from "./helpers/fixtures.ts";
+import { assert, assertDefined, assertEquals } from "./helpers/assert.ts";
 
 Deno.test("setup: starter-deck validation and composition", async (t) => {
   await t.step("starter decks validate for their side", () => {
@@ -71,4 +71,20 @@ Deno.test("setup: startGame sets up the expected initial state", async (t) => {
     assert(state.turn.phase === "action");
     assert(state.prompts.length === 0);
   });
+});
+
+Deno.test("applyMove never mutates the caller's state object", () => {
+  // Engine invariant (AGENTS.md): applyMove works on a copy and returns the new
+  // state; the caller's object is untouched. Snapshot the pre-state, apply a
+  // legal move, and assert the original is byte-identical.
+  const state = newStarterGame(7);
+  const before = JSON.stringify(state);
+  const move = assertDefined(
+    engine.getLegalMoves(state, "corp").find((m) => m.kind === "corp.gainCredits"),
+    "the Corp has a gain-credits move on turn 1",
+  );
+  const result = engine.applyMove(state, "corp", move);
+  assert(result.kind === "applied", "the move was legal and applied");
+  assertEquals(JSON.stringify(state), before, "applyMove left the caller's state untouched");
+  assert(JSON.stringify(result.state) !== before, "applyMove returned a new state object");
 });

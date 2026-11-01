@@ -37,3 +37,23 @@ g.requestAnimationFrame = win.requestAnimationFrame.bind(win);
 if (win.cancelAnimationFrame) {
   g.cancelAnimationFrame = win.cancelAnimationFrame.bind(win);
 }
+
+/**
+ * Inject the shipped `public/css/style.css` into the test DOM so computed
+ * `getComputedStyle` reflects the real stylesheet (happy-dom resolves
+ * stylesheet rules into computed values). Idempotent: guarded by an element
+ * id, so calling it from several tests is safe.
+ */
+export function installRealCss(): void {
+  const doc = (globalThis as unknown as Record<string, unknown>).document as unknown as {
+    head: { appendChild: (n: unknown) => void };
+    getElementById: (id: string) => unknown;
+    createElement: (tag: string) => { id: string; textContent: string };
+  };
+  if (doc.getElementById("real-ui-css")) return;
+  const css = Deno.readTextFileSync(new URL("../../public/css/style.css", import.meta.url));
+  const style = doc.createElement("style");
+  style.id = "real-ui-css";
+  style.textContent = css;
+  doc.head.appendChild(style);
+}

@@ -14,12 +14,7 @@
  */
 
 import { engine, starterDeckConfigs } from "../src/mod.ts";
-import {
-  endCorpTurn,
-  newGameWithCorpHand,
-  orderedCorpDeck,
-  play,
-} from "../src/testing/fixtures.ts";
+import { endCorpTurn, newGameWithCorpHand, orderedCorpDeck, play } from "./helpers/fixtures.ts";
 import type { DeckConfig, GameEvent, GameState, Move, PlayerSide } from "../src/types.ts";
 import { assert, assertDefined, assertEquals } from "./helpers/assert.ts";
 

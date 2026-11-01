@@ -5,8 +5,12 @@
  *
  * These are the properties the fuzz audit checks across 20 full games. They
  * are kept as tests so a future change that makes `getLegalMoves` offer an
- * illegal move or a no-op move fails loudly. Each property is a step of one
- * top-level test, so a failure still names which invariant broke.
+ * illegal move or a no-op move fails loudly.
+ *
+ * All three properties are asserted in ONE sweep of 20 games (not one sweep
+ * per property). A single pass exercises every branch once, so V8 records the
+ * coverage for all three invariants together; splitting them across `t.step`s
+ * previously dropped branch records from the steps that did not run.
  */
 
 import { engine, RandomAI, starterDeckConfigs } from "../src/mod.ts";
@@ -50,28 +54,18 @@ function playRandomGame(
   return { state, illegalOffered, noopMoves };
 }
 
-Deno.test("legal moves: every offered move applies, changes state, and reaches a winner", async (t) => {
-  await t.step("getLegalMoves never offers a move applyMove rejects", () => {
-    let illegalOffered = 0;
-    for (let seed = 1; seed <= 20; seed++) {
-      illegalOffered += playRandomGame(seed, 500).illegalOffered;
-    }
-    assert(illegalOffered === 0, "getLegalMoves never offers a move applyMove rejects");
-  });
+Deno.test("legal moves: every offered move applies, changes state, and reaches a winner", () => {
+  let illegalOffered = 0;
+  let noopMoves = 0;
+  let stuck = 0;
+  for (let seed = 1; seed <= 20; seed++) {
+    const out = playRandomGame(seed, 500);
+    illegalOffered += out.illegalOffered;
+    noopMoves += out.noopMoves;
+    if (!out.state.winner) stuck++;
+  }
 
-  await t.step("every offered move changes the game state", () => {
-    let noopMoves = 0;
-    for (let seed = 1; seed <= 20; seed++) {
-      noopMoves += playRandomGame(seed, 500).noopMoves;
-    }
-    assert(noopMoves === 0, "every offered move changes the game state");
-  });
-
-  await t.step("every random game reaches a winner", () => {
-    let stuck = 0;
-    for (let seed = 1; seed <= 20; seed++) {
-      if (!playRandomGame(seed, 500).state.winner) stuck++;
-    }
-    assert(stuck === 0, "every random game reaches a winner");
-  });
+  assert(illegalOffered === 0, "getLegalMoves never offers a move applyMove rejects");
+  assert(noopMoves === 0, "every offered move changes the game state");
+  assert(stuck === 0, "every random game reaches a winner");
 });

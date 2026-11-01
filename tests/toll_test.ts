@@ -18,7 +18,7 @@
  */
 
 import { engine } from "../src/mod.ts";
-import { endCorpTurn, newGameWithCorpHand, play } from "../src/testing/fixtures.ts";
+import { endCorpTurn, newGameWithCorpHand, play } from "./helpers/fixtures.ts";
 import type { ApplyMoveResult, GameState } from "../src/types.ts";
 import { assert, assertDefined, assertEquals } from "./helpers/assert.ts";
 

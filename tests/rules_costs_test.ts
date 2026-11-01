@@ -11,7 +11,7 @@
 
 import { cardDef, engine, starterDeckConfigs } from "../src/mod.ts";
 import type { CardId, DeckConfig, GameState, Move, ServerId } from "../src/types.ts";
-import { endCorpTurn, play } from "../src/testing/fixtures.ts";
+import { endCorpTurn, play } from "./helpers/fixtures.ts";
 import { assert, assertDefined, assertEquals } from "./helpers/assert.ts";
 
 // ---------------------------------------------------------------------------

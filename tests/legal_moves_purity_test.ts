@@ -10,7 +10,7 @@
  */
 
 import { engine, RandomAI, starterDeckConfigs } from "../src/mod.ts";
-import { continueRun, newStarterGame, play } from "../src/testing/fixtures.ts";
+import { continueRun, CORP_FILLER, newStarterGame, play } from "./helpers/fixtures.ts";
 import type { DeckConfig, GameState, Move, PlayerSide } from "../src/types.ts";
 import { decide } from "./helpers/boundary.ts";
 import { assert, assertEquals } from "./helpers/assert.ts";
@@ -31,29 +31,6 @@ function orderedCorpDeck(ordered: string[]): DeckConfig {
     orderedCards: ordered,
   };
 }
-
-/** Filler cards drawn from the corp starter pool (after the scripted hand). */
-const CORP_FILLER = [
-  "hedge_fund",
-  "hedge_fund",
-  "hedge_fund",
-  "government_subsidy",
-  "government_subsidy",
-  "offworld_office",
-  "offworld_office",
-  "send_a_message",
-  "send_a_message",
-  "nico_campaign",
-  "nico_campaign",
-  "urtica_cipher",
-  "urtica_cipher",
-  "tithe",
-  "tithe",
-  "whitespace",
-  "whitespace",
-  "palisade",
-  "palisade",
-];
 
 function newGameWithCorpOrder(hand: string[], seed = 3): GameState {
   const decks = starterDeckConfigs();
