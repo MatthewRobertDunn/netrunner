@@ -6,7 +6,13 @@
  */
 
 import { cardDef } from "../cards/catalogue.ts";
-import { behaviors, supportStatus } from "../cards/effects.ts";
+import {
+  behavior,
+  behaviors,
+  breakAbilityDef,
+  pumpAbilityDef,
+  supportStatus,
+} from "../cards/effects.ts";
 import { abilityLegality, serversForAbility } from "./effects.ts";
 import { randomAccessCandidateCount, specificAccessCandidates } from "./settle.ts";
 import {
@@ -226,9 +232,10 @@ function corpActionMoves(state: GameState): Move[] {
   for (const card of corpInstalled(state)) {
     const def = cardDef(card.cardId);
     // Rule 1.18.3: Agendas can always be advanced; non-agenda cards only if printed
-    // card text explicitly permits it (e.g. Urtica Cipher: "You can advance this asset.").
+    // card text explicitly permits it (Urtica Cipher: "You can advance this asset."
+    // → `advanceable` in the card registry).
     // Rule 5.2.6f: Advancing costs 1 click and 1 credit.
-    const isAdvanceable = def.type === "agenda" || card.cardId === "urtica_cipher";
+    const isAdvanceable = def.type === "agenda" || behavior(card.cardId)?.advanceable === true;
     if (isAdvanceable && state.corp.credits >= 1) {
       moves.push({ kind: "corp.advance", targetId: card.id });
     }
@@ -325,16 +332,15 @@ function runnerActionMoves(state: GameState): Move[] {
     if (def.cost !== null && def.cost > runner.credits) continue;
     if (def.minimumDeckSize !== null) continue;
     evented.add(card.cardId);
-    if (
-      card.cardId === "jailbreak" || card.cardId === "overclock" || card.cardId === "tread_lightly"
-    ) {
-      // These events initiate a run as part of their resolution (rule 5.2.2b),
-      // so the Runner must choose the attacked server when playing them.
-      // Jailbreak names "HQ or R&D"; Overclock and Tread Lightly name "any
-      // server", so they enumerate every server that could be run (central or
-      // existing remote), subject to the same Red Team restriction as a basic
-      // run (the event's run is still a run).
-      const servers: ServerId[] = card.cardId === "jailbreak"
+    const eventEffect = behavior(card.cardId)?.eventEffect;
+    if (eventEffect?.kind === "run") {
+      // Run-sourcing events (rule 5.2.2b) initiate a run as part of their
+      // resolution, so the Runner must choose the attacked server when playing
+      // them. Jailbreak names "HQ or R&D"; Overclock and Tread Lightly name
+      // "any server", so they enumerate every server that could be run (central
+      // or existing remote), subject to the same Red Team restriction as a
+      // basic run (the event's run is still a run).
+      const servers: ServerId[] = eventEffect.runServers === "hq-or-rd"
         ? ["hq", "rd"]
         : allServers(state).filter((s) => !cardRestrictsRun(state, s));
       for (const server of servers) {
@@ -356,11 +362,14 @@ function runnerActionMoves(state: GameState): Move[] {
   return moves;
 }
 
-/** Red Team forbids running the same central server twice per turn. */
+/** Cards imposing a run restriction (Red Team) forbid re-running a central. */
 function cardRestrictsRun(state: GameState, server: ServerId): boolean {
   if (!server.startsWith("remote-") && state.runner.ranServersThisTurn.includes(server)) {
-    // Only Red Team imposes this; if it is not installed the restriction does not apply.
-    if (state.runner.installed.some((c) => c.cardId === "red_team")) return true;
+    // The restriction applies while a card declaring it (Red Team, rule
+    // 6.3.2a) is installed; without one the restriction does not apply.
+    if (state.runner.installed.some((c) => behavior(c.cardId)?.runRestriction !== undefined)) {
+      return true;
+    }
   }
   return false;
 }
@@ -409,9 +418,9 @@ function addBreakMoves(state: GameState, ice: CardInstance, moves: Move[]): void
     if (!isIcebreaker(program)) continue;
     const strengthOk = currentIceStrength(state, program) >= iceStrength;
     for (const subIndex of unbroken) {
-      // Bran 1.0: lose [click] to break 1 subroutine; any installed icebreaker,
-      // no strength requirement.
-      if (ice.cardId === "bran_1_0") {
+      // Brân 1.0: lose [click] to break 1 subroutine; any installed icebreaker,
+      // no strength requirement — declared by the ice's `bioroid` break.
+      if (breakAbilityDef(ice.cardId)?.bioroid) {
         if (state.runner.clicks >= 1) {
           moves.push({
             kind: "runner.breakSubroutine",
@@ -422,7 +431,7 @@ function addBreakMoves(state: GameState, ice: CardInstance, moves: Move[]): void
         continue;
       }
       if (strengthOk) {
-        const breakDef = behaviors.get(program.cardId)?.breakAbility;
+        const breakDef = breakAbilityDef(program.cardId);
         const cost = breakDef?.creditCost ?? 1;
         const breaks = breakDef?.breaks ?? [];
         const iceSubtypes = cardDef(ice.cardId).subtypes;
@@ -437,7 +446,7 @@ function addBreakMoves(state: GameState, ice: CardInstance, moves: Move[]): void
       }
     }
     // Pump.
-    const pumpDef = behaviors.get(program.cardId)?.pumpAbility;
+    const pumpDef = pumpAbilityDef(program.cardId);
     if (pumpDef && availableCredits(state, "runner") >= pumpDef.creditCost) {
       moves.push({ kind: "runner.pumpIcebreaker", programId: program.id });
     }
@@ -448,13 +457,15 @@ function addBreakMoves(state: GameState, ice: CardInstance, moves: Move[]): void
 function currentIceStrength(state: GameState, card: CardInstance): number {
   const printed = cardDef(card.cardId).strength ?? 0;
   let extra = card.strengthBoost ?? 0;
-  if (card.cardId === "unity") {
+  const ss = behavior(card.cardId)?.staticStrength;
+  if (ss?.kind === "icebreakers-installed") {
     // Unity's +X is static (not a pump): its strength equals installed icebreakers.
     const count = state.runner.installed.filter((c) => isIcebreaker(c)).length;
     extra = count - 1; // printed strength 1 already counted
   }
-  if (card.cardId === "palisade" && (card.server?.startsWith("remote-") ?? false)) {
-    return printed + 2 + (card.strengthBoost ?? 0);
+  if (ss?.kind === "bonus-if-remote" && (card.server?.startsWith("remote-") ?? false)) {
+    // Palisade: +2 strength while protecting a remote server.
+    return printed + (ss.amount ?? 0) + (card.strengthBoost ?? 0);
   }
   return printed + extra;
 }

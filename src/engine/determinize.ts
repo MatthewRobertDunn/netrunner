@@ -36,6 +36,7 @@
  */
 
 import { cardDef, isIce } from "../cards/catalogue.ts";
+import { handSizeBonusOf } from "../cards/effects.ts";
 import { fastCloneState } from "./clone.ts";
 import type { Rng } from "./rng.ts";
 import type {
@@ -156,10 +157,12 @@ function hiddenInstance(
 function basePlayerState(view: PlayerView, side: PlayerSide): PlayerState {
   const section = view[side] as PlayerView["corp"];
   // baseHandSize is always 5 in this engine; reconstruct the modifier so the
-  // derived maximum hand size round-trips. Superconducting Hub's +2 is
-  // recomputed by the engine from the score area, so subtract it here.
-  const hubBonus =
-    side === "corp" && view.corp.score.some((c) => c.cardId === "superconducting_hub") ? 2 : 0;
+  // derived maximum hand size round-trips. Hand-size bonuses from scored
+  // agendas (Superconducting Hub's +2) are recomputed by the engine from the
+  // score area, so subtract them here.
+  const hubBonus = side === "corp"
+    ? handSizeBonusOf(view.corp.score.map((c) => c.cardId as string))
+    : 0;
   return {
     side,
     identity: instanceOf(section.identity, section.identity.cardId as CardId),
