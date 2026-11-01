@@ -17,18 +17,18 @@ of running the suite is how it goes stale. The two entries that survive here are
 
 1. **Rule citations in comments go stale — re-grep the rules file, don't trust the number.**
    Known-fixed list, each arrow verified against the rules text: "4.6.10"/"4.6.10b" (→ 4.6.8e,
-   8.5.8, 10.3.1h — an emptied remote server ceases to exist at the checkpoint, and a run against
-   it ends neither successful nor unsuccessful), "4.6.7d/e" (→ 4.6.6d/e; 4.6.7d is the
-   Archives-zone rule and 4.6.7e does not exist), "1.16.6b as rez cost" (→ 1.16.8; 1.16.6b is the
-   ice *install* cost), eval.ts "1.15.2" (→ 1.17.1, agenda points), "8.6" (→ 10.5, tags), "6.4"
-   (→ 1.20 + 3.9.3, memory). Fixed in the same changeset as this file — don't reintroduce. When
-   you touch a rule, re-read the cited section in the rules doc, not the comment.
+   8.5.8, 10.3.1h — an emptied remote server ceases to exist at the checkpoint, and a run against it
+   ends neither successful nor unsuccessful), "4.6.7d/e" (→ 4.6.6d/e; 4.6.7d is the Archives-zone
+   rule and 4.6.7e does not exist), "1.16.6b as rez cost" (→ 1.16.8; 1.16.6b is the ice _install_
+   cost), eval.ts "1.15.2" (→ 1.17.1, agenda points), "8.6" (→ 10.5, tags), "6.4" (→ 1.20 + 3.9.3,
+   memory). Fixed in the same changeset as this file — don't reintroduce. When you touch a rule,
+   re-read the cited section in the rules doc, not the comment.
 
    Beware when re-grepping: the rules dump is formatted one fragment per line, so a sub-item
    citation like `4.6.8e` never matches a contiguous grep (`grep "4.6.8e"` returns 0 even though
    rule 4.6.8 item e exists). Grep the section number with its trailing dot
-   (`grep -n "^4\.6\.8\." docs/rules-v26.03.txt`) and read the lettered items below it; a
-   0-match grep on a sub-item is a false positive, not proof that a citation is phantom.
+   (`grep -n "^4\.6\.8\." docs/rules-v26.03.txt`) and read the lettered items below it; a 0-match
+   grep on a sub-item is a false positive, not proof that a citation is phantom.
 
 2. **Documented simplifications that are safe to keep (do not "fix" casually):** no faceup/facedown
    Archives split (whole pile hidden from the Runner); installing over a like card is forbidden
@@ -63,3 +63,11 @@ assertions. They live in the test files as the authoritative regression record:
 - Announced Runner actions are open info; the heap is public (10.2, 4.4.7b) —
   `tests/visibility_test.ts`
 - Trash affordability counts the run fund, not pool credits alone — `tests/event_texts_test.ts`
+- A subroutine loses only what its card text says: a `?? 3` default in the resolver invented a loss
+  Whitespace's second sub doesn't have ("If the Runner has 6[credit] or less, end the run" — no
+  loss) and ETR'd runners the rules let survive; resolve subroutines exactly as `data/cards.json`
+  reads, and never default an absent `amount` into an effect — `tests/subroutines_test.ts`
+- Installing ice "directly inward" of the encountered ice (rule 8.5.14c) shifts that ice's ARRAY
+  index (the ice array runs innermost-first) but not the Runner's position — rule 6.2.6 says the
+  position is an element of the position sequence, not an index, so re-point `run.position` at the
+  engaged ice's new index or the encounter reads the wrong card — `tests/subroutines_test.ts`

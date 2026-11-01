@@ -9,6 +9,7 @@ import { cardDef } from "../cards/catalogue.ts";
 import { behavior, behaviors, triggersOf } from "../cards/effects.ts";
 import {
   addHostedCredits,
+  availableCredits,
   corpInstalled,
   dealDamage,
   drawCards,
@@ -18,6 +19,7 @@ import {
   loseClicks,
   loseCredits,
   player,
+  spendCredits,
   takeCreditsFrom,
   toDiscard,
 } from "./state.ts";
@@ -224,7 +226,14 @@ export function resolveSubroutine(state: GameState, ice: CardInstance, index: nu
       break;
     }
     case "lose-credits-then-conditional-end-run": {
-      loseCredits(state, "runner", sub.amount ?? 3);
+      // Resolve the subroutine exactly as written (data/cards.json is the
+      // specification): Whitespace's second sub is ONLY "If the Runner has
+      // 6[credit] or less, end the run" — no credit loss. A registry entry
+      // with an `amount` declares a combined "lose N, then check" sub; the
+      // absence of `amount` must never be defaulted into a loss (a `?? 3`
+      // here invented a phantom second loss and ETR'd runners the rules
+      // let survive — see docs/rules-gotchas.md).
+      if (sub.amount !== undefined) loseCredits(state, "runner", sub.amount);
       if ((sub.creditsAtMost ?? 6) >= state.runner.credits) endRun(state);
       break;
     }
@@ -457,9 +466,21 @@ function spendToll(state: GameState): void {
 
 /**
  * Install ice directly inward from another piece of ice, ignoring all costs.
- * Rule 8.5.14 ("directly inward from this ice"): the new ice is inserted at the
- * `from` ice's index, pushing `from` (and everything above it) outward — the
- * mirror of the legality filter in legal-moves.ts `corp-install-ice-inward`.
+ * Rule 8.5.14c: the new position is "inward from that ice's position, and
+ * outward from the next already-existing position inward". The ice array runs
+ * innermost-first (index 0 adjoins the server; normal installs `push` the
+ * outermost ice, and the Runner's position counts DOWN as it moves inward), so
+ * "directly inward of `from`" is the array index `fromIndex` — `from` and
+ * everything outward of it shift up by one.
+ *
+ * Rule 6.2.6: the Runner's position is an element of the position sequence,
+ * not an index, so adding a position does not move the Runner — but the array
+ * index of the ice they are engaged with DOES shift, and `run.position` is an
+ * index (every reader does `ice[run.position]`). Re-point it at `from`'s new
+ * index so an install during the encounter keeps `ice[run.position]` naming
+ * the encountered card (`currentIceId` names ids, not indices, and needs no
+ * change). Skipping this left the encounter reading the freshly installed
+ * unrezzed ice instead of Brân 1.0.
  */
 function installIceInward(state: GameState, targetId: string, fromIceId: string): void {
   const found = findCard(state, targetId);
@@ -482,8 +503,18 @@ function installIceInward(state: GameState, targetId: string, fromIceId: string)
   const iceList = iceAt(state, server);
   const fromIndex = iceList.findIndex((c) => c.id === fromIceId);
   if (fromIndex < 0) return;
-  // Install directly inward: insert at the same index, pushing `from` outward.
+  // Install directly inward (rule 8.5.14c): insert AT `from`'s index — the
+  // position between `from` and the next already-existing position inward —
+  // pushing `from` and everything outward of it one step outward.
   iceList.splice(fromIndex, 0, card);
+  // Rule 6.2.6: the Runner stays in their position; only the array index
+  // shifts. An insertion at index i shifts every element with index >= i, so
+  // any run position at or outward of the insertion point moves up by one.
+  // (`currentIceId` already names the engaged card and is index-free.)
+  const run = state.run;
+  if (run && run.server === server && run.position !== null && run.position >= fromIndex) {
+    run.position += 1;
+  }
   state.log.push({ type: "install", cardId: card.id, player: "corp", server });
 }
 
@@ -513,6 +544,12 @@ export function abilityLegality(
   }
   if (ability.clickCost && player(state, side).clicks < ability.clickCost) {
     return { ok: false, reason: "Not enough clicks", title: ability.title, index: abilityIndex };
+  }
+  if (
+    ability.creditCost !== undefined &&
+    availableCredits(state, side) < ability.creditCost
+  ) {
+    return { ok: false, reason: "Not enough credits", title: ability.title, index: abilityIndex };
   }
   if (ability.requiresHostedCredits && (card.hostedCredits ?? 0) < ability.requiresHostedCredits) {
     return { ok: false, reason: "No hosted credits", title: ability.title, index: abilityIndex };
@@ -560,6 +597,15 @@ export function applyPaidAbility(
   const legality = abilityLegality(state, side, card, abilityIndex);
   if (!legality.ok) return false;
   const ability = behaviors.get(card.cardId)?.paidAbilities?.[abilityIndex]!;
+  const effect = ability.effect;
+  // An illegal half-apply must never spend anything: a run-server ability
+  // without the server choice the registry demands bails out BEFORE the
+  // credit/click spends and the once-per-turn burn below.
+  if (effect.kind === "run-server" && !server) return false;
+  // The registry-declared credit cost (PaidAbilityDef.creditCost) is charged
+  // fund-aware — `spendCredits` consumes the run fund first and logs the
+  // spend-credits event — exactly like every other cost path.
+  if (ability.creditCost) spendCredits(state, side, ability.creditCost);
   if (ability.clickCost) {
     state.log.push({ type: "spend-clicks", player: side, amount: ability.clickCost });
     player(state, side).clicks -= ability.clickCost;
@@ -570,7 +616,6 @@ export function applyPaidAbility(
   const runner = state.runner;
 
   // The effect is declared in the registry; the engine dispatches on it.
-  const effect = ability.effect;
   switch (effect.kind) {
     case "load-credits":
       // "[click]: Place N credits on this card" (from the bank).

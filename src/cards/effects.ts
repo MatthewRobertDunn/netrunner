@@ -44,11 +44,14 @@ export interface SubroutineDef {
 export interface BreakAbilityDef {
   /** Ice subtypes this ability can break (e.g. "sentry"). Empty = any. */
   breaks: string[];
-  /** Number of subroutines broken per use. */
-  count: number;
   creditCost: number;
   /** Bran 1.0 style: paid with clicks instead of credits; no strength check. */
   bioroid?: boolean;
+  // NOTE: there is deliberately NO `count` field. Break abilities are
+  // implemented per-subroutine (one break per move, paid at `creditCost`
+  // each); a "break up to N subroutines" ability needs a combined move in
+  // legal-moves.ts + apply.ts before any data field can express it — do not
+  // trust a count field until that move exists.
 }
 
 export interface PumpAbilityDef {
@@ -212,7 +215,7 @@ const B: CardBehavior[] = [
   {
     cardId: "carmen",
     support: "supported",
-    breakAbility: { breaks: ["sentry"], count: 1, creditCost: 1 },
+    breakAbility: { breaks: ["sentry"], creditCost: 1 },
     pumpAbility: { creditCost: 2, amount: 3 },
     installDiscount: { kind: "after-successful-run", amount: 2 },
     note:
@@ -221,13 +224,17 @@ const B: CardBehavior[] = [
   {
     cardId: "cleaver",
     support: "supported",
-    breakAbility: { breaks: ["barrier"], count: 2, creditCost: 1 },
+    // Printed "1[credit]: Break up to 2 barrier subroutines" — implemented
+    // per-subroutine (one break move per sub, 1[credit] each); a multi-sub
+    // "up to N" break needs a combined move in legal-moves.ts/apply.ts, so
+    // there is deliberately no count field to trust (see BreakAbilityDef).
+    breakAbility: { breaks: ["barrier"], creditCost: 1 },
     pumpAbility: { creditCost: 2, amount: 1 },
   },
   {
     cardId: "mayfly",
     support: "supported",
-    breakAbility: { breaks: [], count: 1, creditCost: 1 },
+    breakAbility: { breaks: [], creditCost: 1 },
     pumpAbility: { creditCost: 1, amount: 1 },
     triggers: [{ id: "run-trash-program", kind: "run-trash-program" }],
     note:
@@ -236,7 +243,7 @@ const B: CardBehavior[] = [
   {
     cardId: "unity",
     support: "supported",
-    breakAbility: { breaks: ["code_gate"], count: 1, creditCost: 1 },
+    breakAbility: { breaks: ["code_gate"], creditCost: 1 },
     pumpAbility: { creditCost: 1, amount: 1 },
     // Unity prints "1[credit]: +1 strength", but its strength is STATIC
     // ("+X = installed icebreakers"), so the pump entry only serves to offer
@@ -505,7 +512,7 @@ const B: CardBehavior[] = [
       { id: "etr-1", kind: "end-run" },
       { id: "etr-2", kind: "end-run" },
     ],
-    breakAbility: { breaks: [], count: 1, creditCost: 0, bioroid: true },
+    breakAbility: { breaks: [], creditCost: 0, bioroid: true },
     note:
       "Runner breaks subroutines with 'lose [click]' instead of credits; no strength requirement.",
   },
