@@ -4,7 +4,7 @@ var __export = (target, all) => {
     __defProp(target, name, { get: all[name], enumerable: true });
 };
 
-// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-dom/3.5.13/dist/runtime-dom.esm-bundler.js
+// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-dom/3.5.13/dist/runtime-dom.esm-bundler.js
 var runtime_dom_esm_bundler_exports = {};
 __export(runtime_dom_esm_bundler_exports, {
   BaseTransition: () => BaseTransition,
@@ -177,7 +177,7 @@ __export(runtime_dom_esm_bundler_exports, {
   withScopeId: () => withScopeId
 });
 
-// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/shared/3.5.13/dist/shared.esm-bundler.js
+// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/shared/3.5.13/dist/shared.esm-bundler.js
 // @__NO_SIDE_EFFECTS__
 function makeMap(str) {
   const map2 = /* @__PURE__ */ Object.create(null);
@@ -523,7 +523,7 @@ var stringifySymbol = (v, i = "") => {
   );
 };
 
-// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/reactivity/3.5.13/dist/reactivity.esm-bundler.js
+// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/reactivity/3.5.13/dist/reactivity.esm-bundler.js
 function warn(msg, ...args) {
   console.warn(`[Vue warn] ${msg}`, ...args);
 }
@@ -2200,7 +2200,7 @@ function traverse(value, depth = Infinity, seen2) {
   return value;
 }
 
-// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-core/3.5.13/dist/runtime-core.esm-bundler.js
+// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-core/3.5.13/dist/runtime-core.esm-bundler.js
 var stack = [];
 function pushWarningContext(vnode) {
   stack.push(vnode);
@@ -9588,7 +9588,7 @@ var resolveFilter = null;
 var compatUtils = null;
 var DeprecationTypes = null;
 
-// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-dom/3.5.13/dist/runtime-dom.esm-bundler.js
+// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-dom/3.5.13/dist/runtime-dom.esm-bundler.js
 var policy = void 0;
 var tt = typeof window !== "undefined" && window.trustedTypes;
 if (tt) {
@@ -11384,7 +11384,7 @@ var initDirectivesForSSR = () => {
   }
 };
 
-// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/compiler-core/3.5.13/dist/compiler-core.esm-bundler.js
+// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/compiler-core/3.5.13/dist/compiler-core.esm-bundler.js
 var FRAGMENT = Symbol(true ? `Fragment` : ``);
 var TELEPORT = Symbol(true ? `Teleport` : ``);
 var SUSPENSE = Symbol(true ? `Suspense` : ``);
@@ -16216,7 +16216,7 @@ var noopDirectiveTransform = () => ({
   props: []
 });
 
-// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/compiler-dom/3.5.13/dist/compiler-dom.esm-bundler.js
+// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/compiler-dom/3.5.13/dist/compiler-dom.esm-bundler.js
 var V_MODEL_RADIO = Symbol(true ? `vModelRadio` : ``);
 var V_MODEL_CHECKBOX = Symbol(true ? `vModelCheckbox` : ``);
 var V_MODEL_TEXT = Symbol(true ? `vModelText` : ``);
@@ -16852,7 +16852,7 @@ function compile2(src, options = {}) {
   }));
 }
 
-// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/vue/3.5.13/dist/vue.esm-bundler.js
+// ../usr/local/share/deno/npm/registry.npmjs.org/vue/3.5.13/dist/vue.esm-bundler.js
 function initDev() {
   {
     initCustomFormatter();
@@ -18994,7 +18994,6 @@ var starter_decks_default = {
 
 // src/decks/starter-decks-cyberclick-v1.ts
 var data2 = starter_decks_default;
-var importedCardIds = new Set(cards_default.cards.map((c) => c.id));
 function starterDeckConfigs() {
   const toConfig = (entry) => ({
     identity: entry.identity,
@@ -19028,7 +19027,7 @@ function verifyFixtureAgainstSnapshot() {
   ]) {
     const entry = data2.decks[side];
     for (const [cardId, count] of Object.entries(entry.cards)) {
-      if (!importedCardIds.has(cardId)) {
+      if (!tryCardDef(cardId)) {
         problems.push(`${side}: ${cardId} missing from card catalogue`);
       }
       if (count < 1) problems.push(`${side}: ${cardId} has count ${count}`);
@@ -23154,29 +23153,40 @@ function respectTerm(card, def2) {
 function advancementOf(card) {
   return card.advancement ?? 0;
 }
+function staticBonus(ice, server) {
+  const ss = behavior(ice.cardId)?.staticStrength;
+  if (ss?.kind === "bonus-if-remote") {
+    return server.id.startsWith("remote-") ? ss.amount ?? 0 : 0;
+  }
+  return 0;
+}
 function iceAheadPenalty(state, ice, server) {
   const def2 = cardDef(ice.cardId);
   let penalty = W_RUN_ICE_ENTRY;
-  const strength = Math.min((def2.strength ?? 0) + (ice.cardId === "palisade" && server.id.startsWith("remote-") ? 2 : 0), 8);
+  const strength = Math.min((def2.strength ?? 0) + staticBonus(ice, server), ICE_STRENGTH_CAP);
   penalty += 0.25 * strength;
   penalty += iceCovered(state, def2) ? W_RUN_BREAKABLE_BILL : W_RUN_UNBREAKABLE;
   return penalty;
 }
 function iceCovered(state, def2) {
   const iceSubtypes = def2.subtypes;
+  const targetBran = behavior(def2.id)?.breakAbility?.bioroid === true;
   for (const program of state.runner.installed) {
     const pd = cardDef(program.cardId);
-    if (pd.type !== "program" || !pd.subtypes.includes("icebreaker")) continue;
-    if (def2.id === "bran_1_0") return true;
+    if (!isIcebreaker(program)) continue;
+    if (targetBran) return true;
     const breakDef = behaviors.get(program.cardId)?.breakAbility;
     if (!breakDef) continue;
     const match = breakDef.breaks.length === 0 || iceSubtypes.some((s) => breakDef.breaks.includes(s));
     if (!match) continue;
-    const effective = (pd.strength ?? 0) + (pd.id === "unity" ? 2 : 0);
+    const effective = (pd.strength ?? 0) + unityEvalBonus(program);
     const canPump = behaviors.get(program.cardId)?.pumpAbility !== void 0;
     if (effective >= (def2.strength ?? 0) || canPump) return true;
   }
   return false;
+}
+function unityEvalBonus(program) {
+  return behavior(program.cardId)?.staticStrength?.kind === "icebreakers-installed" ? 2 : 0;
 }
 function pendingAccessTerm(state, id) {
   if (!id) return 0;
