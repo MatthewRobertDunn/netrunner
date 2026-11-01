@@ -125,6 +125,7 @@ export default defineComponent({
                 type="button"
                 class="pick-slot"
                 :class="{ picked: discardSelected.includes(c.id) }"
+                :aria-pressed="String(discardSelected.includes(c.id))"
                 @click="$emit('discard-toggle', c.id)"
               >
                 <card-tile

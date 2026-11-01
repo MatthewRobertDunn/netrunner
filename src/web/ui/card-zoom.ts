@@ -17,7 +17,7 @@
  * Uses `setup()` (Composition API) so `deno check` gets full typing.
  */
 
-import { computed, defineComponent, onMounted, ref } from "vue";
+import { computed, defineComponent, onMounted, onUnmounted, ref } from "vue";
 import type { PropType } from "vue";
 import { cardOf, imageFor, plainCardText } from "./util.ts";
 
@@ -42,8 +42,23 @@ export default defineComponent({
      * Typed structurally (this repo typechecks without the DOM lib).
      */
     const backdropRef = ref<{ focus(): void } | null>(null);
+    /**
+     * The element focused before the modal opened. On close (unmount) focus
+     * returns to it, so keyboard and screen-reader users are handed back to
+     * the tile they came from instead of being dumped at <body>. The open
+     * behaviour (autofocus on the backdrop) is unchanged.
+     */
+    let previousFocus: { focus(): void } | null = null;
     onMounted(() => {
+      const doc = globalThis as unknown as {
+        document?: { activeElement?: { focus(): void } | null };
+      };
+      previousFocus = doc.document?.activeElement ?? null;
       backdropRef.value?.focus();
+    });
+    onUnmounted(() => {
+      previousFocus?.focus();
+      previousFocus = null;
     });
 
     return { def, img, text, backdropRef, onClose: () => emit("close") };

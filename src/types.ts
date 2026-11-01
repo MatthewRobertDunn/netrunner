@@ -736,10 +736,13 @@ export interface PublicServerStatus {
   id: ServerId;
   /** Cards in the server's root, hidden when unrezzed Corp cards (rules 4.6.2/4.6.3). */
   root: ViewCard[];
-  /** Rezzed ice protecting the server, outermost last. */
+  /**
+   * Ice protecting the server, innermost first (engine `ServerState.ice`
+   * order). Unrezzed ice stays IN POSITION as a redacted entry
+   * (`cardId: "hidden"`, real instance id preserved): the stack order is open
+   * information (rule 4.6.2), the identity is not (rules 4.6.2/4.6.3).
+   */
   ice: ViewCard[];
-  /** Number of unrezzed ice protecting this server (public to both players). */
-  unrezzedIceCount: number;
 }
 
 export interface PublicRunStatus {

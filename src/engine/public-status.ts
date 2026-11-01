@@ -116,16 +116,21 @@ function publicPlayer(
 
 function serverStatus(state: GameState, id: ServerId, hideInstalled: boolean): PublicServerStatus {
   const s = state.servers.find((x) => x.id === id)!;
-  // Rules 4.6.2/4.6.3: the Corp always knows its own cards; the Runner only
-  // sees rezzed ice identities plus the count of unrezzed ice.
-  const iceVisible = s.ice.filter((c) => !hideInstalled || c.rezzed === true);
+  // Rules 4.6.2/4.6.3: the Corp always knows its own cards; the Runner sees
+  // only rezzed ice identities. Unrezzed ice STAYS IN POSITION as a redacted
+  // entry (`cardId: "hidden"`, real instance id preserved): the stack order is
+  // open information (rule 4.6.2), so the UI renders facedown tiles exactly
+  // where the cards physically sit. Reducing unrezzed ice to a bare count and
+  // appending it after the rezzed cards drew mixed-rez stacks inside-out (and
+  // lost the RUN badge on the approached facedown ice).
   return {
     id,
     root: s.root.map((c) =>
       viewCard(c, { hidden: hideInstalled && c.rezzed !== true, position: "root" })
     ),
-    ice: iceVisible.map((c) => viewCard(c, { position: "ice" })),
-    unrezzedIceCount: s.ice.length - iceVisible.length,
+    ice: s.ice.map((c) =>
+      viewCard(c, { hidden: hideInstalled && c.rezzed !== true, position: "ice" })
+    ),
   };
 }
 
