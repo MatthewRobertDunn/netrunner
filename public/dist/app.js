@@ -16909,10 +16909,10 @@ var mod_exports = {};
 __export(mod_exports, {
   AiGameError: () => AiGameError,
   EvalAI: () => EvalAI,
+  PASS_OPTION_ID: () => PASS_OPTION_ID,
   RandomAI: () => RandomAI,
   applyMove: () => applyMove,
   cardDef: () => cardDef,
-  cardSupport: () => cardSupport,
   cardSupportReport: () => cardSupportReport,
   decisionSeedFor: () => decisionSeedFor,
   determinize: () => determinize,
@@ -16927,17 +16927,13 @@ __export(mod_exports, {
   playGame: () => playGame,
   randomAI: () => randomAI,
   startGame: () => startGame,
-  starterDeckCardIds: () => starterDeckCardIds,
   starterDeckConfigs: () => starterDeckConfigs,
   starterDeckSupport: () => starterDeckSupport,
   starterPoolCardIds: () => starterPoolCardIds,
   supportStatus: () => supportStatus,
-  supportWarningsOf: () => supportWarningsOf,
   tryCardDef: () => tryCardDef,
   validateDeck: () => validateDeck,
-  verifyFixtureAgainstSnapshot: () => verifyFixtureAgainstSnapshot,
-  viewCard: () => viewCard,
-  visiblePrompt: () => visiblePrompt
+  verifyFixtureAgainstSnapshot: () => verifyFixtureAgainstSnapshot
 });
 
 // data/cards.json
@@ -19036,6 +19032,107 @@ function verifyFixtureAgainstSnapshot() {
   return problems;
 }
 
+// src/engine/clone.ts
+function fastCloneState(state) {
+  return {
+    ...state,
+    turn: {
+      ...state.turn
+    },
+    corp: clonePlayer(state.corp),
+    runner: clonePlayer(state.runner),
+    servers: state.servers.map(cloneServer),
+    run: state.run ? cloneRun(state.run) : null,
+    breach: state.breach ? cloneBreach(state.breach) : null,
+    prompts: state.prompts.map(clonePrompt),
+    log: state.log.map(cloneEvent),
+    supportWarnings: [
+      ...state.supportWarnings
+    ]
+  };
+}
+function clonePlayer(p2) {
+  return {
+    ...p2,
+    identity: cloneCard(p2.identity),
+    hand: p2.hand.map(cloneCard),
+    deck: p2.deck.map(cloneCard),
+    discard: p2.discard.map(cloneCard),
+    score: p2.score.map(cloneCard),
+    installed: p2.installed.map(cloneCard),
+    installedThisTurn: [
+      ...p2.installedThisTurn
+    ],
+    ranServersThisTurn: [
+      ...p2.ranServersThisTurn
+    ],
+    usedOncePerTurn: [
+      ...p2.usedOncePerTurn
+    ]
+  };
+}
+function cloneCard(c) {
+  return {
+    ...c
+  };
+}
+function cloneServer(s) {
+  return {
+    ...s,
+    root: s.root.map(cloneCard),
+    ice: s.ice.map(cloneCard)
+  };
+}
+function cloneRun(r) {
+  return {
+    ...r,
+    broken: [
+      ...r.broken
+    ],
+    resolved: [
+      ...r.resolved
+    ]
+  };
+}
+function cloneBreach(b) {
+  return {
+    ...b,
+    chosen: [
+      ...b.chosen
+    ]
+  };
+}
+function clonePrompt(p2) {
+  if (p2.kind === "rez-window" || p2.kind === "choose-one") {
+    return {
+      ...p2,
+      options: p2.options.map(cloneOption)
+    };
+  }
+  return {
+    ...p2
+  };
+}
+function cloneOption(o) {
+  const out = {
+    ...o
+  };
+  if (o.effect !== void 0) out.effect = {
+    ...o.effect
+  };
+  return out;
+}
+function cloneEvent(e) {
+  return e.type === "damage" ? {
+    ...e,
+    trashed: [
+      ...e.trashed
+    ]
+  } : {
+    ...e
+  };
+}
+
 // src/engine/rng.ts
 function mulberry32Step(state) {
   const s = state + 1831565813 | 0;
@@ -19084,6 +19181,11 @@ function player(state, side) {
 }
 function other(side) {
   return side === "corp" ? "runner" : "corp";
+}
+function actorOf(state) {
+  const prompt = state.prompts[0];
+  if (prompt) return prompt.player;
+  return state.turn.player;
 }
 var CENTRAL_IDS = [
   "hq",
@@ -19263,6 +19365,16 @@ function spendClicks(state, side, amount) {
   });
   return spent;
 }
+function loseClicks(state, side, amount) {
+  const p2 = player(state, side);
+  const lost = Math.min(p2.clicks, amount);
+  p2.clicks -= lost;
+  if (lost > 0) state.log.push({
+    type: "lose-clicks",
+    player: side,
+    amount: lost
+  });
+}
 function detachFromPlayer(p2, card) {
   if (p2.identity.id === card.id) return;
   for (const list of [
@@ -19287,7 +19399,6 @@ function moveCardTo(state, card, zone, side, opts = {}) {
   }
   card.zone = zone;
   if (zone !== "play-area") card.server = void 0;
-  card.iceIndex = void 0;
   const p2 = player(state, side);
   switch (zone) {
     case "hand":
@@ -19336,7 +19447,7 @@ function dealDamage(state, amount, kind = "net", rng) {
     state.log.push({
       type: "flatline"
     });
-    setWinner(state, "corp", "Runner was flatlined by damage");
+    setGameOver(state, "corp", "Runner was flatlined by damage");
     return trashed2.map((c) => c.id);
   }
   const trashed = [];
@@ -19359,7 +19470,7 @@ function dealDamage(state, amount, kind = "net", rng) {
   });
   return trashed.map((c) => c.id);
 }
-function setWinner(state, winner, reason) {
+function setGameOver(state, winner, reason) {
   if (state.winner) return;
   state.winner = winner;
   state.winReason = reason;
@@ -19426,6 +19537,13 @@ function rezCostFor(state, card) {
   let cost = def2.cost ?? 0;
   if (isIce(def2) && state.run?.rezCostIncrease) cost += state.run.rezCostIncrease;
   return cost;
+}
+function fireRez(state, card) {
+  const b = behaviors.get(card.cardId);
+  if (!b) return;
+  for (const t of b.triggers ?? []) {
+    if (t.kind === "on-rez-load-credits") addHostedCredits(state, card, t.amount ?? 0);
+  }
 }
 function rezCard(state, card, free = false) {
   if (card.rezzed) return true;
@@ -19499,7 +19617,7 @@ function beginEncounter(state) {
     cardId: current.id
   });
 }
-function passIce(state) {
+function passCurrentIce(state) {
   const run = state.run;
   const ice = iceAt(state, run.server);
   const current = run.position !== null ? ice[run.position] : null;
@@ -19507,10 +19625,9 @@ function passIce(state) {
     type: "pass-ice",
     cardId: current.id
   });
-  run.jackOutOffered = false;
+  run.currentIceId = void 0;
   if (run.position === null || run.position === 0) {
     run.position = null;
-    run.currentIceId = void 0;
     run.phase = "movement";
     return;
   }
@@ -19523,33 +19640,23 @@ function passIce(state) {
     cardId: run.currentIceId
   });
 }
+function passIce(state) {
+  const run = state.run;
+  run.jackOutOffered = false;
+  passCurrentIce(state);
+}
 function continueMovement(state) {
   const run = state.run;
-  const ice = iceAt(state, run.server);
   if (run.position === null) {
     if (approachToll(state)) return true;
     declareSuccess(state);
     return false;
   }
-  const current = ice[run.position];
-  if (current) state.log.push({
-    type: "pass-ice",
-    cardId: current.id
-  });
-  run.currentIceId = void 0;
-  if (run.position === 0) {
-    run.position = null;
+  passCurrentIce(state);
+  if (run.position === null) {
     if (approachToll(state)) return true;
     declareSuccess(state);
-    return false;
   }
-  run.position -= 1;
-  run.currentIceId = ice[run.position].id;
-  run.phase = "approach-ice";
-  state.log.push({
-    type: "approach-ice",
-    cardId: run.currentIceId
-  });
   return false;
 }
 function approachToll(state) {
@@ -19611,6 +19718,15 @@ function endRun(state) {
   if (!run) return;
   run.phase = "run-ends";
 }
+function trashMayfly(state) {
+  for (const card of [
+    ...state.runner.installed
+  ]) {
+    if (triggersOf(card.cardId).some((t) => t.kind === "run-trash-program")) {
+      toDiscard(state, card, "run ends");
+    }
+  }
+}
 function finishRun(state) {
   const run = state.run;
   const successful = run.successful;
@@ -19624,6 +19740,9 @@ function finishRun(state) {
   state.run = null;
 }
 
+// src/types.ts
+var PASS_OPTION_ID = "pass";
+
 // src/engine/effects.ts
 function queuePrompt(state, prompt) {
   state.prompts.push(prompt);
@@ -19633,13 +19752,6 @@ function fireInstall(state, card) {
   if (!b) return;
   for (const t of b.triggers ?? []) {
     if (t.kind === "on-install-load-credits") addHostedCredits(state, card, t.amount ?? 0);
-  }
-}
-function fireRez(state, card) {
-  const b = behaviors.get(card.cardId);
-  if (!b) return;
-  for (const t of b.triggers ?? []) {
-    if (t.kind === "on-rez-load-credits") addHostedCredits(state, card, t.amount ?? 0);
   }
 }
 function fireAccessBegin(state, card) {
@@ -19670,7 +19782,7 @@ function fireScore(state, card) {
             }
           },
           {
-            id: "pass",
+            id: PASS_OPTION_ID,
             label: "Pass",
             effect: {
               kind: "no-op"
@@ -19707,7 +19819,7 @@ function queueFreeRezPrompt(state, card) {
         }
       })),
       {
-        id: "pass",
+        id: PASS_OPTION_ID,
         label: "Pass",
         effect: {
           kind: "no-op"
@@ -19791,7 +19903,7 @@ function resolveSubroutine(state, ice, index) {
             }
           },
           {
-            id: "pass",
+            id: PASS_OPTION_ID,
             label: "Resolve remaining subroutines",
             effect: {
               kind: "no-op"
@@ -19840,7 +19952,7 @@ function resolveSubroutine(state, ice, index) {
             }
           })),
           {
-            id: "pass",
+            id: PASS_OPTION_ID,
             label: "Pass",
             effect: {
               kind: "no-op"
@@ -19860,14 +19972,6 @@ function oddCostTrashed(state, trashed) {
     if (cost !== null && cost % 2 === 1) return true;
   }
   return false;
-}
-function addTwoAdvancement(state, card) {
-  card.advancement = (card.advancement ?? 0) + 2;
-  state.log.push({
-    type: "advance",
-    cardId: card.id,
-    amount: 2
-  });
 }
 function placeAdvancementOnInstalled(state, card, amount) {
   card.advancement = (card.advancement ?? 0) + amount;
@@ -19933,13 +20037,8 @@ function resolveEventEffect(state, card, server) {
       break;
     }
   }
-  if (eff.thenLoseClickIfAny && state.runner.clicks > 0) {
-    state.runner.clicks -= 1;
-    state.log.push({
-      type: "lose-clicks",
-      player: "runner",
-      amount: 1
-    });
+  if (eff.thenLoseClickIfAny) {
+    loseClicks(state, "runner", 1);
   }
 }
 function applyChoice(state, effect2) {
@@ -19968,7 +20067,7 @@ function applyChoice(state, effect2) {
     }
     case "place-2-advancement": {
       const found = findCard(state, effect2.targetId);
-      if (found) addTwoAdvancement(state, found.card);
+      if (found) placeAdvancementOnInstalled(state, found.card, 2);
       break;
     }
     case "corp-draw":
@@ -20119,7 +20218,7 @@ function applyPaidAbility(state, side, card, abilityIndex, server) {
     case "run-server": {
       if (!server) return false;
       initiateRun(state, server, `${effect2.sourcePrefix}:${card.id}`);
-      if (server === "hq" || server === "rd" || server === "archives") {
+      if (isCentral(server)) {
         state.runner.ranServersThisTurn.push(server);
       }
       return true;
@@ -20135,15 +20234,6 @@ function checkEmpty(state, card) {
   const draw = trigger2.kind === "empty-then-trash-and-draw";
   toDiscard(state, card, "emptied");
   if (draw) drawCards(state, "corp", 1);
-}
-function trashMayfly(state) {
-  for (const card of [
-    ...state.runner.installed
-  ]) {
-    if (triggersOf(card.cardId).some((t) => t.kind === "run-trash-program")) {
-      toDiscard(state, card, "run ends");
-    }
-  }
 }
 
 // src/engine/turns.ts
@@ -20283,17 +20373,6 @@ function maxHandSize(state, side) {
   const p2 = player(state, side);
   const bonus = side === "corp" ? handSizeBonusOf(state.corp.score.map((c) => c.cardId)) : 0;
   return p2.baseHandSize + p2.maxHandSizeMod + bonus;
-}
-function setGameOver(state, winner, reason) {
-  if (state.winner) return;
-  state.winner = winner;
-  state.winReason = reason;
-  state.turn.phase = "game-over";
-  state.log.push({
-    type: "game-end",
-    winner,
-    reason
-  });
 }
 
 // src/engine/settle.ts
@@ -20466,7 +20545,7 @@ function beginBreach(state, server) {
 function stepBreach(state) {
   const breach = state.breach;
   if (breach.accessing) return true;
-  const remaining = candidatesForBreach(state).filter((c) => !breach.chosen.includes(c.instanceId));
+  const remaining = candidatesForBreach(state);
   if (remaining.length === 0) {
     state.breach = null;
     state.run.phase = "run-ends";
@@ -20581,20 +20660,15 @@ function finishAccess(state, trashed) {
     fireSteal(state, card);
   }
 }
-function stealAgendaInstance(state, cardId) {
-  const found = findCard(state, cardId);
-  if (!found) return;
-  const card = found.card;
-  const def2 = cardDef(card.cardId);
+function moveToScoreArea(state, card, side, points, eventType) {
   card.zone = "score";
   card.rezzed = void 0;
   card.server = void 0;
-  card.iceIndex = void 0;
   card.advancement = 0;
   for (const s of state.servers) {
-    const i = s.root.findIndex((c) => c.id === cardId);
+    const i = s.root.findIndex((c) => c.id === card.id);
     if (i >= 0) s.root.splice(i, 1);
-    const j = s.ice.findIndex((c) => c.id === cardId);
+    const j = s.ice.findIndex((c) => c.id === card.id);
     if (j >= 0) s.ice.splice(j, 1);
   }
   for (const list of [
@@ -20602,51 +20676,30 @@ function stealAgendaInstance(state, cardId) {
     state.corp.discard,
     state.corp.deck
   ]) {
-    const i = list.findIndex((c) => c.id === cardId);
+    const i = list.findIndex((c) => c.id === card.id);
     if (i >= 0) list.splice(i, 1);
   }
-  state.runner.score.push(card);
-  state.runner.agendaPoints += def2.agendaPoints ?? 0;
+  player(state, side).score.push(card);
+  player(state, side).agendaPoints += points;
   state.log.push({
-    type: "steal",
+    type: eventType,
     cardId: card.id,
-    points: def2.agendaPoints ?? 0
+    points
   });
   checkVictory(state);
+}
+function stealAgendaInstance(state, cardId) {
+  const found = findCard(state, cardId);
+  if (!found) return;
+  const def2 = cardDef(found.card.cardId);
+  moveToScoreArea(state, found.card, "runner", def2.agendaPoints ?? 0, "steal");
 }
 function scoreAgenda(state, cardId) {
   const found = findCard(state, cardId);
   if (!found) return;
-  const card = found.card;
-  const def2 = cardDef(card.cardId);
-  card.zone = "score";
-  card.rezzed = void 0;
-  card.server = void 0;
-  card.iceIndex = void 0;
-  card.advancement = 0;
-  for (const s of state.servers) {
-    const i = s.root.findIndex((c) => c.id === cardId);
-    if (i >= 0) s.root.splice(i, 1);
-    const j = s.ice.findIndex((c) => c.id === cardId);
-    if (j >= 0) s.ice.splice(j, 1);
-  }
-  for (const list of [
-    state.corp.hand,
-    state.corp.discard,
-    state.corp.deck
-  ]) {
-    const i = list.findIndex((c) => c.id === cardId);
-    if (i >= 0) list.splice(i, 1);
-  }
-  state.corp.score.push(card);
-  state.corp.agendaPoints += def2.agendaPoints ?? 0;
-  state.log.push({
-    type: "score",
-    cardId: card.id,
-    points: def2.agendaPoints ?? 0
-  });
-  checkVictory(state);
-  fireScore(state, card);
+  const def2 = cardDef(found.card.cardId);
+  moveToScoreArea(state, found.card, "corp", def2.agendaPoints ?? 0, "score");
+  fireScore(state, found.card);
 }
 function checkVictory(state) {
   if (state.winner) return;
@@ -20813,7 +20866,7 @@ function movesForPrompt(state, playerSide, prompt) {
         kind: "prompt.answer",
         player: "corp",
         promptId: prompt.id,
-        optionId: "pass"
+        optionId: PASS_OPTION_ID
       });
       return moves;
     }
@@ -21061,32 +21114,33 @@ function addBreakMoves(state, ice, moves) {
   });
   if (unbroken.length === 0) return;
   const iceStrength = currentIceStrength(state, ice);
+  if (breakAbilityDef(ice.cardId)?.bioroid === true && state.runner.clicks >= 1 && state.runner.installed.some((c) => isIcebreaker(c))) {
+    for (const subIndex of unbroken) {
+      moves.push({
+        kind: "runner.bioroidBreak",
+        iceId: ice.id,
+        subIndex
+      });
+    }
+  }
   for (const program of state.runner.installed) {
     if (!isIcebreaker(program)) continue;
-    const strengthOk = currentIceStrength(state, program) >= iceStrength;
-    for (const subIndex of unbroken) {
-      if (breakAbilityDef(ice.cardId)?.bioroid) {
-        if (state.runner.clicks >= 1) {
-          moves.push({
-            kind: "runner.breakSubroutine",
-            programId: program.id,
-            subIndex
-          });
-        }
-        continue;
-      }
-      if (strengthOk) {
-        const breakDef = breakAbilityDef(program.cardId);
-        const cost = breakDef?.creditCost ?? 1;
-        const breaks = breakDef?.breaks ?? [];
-        const iceSubtypes = cardDef(ice.cardId).subtypes;
-        const canBreak = breaks.length === 0 || iceSubtypes.some((s) => breaks.includes(s));
-        if (canBreak && availableCredits(state, "runner") >= cost) {
-          moves.push({
-            kind: "runner.breakSubroutine",
-            programId: program.id,
-            subIndex
-          });
+    if (breakAbilityDef(ice.cardId)?.bioroid !== true) {
+      const strengthOk = currentIceStrength(state, program) >= iceStrength;
+      for (const subIndex of unbroken) {
+        if (strengthOk) {
+          const breakDef = breakAbilityDef(program.cardId);
+          const cost = breakDef?.creditCost ?? 1;
+          const breaks = breakDef?.breaks ?? [];
+          const iceSubtypes = cardDef(ice.cardId).subtypes;
+          const canBreak = breaks.length === 0 || iceSubtypes.some((s) => breaks.includes(s));
+          if (canBreak && availableCredits(state, "runner") >= cost) {
+            moves.push({
+              kind: "runner.breakSubroutine",
+              programId: program.id,
+              subIndex
+            });
+          }
         }
       }
     }
@@ -21191,9 +21245,6 @@ function combinations(ids, size) {
 }
 
 // src/engine/apply.ts
-function copyState(state) {
-  return JSON.parse(JSON.stringify(state));
-}
 function applyMove(state, playerSide, move, opts = {}) {
   const legal = getLegalMoves(state, playerSide);
   const ok = legal.some((m) => sameMove(m, move));
@@ -21204,7 +21255,7 @@ function applyMove(state, playerSide, move, opts = {}) {
       move
     };
   }
-  const next = opts.mutate ? state : copyState(state);
+  const next = opts.mutate ? state : fastCloneState(state);
   const mark = next.log.length;
   applyResolvedMove(next, playerSide, move);
   settle(next);
@@ -21305,7 +21356,7 @@ function applyResolvedMove(state, playerSide, move) {
         });
         return;
       }
-      enterEndOfTurn(state);
+      enterDiscardPhase(state);
       break;
     }
     // Corp actions --------------------------------------------------------
@@ -21395,7 +21446,7 @@ function applyResolvedMove(state, playerSide, move) {
     case "runner.run": {
       spendClicks(state, "runner", 1);
       initiateRun(state, move.server);
-      if (move.server === "hq" || move.server === "rd" || move.server === "archives") {
+      if (isCentral(move.server)) {
         state.runner.ranServersThisTurn.push(move.server);
       }
       break;
@@ -21483,7 +21534,7 @@ function answerPrompt(state, promptId, optionId) {
       break;
     }
     case "choose-one": {
-      if (optionId === "pass") {
+      if (optionId === PASS_OPTION_ID) {
         state.prompts.shift();
         return;
       }
@@ -21685,113 +21736,9 @@ function addAdvancementCounter(state, card) {
     amount: 1
   });
 }
-function enterEndOfTurn(state) {
-  enterDiscardPhase(state);
-}
 function startFirstTurn(state) {
   state.turn.phase = "action";
   beginCorpTurn(state);
-}
-
-// src/engine/clone.ts
-function fastCloneState(state) {
-  return {
-    ...state,
-    turn: {
-      ...state.turn
-    },
-    corp: clonePlayer(state.corp),
-    runner: clonePlayer(state.runner),
-    servers: state.servers.map(cloneServer),
-    run: state.run ? cloneRun(state.run) : null,
-    breach: state.breach ? cloneBreach(state.breach) : null,
-    prompts: state.prompts.map(clonePrompt),
-    log: state.log.map(cloneEvent),
-    supportWarnings: [
-      ...state.supportWarnings
-    ]
-  };
-}
-function clonePlayer(p2) {
-  return {
-    ...p2,
-    identity: cloneCard(p2.identity),
-    hand: p2.hand.map(cloneCard),
-    deck: p2.deck.map(cloneCard),
-    discard: p2.discard.map(cloneCard),
-    score: p2.score.map(cloneCard),
-    installed: p2.installed.map(cloneCard),
-    installedThisTurn: [
-      ...p2.installedThisTurn
-    ],
-    ranServersThisTurn: [
-      ...p2.ranServersThisTurn
-    ],
-    usedOncePerTurn: [
-      ...p2.usedOncePerTurn
-    ]
-  };
-}
-function cloneCard(c) {
-  return {
-    ...c
-  };
-}
-function cloneServer(s) {
-  return {
-    ...s,
-    root: s.root.map(cloneCard),
-    ice: s.ice.map(cloneCard)
-  };
-}
-function cloneRun(r) {
-  return {
-    ...r,
-    broken: [
-      ...r.broken
-    ],
-    resolved: [
-      ...r.resolved
-    ]
-  };
-}
-function cloneBreach(b) {
-  return {
-    ...b,
-    chosen: [
-      ...b.chosen
-    ]
-  };
-}
-function clonePrompt(p2) {
-  if (p2.kind === "rez-window" || p2.kind === "choose-one") {
-    return {
-      ...p2,
-      options: p2.options.map(cloneOption)
-    };
-  }
-  return {
-    ...p2
-  };
-}
-function cloneOption(o) {
-  const out = {
-    ...o
-  };
-  if (o.effect !== void 0) out.effect = {
-    ...o.effect
-  };
-  return out;
-}
-function cloneEvent(e) {
-  return e.type === "damage" ? {
-    ...e,
-    trashed: [
-      ...e.trashed
-    ]
-  } : {
-    ...e
-  };
 }
 
 // src/engine/determinize.ts
@@ -21853,7 +21800,6 @@ function instanceOf(view, cardId) {
   if (view.hostedCredits !== void 0) card.hostedCredits = view.hostedCredits;
   if (view.strengthBoost !== void 0) card.strengthBoost = view.strengthBoost;
   if (view.server !== void 0) card.server = view.server;
-  if (view.iceIndex !== void 0) card.iceIndex = view.iceIndex;
   return card;
 }
 function hiddenInstance(id, cardId, side, zone) {
@@ -22133,7 +22079,10 @@ function collectOrphans(view) {
   for (const id of orphans) {
     if (breachRefs.has(id) && breach) {
       if (breach.server === "hq") oppHand.push(id);
-      else if (breach.server === "rd") breachViewerDeck(view, id, ownDeck, oppDeck);
+      else if (breach.server === "rd") {
+        if (view.viewer === "corp") ownDeck.push(id);
+        else oppDeck.push(id);
+      }
       continue;
     }
     ownDeck.push(id);
@@ -22143,10 +22092,6 @@ function collectOrphans(view) {
     oppHand,
     oppDeck
   };
-}
-function breachViewerDeck(view, _id, ownDeck, oppDeck) {
-  if (view.viewer === "corp") ownDeck.push(_id);
-  else oppDeck.push(_id);
 }
 function eventCardIds(event) {
   switch (event.type) {
@@ -22280,7 +22225,11 @@ function viewCard(card, opts = {}) {
     hostedCredits: card.hostedCredits,
     strength: hidden ? void 0 : cardDef(card.cardId).strength ?? void 0,
     strengthBoost: hidden ? void 0 : card.strengthBoost,
-    iceIndex: card.iceIndex,
+    // Kept as a present-`undefined` key on purpose: `infoSetKey` serializes the
+    // view with sorted keys and turns a present-undefined key into
+    // `"iceIndex":null`, so dropping the key would change every decision seed
+    // (and with it every AI trajectory) — see docs/rules-gotchas.md.
+    iceIndex: void 0,
     position: opts.position,
     zone: card.zone,
     server: card.server
@@ -22403,6 +22352,16 @@ function promptStub(prompt) {
   };
 }
 
+// src/decks/mod.ts
+function allowedCardIds(mode) {
+  switch (mode) {
+    case "starter-decks":
+      return new Set(starterPoolCardIds());
+    case "open-play":
+      return null;
+  }
+}
+
 // src/engine/setup.ts
 var INFLUENCE_LIMIT_DEFAULT = 15;
 function issue(code, message, cardId) {
@@ -22414,7 +22373,7 @@ function issue(code, message, cardId) {
 }
 function validateDeck(deck, side, mode = "open-play") {
   const issues = [];
-  const pool = mode === "starter-decks" ? new Set(starterPoolCardIds()) : null;
+  const pool = allowedCardIds(mode);
   const identity = tryCardDef(deck.identity);
   if (!identity) {
     issues.push(issue("unknown-identity", `Unknown identity card '${deck.identity}'`, deck.identity));
@@ -22450,7 +22409,7 @@ function validateDeck(deck, side, mode = "open-play") {
     if (def2.side !== side) {
       issues.push(issue("not-in-supported-cards", `Card '${def2.title}' is a ${def2.side} card, not a ${side} card`, entry.cardId));
     }
-    if (mode === "starter-decks" && !pool.has(entry.cardId)) {
+    if (pool && !pool.has(entry.cardId)) {
       issues.push(issue("not-in-supported-cards", `Card '${entry.cardId}' is not in the supported starter-deck card pool`, entry.cardId));
     }
     if (def2.deckLimit !== null && entry.count > def2.deckLimit) {
@@ -22659,7 +22618,6 @@ function sideCards(state, side) {
     deckCount: p2.deck.length,
     discardCount: p2.discard.length,
     installed: p2.installed,
-    identity: p2.identity,
     score: p2.score
   };
 }
@@ -22680,6 +22638,22 @@ function turnStateOf(state, side) {
     ],
     pendingRunFund: p2.pendingRunFund
   };
+}
+function currentIceView(state, viewer) {
+  const currentIceId = state.run?.currentIceId;
+  if (!currentIceId) return void 0;
+  const found = findCard(state, currentIceId);
+  if (!found) return void 0;
+  return viewCard(found.card, {
+    hidden: viewer !== "corp" && found.card.rezzed !== true,
+    position: "ice"
+  });
+}
+function accessingView(state) {
+  const accessing = state.breach?.accessing;
+  if (!accessing) return void 0;
+  const found = findCard(state, accessing);
+  return found ? viewCard(found.card) : void 0;
 }
 function handView(state, side, viewer) {
   return side === viewer ? player(state, side).hand.map((c) => viewCard(c)) : [];
@@ -22739,12 +22713,7 @@ function getPlayerView(state, viewer) {
       server: state.run.server,
       phase: state.run.phase,
       position: state.run.position,
-      currentIce: state.run.currentIceId ? viewCard(findCard(state, state.run.currentIceId)?.card ?? state.corp.identity, {
-        // The ice being approached is public once rezzed (rules 1.21.1a,
-        // 4.6.3): every player reads Rezzed ice off the table.
-        hidden: viewer !== "corp" && findCard(state, state.run.currentIceId)?.card.rezzed !== true,
-        position: "ice"
-      }) : void 0,
+      currentIce: currentIceView(state, viewer),
       broken: [
         ...state.run.broken
       ],
@@ -22763,7 +22732,7 @@ function getPlayerView(state, viewer) {
       chosen: [
         ...state.breach.chosen
       ],
-      accessing: state.breach.accessing ? viewCard(findCard(state, state.breach.accessing)?.card ?? state.corp.identity) : void 0
+      accessing: accessingView(state)
     } : null,
     prompts: state.prompts.map((p2) => visiblePrompt(p2, viewer)),
     events: state.log.map((e) => visibleEvent(state, e, viewer)),
@@ -22916,11 +22885,6 @@ var AiGameError = class extends Error {
     this.name = "AiGameError";
   }
 };
-function actorOf(state) {
-  const prompt = state.prompts[0];
-  if (prompt) return prompt.player;
-  return state.turn.player;
-}
 function playGame(config) {
   const { corp, runner, state: initial } = config;
   const maxMoves = config.maxMoves ?? 1e4;
@@ -23283,31 +23247,6 @@ function softmaxIndex(avgs, temperature, rng) {
 }
 
 // src/mod.ts
-function starterDeckCardIds() {
-  const s = starterDeckConfigs();
-  return {
-    runner: [
-      s.runner.identity,
-      ...s.runner.cards.map((e) => e.cardId)
-    ],
-    corp: [
-      s.corp.identity,
-      ...s.corp.cards.map((e) => e.cardId)
-    ]
-  };
-}
-function cardSupport(cardId) {
-  const status = supportStatus(cardId);
-  const note = behaviors.get(cardId)?.note;
-  return status === "supported" ? {
-    supported: true,
-    status
-  } : {
-    supported: false,
-    status,
-    note
-  };
-}
 function starterDeckSupport() {
   const ids = starterPoolCardIds();
   const report = cardSupportReport(ids);
@@ -23316,16 +23255,8 @@ function starterDeckSupport() {
     all: ids
   };
 }
-var supportWarningsOf = (state) => [
-  ...state.supportWarnings
-];
 
 // src/web/ui/util.ts
-function actorOf2(state) {
-  const prompt = state.prompts[0];
-  if (prompt) return prompt.player;
-  return state.turn.player;
-}
 function handOf(state, side) {
   return side === "corp" ? state.corp.hand : state.runner.hand;
 }
@@ -24303,7 +24234,7 @@ var game_default = defineComponent({
     const zoomHandCardId = ref(null);
     const logOpen = ref(true);
     const status = computed2(() => engine.getPublicGameStatusFor(props.state, props.humanSide));
-    const actor = computed2(() => actorOf2(props.state));
+    const actor = computed2(() => actorOf(props.state));
     const isHumanTurn = computed2(() => !props.state.winner && actor.value === props.humanSide);
     const isAiTurn = computed2(() => !props.state.winner && actor.value !== props.humanSide);
     const corp = computed2(() => status.value.players.corp);
@@ -24773,7 +24704,7 @@ var app_default = defineComponent({
     function planAiTurn() {
       const s = state.value;
       if (!s || s.winner || !ai) return;
-      const actor = actorOf2(s);
+      const actor = actorOf(s);
       if (actor === humanSide.value) return;
       thinking.value = true;
       setTimeout(() => {
