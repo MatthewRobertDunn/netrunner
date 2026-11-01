@@ -48,19 +48,22 @@ function iceSeed(): { seed: number; cardId: string } | null {
 
 Deno.test("install dedup: a duplicate hand card adds no install/play move (definition-id keyed)", async (t) => {
   await t.step("two copies of an ice yield one install move per server", () => {
+    // Precondition: at least one of the first 60 seeds must put an installable
+    // ice in the Corp's opening hand. If none do, the step would otherwise
+    // return silently — fail loudly instead.
     const found = iceSeed();
-    if (!found) {
-      console.log("no seed has ice in the Corp opening hand — skip");
-      return;
-    }
-    const state = fresh(found.seed);
+    assert(
+      found !== null,
+      "at least one of the first 60 seeds puts an installable ice in the Corp opening hand",
+    );
+    const state = fresh(found!.seed);
     const before = engine.getLegalMoves(state, "corp").filter((m) =>
-      m.kind === "corp.install" && m.cardId === found.cardId
+      m.kind === "corp.install" && m.cardId === found!.cardId
     );
     assert(before.length > 0, "the ice is installable before duplication");
-    dupHandCard(state, "corp", (id) => id === found.cardId);
+    dupHandCard(state, "corp", (id) => id === found!.cardId);
     const after = engine.getLegalMoves(state, "corp").filter((m) =>
-      m.kind === "corp.install" && m.cardId === found.cardId
+      m.kind === "corp.install" && m.cardId === found!.cardId
     );
     assertEquals(after.length, before.length, "a second copy adds no install moves");
     assertEquals(
@@ -71,6 +74,9 @@ Deno.test("install dedup: a duplicate hand card adds no install/play move (defin
   });
 
   await t.step("two copies of an operation yield one play move", () => {
+    // Search the first 60 seeds for a playable Corp operation; if none exists
+    // the precondition is genuinely unmet and the step must fail loudly.
+    let found = false;
     for (let seed = 1; seed <= 60; seed++) {
       const state = fresh(seed);
       const op = state.corp.hand.find((c) => cardDef(c.cardId).type === "operation");
@@ -80,6 +86,7 @@ Deno.test("install dedup: a duplicate hand card adds no install/play move (defin
           !(m.kind === "corp.playOperation" && m.cardId === op.cardId)
         )
       ) continue;
+      found = true;
       const before = engine.getLegalMoves(state, "corp").filter((m) =>
         m.kind === "corp.playOperation" && m.cardId === op.cardId
       );
@@ -89,14 +96,18 @@ Deno.test("install dedup: a duplicate hand card adds no install/play move (defin
       );
       assertEquals(after.length, before.length, "a second copy adds no play moves");
       assertEquals(after.length, 1, "exactly one play move for the operation");
-      return;
+      break;
     }
-    console.log("no seed has a playable operation in the Corp opening hand — skip");
+    assert(
+      found,
+      "at least one of the first 60 seeds has a playable operation in the Corp opening hand",
+    );
   });
 
   await t.step("two copies of a runner card yield one install/play move", () => {
+    // Runner moves second: burn through the corp turn with first-legal moves.
+    let found = false;
     for (let seed = 1; seed <= 60; seed++) {
-      // Runner moves second: burn through the corp turn with first-legal moves.
       let s = fresh(seed);
       for (let i = 0; i < 60 && !s.winner && s.turn.player !== "runner"; i++) {
         const moves = engine.getLegalMoves(s, s.turn.player);
@@ -115,6 +126,7 @@ Deno.test("install dedup: a duplicate hand card adds no install/play move (defin
         m.cardId === res.cardId
       );
       if (before.length === 0) continue;
+      found = true;
       dupHandCard(s, "runner", (id) => id === res.cardId);
       const after = engine.getLegalMoves(s, "runner").filter((m) =>
         (m.kind === "runner.install" || m.kind === "runner.playEvent") &&
@@ -126,8 +138,11 @@ Deno.test("install dedup: a duplicate hand card adds no install/play move (defin
         after.length,
         "no exact-duplicate runner moves",
       );
-      return;
+      break;
     }
-    console.log("no seed has an installable runner card on turn 1 — skip");
+    assert(
+      found,
+      "at least one of the first 60 seeds has an installable runner card on turn 1",
+    );
   });
 });

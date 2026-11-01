@@ -18,7 +18,7 @@ import {
   newStarterGame,
   play,
   rezWindowState,
-} from "../src/testing/fixtures.ts";
+} from "./helpers/fixtures.ts";
 import type { GameState, Move } from "../src/types.ts";
 import { describeMove } from "../src/web/ui/util.ts";
 import { assert, assertDefined, assertEquals } from "./helpers/assert.ts";

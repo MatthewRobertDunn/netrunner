@@ -49,13 +49,10 @@ export function starterDeckConfigs(): { corp: DeckConfig; runner: DeckConfig } {
   return { corp: toConfig(data.decks.corp), runner: toConfig(data.decks.runner) };
 }
 
-export function starterDeckIds(): { runner: string[]; corp: string[] } {
-  const s = starterDeckConfigs();
-  return {
-    runner: s.runner.cards.flatMap((e) => Array<string>(e.count).fill(e.cardId)),
-    corp: s.corp.cards.flatMap((e) => Array<string>(e.count).fill(e.cardId)),
-  };
-}
+// `starterDeckIds` (per-side flat card-id arrays, excluding identities) was
+// deleted: nothing in the repo ever imported it, and `starterPoolCardIds`
+// below is the single, clearly-named id-list helper the barrel, the engine
+// setup and the tests all use.
 
 /** Every card id (incl. identity) in the supported starter-deck card pool. */
 export function starterPoolCardIds(): string[] {
@@ -77,7 +74,7 @@ export function importMeta() {
   return { ...data._source };
 }
 
-/** Sanity check used by tests: fixture quantites match the imported decklist. */
+/** Sanity check used by tests: fixture quantities match the imported decklist. */
 export function verifyFixtureAgainstSnapshot(): string[] {
   const problems: string[] = [];
   for (const side of ["runner", "corp"] as const) {

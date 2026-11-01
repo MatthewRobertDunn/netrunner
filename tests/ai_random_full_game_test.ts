@@ -6,7 +6,7 @@
 import { playGame, RandomAI } from "../src/ai/mod.ts";
 import { engine } from "../src/mod.ts";
 import type { GameAI } from "../src/ai/mod.ts";
-import { starterFixtures } from "../src/testing/fixtures.ts";
+import { starterFixtures } from "./helpers/fixtures.ts";
 import { assert, assertEquals, assertTruthy } from "./helpers/assert.ts";
 
 /** Two RandomAIs play one full starter game for `seed` through `playGame`. */

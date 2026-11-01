@@ -43,34 +43,14 @@ import {
   newGameWithCorpHand,
   newStarterGame,
   play,
-} from "../src/testing/fixtures.ts";
+} from "./helpers/fixtures.ts";
 import { decide } from "./helpers/boundary.ts";
+import { randomGame } from "./helpers/drive.ts";
 import { assert, assertEquals } from "./helpers/assert.ts";
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-/** Advance a game `steps` decisions with RandomAI (through the boundary). */
-function randomGame(seed: number, steps: number): GameState {
-  const decks = starterDeckConfigs();
-  let state = engine.startGame({
-    corp: decks.corp,
-    runner: decks.runner,
-    mode: "starter-decks",
-    seed,
-  });
-  const ai = new RandomAI();
-  for (let i = 0; i < steps && !state.winner; i++) {
-    const actor: PlayerSide = state.prompts[0]?.player ?? state.turn.player;
-    const legal = engine.getLegalMoves(state, actor);
-    if (legal.length === 0) break;
-    const result = engine.applyMove(state, actor, decide(ai, state, actor, legal, i));
-    if (result.kind === "illegal-move") break;
-    state = result.state;
-  }
-  return state;
-}
 
 /** Determinize `state` as seen by `side` with a fixed decision seed. */
 function determinizeState(state: GameState, side: PlayerSide, seed = 1): {
@@ -279,7 +259,7 @@ Deno.test("determinize: hidden-zone multiset discipline", async (t) => {
       newStarterGame(1),
       newStarterGame(42),
       hiddenInstallsState(),
-      randomGame(9, 8),
+      randomGame(new RandomAI(), 9, 8),
     ];
     for (const [i, state] of cases.entries()) {
       for (const side of ["corp", "runner"] as PlayerSide[]) {
@@ -344,7 +324,7 @@ Deno.test("determinize: hidden-zone multiset discipline", async (t) => {
 
 Deno.test("determinize: same view, ctx and seed give identical states", () => {
   for (const gameSeed of [1, 42]) {
-    const state = randomGame(gameSeed, 7);
+    const state = randomGame(new RandomAI(), gameSeed, 7);
     for (const side of ["corp", "runner"] as PlayerSide[]) {
       for (const decisionSeed of [0, 5, 12345]) {
         const { view, ctx } = determinizeState(state, side, decisionSeed);

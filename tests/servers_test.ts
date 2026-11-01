@@ -8,7 +8,7 @@
  */
 
 import { cardDef, engine, starterDeckConfigs } from "../src/mod.ts";
-import { continueRun } from "../src/testing/fixtures.ts";
+import { continueRun } from "./helpers/fixtures.ts";
 import type { GameState, Move } from "../src/types.ts";
 import { assert, assertDefined, assertEquals } from "./helpers/assert.ts";
 
@@ -90,6 +90,10 @@ Deno.test("servers: remote lifecycle and public status", async (t) => {
   });
 
   await t.step("an empty remote is never returned by the public status", () => {
+    // A fresh starter game has no remote at all, so the loop below would run
+    // zero assertions and the step would pass vacuously. Create one instead:
+    // the Corp installs an asset in a new remote on turn 1, then assert the
+    // public status reports it with content.
     const decks = starterDeckConfigs();
     const state = engine.startGame({
       corp: decks.corp,
@@ -97,14 +101,23 @@ Deno.test("servers: remote lifecycle and public status", async (t) => {
       mode: "starter-decks",
       seed: 42,
     });
-    const shared = engine.getPublicGameStatus(state);
-    for (const s of shared.servers) {
-      if (s.id.startsWith("remote")) {
-        assert(
-          s.root.length > 0 || s.ice.length > 0,
-          `remote ${s.id} has something installed`,
-        );
-      }
+    const install = assertDefined(
+      engine.getLegalMoves(state, "corp").find(
+        (m) =>
+          m.kind === "corp.install" && m.server === "new-remote" &&
+          (cardDef(m.cardId).type === "asset" || cardDef(m.cardId).type === "agenda"),
+      ),
+      "the Corp has an asset or agenda to install in a new remote",
+    );
+    const withRemote = play(state, "corp", install!);
+    const shared = engine.getPublicGameStatus(withRemote);
+    const remotes = shared.servers.filter((s) => s.id.startsWith("remote"));
+    assert(remotes.length > 0, "the public status reports the new remote");
+    for (const s of remotes) {
+      assert(
+        s.root.length > 0 || s.ice.length > 0,
+        `remote ${s.id} has something installed`,
+      );
     }
   });
 });

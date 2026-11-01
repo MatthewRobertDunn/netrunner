@@ -15,14 +15,22 @@
 
 import { engine } from "../src/mod.ts";
 import type { DeckConfig, GameState, Move } from "../src/types.ts";
-import { orderedCorpDeck, play } from "../src/testing/fixtures.ts";
+import { orderedCorpDeck, play } from "./helpers/fixtures.ts";
 import { assert, assertDefined } from "./helpers/assert.ts";
 
 const RUNNER_IDENTITY = "the_catalyst_convention_breaker";
 
-/** Filler cards so the ordered decks survive several draws. */
-const CORP_FILLER = Array.from({ length: 25 }, () => "hedge_fund");
-const RUNNER_FILLER = Array.from({ length: 20 }, () => "sure_gamble");
+/**
+ * Filler cards so the ordered decks survive several draws.
+ *
+ * Deliberate variant of the shared `CORP_FILLER` (see tests/helpers/fixtures.ts):
+ * this scenario rezzes and runs the same HQ ice across two runner turns, so the
+ * corp needs a deep, single-card-draw deck. The canonical 19-card pool would
+ * run the scripted hand dry; 25 copies of hedge_fund guarantee the draws keep
+ * coming without changing any test assertion.
+ */
+const CORP_FILLER_DRAW = Array.from({ length: 25 }, () => "hedge_fund");
+const RUNNER_FILLER_DRAW = Array.from({ length: 20 }, () => "sure_gamble");
 
 /** A runner deck whose top-to-bottom order is exactly `ordered`. */
 function orderedRunnerDeck(ordered: string[]): DeckConfig {
@@ -37,8 +45,8 @@ function orderedRunnerDeck(ordered: string[]): DeckConfig {
 
 function startGame(corpOrdered: string[], runnerOrdered: string[], seed = 1): GameState {
   return engine.startGame({
-    corp: orderedCorpDeck([...corpOrdered, ...CORP_FILLER]),
-    runner: orderedRunnerDeck([...runnerOrdered, ...RUNNER_FILLER]),
+    corp: orderedCorpDeck([...corpOrdered, ...CORP_FILLER_DRAW]),
+    runner: orderedRunnerDeck([...runnerOrdered, ...RUNNER_FILLER_DRAW]),
     mode: "starter-decks",
     seed,
   });

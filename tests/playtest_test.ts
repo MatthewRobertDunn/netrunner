@@ -7,7 +7,8 @@
  */
 
 import { engine } from "../src/mod.ts";
-import { newStarterGame, play } from "../src/testing/fixtures.ts";
+import { assert, assertDefined, assertEquals } from "./helpers/assert.ts";
+import { newStarterGame, play } from "./helpers/fixtures.ts";
 
 function pick<T>(arr: T[]): T | undefined {
   return arr.length > 0 ? arr[0] : undefined;
@@ -36,11 +37,11 @@ function show(label: string, state: ReturnType<typeof newStarterGame>): void {
 Deno.test("playtest: Corp installs and advances an agenda", () => {
   const state = newStarterGame(1);
   const moves = engine.getLegalMoves(state, "corp");
-  const install = moves.find((m) => m.kind === "corp.install");
-  if (!install) {
-    console.log("no install move available (deck may be empty or no hand)");
-    return;
-  }
+  // Precondition: the Corp's opening hand always holds installable cards.
+  const install = assertDefined(
+    moves.find((m) => m.kind === "corp.install"),
+    "the Corp's opening hand has an installable card",
+  );
   const result = play(state, "corp", install);
   show("after install", result.state);
   const adv = engine.getLegalMoves(result.state, "corp").find((m) => m.kind === "corp.advance");
@@ -55,7 +56,12 @@ Deno.test("playtest: Runner runs HQ and accesses a card", () => {
   // Drive the Corp's turn to completion first.
   let current = turn(state, "corp");
   show("after corp turn", current);
-  if (current.turn.player !== "runner") return;
+  // Precondition: burning the Corp's turn always hands the turn to the Runner.
+  assertEquals(
+    current.turn.player,
+    "runner",
+    "the Corp's turn ended and the Runner's turn began",
+  );
   // Runner's turn: play a run.
   current = turn(current, "runner");
   show("after runner turn", current);
@@ -125,9 +131,15 @@ Deno.test("playtest: Runner draws from empty Stack loses", () => {
     current = play(current, "corp", m).state;
     if (current.turn.player === "runner") break;
   }
-  if (current.turn.player !== "runner") return;
+  // Precondition: burning the Corp's turn always hands the turn to the Runner.
+  assertEquals(
+    current.turn.player,
+    "runner",
+    "the Corp's turn ended and the Runner's turn began",
+  );
   const moves = engine.getLegalMoves(current, "runner");
-  if (!moves.some((m) => m.kind === "runner.draw")) {
-    throw new Error("expected a runner draw move");
-  }
+  assert(
+    moves.some((m) => m.kind === "runner.draw"),
+    "the Runner has a draw move at the start of its turn",
+  );
 });

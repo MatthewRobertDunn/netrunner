@@ -8,7 +8,7 @@ import {
   starterDeckSupport,
   verifyFixtureAgainstSnapshot,
 } from "../src/mod.ts";
-import { newStarterGame } from "../src/testing/fixtures.ts";
+import { newStarterGame } from "./helpers/fixtures.ts";
 import { assert, assertEquals } from "./helpers/assert.ts";
 
 Deno.test("regression: starter decks and the checked-in snapshot", async (t) => {

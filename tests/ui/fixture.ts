@@ -9,7 +9,11 @@
 
 import { engine, starterDeckConfigs } from "../../src/mod.ts";
 import type { GameState, Move, PlayerSide } from "../../src/types.ts";
-import { assertDefined } from "../helpers/assert.ts";
+
+// The `moves` list is a heterogeneous bag of Move variants, so it is typed as
+// Move[] rather than a single literal variant. Callers previously cast to
+// never[] to dodge the union — that is both wrong (the array is not empty)
+// and it throws away every type check on the moves they pass.
 
 function fresh(seed: number): GameState {
   return engine.startGame({
@@ -48,16 +52,6 @@ export function publicStatusFor(state: GameState, humanSide: PlayerSide) {
   return engine.getPublicGameStatusFor(state, humanSide);
 }
 
-/** Palisade ids currently in `side`'s hand, for building duplicated hands. */
-export function palisadeInHand(state: GameState, side: "corp" | "runner"): string[] {
-  const hand = side === "corp" ? state.corp.hand : state.runner.hand;
-  return hand.filter((c) => c.cardId === "palisade").map((c) => c.cardId);
-}
-
-export function freshCorpHandWithExtraPalisade(seed = 42): GameState {
-  const state = fresh(seed);
-  const palisade = state.corp.hand.find((c) => c.cardId === "palisade");
-  assertDefined(palisade, "seed 42 corp hand should hold Palisade");
-  state.corp.hand.push({ ...palisade!, id: `${palisade!.id}-dup` });
-  return state;
-}
+// `palisadeInHand` and `freshCorpHandWithExtraPalisade` were deleted: nothing
+// in the repo referenced them, and the palisade-duplication scenario they
+// supported is not exercised by any test.

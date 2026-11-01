@@ -5,9 +5,9 @@
  * a specific card order supply `orderedCards` explicitly.
  */
 
-import { engine, starterDeckConfigs } from "../mod.ts";
-import type { DeckConfig, GameState, Move, PlayerSide } from "../types.ts";
-import type { ApplyMoveResult } from "../types.ts";
+import { engine } from "../../src/engine/facade.ts";
+import { starterDeckConfigs } from "../../src/decks/starter-decks-cyberclick-v1.ts";
+import type { ApplyMoveResult, DeckConfig, GameState, Move, PlayerSide } from "../../src/types.ts";
 
 export function starterFixtures(): { corp: DeckConfig; runner: DeckConfig } {
   return starterDeckConfigs();
@@ -29,7 +29,7 @@ export function newStarterGame(
 const ORDERED_CORP_IDENTITY = "the_syndicate_profit_over_principle";
 
 /** Filler cards from the corp starter pool (used after a scripted hand). */
-const CORP_FILLER = [
+export const CORP_FILLER = [
   "hedge_fund",
   "hedge_fund",
   "hedge_fund",
