@@ -168,16 +168,19 @@ body {
   min-height: calc(100vh - 24px);
 }
 /* The play column takes all remaining width; the log docks to the right.
-   Rows size to their content (align-content: start): the side docks are
-   viewport-capped and sticky, so a long game log must never stretch the
-   servers/action/hand rows apart — leftover space stays below the column,
-   not between panels. */
+   The column is a flex stack that fills the viewport exactly like the
+   status dock beside it: .servers (first row) flexes to absorb whatever
+   the banner/action/hand rows don't use, so all three top-level columns
+   share one bottom line. The banner/action/hand rows keep flex: none
+   (content-sized). A long game log scrolls inside its dock, so it can
+   never stretch these rows apart or grow the page. */
 .game-main {
   flex: 1;
   min-width: 0;
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 10px;
-  align-content: start;
+  min-height: calc(100vh - 24px);
 }
 /* Perspective classes remain as seat hooks (server ice flip uses
    .corp-seat); the old in-flow strip order scheme is gone since both
@@ -442,7 +445,7 @@ button.stat:disabled {
 
 /* Servers ------------------------------------------------------------ */
 
-/* Servers (direct grid child of .game-main) ------------------------------ */
+/* Servers (direct flex child of .game-main) ------------------------------ */
 .servers {
   display: flex;
   gap: 28px;
@@ -453,6 +456,11 @@ button.stat:disabled {
   border-radius: 10px;
   padding: 10px;
   min-height: 340px;
+  /* Grow (never shrink) to absorb the play column's free height: the extra
+   * room on tall windows goes to the play area, while the action panel and
+   * hand keep their content sizes (their default flex is none). The column
+   * bottom then lines up with the status and log docks. */
+  flex: 1 0 auto;
   overflow-x: auto;
 }
 /* Each server is a vertical card stack drawn from the human player's seat
@@ -797,15 +805,18 @@ button.stat:disabled {
   align-items: stretch;
   gap: 0;
   width: 250px;
-  /* Viewport-capped and sticky: a long game log scrolls inside the dock
-     instead of stretching the whole page (which used to pull the play
-     column's grid rows apart, leaving black gaps between panels). */
+  /* Full viewport height, matching the status dock, so both side docks and
+     the play column share one bottom line; a long game log scrolls inside
+     .log-panel instead of stretching the page (which used to pull the play
+     column's rows apart, leaving black gaps between panels). The collapsed
+     rail below opts back out — it stays a short strip. */
   position: sticky;
   top: 12px;
-  max-height: calc(100vh - 24px);
+  height: calc(100vh - 24px);
 }
 .log-dock.collapsed {
   width: 20px;
+  height: auto;
 }
 .log-toggle {
   flex: none;
@@ -1186,9 +1197,20 @@ button.stat:disabled {
   .game {
     flex-direction: column;
   }
+  /* Stacked layout: the play column is content-sized again (a viewport-tall
+     empty play area between the docks would just add dead scroll), and the
+     log dock loses the forced desktop height. */
+  .game-main {
+    min-height: 0;
+  }
+  .servers {
+    flex: none;
+    flex-wrap: wrap;
+  }
   .log-dock {
     width: 100%;
     position: static;
+    height: auto;
     max-height: none;
   }
   .status-dock {
@@ -1208,8 +1230,5 @@ button.stat:disabled {
   }
   .log-panel {
     border-radius: 0 0 10px 10px;
-  }
-  .servers {
-    flex-wrap: wrap;
   }
 }
