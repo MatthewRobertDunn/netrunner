@@ -60,3 +60,6 @@ assertions. They live in the test files as the authoritative regression record:
 - Run-creating abilities count toward the same-central-twice restriction — `tests/redteam_test.ts`
 - Remote rendering is viewer-agnostic CSS — `tests/ui/game_screen_test.ts`
 - Card effects gain the printed amount, not the net delta — `tests/event_texts_test.ts`
+- Announced Runner actions are open info; the heap is public (10.2, 4.4.7b) —
+  `tests/visibility_test.ts`
+- Trash affordability counts the run fund, not pool credits alone — `tests/event_texts_test.ts`
