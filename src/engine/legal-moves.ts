@@ -30,6 +30,7 @@ import {
   serverById,
 } from "./state.ts";
 import { rezCostFor } from "./runs.ts";
+import { PASS_OPTION_ID } from "../types.ts";
 import type { CardInstance, GameState, Move, PlayerSide, Prompt, ServerId } from "../types.ts";
 
 /** Every legal move for `player` in `state`. */
@@ -158,7 +159,12 @@ function movesForPrompt(state: GameState, playerSide: PlayerSide, prompt: Prompt
           optionId: option.id,
         });
       }
-      moves.push({ kind: "prompt.answer", player: "corp", promptId: prompt.id, optionId: "pass" });
+      moves.push({
+        kind: "prompt.answer",
+        player: "corp",
+        promptId: prompt.id,
+        optionId: PASS_OPTION_ID,
+      });
       return moves;
     }
     case "access-decision": {
@@ -414,34 +420,40 @@ function addBreakMoves(state: GameState, ice: CardInstance, moves: Move[]): void
   if (unbroken.length === 0) return;
   const iceStrength = currentIceStrength(state, ice);
 
+  // Brân 1.0: lose [click] to break 1 subroutine — any installed icebreaker,
+  // no strength requirement (declared by the ice's `bioroid` break; recorded
+  // interpretation in docs/rules-questions.md §7). The effect is identical no
+  // matter which installed breaker "pays" for it, so emit ONE move per
+  // unbroken subroutine (`runner.bioroidBreak` names the ice) — a per-program
+  // loop would offer N×S byte-identical moves and inflate the AI's softmax
+  // mass (see the dedup note in corpActionMoves).
+  if (
+    breakAbilityDef(ice.cardId)?.bioroid === true && state.runner.clicks >= 1 &&
+    state.runner.installed.some((c) => isIcebreaker(c))
+  ) {
+    for (const subIndex of unbroken) {
+      moves.push({ kind: "runner.bioroidBreak", iceId: ice.id, subIndex });
+    }
+  }
+
   for (const program of state.runner.installed) {
     if (!isIcebreaker(program)) continue;
-    const strengthOk = currentIceStrength(state, program) >= iceStrength;
-    for (const subIndex of unbroken) {
-      // Brân 1.0: lose [click] to break 1 subroutine; any installed icebreaker,
-      // no strength requirement — declared by the ice's `bioroid` break.
-      if (breakAbilityDef(ice.cardId)?.bioroid) {
-        if (state.runner.clicks >= 1) {
-          moves.push({
-            kind: "runner.breakSubroutine",
-            programId: program.id,
-            subIndex,
-          });
-        }
-        continue;
-      }
-      if (strengthOk) {
-        const breakDef = breakAbilityDef(program.cardId);
-        const cost = breakDef?.creditCost ?? 1;
-        const breaks = breakDef?.breaks ?? [];
-        const iceSubtypes = cardDef(ice.cardId).subtypes;
-        const canBreak = breaks.length === 0 || iceSubtypes.some((s) => breaks.includes(s));
-        if (canBreak && availableCredits(state, "runner") >= cost) {
-          moves.push({
-            kind: "runner.breakSubroutine",
-            programId: program.id,
-            subIndex,
-          });
+    if (breakAbilityDef(ice.cardId)?.bioroid !== true) {
+      const strengthOk = currentIceStrength(state, program) >= iceStrength;
+      for (const subIndex of unbroken) {
+        if (strengthOk) {
+          const breakDef = breakAbilityDef(program.cardId);
+          const cost = breakDef?.creditCost ?? 1;
+          const breaks = breakDef?.breaks ?? [];
+          const iceSubtypes = cardDef(ice.cardId).subtypes;
+          const canBreak = breaks.length === 0 || iceSubtypes.some((s) => breaks.includes(s));
+          if (canBreak && availableCredits(state, "runner") >= cost) {
+            moves.push({
+              kind: "runner.breakSubroutine",
+              programId: program.id,
+              subIndex,
+            });
+          }
         }
       }
     }
@@ -544,5 +556,3 @@ function combinations(ids: string[], size: number): string[][] {
   walk(0, []);
   return result;
 }
-
-export {};

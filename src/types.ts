@@ -94,11 +94,6 @@ export interface CardInstance {
 
   /** Server this card is installed in (corp cards). */
   server?: ServerId;
-  /**
-   * For ice: 0 is the innermost piece (closest to the server), higher indices
-   * are further out. Undefined for root cards.
-   */
-  iceIndex?: number;
   /** Corp cards: rezzed status. Runner installed cards are always active. */
   rezzed?: boolean;
   /** Advancement counters (agendas, advanceable assets). */
@@ -188,6 +183,12 @@ export type ChoiceEffect =
   | { kind: "runner-take-3-red-team" };
 
 export interface PromptOption {
+  /**
+   * Stable option id. Convention: the id `"pass"` is RESERVED for the engine's
+   * decline/cancel answer (`PASS_OPTION_ID`) — `answerPrompt` treats an option
+   * id of `"pass"` as "close the prompt and do nothing", so a card-defined
+   * option with a real effect must never use it.
+   */
   id: string;
   label: string;
   targetId?: CardInstanceId;
@@ -197,6 +198,9 @@ export interface PromptOption {
   clickCost?: number;
   effect?: ChoiceEffect;
 }
+
+/** The reserved decline/cancel option id — see `PromptOption.id`. */
+export const PASS_OPTION_ID = "pass";
 
 export type Prompt =
   | {
@@ -394,11 +398,13 @@ export interface ViewCard {
    * counter (rule 10.2), suppressed for cards whose id is hidden. */
   strengthBoost?: number;
   /**
-   * Legacy stack-position field. The current engine never assigns it (ice
-   * position is carried by array order and exposed as `position`), so it is
-   * always undefined in views produced today; kept for shape compatibility.
-   * Never use it as an ice-vs-root discriminator, and beware that `0` would
-   * be falsy anyway — test `!== undefined`.
+   * Legacy stack-position field. The engine never assigns it (ice position is
+   * carried by array order and exposed as `position`), so it is always
+   * undefined; it is kept in the VIEW SHAPE only because `infoSetKey` hashes
+   * the serialized view key-by-key (present-undefined serializes as
+   * `"iceIndex":null`) and dropping the key would change every AI decision
+   * seed. Never use it as an ice-vs-root discriminator, and beware that `0`
+   * would be falsy anyway — test `!== undefined`.
    */
   iceIndex?: number;
   /**

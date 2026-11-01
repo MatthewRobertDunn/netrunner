@@ -134,7 +134,6 @@ function instanceOf(view: ViewCard, cardId: CardId): CardInstance {
   if (view.hostedCredits !== undefined) card.hostedCredits = view.hostedCredits;
   if (view.strengthBoost !== undefined) card.strengthBoost = view.strengthBoost;
   if (view.server !== undefined) card.server = view.server;
-  if (view.iceIndex !== undefined) card.iceIndex = view.iceIndex;
   return card;
 }
 
@@ -496,7 +495,12 @@ function collectOrphans(view: PlayerView): {
     if (breachRefs.has(id) && breach) {
       // Breach targets are Corp cards; the zone follows the breached server.
       if (breach.server === "hq") oppHand.push(id);
-      else if (breach.server === "rd") breachViewerDeck(view, id, ownDeck, oppDeck);
+      else if (breach.server === "rd") {
+        // An R&D breach orphan is the corp's deck — the viewer's own or the
+        // opponent's (the viewer always sees their own deck's ids, rule 4.2.2).
+        if (view.viewer === "corp") ownDeck.push(id);
+        else oppDeck.push(id);
+      }
       // archives/remote targets are always listed (real discard/install ids).
       continue;
     }
@@ -505,17 +509,6 @@ function collectOrphans(view: PlayerView): {
     ownDeck.push(id);
   }
   return { ownDeck, oppHand, oppDeck };
-}
-
-/** Breach orphans on R&D: the corp's deck — the viewer's own or the opponent's. */
-function breachViewerDeck(
-  view: PlayerView,
-  _id: CardInstanceId,
-  ownDeck: CardInstanceId[],
-  oppDeck: CardInstanceId[],
-): void {
-  if (view.viewer === "corp") ownDeck.push(_id);
-  else oppDeck.push(_id);
 }
 
 /** Card ids an event references, as the viewer may see them. */
@@ -574,7 +567,10 @@ function promptCardIds(prompt: Prompt | PromptStub): CardInstanceId[] {
   return ids;
 }
 
-/** Rebuild the corp's servers from the flat `view.corp.installed` list. */ function buildServers(
+/**
+ * Rebuild the corp's servers from the flat `view.corp.installed` list.
+ */
+function buildServers(
   view: PlayerView,
   pool: CardPool,
   rng: Rng,

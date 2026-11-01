@@ -28,12 +28,13 @@ import {
   player,
   pruneEmptyRemotes,
   serverById,
+  setGameOver,
   spendCredits,
   toDiscard,
 } from "./state.ts";
 import { rngNext } from "./rng.ts";
-import { enterDiscardPhase, setGameOver } from "./turns.ts";
-import type { CardInstance, GameState, ServerId } from "../types.ts";
+import { enterDiscardPhase } from "./turns.ts";
+import type { CardInstance, GameState, PlayerSide, ServerId } from "../types.ts";
 
 /** Resolve automatic rules until input is needed (or the game ends). */
 export function settle(state: GameState): void {
@@ -259,7 +260,7 @@ export function beginBreach(state: GameState, server: ServerId): void {
 function stepBreach(state: GameState): boolean {
   const breach = state.breach!;
   if (breach.accessing) return true; // access-decision pending
-  const remaining = candidatesForBreach(state).filter((c) => !breach.chosen.includes(c.instanceId));
+  const remaining = candidatesForBreach(state);
   if (remaining.length === 0) {
     // Breach complete: the run proceeds to the Run Ends phase.
     state.breach = null;
@@ -414,59 +415,56 @@ export function finishAccess(state: GameState, trashed: boolean): void {
   }
 }
 
+/**
+ * Detach a card from every zone it might be in and place it in `side`'s score
+ * area: clear its placement, reset its counters, log the score/steal event, and
+ * check the agenda-point victory condition. The two scoring paths differ only
+ * in the log event (`score` vs `steal`) and the side that receives the card —
+ * `scoreAgenda` additionally fires `fireScore`, and `finishAccess`'s trash
+ * branch additionally fires `fireSteal`.
+ */
+function moveToScoreArea(
+  state: GameState,
+  card: CardInstance,
+  side: PlayerSide,
+  points: number,
+  eventType: "score" | "steal",
+): void {
+  card.zone = "score";
+  card.rezzed = undefined;
+  card.server = undefined;
+  card.advancement = 0;
+  for (const s of state.servers) {
+    const i = s.root.findIndex((c) => c.id === card.id);
+    if (i >= 0) s.root.splice(i, 1);
+    const j = s.ice.findIndex((c) => c.id === card.id);
+    if (j >= 0) s.ice.splice(j, 1);
+  }
+  for (const list of [state.corp.hand, state.corp.discard, state.corp.deck]) {
+    const i = list.findIndex((c) => c.id === card.id);
+    if (i >= 0) list.splice(i, 1);
+  }
+  player(state, side).score.push(card);
+  player(state, side).agendaPoints += points;
+  state.log.push({ type: eventType, cardId: card.id, points });
+  checkVictory(state);
+}
+
 /** Move an agenda to the Runner's score area. */
 function stealAgendaInstance(state: GameState, cardId: string): void {
   const found = findCard(state, cardId);
   if (!found) return;
-  const card = found.card;
-  const def = cardDef(card.cardId);
-  card.zone = "score";
-  card.rezzed = undefined;
-  card.server = undefined;
-  card.iceIndex = undefined;
-  card.advancement = 0;
-  for (const s of state.servers) {
-    const i = s.root.findIndex((c) => c.id === cardId);
-    if (i >= 0) s.root.splice(i, 1);
-    const j = s.ice.findIndex((c) => c.id === cardId);
-    if (j >= 0) s.ice.splice(j, 1);
-  }
-  for (const list of [state.corp.hand, state.corp.discard, state.corp.deck]) {
-    const i = list.findIndex((c) => c.id === cardId);
-    if (i >= 0) list.splice(i, 1);
-  }
-  state.runner.score.push(card);
-  state.runner.agendaPoints += def.agendaPoints ?? 0;
-  state.log.push({ type: "steal", cardId: card.id, points: def.agendaPoints ?? 0 });
-  checkVictory(state);
+  const def = cardDef(found.card.cardId);
+  moveToScoreArea(state, found.card, "runner", def.agendaPoints ?? 0, "steal");
 }
 
 /** Score an agenda for the Corp. */
 export function scoreAgenda(state: GameState, cardId: string): void {
   const found = findCard(state, cardId);
   if (!found) return;
-  const card = found.card;
-  const def = cardDef(card.cardId);
-  card.zone = "score";
-  card.rezzed = undefined;
-  card.server = undefined;
-  card.iceIndex = undefined;
-  card.advancement = 0;
-  for (const s of state.servers) {
-    const i = s.root.findIndex((c) => c.id === cardId);
-    if (i >= 0) s.root.splice(i, 1);
-    const j = s.ice.findIndex((c) => c.id === cardId);
-    if (j >= 0) s.ice.splice(j, 1);
-  }
-  for (const list of [state.corp.hand, state.corp.discard, state.corp.deck]) {
-    const i = list.findIndex((c) => c.id === cardId);
-    if (i >= 0) list.splice(i, 1);
-  }
-  state.corp.score.push(card);
-  state.corp.agendaPoints += def.agendaPoints ?? 0;
-  state.log.push({ type: "score", cardId: card.id, points: def.agendaPoints ?? 0 });
-  checkVictory(state);
-  fireScore(state, card);
+  const def = cardDef(found.card.cardId);
+  moveToScoreArea(state, found.card, "corp", def.agendaPoints ?? 0, "score");
+  fireScore(state, found.card);
 }
 
 /** Check the agenda-point victory condition (rule 1.7.2a). */

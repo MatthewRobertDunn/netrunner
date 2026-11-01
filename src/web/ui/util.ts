@@ -21,12 +21,10 @@ import type {
   Prompt,
 } from "../../types.ts";
 
-/** The player who may act right now (prompted player, else turn player). */
-export function actorOf(state: GameState): PlayerSide {
-  const prompt = state.prompts[0];
-  if (prompt) return prompt.player;
-  return state.turn.player;
-}
+// "The player who may act right now" is engine state machinery (also used by
+// the AI shell), so it lives next to `player`/`other` in engine/state.ts and
+// is re-exported here for the UI components.
+export { actorOf } from "../../engine/state.ts";
 
 export function handOf(state: GameState, side: PlayerSide): CardInstance[] {
   return side === "corp" ? state.corp.hand : state.runner.hand;

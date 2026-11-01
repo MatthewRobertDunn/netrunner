@@ -3,7 +3,7 @@
  */
 
 import { cardDef, tryCardDef } from "../cards/catalogue.ts";
-import { starterPoolCardIds } from "../decks/starter-decks-cyberclick-v1.ts";
+import { allowedCardIds } from "../decks/mod.ts";
 import { shuffle } from "./rng.ts";
 import { player } from "./state.ts";
 import { beginCorpTurn } from "./turns.ts";
@@ -27,14 +27,16 @@ function issue(
   return { code, message, cardId };
 }
 
-/** Validate a deck for a side, optionally restricted to the starter card pool. */
+/** Validate a deck for a side, optionally restricted to its mode's card pool. */
 export function validateDeck(
   deck: DeckConfig,
   side: PlayerSide,
   mode: GameConfig["mode"] = "open-play",
 ): DeckValidationResult {
   const issues: DeckValidationIssue[] = [];
-  const pool = mode === "starter-decks" ? new Set(starterPoolCardIds()) : null;
+  // The registry (src/decks/mod.ts) maps the validation mode to the allowed
+  // card pool; open-play has no pool restriction (null).
+  const pool = allowedCardIds(mode);
 
   // Identity
   const identity = tryCardDef(deck.identity);
@@ -110,7 +112,7 @@ export function validateDeck(
         ),
       );
     }
-    if (mode === "starter-decks" && !pool!.has(entry.cardId)) {
+    if (pool && !pool.has(entry.cardId)) {
       issues.push(
         issue(
           "not-in-supported-cards",

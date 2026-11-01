@@ -14,6 +14,8 @@ import {
   drawCards,
   findCard,
   gainCredits,
+  isCentral,
+  loseClicks,
   loseCredits,
   player,
   takeCreditsFrom,
@@ -21,6 +23,7 @@ import {
 } from "./state.ts";
 import { rngNext } from "./rng.ts";
 import { endRun, iceAt, initiateRun, rezCard } from "./runs.ts";
+import { PASS_OPTION_ID } from "../types.ts";
 import type {
   CardInstance,
   CardInstanceId,
@@ -46,15 +49,6 @@ export function fireInstall(state: GameState, card: CardInstance): void {
   if (!b) return;
   for (const t of b.triggers ?? []) {
     if (t.kind === "on-install-load-credits") addHostedCredits(state, card, t.amount ?? 0);
-  }
-}
-
-/** "When you rez this asset, load N credits onto it." */
-export function fireRez(state: GameState, card: CardInstance): void {
-  const b = behaviors.get(card.cardId);
-  if (!b) return;
-  for (const t of b.triggers ?? []) {
-    if (t.kind === "on-rez-load-credits") addHostedCredits(state, card, t.amount ?? 0);
   }
 }
 
@@ -89,7 +83,7 @@ export function fireScore(state: GameState, card: CardInstance): void {
             label: `Draw ${t.amount ?? 2} cards`,
             effect: { kind: "corp-draw", amount: t.amount ?? 2 },
           },
-          { id: "pass", label: "Pass", effect: { kind: "no-op" } },
+          { id: PASS_OPTION_ID, label: "Pass", effect: { kind: "no-op" } },
         ],
       });
     }
@@ -126,7 +120,7 @@ function queueFreeRezPrompt(state: GameState, card: CardInstance): void {
         targetId: c.id,
         effect: { kind: "rez-card-free", targetId: c.id } as ChoiceEffect,
       })),
-      { id: "pass", label: "Pass", effect: { kind: "no-op" } as ChoiceEffect },
+      { id: PASS_OPTION_ID, label: "Pass", effect: { kind: "no-op" } as ChoiceEffect },
     ],
   });
 }
@@ -214,7 +208,11 @@ export function resolveSubroutine(state: GameState, ice: CardInstance, index: nu
         title: "Karuna: the Runner may jack out",
         options: [
           { id: "jack-out", label: "Jack out", effect: { kind: "end-run" } },
-          { id: "pass", label: "Resolve remaining subroutines", effect: { kind: "no-op" } },
+          {
+            id: PASS_OPTION_ID,
+            label: "Resolve remaining subroutines",
+            effect: { kind: "no-op" },
+          },
         ],
       });
       break;
@@ -259,7 +257,7 @@ export function resolveSubroutine(state: GameState, ice: CardInstance, index: nu
               targetId: c.id,
             } as ChoiceEffect,
           })),
-          { id: "pass", label: "Pass", effect: { kind: "no-op" } as ChoiceEffect },
+          { id: PASS_OPTION_ID, label: "Pass", effect: { kind: "no-op" } as ChoiceEffect },
         ],
       });
       break;
@@ -279,24 +277,14 @@ function oddCostTrashed(state: GameState, trashed: CardInstanceId[]): boolean {
 }
 
 /**
- * Place exactly 2 advancement counters on `card`. Seamless Launch's text is
- * "Place 2 advancement counters on 1 installed card that you did not install
- * this turn" — rule 1.18.2 keeps this distinct from advancing (no click, no
- * credit, no rez). Shared by the single-target path (apply.ts) and the
- * multi-target choose-one option (`place-2-advancement`).
- */
-export function addTwoAdvancement(state: GameState, card: CardInstance): void {
-  card.advancement = (card.advancement ?? 0) + 2;
-  state.log.push({ type: "advance", cardId: card.id, amount: 2 });
-}
-
-/**
  * Place N advancement counters on an installed card, subject to the
  * operation's own restriction (rule 1.18.2: "1 installed card that you did not
- * install this turn"). When more than one card is legal the Corp chooses; the
- * chosen option carries a `place-2-advancement` effect, which calls
- * `addTwoAdvancement` on the target. This is the single implementation of the
- * operation's effect, so the choice effect and the one-target path agree.
+ * install this turn"). Rule 1.18.2 keeps placing counters distinct from
+ * advancing (no click, no credit, no rez). This is the single implementation:
+ * `resolveOperationEffect` calls it directly when Seamless Launch has exactly
+ * one legal target, and when several cards qualify the choose-one options
+ * carry a `place-2-advancement` effect that `applyChoice` routes back here —
+ * so the one-target path and the choice effect can never disagree.
  */
 export function placeAdvancementOnInstalled(
   state: GameState,
@@ -397,11 +385,10 @@ export function resolveEventEffect(
       break;
     }
   }
-  if (eff.thenLoseClickIfAny && state.runner.clicks > 0) {
+  if (eff.thenLoseClickIfAny) {
     // Rule 5.2.2a / 1.11.3b: "lose" is not "spend", so only an available click
     // is lost — playing it as the last action of the turn loses nothing.
-    state.runner.clicks -= 1;
-    state.log.push({ type: "lose-clicks", player: "runner", amount: 1 });
+    loseClicks(state, "runner", 1);
   }
 }
 
@@ -439,7 +426,7 @@ export function applyChoice(state: GameState, effect: ChoiceEffect | undefined):
       // Seamless Launch (rule 1.18.2): placing counters directly is not
       // advancing, so no cost is paid and nothing is rezzed.
       const found = findCard(state, effect.targetId);
-      if (found) addTwoAdvancement(state, found.card);
+      if (found) placeAdvancementOnInstalled(state, found.card, 2);
       break;
     }
     case "corp-draw":
@@ -468,7 +455,12 @@ function spendToll(state: GameState): void {
   run.tollPaid = true;
 }
 
-/** Install ice directly inward from another piece of ice, ignoring all costs. */
+/**
+ * Install ice directly inward from another piece of ice, ignoring all costs.
+ * Rule 8.5.14 ("directly inward from this ice"): the new ice is inserted at the
+ * `from` ice's index, pushing `from` (and everything above it) outward — the
+ * mirror of the legality filter in legal-moves.ts `corp-install-ice-inward`.
+ */
 function installIceInward(state: GameState, targetId: string, fromIceId: string): void {
   const found = findCard(state, targetId);
   const from = findCard(state, fromIceId);
@@ -606,7 +598,7 @@ export function applyPaidAbility(
       // restriction exactly like a basic `runner.run` move (apply.ts), so the
       // Runner cannot then legally `runner.run` the same central again.
       initiateRun(state, server, `${effect.sourcePrefix}:${card.id}`);
-      if (server === "hq" || server === "rd" || server === "archives") {
+      if (isCentral(server)) {
         state.runner.ranServersThisTurn.push(server);
       }
       return true;
@@ -626,17 +618,4 @@ export function checkEmpty(state: GameState, card: CardInstance): void {
   const draw = trigger.kind === "empty-then-trash-and-draw";
   toDiscard(state, card, "emptied"); // logs the trash event
   if (draw) drawCards(state, "corp", 1);
-}
-
-/**
- * "When this run ends, trash this program" (Mayfly) — dispatched from the
- * card's `run-trash-program` trigger. Every run end funnels through
- * `finishRun`, which calls this.
- */
-export function trashMayfly(state: GameState): void {
-  for (const card of [...state.runner.installed]) {
-    if (triggersOf(card.cardId).some((t) => t.kind === "run-trash-program")) {
-      toDiscard(state, card, "run ends"); // logs the trash event
-    }
-  }
 }

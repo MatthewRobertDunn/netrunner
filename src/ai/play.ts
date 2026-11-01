@@ -19,6 +19,7 @@
 
 import { decisionSeedFor, makeAIDecisionContext } from "./context.ts";
 import { engine } from "../engine/facade.ts";
+import { actorOf } from "../engine/state.ts";
 import type { GameAI, GameState, Move, PlayerSide } from "../types.ts";
 
 export interface GameConfig {
@@ -50,13 +51,6 @@ export class AiGameError extends Error {
     super(message);
     this.name = "AiGameError";
   }
-}
-
-/** The player who may act in `state` (turn player, or the prompted player). */
-function actorOf(state: GameState): PlayerSide {
-  const prompt = state.prompts[0];
-  if (prompt) return prompt.player;
-  return state.turn.player;
 }
 
 /**

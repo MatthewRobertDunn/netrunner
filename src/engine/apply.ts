@@ -11,6 +11,7 @@ import {
   subroutinesOf,
   triggersOf,
 } from "../cards/effects.ts";
+import { fastCloneState } from "./clone.ts";
 import {
   applyChoice,
   applyPaidAbility,
@@ -35,6 +36,7 @@ import {
   expireIcebreakerPumps,
   findCard,
   gainCredits,
+  isCentral,
   memoryLimit,
   memoryUsed,
   moveCardTo,
@@ -48,6 +50,7 @@ import {
 } from "./state.ts";
 import { getLegalMoves } from "./legal-moves.ts";
 import { beginCorpTurn, enterDiscardPhase, maxHandSize } from "./turns.ts";
+import { PASS_OPTION_ID } from "../types.ts";
 import type {
   ApplyMoveOptions,
   ApplyMoveResult,
@@ -58,11 +61,6 @@ import type {
   PlayerSide,
   ServerId,
 } from "../types.ts";
-
-/** Deep copy of the game state (JSON round-trip keeps it deterministic). */
-function copyState(state: GameState): GameState {
-  return JSON.parse(JSON.stringify(state)) as GameState;
-}
 
 export function applyMove(
   state: GameState,
@@ -79,7 +77,7 @@ export function applyMove(
       move,
     };
   }
-  const next = opts.mutate ? state : copyState(state);
+  const next = opts.mutate ? state : fastCloneState(state);
   const mark = next.log.length;
   applyResolvedMove(next, playerSide, move);
   settle(next);
@@ -90,13 +88,6 @@ export function applyMove(
     events,
     warnings: supportWarnings(next),
   };
-}
-
-/** True when `result` is a successfully applied move. */
-export function applied(
-  result: ApplyMoveResult | IllegalMove,
-): result is ApplyMoveResult {
-  return result.kind === "applied";
 }
 
 function supportWarnings(state: GameState): string[] {
@@ -190,7 +181,7 @@ function applyResolvedMove(state: GameState, playerSide: PlayerSide, move: Move)
         });
         return;
       }
-      enterEndOfTurn(state);
+      enterDiscardPhase(state);
       break;
     }
 
@@ -280,7 +271,7 @@ function applyResolvedMove(state: GameState, playerSide: PlayerSide, move: Move)
     case "runner.run": {
       spendClicks(state, "runner", 1);
       initiateRun(state, move.server);
-      if (move.server === "hq" || move.server === "rd" || move.server === "archives") {
+      if (isCentral(move.server)) {
         state.runner.ranServersThisTurn.push(move.server);
       }
       break;
@@ -316,8 +307,9 @@ function applyResolvedMove(state: GameState, playerSide: PlayerSide, move: Move)
       break;
     }
     case "runner.bioroidBreak": {
-      // Bran 1.0 style breaking: the move names the ice whose subroutine the
-      // Runner breaks with a click (handled the same as any icebreaker break).
+      // Brân 1.0's `bioroid` break: spend a click to break one subroutine of
+      // the encountered ice (any installed icebreaker qualifies, no strength
+      // match — recorded interpretation in docs/rules-questions.md §7).
       breakSubroutine(state, move.iceId, move.subIndex);
       break;
     }
@@ -381,7 +373,7 @@ function answerPrompt(state: GameState, promptId: number, optionId: string): voi
       break;
     }
     case "choose-one": {
-      if (optionId === "pass") {
+      if (optionId === PASS_OPTION_ID) {
         state.prompts.shift();
         return;
       }
@@ -425,7 +417,6 @@ function answerPrompt(state: GameState, promptId: number, optionId: string): voi
 
 // ---------------------------------------------------------------------------
 // Corp installs
-// ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
 
 function installCorpCard(state: GameState, cardId: string, server: ServerId | "new-remote"): void {
@@ -610,10 +601,6 @@ export function resolveEncounter(state: GameState): void {
 function addAdvancementCounter(state: GameState, card: CardInstance): void {
   card.advancement = (card.advancement ?? 0) + 1;
   state.log.push({ type: "advance", cardId: card.id, amount: 1 });
-}
-
-function enterEndOfTurn(state: GameState): void {
-  enterDiscardPhase(state);
 }
 
 function startFirstTurn(state: GameState): void {

@@ -16,6 +16,7 @@ import { corpInstalled, findCard, player } from "./state.ts";
 import { maxHandSize } from "./turns.ts";
 import type {
   CardInstance,
+  GameState,
   PlayerSide,
   Prompt,
   PromptStub,
@@ -27,7 +28,6 @@ import type {
   ServerId,
   ViewCard,
 } from "../types.ts";
-import type { GameState } from "../types.ts";
 
 const HIDDEN = "hidden" as const;
 
@@ -58,7 +58,11 @@ export function viewCard(
     hostedCredits: card.hostedCredits,
     strength: hidden ? undefined : cardDef(card.cardId).strength ?? undefined,
     strengthBoost: hidden ? undefined : card.strengthBoost,
-    iceIndex: card.iceIndex,
+    // Kept as a present-`undefined` key on purpose: `infoSetKey` serializes the
+    // view with sorted keys and turns a present-undefined key into
+    // `"iceIndex":null`, so dropping the key would change every decision seed
+    // (and with it every AI trajectory) — see docs/rules-gotchas.md.
+    iceIndex: undefined,
     position: opts.position,
     zone: card.zone,
     server: card.server,

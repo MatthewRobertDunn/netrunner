@@ -6,7 +6,7 @@
  */
 
 import { checkEmpty } from "./effects.ts";
-import { drawCards, player } from "./state.ts";
+import { drawCards, player, setGameOver } from "./state.ts";
 import { handSizeBonusOf, triggersOf } from "../cards/effects.ts";
 import type { GameState, PlayerSide } from "../types.ts";
 
@@ -136,12 +136,4 @@ export function maxHandSize(state: GameState, side: PlayerSide): number {
   // comparison), which is how the engine has always interpreted the card.
   const bonus = side === "corp" ? handSizeBonusOf(state.corp.score.map((c) => c.cardId)) : 0;
   return p.baseHandSize + p.maxHandSizeMod + bonus;
-}
-
-export function setGameOver(state: GameState, winner: PlayerSide | "draw", reason: string): void {
-  if (state.winner) return;
-  state.winner = winner;
-  state.winReason = reason;
-  state.turn.phase = "game-over";
-  state.log.push({ type: "game-end", winner, reason });
 }

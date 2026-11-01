@@ -50,7 +50,6 @@ function sideCards(state: GameState, side: PlayerSide) {
     deckCount: p.deck.length,
     discardCount: p.discard.length,
     installed: p.installed,
-    identity: p.identity,
     score: p.score,
   };
 }
@@ -66,6 +65,33 @@ function turnStateOf(state: GameState, side: PlayerSide): PlayerTurnState {
     usedOncePerTurn: [...p.usedOncePerTurn],
     pendingRunFund: p.pendingRunFund,
   };
+}
+
+/**
+ * The ice being approached — public once rezzed (rules 1.21.1a, 4.6.3). A
+ * dangling id (the card left the table mid-run) looks missing, never like some
+ * other corp card.
+ */
+function currentIceView(state: GameState, viewer: PlayerSide): ViewCard | undefined {
+  const currentIceId = state.run?.currentIceId;
+  if (!currentIceId) return undefined;
+  const found = findCard(state, currentIceId);
+  if (!found) return undefined;
+  return viewCard(found.card, {
+    hidden: viewer !== "corp" && found.card.rezzed !== true,
+    position: "ice",
+  });
+}
+
+/**
+ * The card being accessed: its identity is public to the Runner (rule 7.2.1).
+ * A dangling id looks missing, never like some other corp card.
+ */
+function accessingView(state: GameState): ViewCard | undefined {
+  const accessing = state.breach?.accessing;
+  if (!accessing) return undefined;
+  const found = findCard(state, accessing);
+  return found ? viewCard(found.card) : undefined;
 }
 
 /**
@@ -149,15 +175,7 @@ export function getPlayerView(state: GameState, viewer: PlayerSide): PlayerView 
         server: state.run.server,
         phase: state.run.phase,
         position: state.run.position,
-        currentIce: state.run.currentIceId
-          ? viewCard(findCard(state, state.run.currentIceId)?.card ?? state.corp.identity, {
-            // The ice being approached is public once rezzed (rules 1.21.1a,
-            // 4.6.3): every player reads Rezzed ice off the table.
-            hidden: viewer !== "corp" &&
-              findCard(state, state.run.currentIceId)?.card.rezzed !== true,
-            position: "ice",
-          })
-          : undefined,
+        currentIce: currentIceView(state, viewer),
         broken: [...state.run.broken],
         resolved: [...state.run.resolved],
         source: state.run.source,
@@ -175,9 +193,7 @@ export function getPlayerView(state: GameState, viewer: PlayerSide): PlayerView 
           state.breach.randomAccessLimit - state.breach.randomAccessesUsed,
         ),
         chosen: [...state.breach.chosen],
-        accessing: state.breach.accessing
-          ? viewCard(findCard(state, state.breach.accessing)?.card ?? state.corp.identity)
-          : undefined,
+        accessing: accessingView(state),
       }
       : null,
     prompts: state.prompts.map((p) => visiblePrompt(p, viewer)),
