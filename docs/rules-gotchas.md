@@ -12,7 +12,7 @@ is listed under "documented simplifications", it is a deliberate, safe-to-keep d
 Every bug listed below as "was wrong / now correct" is pinned by a test, and the test is the
 regression record — the prose is a pointer to the test, not a duplicate of it. If a behavior is
 covered by a test, the test is the thing that catches a reintroduction; re-reading this file instead
-of running the suite is how it goes stale. The two entries that survive here are the ones with
+of running the suite is how it goes stale. The three entries that survive here are the ones with
 **no** test:
 
 1. **Rule citations in comments go stale — re-grep the rules file, don't trust the number.**
@@ -38,6 +38,15 @@ of running the suite is how it goes stale. The two entries that survive here are
    attacked server's root, whereas the `(R)` window (6.9.2b, 6.9.4e) permits rezzing any installed
    unrezzed non-ice card — no starter card needs the wider window.
 
+3. **Event visibility is evaluated at render time, not write time.** A
+   damage-trash log line names the trashed card to the Corp: by the time the
+   view is rendered the card sits in the Runner's heap, which is open to every
+   viewer (rule 4.4.7b), so `visibleEvent` keeps the real id even though the
+   card was secret in the grip when the event was written. `visibleEvent`
+   re-checks `cardVisibleTo` against the card's CURRENT zone on every
+   projection — that is the intended shape, not a leak to "fix", and
+   visibility must never be snapshotted onto the event at write time.
+
 ## Pinned by tests (no entry kept here)
 
 The following were all "was wrong / now correct" and are each covered by a named test with explicit
@@ -61,5 +70,8 @@ assertions. They live in the test files as the authoritative regression record:
 - Remote rendering is viewer-agnostic CSS — `tests/ui/game_screen_test.ts`
 - Card effects gain the printed amount, not the net delta — `tests/event_texts_test.ts`
 - Announced Runner actions are open info; the heap is public (10.2, 4.4.7b) —
-  `tests/visibility_test.ts`
-- Trash affordability counts the run fund, not pool credits alone — `tests/event_texts_test.ts`
+  `Deno.test("visibility: announced Runner actions are open to the Corp (rules 10.2, 4.4.7b)")`
+- Trash affordability counts the run fund, not pool credits alone —
+  `Deno.test("event texts: overclock's hosted fund pays an access trash the pool cannot")`
+- Accessed cards stay visible to the Runner for the remainder of the breach (7.3.1a) —
+  `Deno.test("visibility: accessed cards stay visible for the remainder of the breach (rule 7.3.1a)")`

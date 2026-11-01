@@ -12,10 +12,12 @@
 import { cardDef, engine } from "../src/mod.ts";
 import {
   continueRun,
+  CORP_FILLER,
   endCorpTurn,
   installInNewRemoteAndEndTurn,
   newGameWithCorpHand,
   newStarterGame,
+  orderedCorpDeck,
   play,
   rezWindowState,
   runnerDeckStartingWith,
@@ -473,6 +475,103 @@ Deno.test("visibility: announced Runner actions are open to the Corp (rules 10.2
       discardEvents.map((e) => e.cardId),
       ["hidden"],
       "the facedown Archives entry stays hidden from the Runner",
+    );
+  });
+});
+
+/**
+ * A breach of HQ whose only candidates are the unrezzed root card and the
+ * Runner's hand. Jailbreak gives +1 access, so two random hand accesses are
+ * available after the breach — the runner can access two hand cards in one
+ * breach. The Corp's hand has 5 cards after the mandatory draw, so the root
+ * card is never a candidate here (it stays in `chosen` as a non-hand card).
+ */
+function twoAccessBreachState(seed = 3): GameState {
+  const state = newStarterGame(seed, {
+    corp: orderedCorpDeck(["manegarm_skunkworks", ...CORP_FILLER]),
+    runner: runnerDeckStartingWith(["jailbreak"]),
+  });
+  const install = engine.getLegalMoves(state, "corp").find(
+    (m) => m.kind === "corp.install" && m.cardId === "manegarm_skunkworks",
+  );
+  assert(install && install.kind === "corp.install", "the corp can install manegarm");
+  const after = endCorpTurn(play(state, "corp", install));
+  const jailbreak = engine.getLegalMoves(after, "runner").find(
+    (m) => m.kind === "runner.playEvent" && m.cardId === "jailbreak",
+  );
+  assert(jailbreak && jailbreak.kind === "runner.playEvent", "the runner can play jailbreak");
+  return continueRun(play(after, "runner", jailbreak));
+}
+
+/**
+ * Run one access (random hand) to completion: apply `runner.accessRandom`,
+ * then `runner.finishAccess`. Settle may auto-select the next candidate, so
+ * the returned state may still have a breach open with a pending access.
+ */
+function accessRandomToCompletion(state: GameState): GameState {
+  const access = engine.getLegalMoves(state, "runner").find((m) =>
+    m.kind === "runner.accessRandom"
+  );
+  assert(access && access.kind === "runner.accessRandom", "a random access is offered");
+  const afterAccess = play(state, "runner", access);
+  const finish = engine.getLegalMoves(afterAccess, "runner").find((m) =>
+    m.kind === "runner.finishAccess"
+  );
+  assert(finish && finish.kind === "runner.finishAccess", "the runner can finish the access");
+  return play(afterAccess, "runner", finish);
+}
+
+Deno.test("visibility: accessed cards stay visible for the remainder of the breach (rule 7.3.1a)", async (t) => {
+  await t.step(
+    "accessed cards stay named while the breach is open, even after later accesses finish",
+    () => {
+      const state = twoAccessBreachState();
+      assert(state.breach !== null, "the run has breached HQ");
+      assert(state.breach!.randomAccessLimit === 2, "jailbreak grants 2 random accesses");
+
+      // Two random hand accesses, each finished. After the second finish the
+      // breach is still open: settle auto-selects the unrezzed root card next.
+      const after = accessRandomToCompletion(accessRandomToCompletion(state));
+      assert(after.breach !== null, "the breach is still open after two accesses");
+
+      // The Corp's own log names every access (control).
+      const logIds = after.log.filter((e) => e.type === "access").map((e) => e.cardId);
+      assertEquals(logIds.length, 3, "two hand accesses + the auto-selected root card");
+
+      const runnerView = engine.getPlayerView(after, "runner");
+      const runnerIds = runnerView.events.filter((e) => e.type === "access").map((e) => e.cardId);
+      assertEquals(
+        runnerIds,
+        logIds,
+        "the Runner's own log names every access for the remainder of the breach (7.3.1a)",
+      );
+      assert(
+        runnerIds.every((id) => id !== "hidden"),
+        "no accessed card is redacted while the breach is open",
+      );
+      // The FIRST access event in particular still names its card — the case the
+      // rule is about: a redaction that only re-hides after the breach closes.
+      assert(runnerIds[0] !== "hidden", "the first access event names its card");
+    },
+  );
+
+  await t.step("the events re-redact once the breach ends", () => {
+    const state = twoAccessBreachState();
+    const after = accessRandomToCompletion(accessRandomToCompletion(state));
+    // Finish the auto-selected root card: the breach is now complete.
+    const finish = engine.getLegalMoves(after, "runner").find((m) =>
+      m.kind === "runner.finishAccess"
+    );
+    assert(finish && finish.kind === "runner.finishAccess", "the final access is finishable");
+    const ended = play(after, "runner", finish);
+    assert(ended.breach === null, "the breach is complete");
+
+    const runnerIds = engine.getPlayerView(ended, "runner").events
+      .filter((e) => e.type === "access").map((e) => e.cardId);
+    assertEquals(
+      runnerIds,
+      ["hidden", "hidden", "hidden"],
+      "access events redact again once the breach is over (7.3.1a scopes to the breach)",
     );
   });
 });

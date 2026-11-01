@@ -128,7 +128,8 @@ export function corpInstalled(state: GameState): CardInstance[] {
  * (rules 10.2.2/10.2.3, 1.21, 4.6.2/4.6.3, 4.4.7b): cards the viewer owns,
  * installed Runner cards (public to both players, rule 4.6.2), the Runner's
  * heap (open to every viewer, rule 4.4.7b), rezzed Corp cards, scored agendas,
- * identity cards, and the card currently being accessed during a breach.
+ * identity cards, the card currently being accessed during a breach, and cards
+ * already accessed earlier in the same breach (rule 7.3.1a).
  * Everything else — facedown Corp installs (Archives included, pending the
  * faceup/facedown split), the opponent's hand, and the opponent's deck — stays
  * hidden. The Corp's Archives opens only to the Corp until the split is
@@ -163,6 +164,11 @@ export function cardVisibleTo(
     if (p.kind === "access-decision" && p.cardId === instanceId) return true;
   }
   if (state.breach?.accessing === instanceId) return true;
+  // Rule 7.3.1a: a card accessed earlier in this breach remains visible to the
+  // Runner for the remainder of the breach, so its access event keeps the real
+  // id in the Runner's own log. `chosen` only ever holds Corp card ids, and the
+  // Corp viewer's own cards are already open to them, so this is Runner-only.
+  if (state.breach?.chosen.includes(instanceId)) return true;
   return false;
 }
 
