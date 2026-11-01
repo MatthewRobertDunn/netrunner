@@ -4,6 +4,10 @@
  * plus the card's printed title, type line, and text. Click the backdrop or
  * press Esc to close.
  *
+ * The backdrop takes focus on mount (`onMounted`), so the Esc key reaches its
+ * `@keydown.escape` handler without a prior click — the popup can always be
+ * dismissed from the keyboard as soon as it opens.
+ *
  * While the Runner is accessing a card the popup also carries the access
  * decision buttons (rule 7.2.2: one mid-access window — pass, or the basic
  * trash ability if the card has a payable trash cost).
@@ -11,7 +15,7 @@
  * Uses `setup()` (Composition API) so `deno check` gets full typing.
  */
 
-import { computed, defineComponent } from "vue";
+import { computed, defineComponent, onMounted, ref } from "vue";
 import type { PropType } from "vue";
 import { cardOf, imageFor, plainCardText } from "./util.ts";
 
@@ -23,17 +27,30 @@ export default defineComponent({
     actions: { type: Array as PropType<{ label: string; move: unknown }[]>, default: () => [] },
   },
   emits: ["close", "move"],
-  setup(props: { cardId: string | null }, { emit }: { emit: (event: "close") => void }) {
+  setup(
+    props: { cardId: string | null },
+    { emit }: { emit: (event: "close") => void },
+  ) {
     const def = computed(() => (props.cardId ? cardOf(props.cardId) : null));
     const img = computed(() => (props.cardId ? imageFor(props.cardId) : null));
     const text = computed(() => (props.cardId ? plainCardText(props.cardId) : ""));
 
-    return { def, img, text, onClose: () => emit("close") };
+    /**
+     * The modal backdrop; focused on mount so Esc closes without a click.
+     * Typed structurally (this repo typechecks without the DOM lib).
+     */
+    const backdropRef = ref<{ focus(): void } | null>(null);
+    onMounted(() => {
+      backdropRef.value?.focus();
+    });
+
+    return { def, img, text, backdropRef, onClose: () => emit("close") };
   },
   template: `
     <transition name="zoom">
       <div
         v-if="cardId"
+        ref="backdropRef"
         class="zoom-backdrop"
         @click.self="onClose"
         @keydown.escape="onClose"

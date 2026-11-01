@@ -16936,7 +16936,9 @@ __export(mod_exports, {
   supportWarningsOf: () => supportWarningsOf,
   tryCardDef: () => tryCardDef,
   validateDeck: () => validateDeck,
-  verifyFixtureAgainstSnapshot: () => verifyFixtureAgainstSnapshot
+  verifyFixtureAgainstSnapshot: () => verifyFixtureAgainstSnapshot,
+  viewCard: () => viewCard,
+  visiblePrompt: () => visiblePrompt
 });
 
 // data/cards.json
@@ -19036,6 +19038,12 @@ function findCard(state, instanceId) {
   }
   return null;
 }
+function corpInstalled(state) {
+  return state.servers.flatMap((s) => [
+    ...s.root,
+    ...s.ice
+  ]);
+}
 function cardVisibleTo(state, instanceId, viewer) {
   const found = findCard(state, instanceId);
   if (!found) return false;
@@ -20110,56 +20118,13 @@ function settle(state) {
       continue;
     }
     if (state.turn.phase === "action" && player(state, state.turn.player).clicks === 0) {
-      state.turn.phase = "discard";
-      promptOrFinishDiscard(state);
+      enterDiscardPhase(state);
       if (state.prompts.length > 0) return;
       continue;
     }
     return;
   }
   state.supportWarnings.push("settle loop guard reached 1000 steps \u2014 the phase machine may be wedged");
-}
-function promptOrFinishDiscard(state) {
-  const side = state.turn.player;
-  const p2 = player(state, side);
-  if (side === "runner" && maxHandSize2(state, "runner") < 0) {
-    setGameOver(state, "corp", "Runner's maximum hand size dropped below 0");
-    return;
-  }
-  const max = maxHandSize2(state, side);
-  if (p2.hand.length > max) {
-    state.prompts.push({
-      kind: "discard",
-      id: state.nextPromptId++,
-      player: side,
-      count: p2.hand.length - max
-    });
-    return;
-  }
-  finishTurn2(state);
-}
-function finishTurn2(state) {
-  if (state.winner) return;
-  const side = state.turn.player;
-  const leftover = player(state, side).clicks;
-  if (leftover > 0) state.log.push({
-    type: "lose-clicks",
-    player: side,
-    amount: leftover
-  });
-  player(state, side).clicks = 0;
-  state.log.push({
-    type: "turn-end",
-    player: side,
-    turn: state.turn.number
-  });
-  if (side === "corp") beginRunnerTurn(state);
-  else beginCorpTurn(state);
-}
-function maxHandSize2(state, side) {
-  const p2 = player(state, side);
-  const hubBonus = side === "corp" && state.corp.score.some((c) => c.cardId === "superconducting_hub") ? 2 : 0;
-  return p2.baseHandSize + p2.maxHandSizeMod + hubBonus;
 }
 function stepRun(state) {
   const run = state.run;
@@ -20223,9 +20188,9 @@ function corpRezOptions(state) {
   if (ice && ice.rezzed !== true) {
     options.push({
       id: `rez-${ice.id}`,
-      label: `Rez ${cardDef(ice.cardId).title} (${rezSafeCost(state, ice)}[credit])`,
+      label: `Rez ${cardDef(ice.cardId).title} (${rezCostFor(state, ice)}[credit])`,
       targetId: ice.id,
-      creditCost: rezSafeCost(state, ice)
+      creditCost: rezCostFor(state, ice)
     });
   }
   for (const c of corpRootCards(state, run.server)) {
@@ -20234,15 +20199,12 @@ function corpRezOptions(state) {
     if (def2.type !== "asset" && def2.type !== "upgrade") continue;
     options.push({
       id: `rez-${c.id}`,
-      label: `Rez ${def2.title} (${rezSafeCost(state, c)}[credit])`,
+      label: `Rez ${def2.title} (${rezCostFor(state, c)}[credit])`,
       targetId: c.id,
-      creditCost: rezSafeCost(state, c)
+      creditCost: rezCostFor(state, c)
     });
   }
   return options;
-}
-function rezSafeCost(state, card) {
-  return rezCostFor(state, card);
 }
 function encounterStep(state) {
   const run = state.run;
@@ -20725,7 +20687,7 @@ function corpActionMoves(state) {
       cardId: card.cardId
     });
   }
-  for (const card of corpInstalledCardsLocal(state)) {
+  for (const card of corpInstalled(state)) {
     const def2 = cardDef(card.cardId);
     const isAdvanceable = def2.type === "agenda" || card.cardId === "urtica_cipher";
     if (isAdvanceable && state.corp.credits >= 1) {
@@ -20743,7 +20705,7 @@ function corpActionMoves(state) {
       });
     }
   }
-  for (const card of corpInstalledCardsLocal(state)) {
+  for (const card of corpInstalled(state)) {
     const def2 = cardDef(card.cardId);
     if (def2.type !== "asset" && def2.type !== "upgrade") continue;
     if (card.rezzed === true) continue;
@@ -20754,7 +20716,7 @@ function corpActionMoves(state) {
       });
     }
   }
-  addAbilityMoves(state, "corp", corpInstalledCardsLocal(state), moves);
+  addAbilityMoves(state, "corp", corpInstalled(state), moves);
   return moves;
 }
 function installServersFor(state, card) {
@@ -20988,12 +20950,6 @@ function addAbilityMoves(state, side, cards2, moves) {
     }
   }
 }
-function corpInstalledCardsLocal(state) {
-  return state.servers.flatMap((s) => [
-    ...s.root,
-    ...s.ice
-  ]);
-}
 function combinations(ids, size) {
   if (size <= 0) return [
     []
@@ -21030,7 +20986,7 @@ function applyMove(state, playerSide, move, opts = {}) {
   if (!ok) {
     return {
       kind: "illegal-move",
-      reason: explainIllegal(state, playerSide, move),
+      reason: explainIllegal(playerSide, move),
       move
     };
   }
@@ -21069,7 +21025,7 @@ function sameMove(a, b) {
   }
   return true;
 }
-function explainIllegal(_state, playerSide, move) {
+function explainIllegal(playerSide, move) {
   switch (move.kind) {
     case "mulligan.take":
     case "mulligan.decline":
@@ -21411,10 +21367,10 @@ function playCorpOperation(state, cardId) {
     cardId: card.id,
     player: "corp"
   });
-  resolveCorpOperation(state, cardId, card);
+  resolveCorpOperation(state, cardId);
   pruneEmptyRemotes(state);
 }
-function resolveCorpOperation(state, cardId, card) {
+function resolveCorpOperation(state, cardId) {
   switch (cardId) {
     case "hedge_fund":
       gainCredits(state, "corp", 9);
@@ -21423,7 +21379,7 @@ function resolveCorpOperation(state, cardId, card) {
       gainCredits(state, "corp", 15);
       break;
     case "seamless_launch": {
-      const candidates = corpInstalledCards(state).filter((c) => !state.corp.installedThisTurn.includes(c.id));
+      const candidates = corpInstalled(state).filter((c) => !state.corp.installedThisTurn.includes(c.id));
       const targets = candidates;
       if (targets.length === 0) {
         state.supportWarnings.push("Seamless Launch found no legal target; it resolves without placing counters");
@@ -21453,7 +21409,6 @@ function resolveCorpOperation(state, cardId, card) {
     default:
       break;
   }
-  void card;
 }
 function playRunnerEvent(state, cardId, server) {
   const card = state.runner.hand.find((c) => c.cardId === cardId);
@@ -21599,12 +21554,6 @@ function enterEndOfTurn(state) {
 function startFirstTurn(state) {
   state.turn.phase = "action";
   beginCorpTurn(state);
-}
-function corpInstalledCards(state) {
-  return state.servers.flatMap((s) => [
-    ...s.root,
-    ...s.ice
-  ]);
 }
 
 // src/ai/fast-clone.ts
@@ -22183,7 +22132,8 @@ function assertSize(actual, expected, what, expectedDesc) {
 
 // src/engine/public-status.ts
 var HIDDEN2 = "hidden";
-function viewCard(card, hidden, position) {
+function viewCard(card, opts = {}) {
+  const hidden = opts.hidden === true;
   return {
     id: card.id,
     cardId: hidden ? HIDDEN2 : card.cardId,
@@ -22194,17 +22144,18 @@ function viewCard(card, hidden, position) {
     strength: hidden ? void 0 : cardDef(card.cardId).strength ?? void 0,
     strengthBoost: hidden ? void 0 : card.strengthBoost,
     iceIndex: card.iceIndex,
-    position,
+    position: opts.position,
     zone: card.zone,
     server: card.server
   };
 }
+function visiblePrompt(prompt, viewer) {
+  if (prompt.player === viewer) return prompt;
+  return promptStub(prompt);
+}
 function installedCards(state, side) {
   if (side === "runner") return state.runner.installed;
-  return state.servers.flatMap((s) => [
-    ...s.root,
-    ...s.ice
-  ]);
+  return corpInstalled(state);
 }
 function publicPlayer(state, side, viewer) {
   const p2 = player(state, side);
@@ -22219,9 +22170,11 @@ function publicPlayer(state, side, viewer) {
     handSize: maxHandSize(state, side),
     deckCount: p2.deck.length,
     discardCount: p2.discard.length,
-    identity: viewCard(p2.identity, false),
-    score: p2.score.map((c) => viewCard(c, false)),
-    installed: installedCards(state, side).map((c) => viewCard(c, hideInstalled && c.rezzed !== true))
+    identity: viewCard(p2.identity),
+    score: p2.score.map((c) => viewCard(c)),
+    installed: installedCards(state, side).map((c) => viewCard(c, {
+      hidden: hideInstalled && c.rezzed !== true
+    }))
   };
 }
 function serverStatus(state, id, hideInstalled) {
@@ -22229,8 +22182,13 @@ function serverStatus(state, id, hideInstalled) {
   const iceVisible = s.ice.filter((c) => !hideInstalled || c.rezzed === true);
   return {
     id,
-    root: s.root.map((c) => viewCard(c, hideInstalled && c.rezzed !== true, "root")),
-    ice: iceVisible.map((c) => viewCard(c, false, "ice")),
+    root: s.root.map((c) => viewCard(c, {
+      hidden: hideInstalled && c.rezzed !== true,
+      position: "root"
+    })),
+    ice: iceVisible.map((c) => viewCard(c, {
+      position: "ice"
+    })),
     unrezzedIceCount: s.ice.length - iceVisible.length
   };
 }
@@ -22244,7 +22202,11 @@ function publicRun(state, hideCorpInstalled) {
   let currentIce2 = null;
   if (iceId) {
     const found = findCard(state, iceId);
-    if (found) currentIce2 = viewCard(found.card, hideCorpInstalled && found.card.rezzed !== true);
+    if (found) {
+      currentIce2 = viewCard(found.card, {
+        hidden: hideCorpInstalled && found.card.rezzed !== true
+      });
+    }
   }
   return {
     server: run.server,
@@ -22962,31 +22924,14 @@ function accessedId(state) {
 
 // src/mod.ts
 var HIDDEN3 = "hidden";
-function viewCard2(card, opts = {}) {
-  const hidden = opts.hidden === true;
-  return {
-    id: card.id,
-    cardId: hidden ? HIDDEN3 : card.cardId,
-    owner: card.owner,
-    rezzed: card.rezzed,
-    advancement: card.advancement,
-    hostedCredits: card.hostedCredits,
-    strength: hidden ? void 0 : cardDef(card.cardId).strength ?? void 0,
-    strengthBoost: hidden ? void 0 : card.strengthBoost,
-    iceIndex: card.iceIndex,
-    position: opts.position,
-    zone: card.zone,
-    server: card.server
-  };
-}
 function corpInstalledView(state, viewer) {
   const hide = viewer !== "corp";
   return state.servers.flatMap((s) => [
-    ...s.root.map((c) => viewCard2(c, {
+    ...s.root.map((c) => viewCard(c, {
       hidden: hide && c.rezzed !== true,
       position: "root"
     })),
-    ...s.ice.map((c) => viewCard2(c, {
+    ...s.ice.map((c) => viewCard(c, {
       hidden: hide && c.rezzed !== true,
       position: "ice"
     }))
@@ -23023,12 +22968,12 @@ function turnStateOf(state, side) {
   };
 }
 function handView(state, side, viewer) {
-  return side === viewer ? player(state, side).hand.map((c) => viewCard2(c)) : [];
+  return side === viewer ? player(state, side).hand.map((c) => viewCard(c)) : [];
 }
 function discardView(state, side, viewer) {
   const p2 = player(state, side);
-  if (side === "runner" || side === viewer) return p2.discard.map((c) => viewCard2(c));
-  return p2.discard.map((c) => viewCard2(c, {
+  if (side === "runner" || side === viewer) return p2.discard.map((c) => viewCard(c));
+  return p2.discard.map((c) => viewCard(c, {
     hidden: true
   }));
 }
@@ -23053,8 +22998,8 @@ function getPlayerView(state, viewer) {
       discardCount: corpSide.discardCount,
       agendaPoints: state.corp.agendaPoints,
       tags: state.corp.tags,
-      identity: viewCard2(state.corp.identity),
-      score: corpSide.score.map((c) => viewCard2(c)),
+      identity: viewCard(state.corp.identity),
+      score: corpSide.score.map((c) => viewCard(c)),
       installed: corpInstalledView(state, viewer),
       hand: handView(state, "corp", viewer),
       discard: discardView(state, "corp", viewer),
@@ -23068,9 +23013,9 @@ function getPlayerView(state, viewer) {
       deckCount: runnerSide.deckCount,
       discardCount: runnerSide.discardCount,
       agendaPoints: state.runner.agendaPoints,
-      identity: viewCard2(state.runner.identity),
-      score: runnerSide.score.map((c) => viewCard2(c)),
-      installed: runnerSide.installed.map((c) => viewCard2(c)),
+      identity: viewCard(state.runner.identity),
+      score: runnerSide.score.map((c) => viewCard(c)),
+      installed: runnerSide.installed.map((c) => viewCard(c)),
       hand: handView(state, "runner", viewer),
       discard: discardView(state, "runner", viewer),
       tags: state.runner.tags,
@@ -23080,7 +23025,7 @@ function getPlayerView(state, viewer) {
       server: state.run.server,
       phase: state.run.phase,
       position: state.run.position,
-      currentIce: state.run.currentIceId ? viewCard2(findCard(state, state.run.currentIceId)?.card ?? state.corp.identity, {
+      currentIce: state.run.currentIceId ? viewCard(findCard(state, state.run.currentIceId)?.card ?? state.corp.identity, {
         // The ice being approached is public once rezzed (rules 1.21.1a,
         // 4.6.3): every player reads Rezzed ice off the table.
         hidden: viewer !== "corp" && findCard(state, state.run.currentIceId)?.card.rezzed !== true,
@@ -23104,21 +23049,13 @@ function getPlayerView(state, viewer) {
       chosen: [
         ...state.breach.chosen
       ],
-      accessing: state.breach.accessing ? viewCard2(findCard(state, state.breach.accessing)?.card ?? state.corp.identity) : void 0
+      accessing: state.breach.accessing ? viewCard(findCard(state, state.breach.accessing)?.card ?? state.corp.identity) : void 0
     } : null,
     prompts: state.prompts.map((p2) => visiblePrompt(p2, viewer)),
     events: state.log.map((e) => visibleEvent(state, e, viewer)),
     warnings: [
       ...state.supportWarnings
     ]
-  };
-}
-function visiblePrompt(prompt, viewer) {
-  if (prompt.player === viewer) return prompt;
-  return {
-    kind: prompt.kind,
-    id: prompt.id,
-    player: prompt.player
   };
 }
 function visibleEvent(state, event, viewer) {
@@ -23202,8 +23139,8 @@ var engine = {
   getLegalMoves(state, player2) {
     return getLegalMoves(state, player2);
   },
-  applyMove(state, player2, move, opts = {}) {
-    return applyMove(state, player2, move, opts);
+  applyMove(state, player2, move) {
+    return applyMove(state, player2, move);
   },
   /**
    * Public game status (rules 10.2.2/10.2.3): only information both players
@@ -23532,7 +23469,7 @@ var card_tile_default = defineComponent({
   emits: [
     "zoom"
   ],
-  setup(props) {
+  setup(props, { emit: emit2 }) {
     const def2 = computed2(() => {
       const card = props.card;
       return card && card.cardId !== "hidden" ? cardOf(card.cardId) : null;
@@ -23543,19 +23480,28 @@ var card_tile_default = defineComponent({
     });
     const typeTag = computed2(() => def2.value ? def2.value.type : "");
     const isAgenda = computed2(() => typeTag.value === "agenda");
+    const isZoomable = computed2(() => Boolean(props.clickable && props.card && props.card.cardId !== "hidden"));
+    function onClick() {
+      const card = props.card;
+      if (isZoomable.value && card) emit2("zoom", card.cardId);
+    }
     return {
       def: def2,
       img,
       typeTag,
-      isAgenda
+      isAgenda,
+      isZoomable,
+      onClick
     };
   },
   template: `
-    <div
+    <component
+      :is="isZoomable ? 'button' : 'div'"
+      :type="isZoomable ? 'button' : undefined"
       class="card-tile"
       :class="{ facedown, ice, highlight, small, 'is-agenda': isAgenda, clickable }"
       :title="def ? def.title + '\\n' + def.strippedText : 'Facedown card'"
-      @click="clickable && card && card.cardId !== 'hidden' && $emit('zoom', card.cardId)"
+      @click="onClick"
     >
       <img v-if="img" class="card-img" :src="img" :alt="def ? def.title : ''" loading="lazy" />
       <div v-else class="card-face-fallback">
@@ -23575,6 +23521,165 @@ var card_tile_default = defineComponent({
       <div v-if="badge" class="counter badge-counter">{{ badge }}</div>
       <div v-if="card && card.rezzed === false && !facedown" class="unrezzed-flag">D</div>
       <div v-if="facedown && !corp" class="facedown-label">?</div>
+    </component>
+  `
+});
+
+// src/web/ui/action-panel.ts
+function moveKey(m) {
+  return JSON.stringify(m);
+}
+var action_panel_default = defineComponent({
+  name: "ActionPanel",
+  components: {
+    CardTile: card_tile_default
+  },
+  props: {
+    state: {
+      type: Object,
+      required: true
+    },
+    /** Whether it is the human player's turn to act. */
+    humanTurn: {
+      type: Boolean,
+      default: false
+    },
+    /** The AI is mid-decision (waiting banner wording). */
+    thinking: {
+      type: Boolean,
+      default: false
+    },
+    /** The card the human is accessing (shows the access notice). */
+    accessedCardId: {
+      type: String,
+      default: null
+    },
+    /** The human's own prompt, if any. */
+    prompt: {
+      type: Object,
+      default: null
+    },
+    /** All legal moves for the human (prompt buttons). */
+    legal: {
+      type: Array,
+      default: () => []
+    },
+    /** Legal moves minus card/run/tile-hosted ones (general moves list). */
+    generalMoves: {
+      type: Array,
+      default: () => []
+    },
+    /** The human player's hand (discard picker tiles). */
+    hand: {
+      type: Array,
+      default: () => []
+    },
+    /** Cards picked in the discard picker so far. */
+    discardSelected: {
+      type: Array,
+      default: () => []
+    },
+    /** Whether the current discard selection can be submitted. */
+    canDiscard: {
+      type: Boolean,
+      default: false
+    }
+  },
+  emits: [
+    "move",
+    "zoom",
+    "discard-toggle",
+    "discard-submit",
+    "open-access"
+  ],
+  setup(props) {
+    const discardCount = computed2(() => props.prompt && props.prompt.kind === "discard" ? props.prompt.count : 0);
+    function label(move) {
+      return describeMove(props.state, move);
+    }
+    return {
+      label,
+      moveKey,
+      promptTitle,
+      discardCount,
+      cardTitle
+    };
+  },
+  template: `
+    <div class="action-panel" data-testid="action-panel">
+      <template v-if="state.winner">
+        <div class="banner-win">Winner: {{ state.winner }} <span v-if="state.winReason">({{ state.winReason }})</span></div>
+      </template>
+
+      <template v-else-if="!humanTurn">
+        <div class="banner-wait">
+          <template v-if="thinking">Corp is planning its move\u2026</template>
+          <template v-else>Waiting for the Corp\u2026</template>
+        </div>
+      </template>
+
+      <template v-else>
+        <!-- Access decisions live on the card popup (rule 7.2.2), so the
+             action panel shows nothing while one is pending. Clicking the
+             notice reopens the popup. -->
+        <button
+          v-if="accessedCardId"
+          class="banner-wait banner-access"
+          data-testid="access-notice"
+          @click="$emit('open-access')"
+        >
+          Accessing {{ cardTitle(accessedCardId) }} \u2014 decide on the card
+        </button>
+
+        <div v-else-if="prompt" class="prompt-box" data-testid="prompt">
+          <div class="prompt-title">{{ promptTitle(prompt) }}</div>
+
+          <div v-if="prompt.kind === 'discard'" class="discard-picker">
+            <div class="hint">Choose {{ discardCount }} card(s) to discard:</div>
+            <div class="hand-row picker">
+              <button
+                v-for="c in hand"
+                :key="c.id"
+                type="button"
+                class="pick-slot"
+                :class="{ picked: discardSelected.includes(c.id) }"
+                @click="$emit('discard-toggle', c.id)"
+              >
+                <card-tile
+                  :card="{ cardId: c.cardId, rezzed: true, advancement: 0 }"
+                  :badge="discardSelected.includes(c.id) ? '\u2713' : ''"
+                  small
+                  clickable
+                  @zoom="$emit('zoom', c.cardId)"
+                />
+              </button>
+            </div>
+            <button class="move-btn primary" :disabled="!canDiscard" @click="$emit('discard-submit')" data-testid="discard-submit">
+              Discard selected
+            </button>
+          </div>
+
+          <div v-else class="moves">
+            <button
+              v-for="m in legal"
+              :key="moveKey(m)"
+              class="move-btn"
+              @click="$emit('move', m)"
+              :data-move="m.kind"
+            >{{ label(m) }}</button>
+          </div>
+        </div>
+
+        <div v-else class="moves" data-testid="action-moves">
+          <button
+            v-for="m in generalMoves"
+            :key="moveKey(m)"
+            class="move-btn"
+            @click="$emit('move', m)"
+            :data-move="m.kind"
+          >{{ label(m) }}</button>
+        </div>
+      </template>
     </div>
   `
 });
@@ -23601,10 +23706,15 @@ var card_zoom_default = defineComponent({
     const def2 = computed2(() => props.cardId ? cardOf(props.cardId) : null);
     const img = computed2(() => props.cardId ? imageFor(props.cardId) : null);
     const text = computed2(() => props.cardId ? plainCardText(props.cardId) : "");
+    const backdropRef = ref(null);
+    onMounted(() => {
+      backdropRef.value?.focus();
+    });
     return {
       def: def2,
       img,
       text,
+      backdropRef,
       onClose: () => emit2("close")
     };
   },
@@ -23612,6 +23722,7 @@ var card_zoom_default = defineComponent({
     <transition name="zoom">
       <div
         v-if="cardId"
+        ref="backdropRef"
         class="zoom-backdrop"
         @click.self="onClose"
         @keydown.escape="onClose"
@@ -23669,19 +23780,293 @@ var card_zoom_default = defineComponent({
   `
 });
 
-// src/web/ui/game.ts
+// src/web/ui/server-column.ts
 var SERVER_GLYPH = {
   rd: "assets/svg/rd.svg",
   archives: "assets/svg/archives.svg"
 };
-function moveKey(m) {
+function serverGlyphFor(id) {
+  return SERVER_GLYPH[id] ?? "";
+}
+function isCentralId(id) {
+  return id === "hq" || id === "rd" || id === "archives";
+}
+function remoteLabelFor(id) {
+  return id.replace("-", " ");
+}
+var server_column_default = defineComponent({
+  name: "ServerColumn",
+  components: {
+    CardTile: card_tile_default
+  },
+  props: {
+    /** The public server row for this column. */
+    server: {
+      type: Object,
+      required: true
+    },
+    /** Whether the human player sits in the Corp seat (drives the CSS flip). */
+    corpSeat: {
+      type: Boolean,
+      default: false
+    },
+    /** The Corp's identity card id, or null when it could not be resolved. */
+    identityCardId: {
+      type: String,
+      default: null
+    },
+    /** The HQ identity art, or null to render the glyph face. */
+    identityImg: {
+      type: String,
+      default: null
+    },
+    /** The legal runner.run move for this server, if one exists. */
+    runMove: {
+      type: Object,
+      default: void 0
+    },
+    /** A run is in progress (Run buttons hide while one is active). */
+    runInProgress: {
+      type: Boolean,
+      default: false
+    },
+    /** Instance id of the ice the run is currently at (highlight). */
+    currentIceId: {
+      type: String,
+      default: null
+    }
+  },
+  emits: [
+    "move",
+    "zoom",
+    "zoom-identity",
+    "identity-error"
+  ],
+  setup(props) {
+    function isCurrentIce(card) {
+      return props.currentIceId !== null && card.id === props.currentIceId;
+    }
+    return {
+      isCentralId,
+      serverGlyphFor,
+      remoteLabelFor,
+      isCurrentIce,
+      cardTitle
+    };
+  },
+  template: `
+    <div class="server" :class="isCentralId(server.id) ? 'central' : 'remote'">
+      <!-- Central servers (hq, rd, archives) keep their dedicated server
+           card (corp back + glyph + name). HQ additionally shows the
+           Corp's identity card (open information, rule 10.2.3); the
+           @error flag falls back to the glyph when the art is missing. -->
+      <template v-if="isCentralId(server.id)">
+        <div
+          class="server-card"
+          :class="{ clickable: server.id === 'hq' && identityImg }"
+          @click="$emit('zoom-identity', server.id)"
+        >
+          <img class="corp-back-img" src="assets/corp-back.svg" alt="" />
+          <div v-if="server.id === 'hq' && identityImg" class="server-card-face identity-face">
+            <img
+              class="identity-art"
+              :src="identityImg"
+              :alt="cardTitle(identityCardId)"
+              @error="$emit('identity-error')"
+            />
+            <span class="server-name">{{ cardTitle(identityCardId) }}</span>
+          </div>
+          <div v-else class="server-card-face">
+            <img class="server-glyph" :src="serverGlyphFor(server.id)" :alt="cardTitle(server.id)" />
+            <span class="server-name">{{ cardTitle(server.id) }}</span>
+          </div>
+        </div>
+      </template>
+      <!-- Remotes: a small label nearest the corp side, shown only when the
+           server has a root card or ice. -->
+      <template v-else>
+        <div
+          v-if="server.root.length || server.ice.length || server.unrezzedIceCount"
+          class="server-label"
+        >{{ remoteLabelFor(server.id) }}</div>
+      </template>
+      <!-- Root row and ice stack render for BOTH kinds. Remotes with only
+           ice reserve a one-card root-slot space (blank, no glyph/back) so
+           the layout doesn't jump when a root card is later installed; a
+           completely empty remote draws nothing else at all (only its Run
+           button). Central roots hold at most an upgrade. unrezzedIceCount
+           covers ice the Runner cannot identify yet (public status redacts
+           the cards, the count stays open information). -->
+      <div v-if="server.root.length" class="server-root-row">
+        <template v-for="c in server.root" :key="c.id">
+          <card-tile
+            v-if="c.cardId !== 'hidden'"
+            :card="{ cardId: c.cardId, rezzed: c.rezzed, advancement: c.advancement }"
+            small
+            clickable
+            @zoom="$emit('zoom', c.cardId)"
+          />
+          <card-tile v-else facedown small corp />
+        </template>
+      </div>
+      <div
+        v-else-if="!isCentralId(server.id) && (server.ice.length || server.unrezzedIceCount)"
+        class="server-root-row server-root-empty"
+      ></div>
+      <div class="server-ice-stack">
+        <div v-for="card in server.ice" :key="card.id" class="ice-slot">
+          <card-tile
+            :card="card"
+            ice
+            clickable
+            :highlight="isCurrentIce(card)"
+            :badge="isCurrentIce(card) ? 'RUN' : ''"
+            @zoom="$emit('zoom', card.cardId)"
+          />
+        </div>
+        <div v-for="n in server.unrezzedIceCount" :key="'u' + server.id + n" class="ice-slot facedown">
+          <card-tile facedown ice corp />
+        </div>
+      </div>
+      <button
+        v-if="runMove && !runInProgress"
+        class="run-btn"
+        :data-testid="'run-' + server.id"
+        @click="runMove && $emit('move', runMove)"
+      >Run</button>
+    </div>
+  `
+});
+
+// src/web/ui/status-block.ts
+function sideGlyph(side) {
+  return side === "corp" ? "assets/svg/faction-hb.svg" : "assets/svg/faction-criminal.svg";
+}
+function discardName(side) {
+  return side === "corp" ? "Archives" : "Heap";
+}
+var status_block_default = defineComponent({
+  name: "StatusBlock",
+  props: {
+    /** Which player this block shows (drives data-side, colors, zone names). */
+    side: {
+      type: String,
+      required: true
+    },
+    /** The viewer-aware public status object for `side`. */
+    stats: {
+      type: Object,
+      required: true
+    },
+    /** Agenda-point target, shared by both seats ("x/target" readout). */
+    agendaTarget: {
+      type: Number,
+      required: true
+    },
+    /** Whether this side is the turn's acting player (highlight). */
+    active: {
+      type: Boolean,
+      default: false
+    },
+    /** Whether this is the human player's own block ("(you)" tag + tiles). */
+    isOwn: {
+      type: Boolean,
+      default: false
+    },
+    /** Legal gain-credit move: turns the credits stat into the action button. */
+    gainMove: {
+      type: Object,
+      default: null
+    },
+    /** Legal draw move: turns the hand stat into the action button. */
+    drawMove: {
+      type: Object,
+      default: null
+    }
+  },
+  emits: [
+    "move"
+  ],
+  setup(_props) {
+    return {
+      sideGlyph,
+      discardName,
+      cardTitle
+    };
+  },
+  template: `
+    <section
+      class="status-block"
+      :class="[side, isOwn ? 'status-own' : 'status-opponent', { active }]"
+      :data-testid="isOwn ? 'status-own' : 'status-opponent'"
+      :data-side="side"
+    >
+      <div class="status-who">
+        <img class="glyph-side" :src="sideGlyph(side)" alt="" />
+        <span class="who">{{ side === 'corp' ? 'CORP' : 'RUNNER' }}<template v-if="isOwn"> (you)</template></span>
+        <span v-if="active" class="acting-tag">acting</span>
+        <span v-if="!isOwn" class="opp-tag">opponent</span>
+      </div>
+      <div class="status-primary">
+        <button
+          v-if="isOwn"
+          class="primary-stat credits"
+          :class="{ clickable: !!gainMove }"
+          :disabled="!gainMove"
+          data-testid="gain-credit"
+          title="Gain 1 credit"
+          @click="gainMove && $emit('move', gainMove)"
+        >
+          <img class="sym" src="assets/svg/credit.svg" alt="Credits" />
+          <span class="primary-val">{{ stats.credits }}</span>
+        </button>
+        <div v-else class="primary-stat credits">
+          <img class="sym" src="assets/svg/credit.svg" alt="Credits" />
+          <span class="primary-val">{{ stats.credits }}</span>
+        </div>
+        <div class="primary-stat agenda">
+          <img class="sym" src="assets/svg/agenda.svg" alt="Agenda points" />
+          <span class="primary-val">{{ stats.agendaPoints }}/{{ agendaTarget }}</span>
+        </div>
+      </div>
+      <div class="status-secondary">
+        <span class="stat"><img class="sym" src="assets/svg/click.svg" alt="Clicks" />{{ stats.clicks }}</span>
+        <button
+          v-if="isOwn"
+          class="stat"
+          :class="{ clickable: !!drawMove }"
+          :disabled="!drawMove"
+          data-testid="draw-card"
+          title="Draw 1 card"
+          @click="drawMove && $emit('move', drawMove)"
+        >
+          hand {{ stats.handCount }}/{{ stats.handSize }}
+        </button>
+        <span v-else class="stat">hand {{ stats.handCount }}/{{ stats.handSize }}</span>
+        <span class="stat">deck {{ stats.deckCount }}</span>
+        <span class="stat">{{ discardName(side) }} {{ stats.discardCount }}</span>
+        <span v-if="side === 'runner' && stats.tags" class="stat"><img class="sym" src="assets/svg/tag.svg" alt="Tags" />{{ stats.tags }}</span>
+        <span v-if="side === 'corp' && stats.tags" class="stat">bad pub {{ stats.tags }}</span>
+      </div>
+      <span v-if="stats.score.length" class="score-strip" :data-testid="side + '-score'">
+        <img v-for="c in stats.score" :key="c.id" class="mini-card" :src="'images/' + c.cardId + '.webp'" :alt="cardTitle(c.cardId)" />
+      </span>
+    </section>
+  `
+});
+
+// src/web/ui/game.ts
+function moveKey2(m) {
   return JSON.stringify(m);
 }
 var game_default = defineComponent({
   name: "GameScreen",
   components: {
+    ActionPanel: action_panel_default,
     CardTile: card_tile_default,
-    CardZoom: card_zoom_default
+    CardZoom: card_zoom_default,
+    ServerColumn: server_column_default,
+    StatusBlock: status_block_default
   },
   props: {
     state: {
@@ -23735,14 +24120,12 @@ var game_default = defineComponent({
     const prompt = computed2(() => promptFor(props.state, props.humanSide));
     const legal = computed2(() => isHumanTurn.value ? engine.getLegalMoves(props.state, props.humanSide) : []);
     const hand = computed2(() => handOf(props.state, props.humanSide));
-    const discardCount = computed2(() => prompt.value && prompt.value.kind === "discard" ? prompt.value.count : 0);
     const selectedKey = computed2(() => [
       ...discardSelected.value
     ].sort().join(","));
     const canDiscard = computed2(() => {
-      if (!discardCount.value || discardSelected.value.length !== discardCount.value) {
-        return false;
-      }
+      if (!prompt.value || prompt.value.kind !== "discard") return false;
+      if (discardSelected.value.length !== prompt.value.count) return false;
       return legal.value.some((m) => m.kind === "discard" && [
         ...m.cardInstanceIds
       ].sort().join(",") === selectedKey.value);
@@ -23762,6 +24145,7 @@ var game_default = defineComponent({
       }
       return null;
     });
+    const currentIceId = computed2(() => run.value?.currentIce?.id ?? null);
     const accessActions = computed2(() => {
       const actions = [];
       for (const p2 of props.state.prompts) {
@@ -23800,16 +24184,10 @@ var game_default = defineComponent({
       if (!isHumanTurn.value || prompt.value || accessedCard.value) return null;
       return legal.value.find((m) => m.kind === "corp.gainCredits" || m.kind === "runner.gainCredits") ?? null;
     });
-    function playGainCredits() {
-      if (gainCreditsMove.value) play(gainCreditsMove.value);
-    }
     const drawMove = computed2(() => {
       if (!isHumanTurn.value || prompt.value || accessedCard.value) return null;
       return legal.value.find((m) => m.kind === "corp.draw" || m.kind === "runner.draw") ?? null;
     });
-    function playDraw() {
-      if (drawMove.value) play(drawMove.value);
-    }
     watch2(() => props.state, () => {
       discardSelected.value = [];
     });
@@ -23817,16 +24195,13 @@ var game_default = defineComponent({
       zoomCardId.value = card && card.cardId !== "hidden" ? card.cardId : null;
       zoomHandCardId.value = null;
     });
-    function label(move) {
-      return describeMove(props.state, move);
-    }
     function name(cardId) {
-      return cardTitle(cardId);
+      return cardTitle(cardId ?? "");
     }
     function toggleDiscard(id) {
       if (discardSelected.value.includes(id)) {
         discardSelected.value = discardSelected.value.filter((x) => x !== id);
-      } else if (discardSelected.value.length < discardCount.value) {
+      } else if (prompt.value && prompt.value.kind === "discard" && discardSelected.value.length < prompt.value.count) {
         discardSelected.value = [
           ...discardSelected.value,
           id
@@ -23859,25 +24234,8 @@ var game_default = defineComponent({
       play(move);
       closeZoom();
     }
-    function isCurrentIce(card) {
-      const r = status.value.run;
-      if (!r || !r.currentIce) return false;
-      return card.id === r.currentIce.id;
-    }
-    function sideGlyph(side) {
-      return side === "corp" ? "assets/svg/faction-hb.svg" : "assets/svg/faction-criminal.svg";
-    }
-    function discardName(side) {
-      return side === "corp" ? "Archives" : "Heap";
-    }
-    function serverGlyph(id) {
-      return SERVER_GLYPH[id] ?? "";
-    }
-    function isCentral2(id) {
-      return id === "hq" || id === "rd" || id === "archives";
-    }
-    function remoteLabel(id) {
-      return id.replace("-", " ");
+    function openAccessZoom() {
+      if (accessedCard.value) zoom(accessedCard.value.cardId);
     }
     function runMove(server) {
       return legal.value.find((m) => m.kind === "runner.run" && m.server === server);
@@ -23930,14 +24288,11 @@ var game_default = defineComponent({
       }
     }
     return {
-      // data
       discardSelected,
       zoomCardId,
       zoomHandCardId,
       logOpen,
-      // computed
       status,
-      actor,
       isHumanTurn,
       isAiTurn,
       corp,
@@ -23950,55 +24305,42 @@ var game_default = defineComponent({
       legal,
       generalMoves,
       hand,
-      discardCount,
       canDiscard,
       events,
       warnings,
       run,
       breach,
       accessedCard,
-      accessActions,
+      currentIceId,
       zoomActions,
       serverRows,
       gainCreditsMove,
       drawMove,
-      // methods
-      label,
+      hqIdentity,
+      hqIdentityImg,
       name,
-      moveKey,
+      moveKey: moveKey2,
       toggleDiscard,
       submitDiscard,
       play,
-      playGainCredits,
-      playDraw,
       playFromZoom,
       zoom,
       zoomHand,
       closeZoom,
-      isCurrentIce,
-      serverGlyph,
-      sideGlyph,
-      discardName,
-      isCentral: isCentral2,
-      remoteLabel,
+      openAccessZoom,
+      zoomHqIdentity,
       runMove,
-      promptTitle,
       handActionsFor,
       shortActionLabel,
-      hqIdentity,
-      hqIdentityImg,
-      zoomHqIdentity,
       identityImgFailed
     };
   },
   template: `
     <div class="game">
-      <!-- ================= STATUS DOCK (left) =================
-           Mirrors the game-log dock width. Carries the title (turn badge
-           style) plus the OPPONENT's and the human player's OWN status
-           blocks; .status-block's flex: 1 1 0 splits the dock evenly
-           between them. data-side marks which side each block shows;
-           active marks state.turn.player. -->
+      <!-- Status dock (left): turn badge + alerts + one StatusBlock per seat.
+           .status-block's flex: 1 1 0 splits the dock evenly between them;
+           data-side marks which side each block shows; active marks
+           state.turn.player. -->
       <aside class="status-dock" data-testid="status-dock">
         <div class="status-half">
         <div class="status-title" data-testid="status-title">
@@ -24020,316 +24362,117 @@ var game_default = defineComponent({
           </span>
           <span v-if="lastWarning" class="chip warn">{{ lastWarning }}</span>
         </div>
-        <section
-          class="status-block status-opponent"
-          :class="[opponentSide, { active: state.turn.player === opponentSide }]"
-          data-testid="status-opponent"
-          :data-side="opponentSide"
-        >
-          <div class="status-who">
-            <img class="glyph-side" :src="sideGlyph(opponentSide)" alt="" />
-            <span class="who">{{ opponentSide === 'corp' ? 'CORP' : 'RUNNER' }}</span>
-            <span v-if="state.turn.player === opponentSide" class="acting-tag">acting</span>
-            <span class="opp-tag">opponent</span>
-          </div>
-          <div class="status-primary">
-            <div class="primary-stat credits">
-              <img class="sym" src="assets/svg/credit.svg" alt="Credits" />
-              <span class="primary-val">{{ opponent.credits }}</span>
-            </div>
-            <div class="primary-stat agenda">
-              <img class="sym" src="assets/svg/agenda.svg" alt="Agenda points" />
-              <span class="primary-val">{{ opponent.agendaPoints }}/{{ status.agendaPointTarget }}</span>
-            </div>
-          </div>
-          <div class="status-secondary">
-            <span class="stat"><img class="sym" src="assets/svg/click.svg" alt="Clicks" />{{ opponent.clicks }}</span>
-            <span class="stat">hand {{ opponent.handCount }}/{{ opponent.handSize }}</span>
-            <span class="stat">deck {{ opponent.deckCount }}</span>
-            <span class="stat">{{ discardName(opponentSide) }} {{ opponent.discardCount }}</span>
-            <span v-if="opponentSide === 'runner' && opponent.tags" class="stat"><img class="sym" src="assets/svg/tag.svg" alt="Tags" />{{ opponent.tags }}</span>
-            <span v-if="opponentSide === 'corp' && opponent.tags" class="stat">bad pub {{ opponent.tags }}</span>
-          </div>
-          <span v-if="opponent.score.length" class="score-strip" :data-testid="opponentSide + '-score'">
-            <img v-for="c in opponent.score" :key="c.id" class="mini-card" :src="'images/' + c.cardId + '.webp'" :alt="name(c.cardId)" />
-          </span>
-        </section>
-        <section
-          class="status-block status-own"
-          :class="[ownSide, { active: state.turn.player === ownSide }]"
-          data-testid="status-own"
-          :data-side="ownSide"
-        >
-          <div class="status-who">
-            <img class="glyph-side" :src="sideGlyph(ownSide)" alt="" />
-            <span class="who">{{ ownSide === 'corp' ? 'CORP' : 'RUNNER' }} (you)</span>
-            <span v-if="state.turn.player === ownSide" class="acting-tag">acting</span>
-          </div>
-          <div class="status-primary">
-            <button
-              class="primary-stat credits"
-              :class="{ clickable: !!gainCreditsMove }"
-              :disabled="!gainCreditsMove"
-              data-testid="gain-credit"
-              title="Gain 1 credit"
-              @click="playGainCredits"
-            >
-              <img class="sym" src="assets/svg/credit.svg" alt="Credits" />
-              <span class="primary-val">{{ own.credits }}</span>
-            </button>
-            <div class="primary-stat agenda">
-              <img class="sym" src="assets/svg/agenda.svg" alt="Agenda points" />
-              <span class="primary-val">{{ own.agendaPoints }}/{{ status.agendaPointTarget }}</span>
-            </div>
-          </div>
-          <div class="status-secondary">
-            <span class="stat"><img class="sym" src="assets/svg/click.svg" alt="Clicks" />{{ own.clicks }}</span>
-            <button
-              class="stat"
-              :class="{ clickable: !!drawMove }"
-              :disabled="!drawMove"
-              data-testid="draw-card"
-              title="Draw 1 card"
-              @click="playDraw"
-            >
-              hand {{ own.handCount }}/{{ own.handSize }}
-            </button>
-            <span class="stat">deck {{ own.deckCount }}</span>
-            <span class="stat">{{ discardName(ownSide) }} {{ own.discardCount }}</span>
-            <span v-if="ownSide === 'runner' && own.tags" class="stat"><img class="sym" src="assets/svg/tag.svg" alt="Tags" />{{ own.tags }}</span>
-            <span v-if="ownSide === 'corp' && own.tags" class="stat">bad pub {{ own.tags }}</span>
-          </div>
-          <span v-if="own.score.length" class="score-strip" :data-testid="ownSide + '-score'">
-            <img v-for="c in own.score" :key="c.id" class="mini-card" :src="'images/' + c.cardId + '.webp'" :alt="name(c.cardId)" />
-          </span>
-        </section>
+        <status-block
+          :side="opponentSide"
+          :stats="opponent"
+          :agenda-target="status.agendaPointTarget"
+          :active="state.turn.player === opponentSide"
+        />
+        <status-block
+          :side="ownSide"
+          :stats="own"
+          :agenda-target="status.agendaPointTarget"
+          :active="state.turn.player === ownSide"
+          is-own
+          :gain-move="gainCreditsMove"
+          :draw-move="drawMove"
+          @move="play"
+        />
         </div>
       </aside>
-      <!-- Perspective class stays for seat-specific tweaks (server ice flip
-           uses .corp-seat); the old in-flow strip order scheme is gone since
-           both statuses now live in the left dock. .game-main holds servers,
-           banner, action panel, hand, warnings top to bottom. -->
+      <!-- .game-main stacks servers, banner, action panel, hand, warnings
+           top to bottom. The corp-seat class on .servers drives the CSS
+           "order" flip that puts ice on the runner side. -->
       <div class="game-main" :class="'perspective-' + humanSide">
-      <!-- ================= SERVERS ================= -->
+      <!-- Servers: one ServerColumn per public server row; the corp-seat flip
+           (ice on the runner side) is CSS "order" on .server.central and
+           .server.remote children, keyed off .servers.corp-seat above. -->
         <div class="servers" data-testid="servers" :class="{ 'corp-seat': humanSide === 'corp' }">
-          <div v-for="s in serverRows" :key="s.id" class="server" :class="isCentral(s.id) ? 'central' : 'remote'">
-            <!-- Central servers (hq, rd, archives) keep their dedicated server
-                 card (corp back + glyph + name). HQ additionally shows the
-                 Corp's identity card (open information, rule 10.2.3); the
-                 @error flag falls back to the glyph when the art is missing. -->
-            <template v-if="isCentral(s.id)">
-              <div
-                class="server-card"
-                :class="{ clickable: s.id === 'hq' && hqIdentityImg }"
-                @click="zoomHqIdentity(s.id)"
-              >
-                <img class="corp-back-img" src="assets/corp-back.svg" alt="" />
-                <div v-if="s.id === 'hq' && hqIdentityImg" class="server-card-face identity-face">
-                  <img
-                    class="identity-art"
-                    :src="hqIdentityImg"
-                    :alt="name(hqIdentity)"
-                    @error="identityImgFailed = true"
-                  />
-                  <span class="server-name">{{ name(hqIdentity) }}</span>
-                </div>
-                <div v-else class="server-card-face">
-                  <img class="server-glyph" :src="serverGlyph(s.id)" :alt="name(s.id)" />
-                  <span class="server-name">{{ name(s.id) }}</span>
-                </div>
-              </div>
-            </template>
-            <!-- Remotes: a small label nearest the corp side, shown only when the
-                 server has a root card or ice. -->
-            <template v-else>
-              <div
-                v-if="s.root.length || s.ice.length || s.unrezzedIceCount"
-                class="server-label"
-              >{{ remoteLabel(s.id) }}</div>
-            </template>
-            <!-- Root row and ice stack render for BOTH kinds. Remotes with only
-                 ice reserve a one-card root-slot space (blank, no glyph/back) so
-                 the layout doesn't jump when a root card is later installed; a
-                 completely empty remote draws nothing else at all (only its Run
-                 button). Central roots hold at most an upgrade. unrezzedIceCount
-                 covers ice the Runner cannot identify yet (public status redacts
-                 the cards, the count stays open information).
-
-                 The DOM order below is one order for every case (server
-                 card/label -> root row -> ice stack -> Run); the column order
-                 is fixed up in CSS via order on .server.central AND
-                 .server.remote children (public/css/style.css). The screen is
-                 drawn from the human player's seat, own side at the bottom,
-                 so the ice must sit on the RUNNER side of the central server
-                 card and the remote root: as Runner (runner at the bottom)
-                 that is BELOW the card/root, which is this DOM order; as
-                 Corp (corp at the bottom, runner at the top) the ice stack
-                 moves ABOVE the card/root. The corp-seat class on .servers
-                 drives that flip. -->
-            <div v-if="s.root.length" class="server-root-row">
-              <template v-for="c in s.root" :key="c.id">
-                <card-tile
-                  v-if="c.cardId !== 'hidden'"
-                  :card="{ cardId: c.cardId, rezzed: c.rezzed, advancement: c.advancement }"
-                  small
-                  clickable
-                  @zoom="zoom"
-                />
-                <card-tile v-else facedown small corp />
-              </template>
-            </div>
-            <div
-              v-else-if="!isCentral(s.id) && (s.ice.length || s.unrezzedIceCount)"
-              class="server-root-row server-root-empty"
-            ></div>
-            <div class="server-ice-stack">
-              <div v-for="card in s.ice" :key="card.id" class="ice-slot">
-                <card-tile
-                  :card="card"
-                  ice
-                  clickable
-                  :highlight="isCurrentIce(card)"
-                  :badge="isCurrentIce(card) ? 'RUN' : ''"
-                  @zoom="zoom"
-                />
-              </div>
-              <div v-for="n in s.unrezzedIceCount" :key="'u' + s.id + n" class="ice-slot facedown">
-                <card-tile facedown ice corp />
-              </div>
-            </div>
-            <button
-              v-if="runMove(s.id) && !state.run"
-              class="run-btn"
-              @click="play(runMove(s.id))"
-              :data-testid="'run-' + s.id"
-            >Run</button>
-          </div>
+          <server-column
+            v-for="s in serverRows"
+            :key="s.id"
+            :server="s"
+            :corp-seat="humanSide === 'corp'"
+            :identity-card-id="hqIdentity"
+            :identity-img="hqIdentityImg"
+            :run-move="runMove(s.id)"
+            :run-in-progress="!!state.run"
+            :current-ice-id="currentIceId"
+            @move="play"
+            @zoom="zoom"
+            @zoom-identity="zoomHqIdentity"
+            @identity-error="identityImgFailed = true"
+          />
         </div>
 
-      <!-- ================= RUN / BREACH BANNER (run/breach context for the action row) ================= -->
-      <section v-if="run || breach" class="run-banner" data-testid="run-banner">
-        <template v-if="breach">
-          <span class="run-tag">BREACH</span> {{ name(breach.server) }} \xB7
-          <span v-if="breach.accessing">accessing a card\u2026</span>
-          <span v-else>{{ breach.randomAccessLimit - breach.randomAccessesUsed }} access(es) left</span>
-        </template>
-        <template v-else-if="run">
-          <span class="run-tag">RUN</span> on {{ name(run.server) }}
-          <template v-if="run.currentIce">
-            \xB7 approached {{ name(run.currentIce.cardId) }}
-            <span v-if="run.brokenSubroutines.length"> \xB7 {{ run.brokenSubroutines.length }} sub(s) broken</span>
+        <!-- Run / breach banner (run/breach context for the action row). -->
+        <section v-if="run || breach" class="run-banner" data-testid="run-banner">
+          <template v-if="breach">
+            <span class="run-tag">BREACH</span> {{ name(breach.server) }} \xB7
+            <span v-if="breach.accessing">accessing a card\u2026</span>
+            <span v-else>{{ breach.randomAccessLimit - breach.randomAccessesUsed }} access(es) left</span>
           </template>
-          <template v-else> \xB7 at {{ name(run.server) }}</template>
-        </template>
-      </section>
-
-      <!-- ================= ACTION PANEL ================= -->
-      <section class="action-row">
-        <div class="action-panel" data-testid="action-panel">
-          <template v-if="state.winner">
-            <div class="banner-win">Winner: {{ state.winner }} <span v-if="state.winReason">({{ state.winReason }})</span></div>
+          <template v-else-if="run">
+            <span class="run-tag">RUN</span> on {{ name(run.server) }}
+            <template v-if="run.currentIce">
+              \xB7 approached {{ name(run.currentIce.cardId) }}
+              <span v-if="run.brokenSubroutines.length"> \xB7 {{ run.brokenSubroutines.length }} sub(s) broken</span>
+            </template>
+            <template v-else> \xB7 at {{ name(run.server) }}</template>
           </template>
+        </section>
 
-          <template v-else-if="!isHumanTurn">
-            <div class="banner-wait">
-              <template v-if="thinking">Corp is planning its move\u2026</template>
-              <template v-else>Waiting for the Corp\u2026</template>
-            </div>
-          </template>
+        <!-- Action panel: winner/waiting banners, access notice, prompt box
+             (incl. the discard picker) and the moves list. -->
+        <section class="action-row">
+          <action-panel
+            :state="state"
+            :human-turn="isHumanTurn"
+            :thinking="thinking"
+            :accessed-card-id="accessedCard ? accessedCard.cardId : null"
+            :prompt="prompt"
+            :legal="legal"
+            :general-moves="generalMoves"
+            :hand="hand"
+            :discard-selected="discardSelected"
+            :can-discard="canDiscard"
+            @move="play"
+            @zoom="zoom"
+            @discard-toggle="toggleDiscard"
+            @discard-submit="submitDiscard"
+            @open-access="openAccessZoom"
+          />
+        </section>
 
-          <template v-else>
-            <!-- Access decisions live on the card popup (rule 7.2.2), so the
-                 action panel shows nothing while one is pending. Clicking the
-                 notice reopens the popup. -->
-            <button
-              v-if="accessedCard"
-              class="banner-wait banner-access"
-              data-testid="access-notice"
-              @click="zoom(accessedCard.cardId)"
-            >
-              Accessing {{ name(accessedCard.cardId) }} \u2014 decide on the card
-            </button>
-
-            <div v-else-if="prompt" class="prompt-box" data-testid="prompt">
-              <div class="prompt-title">{{ promptTitle(prompt) }}</div>
-
-              <div v-if="prompt.kind === 'discard'" class="discard-picker">
-                <div class="hint">Choose {{ discardCount }} card(s) to discard:</div>
-                <div class="hand-row picker">
-                  <div
-                    v-for="c in hand"
-                    :key="c.id"
-                    class="pick-slot"
-                    :class="{ picked: discardSelected.includes(c.id) }"
-                    @click="toggleDiscard(c.id)"
-                  >
-                    <card-tile
-                      :card="{ cardId: c.cardId, rezzed: true, advancement: 0 }"
-                      :badge="discardSelected.includes(c.id) ? '\u2713' : ''"
-                      small
-                      clickable
-                      @zoom="zoom"
-                    />
-                  </div>
-                </div>
-                <button class="move-btn primary" :disabled="!canDiscard" @click="submitDiscard" data-testid="discard-submit">
-                  Discard selected
-                </button>
-              </div>
-
-              <div v-else class="moves">
+        <!-- Hand (own grip, direct grid child via .hand-area wrapper). -->
+        <section class="hand-area">
+          <div class="hand-row runner-hand" data-testid="human-hand">
+            <div v-for="c in hand" :key="c.id" class="hand-card">
+              <card-tile
+                :card="{ cardId: c.cardId, rezzed: true, advancement: 0 }"
+                clickable
+                @zoom="zoomHand(c)"
+              />
+              <div v-if="handActionsFor(c).length && zoomHandCardId !== c.id" class="card-actions">
                 <button
-                  v-for="m in legal"
+                  v-for="m in handActionsFor(c)"
                   :key="moveKey(m)"
-                  class="move-btn"
+                  class="move-btn card-action-btn"
                   @click="play(m)"
                   :data-move="m.kind"
-                >{{ label(m) }}</button>
+                >{{ shortActionLabel(m) }}</button>
               </div>
             </div>
-
-            <div v-else class="moves" data-testid="action-moves">
-              <button
-                v-for="m in generalMoves"
-                :key="moveKey(m)"
-                class="move-btn"
-                @click="play(m)"
-                :data-move="m.kind"
-              >{{ label(m) }}</button>
-            </div>
-          </template>
-        </div>
-      </section>
-
-      <!-- ================= HAND ================= -->
-      <section class="hand-area">
-        <div class="hand-row runner-hand" data-testid="human-hand">
-          <div v-for="c in hand" :key="c.id" class="hand-card">
-            <card-tile
-              :card="{ cardId: c.cardId, rezzed: true, advancement: 0 }"
-              clickable
-              @zoom="zoomHand(c)"
-            />
-            <div v-if="handActionsFor(c).length && zoomHandCardId !== c.id" class="card-actions">
-              <button
-                v-for="m in handActionsFor(c)"
-                :key="moveKey(m)"
-                class="move-btn card-action-btn"
-                @click="play(m)"
-                :data-move="m.kind"
-              >{{ shortActionLabel(m) }}</button>
-            </div>
+            <span v-if="!hand.length" class="empty-hand">(no cards in hand)</span>
           </div>
-          <span v-if="!hand.length" class="empty-hand">(no cards in hand)</span>
-        </div>
-      </section>
+        </section>
 
-      <div v-if="warnings.length" class="support-warnings" data-testid="warnings">
-        <span v-for="(w, i) in warnings" :key="i">\u26A0 {{ w }}</span>
-      </div>
+        <div v-if="warnings.length" class="support-warnings" data-testid="warnings">
+          <span v-for="(w, i) in warnings" :key="i">\u26A0 {{ w }}</span>
+        </div>
       </div><!-- /game-main -->
 
-      <!-- ================= LOG DOCK (right) ================= -->
+      <!-- Log dock (right sidebar). -->
       <aside class="log-dock" :class="{ collapsed: !logOpen }">
         <button
           class="log-toggle"

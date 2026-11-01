@@ -754,6 +754,18 @@ button.stat:disabled {
 .pick-slot:hover {
   border-color: var(--accent);
 }
+/* The pick slot is a real <button type="button"> (keyboard activatable, same
+   treatment as the clickable card tiles). The .pick-slot class keeps its own
+   transparent border; this reset strips the button chrome so the slot keeps
+   its plain picker look. Note the slot wraps a clickable card-tile, which is
+   itself a button: nesting is deliberate (matching the old div > div event
+   flow — the tile click zooms, the bubble to the slot toggles the pick). */
+button.pick-slot {
+  padding: 0;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+}
 
 /* Log dock (right sidebar) --------------------------------------------- */
 
@@ -927,6 +939,15 @@ button.stat:disabled {
 }
 .card-tile.clickable:hover {
   box-shadow: 0 0 0 2px var(--accent);
+}
+/* Clickable tiles render as real <button type="button"> elements (keyboard
+   focusable, Enter/Space activate). The card-tile class supplies background,
+   border and radius; this reset only strips the button chrome the class
+   doesn't set, so a button tile looks exactly like the div it replaced. */
+button.card-tile {
+  padding: 0;
+  font: inherit;
+  color: inherit;
 }
 
 .card-img {

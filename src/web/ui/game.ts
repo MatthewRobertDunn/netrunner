@@ -6,24 +6,31 @@
  * flows up through the `move` event; the root component owns `applyMove` and
  * the AI turn loop.
  *
+ * This file keeps every piece of state derivation (public status, legal
+ * moves, prompts, tile-hosted basic actions) and the zoom/discard UI state;
+ * the three big template clusters are extracted components:
+ *
+ *   - StatusBlock    — one player's `<section class="status-block">` panel
+ *                      (opponent + own, one component instead of two copies)
+ *   - ServerColumn   — one server column (server card/label, root row, ice
+ *                      stack, Run button; corp-seat flip stays in CSS)
+ *   - ActionPanel    — winner/waiting banners, access notice, prompt box
+ *                      (incl. the discard picker) and the moves list
+ *
  * Layout: Corp across the top (servers, ice), run/breach banner in the
  * middle, action panel + log, Runner (hand) at the bottom.
  */
 
 import { computed, defineComponent, ref, watch } from "vue";
 import type { PropType } from "vue";
+import ActionPanel from "./action-panel.ts";
 import CardTile from "./card-tile.ts";
 import CardZoom from "./card-zoom.ts";
+import ServerColumn from "./server-column.ts";
+import StatusBlock from "./status-block.ts";
 import { cardDef } from "../../cards/catalogue.ts";
 import { engine } from "../../mod.ts";
-import type {
-  CardInstance,
-  GameState,
-  Move,
-  PlayerSide,
-  PublicGameStatus,
-  ViewCard,
-} from "../../types.ts";
+import type { CardInstance, GameState, Move, PlayerSide, PublicGameStatus } from "../../types.ts";
 import {
   actorOf,
   cardTitle,
@@ -33,22 +40,8 @@ import {
   handOf,
   imageFor,
   promptFor,
-  promptTitle,
   serverLabel,
 } from "./util.ts";
-
-/**
- * Server glyphs for the central servers that still render a glyph: R&D,
- * Archives, and any remote server (which falls back to the generic
- * "set-sysgw" glyph via serverGlyph()). HQ no longer uses its glyph here —
- * the HQ server card renders the Corp's identity card instead (see the `hq`
- * branch in the CORP AREA template). The identity is public information to
- * both players (rule 10.2.3), so it is read from the public status DTO.
- */
-const SERVER_GLYPH: Record<string, string> = {
-  rd: "assets/svg/rd.svg",
-  archives: "assets/svg/archives.svg",
-};
 
 function moveKey(m: Move): string {
   return JSON.stringify(m);
@@ -56,7 +49,7 @@ function moveKey(m: Move): string {
 
 export default defineComponent({
   name: "GameScreen",
-  components: { CardTile, CardZoom },
+  components: { ActionPanel, CardTile, CardZoom, ServerColumn, StatusBlock },
   props: {
     state: { type: Object as PropType<GameState>, required: true },
     humanSide: { type: String as PropType<PlayerSide>, required: true },
@@ -130,14 +123,10 @@ export default defineComponent({
       isHumanTurn.value ? engine.getLegalMoves(props.state, props.humanSide) : []
     );
     const hand = computed(() => handOf(props.state, props.humanSide));
-    const discardCount = computed(() =>
-      prompt.value && prompt.value.kind === "discard" ? prompt.value.count : 0
-    );
     const selectedKey = computed(() => [...discardSelected.value].sort().join(","));
     const canDiscard = computed(() => {
-      if (!discardCount.value || discardSelected.value.length !== discardCount.value) {
-        return false;
-      }
+      if (!prompt.value || prompt.value.kind !== "discard") return false;
+      if (discardSelected.value.length !== prompt.value.count) return false;
       return legal.value.some(
         (m: Move) =>
           m.kind === "discard" &&
@@ -162,6 +151,8 @@ export default defineComponent({
       }
       return null;
     });
+    /** Id of the ice the run currently sits at (the RUN highlight). */
+    const currentIceId = computed<string | null>(() => run.value?.currentIce?.id ?? null);
 
     /**
      * Access decisions for the zoomed card (rule 7.2.2): pass, or the basic
@@ -214,11 +205,6 @@ export default defineComponent({
       ) ?? null;
     });
 
-    /** Click the own credits tile: take the gain-credit basic action. */
-    function playGainCredits() {
-      if (gainCreditsMove.value) play(gainCreditsMove.value);
-    }
-
     /** The "draw 1 card" basic action, when the human can take it. It lives
      *  on the own hand stat in the side panel instead of the action panel. */
     const drawMove = computed<Move | null>(() => {
@@ -226,11 +212,6 @@ export default defineComponent({
       return legal.value.find((m: Move) => m.kind === "corp.draw" || m.kind === "runner.draw") ??
         null;
     });
-
-    /** Click the own hand stat: take the draw-1-card basic action. */
-    function playDraw() {
-      if (drawMove.value) play(drawMove.value);
-    }
 
     watch(
       () => props.state,
@@ -253,18 +234,17 @@ export default defineComponent({
       },
     );
 
-    function label(move: Move): string {
-      return describeMove(props.state, move);
-    }
-
-    function name(cardId: string): string {
-      return cardTitle(cardId);
+    function name(cardId: string | null): string {
+      return cardTitle(cardId ?? "");
     }
 
     function toggleDiscard(id: string) {
       if (discardSelected.value.includes(id)) {
         discardSelected.value = discardSelected.value.filter((x: string) => x !== id);
-      } else if (discardSelected.value.length < discardCount.value) {
+      } else if (
+        prompt.value && prompt.value.kind === "discard" &&
+        discardSelected.value.length < prompt.value.count
+      ) {
         discardSelected.value = [...discardSelected.value, id];
       }
     }
@@ -305,40 +285,12 @@ export default defineComponent({
       closeZoom();
     }
 
-    function isCurrentIce(card: ViewCard): boolean {
-      const r = status.value.run;
-      if (!r || !r.currentIce) return false;
-      return card.id === r.currentIce.id;
+    /** Clicking the access notice reopens the access popup (rule 7.2.2). */
+    function openAccessZoom() {
+      if (accessedCard.value) zoom(accessedCard.value.cardId);
     }
 
-    /** Glyph for a status block: Corp identity / Runner faction art. */
-    function sideGlyph(side: PlayerSide): string {
-      return side === "corp" ? "assets/svg/faction-hb.svg" : "assets/svg/faction-criminal.svg";
-    }
-
-    /** Correct discard-pile names (rules 2526-2545): Corp Archives, Runner Heap. */
-    function discardName(side: PlayerSide): string {
-      return side === "corp" ? "Archives" : "Heap";
-    }
-
-    function serverGlyph(id: string): string {
-      return SERVER_GLYPH[id] ?? "";
-    }
-
-    /** Central servers keep their dedicated server card; everything else is a
-     *  remote (id "remote-N"), drawn as a label + root/ice columns. Note: this
-     *  is deliberately NOT `id in SERVER_GLYPH` — the glyph map only holds the
-     *  servers that render one (the HQ branch shows the identity card instead,
-     *  and is no longer in the map). */
-    function isCentral(id: string): boolean {
-      return id === "hq" || id === "rd" || id === "archives";
-    }
-
-    /** Label for a remote server: "remote-3" reads as "remote 3" (rule 4.6.8). */
-    function remoteLabel(id: string): string {
-      return id.replace("-", " ");
-    }
-
+    /** Legal run move against one server, if the human Runner has one. */
     function runMove(server: string): Move | undefined {
       return legal.value.find(
         (m: Move) => m.kind === "runner.run" && (m as { server: string }).server === server,
@@ -421,14 +373,11 @@ export default defineComponent({
     }
 
     return {
-      // data
       discardSelected,
       zoomCardId,
       zoomHandCardId,
       logOpen,
-      // computed
       status,
-      actor,
       isHumanTurn,
       isAiTurn,
       corp,
@@ -441,55 +390,42 @@ export default defineComponent({
       legal,
       generalMoves,
       hand,
-      discardCount,
       canDiscard,
       events,
       warnings,
       run,
       breach,
       accessedCard,
-      accessActions,
+      currentIceId,
       zoomActions,
       serverRows,
       gainCreditsMove,
       drawMove,
-      // methods
-      label,
+      hqIdentity,
+      hqIdentityImg,
       name,
       moveKey,
       toggleDiscard,
       submitDiscard,
       play,
-      playGainCredits,
-      playDraw,
       playFromZoom,
       zoom,
       zoomHand,
       closeZoom,
-      isCurrentIce,
-      serverGlyph,
-      sideGlyph,
-      discardName,
-      isCentral,
-      remoteLabel,
+      openAccessZoom,
+      zoomHqIdentity,
       runMove,
-      promptTitle,
       handActionsFor,
       shortActionLabel,
-      hqIdentity,
-      hqIdentityImg,
-      zoomHqIdentity,
       identityImgFailed,
     };
   },
   template: `
     <div class="game">
-      <!-- ================= STATUS DOCK (left) =================
-           Mirrors the game-log dock width. Carries the title (turn badge
-           style) plus the OPPONENT's and the human player's OWN status
-           blocks; .status-block's flex: 1 1 0 splits the dock evenly
-           between them. data-side marks which side each block shows;
-           active marks state.turn.player. -->
+      <!-- Status dock (left): turn badge + alerts + one StatusBlock per seat.
+           .status-block's flex: 1 1 0 splits the dock evenly between them;
+           data-side marks which side each block shows; active marks
+           state.turn.player. -->
       <aside class="status-dock" data-testid="status-dock">
         <div class="status-half">
         <div class="status-title" data-testid="status-title">
@@ -511,316 +447,117 @@ export default defineComponent({
           </span>
           <span v-if="lastWarning" class="chip warn">{{ lastWarning }}</span>
         </div>
-        <section
-          class="status-block status-opponent"
-          :class="[opponentSide, { active: state.turn.player === opponentSide }]"
-          data-testid="status-opponent"
-          :data-side="opponentSide"
-        >
-          <div class="status-who">
-            <img class="glyph-side" :src="sideGlyph(opponentSide)" alt="" />
-            <span class="who">{{ opponentSide === 'corp' ? 'CORP' : 'RUNNER' }}</span>
-            <span v-if="state.turn.player === opponentSide" class="acting-tag">acting</span>
-            <span class="opp-tag">opponent</span>
-          </div>
-          <div class="status-primary">
-            <div class="primary-stat credits">
-              <img class="sym" src="assets/svg/credit.svg" alt="Credits" />
-              <span class="primary-val">{{ opponent.credits }}</span>
-            </div>
-            <div class="primary-stat agenda">
-              <img class="sym" src="assets/svg/agenda.svg" alt="Agenda points" />
-              <span class="primary-val">{{ opponent.agendaPoints }}/{{ status.agendaPointTarget }}</span>
-            </div>
-          </div>
-          <div class="status-secondary">
-            <span class="stat"><img class="sym" src="assets/svg/click.svg" alt="Clicks" />{{ opponent.clicks }}</span>
-            <span class="stat">hand {{ opponent.handCount }}/{{ opponent.handSize }}</span>
-            <span class="stat">deck {{ opponent.deckCount }}</span>
-            <span class="stat">{{ discardName(opponentSide) }} {{ opponent.discardCount }}</span>
-            <span v-if="opponentSide === 'runner' && opponent.tags" class="stat"><img class="sym" src="assets/svg/tag.svg" alt="Tags" />{{ opponent.tags }}</span>
-            <span v-if="opponentSide === 'corp' && opponent.tags" class="stat">bad pub {{ opponent.tags }}</span>
-          </div>
-          <span v-if="opponent.score.length" class="score-strip" :data-testid="opponentSide + '-score'">
-            <img v-for="c in opponent.score" :key="c.id" class="mini-card" :src="'images/' + c.cardId + '.webp'" :alt="name(c.cardId)" />
-          </span>
-        </section>
-        <section
-          class="status-block status-own"
-          :class="[ownSide, { active: state.turn.player === ownSide }]"
-          data-testid="status-own"
-          :data-side="ownSide"
-        >
-          <div class="status-who">
-            <img class="glyph-side" :src="sideGlyph(ownSide)" alt="" />
-            <span class="who">{{ ownSide === 'corp' ? 'CORP' : 'RUNNER' }} (you)</span>
-            <span v-if="state.turn.player === ownSide" class="acting-tag">acting</span>
-          </div>
-          <div class="status-primary">
-            <button
-              class="primary-stat credits"
-              :class="{ clickable: !!gainCreditsMove }"
-              :disabled="!gainCreditsMove"
-              data-testid="gain-credit"
-              title="Gain 1 credit"
-              @click="playGainCredits"
-            >
-              <img class="sym" src="assets/svg/credit.svg" alt="Credits" />
-              <span class="primary-val">{{ own.credits }}</span>
-            </button>
-            <div class="primary-stat agenda">
-              <img class="sym" src="assets/svg/agenda.svg" alt="Agenda points" />
-              <span class="primary-val">{{ own.agendaPoints }}/{{ status.agendaPointTarget }}</span>
-            </div>
-          </div>
-          <div class="status-secondary">
-            <span class="stat"><img class="sym" src="assets/svg/click.svg" alt="Clicks" />{{ own.clicks }}</span>
-            <button
-              class="stat"
-              :class="{ clickable: !!drawMove }"
-              :disabled="!drawMove"
-              data-testid="draw-card"
-              title="Draw 1 card"
-              @click="playDraw"
-            >
-              hand {{ own.handCount }}/{{ own.handSize }}
-            </button>
-            <span class="stat">deck {{ own.deckCount }}</span>
-            <span class="stat">{{ discardName(ownSide) }} {{ own.discardCount }}</span>
-            <span v-if="ownSide === 'runner' && own.tags" class="stat"><img class="sym" src="assets/svg/tag.svg" alt="Tags" />{{ own.tags }}</span>
-            <span v-if="ownSide === 'corp' && own.tags" class="stat">bad pub {{ own.tags }}</span>
-          </div>
-          <span v-if="own.score.length" class="score-strip" :data-testid="ownSide + '-score'">
-            <img v-for="c in own.score" :key="c.id" class="mini-card" :src="'images/' + c.cardId + '.webp'" :alt="name(c.cardId)" />
-          </span>
-        </section>
+        <status-block
+          :side="opponentSide"
+          :stats="opponent"
+          :agenda-target="status.agendaPointTarget"
+          :active="state.turn.player === opponentSide"
+        />
+        <status-block
+          :side="ownSide"
+          :stats="own"
+          :agenda-target="status.agendaPointTarget"
+          :active="state.turn.player === ownSide"
+          is-own
+          :gain-move="gainCreditsMove"
+          :draw-move="drawMove"
+          @move="play"
+        />
         </div>
       </aside>
-      <!-- Perspective class stays for seat-specific tweaks (server ice flip
-           uses .corp-seat); the old in-flow strip order scheme is gone since
-           both statuses now live in the left dock. .game-main holds servers,
-           banner, action panel, hand, warnings top to bottom. -->
+      <!-- .game-main stacks servers, banner, action panel, hand, warnings
+           top to bottom. The corp-seat class on .servers drives the CSS
+           "order" flip that puts ice on the runner side. -->
       <div class="game-main" :class="'perspective-' + humanSide">
-      <!-- ================= SERVERS ================= -->
+      <!-- Servers: one ServerColumn per public server row; the corp-seat flip
+           (ice on the runner side) is CSS "order" on .server.central and
+           .server.remote children, keyed off .servers.corp-seat above. -->
         <div class="servers" data-testid="servers" :class="{ 'corp-seat': humanSide === 'corp' }">
-          <div v-for="s in serverRows" :key="s.id" class="server" :class="isCentral(s.id) ? 'central' : 'remote'">
-            <!-- Central servers (hq, rd, archives) keep their dedicated server
-                 card (corp back + glyph + name). HQ additionally shows the
-                 Corp's identity card (open information, rule 10.2.3); the
-                 @error flag falls back to the glyph when the art is missing. -->
-            <template v-if="isCentral(s.id)">
-              <div
-                class="server-card"
-                :class="{ clickable: s.id === 'hq' && hqIdentityImg }"
-                @click="zoomHqIdentity(s.id)"
-              >
-                <img class="corp-back-img" src="assets/corp-back.svg" alt="" />
-                <div v-if="s.id === 'hq' && hqIdentityImg" class="server-card-face identity-face">
-                  <img
-                    class="identity-art"
-                    :src="hqIdentityImg"
-                    :alt="name(hqIdentity)"
-                    @error="identityImgFailed = true"
-                  />
-                  <span class="server-name">{{ name(hqIdentity) }}</span>
-                </div>
-                <div v-else class="server-card-face">
-                  <img class="server-glyph" :src="serverGlyph(s.id)" :alt="name(s.id)" />
-                  <span class="server-name">{{ name(s.id) }}</span>
-                </div>
-              </div>
-            </template>
-            <!-- Remotes: a small label nearest the corp side, shown only when the
-                 server has a root card or ice. -->
-            <template v-else>
-              <div
-                v-if="s.root.length || s.ice.length || s.unrezzedIceCount"
-                class="server-label"
-              >{{ remoteLabel(s.id) }}</div>
-            </template>
-            <!-- Root row and ice stack render for BOTH kinds. Remotes with only
-                 ice reserve a one-card root-slot space (blank, no glyph/back) so
-                 the layout doesn't jump when a root card is later installed; a
-                 completely empty remote draws nothing else at all (only its Run
-                 button). Central roots hold at most an upgrade. unrezzedIceCount
-                 covers ice the Runner cannot identify yet (public status redacts
-                 the cards, the count stays open information).
-
-                 The DOM order below is one order for every case (server
-                 card/label -> root row -> ice stack -> Run); the column order
-                 is fixed up in CSS via order on .server.central AND
-                 .server.remote children (public/css/style.css). The screen is
-                 drawn from the human player's seat, own side at the bottom,
-                 so the ice must sit on the RUNNER side of the central server
-                 card and the remote root: as Runner (runner at the bottom)
-                 that is BELOW the card/root, which is this DOM order; as
-                 Corp (corp at the bottom, runner at the top) the ice stack
-                 moves ABOVE the card/root. The corp-seat class on .servers
-                 drives that flip. -->
-            <div v-if="s.root.length" class="server-root-row">
-              <template v-for="c in s.root" :key="c.id">
-                <card-tile
-                  v-if="c.cardId !== 'hidden'"
-                  :card="{ cardId: c.cardId, rezzed: c.rezzed, advancement: c.advancement }"
-                  small
-                  clickable
-                  @zoom="zoom"
-                />
-                <card-tile v-else facedown small corp />
-              </template>
-            </div>
-            <div
-              v-else-if="!isCentral(s.id) && (s.ice.length || s.unrezzedIceCount)"
-              class="server-root-row server-root-empty"
-            ></div>
-            <div class="server-ice-stack">
-              <div v-for="card in s.ice" :key="card.id" class="ice-slot">
-                <card-tile
-                  :card="card"
-                  ice
-                  clickable
-                  :highlight="isCurrentIce(card)"
-                  :badge="isCurrentIce(card) ? 'RUN' : ''"
-                  @zoom="zoom"
-                />
-              </div>
-              <div v-for="n in s.unrezzedIceCount" :key="'u' + s.id + n" class="ice-slot facedown">
-                <card-tile facedown ice corp />
-              </div>
-            </div>
-            <button
-              v-if="runMove(s.id) && !state.run"
-              class="run-btn"
-              @click="play(runMove(s.id))"
-              :data-testid="'run-' + s.id"
-            >Run</button>
-          </div>
+          <server-column
+            v-for="s in serverRows"
+            :key="s.id"
+            :server="s"
+            :corp-seat="humanSide === 'corp'"
+            :identity-card-id="hqIdentity"
+            :identity-img="hqIdentityImg"
+            :run-move="runMove(s.id)"
+            :run-in-progress="!!state.run"
+            :current-ice-id="currentIceId"
+            @move="play"
+            @zoom="zoom"
+            @zoom-identity="zoomHqIdentity"
+            @identity-error="identityImgFailed = true"
+          />
         </div>
 
-      <!-- ================= RUN / BREACH BANNER (run/breach context for the action row) ================= -->
-      <section v-if="run || breach" class="run-banner" data-testid="run-banner">
-        <template v-if="breach">
-          <span class="run-tag">BREACH</span> {{ name(breach.server) }} ·
-          <span v-if="breach.accessing">accessing a card…</span>
-          <span v-else>{{ breach.randomAccessLimit - breach.randomAccessesUsed }} access(es) left</span>
-        </template>
-        <template v-else-if="run">
-          <span class="run-tag">RUN</span> on {{ name(run.server) }}
-          <template v-if="run.currentIce">
-            · approached {{ name(run.currentIce.cardId) }}
-            <span v-if="run.brokenSubroutines.length"> · {{ run.brokenSubroutines.length }} sub(s) broken</span>
+        <!-- Run / breach banner (run/breach context for the action row). -->
+        <section v-if="run || breach" class="run-banner" data-testid="run-banner">
+          <template v-if="breach">
+            <span class="run-tag">BREACH</span> {{ name(breach.server) }} ·
+            <span v-if="breach.accessing">accessing a card…</span>
+            <span v-else>{{ breach.randomAccessLimit - breach.randomAccessesUsed }} access(es) left</span>
           </template>
-          <template v-else> · at {{ name(run.server) }}</template>
-        </template>
-      </section>
-
-      <!-- ================= ACTION PANEL ================= -->
-      <section class="action-row">
-        <div class="action-panel" data-testid="action-panel">
-          <template v-if="state.winner">
-            <div class="banner-win">Winner: {{ state.winner }} <span v-if="state.winReason">({{ state.winReason }})</span></div>
+          <template v-else-if="run">
+            <span class="run-tag">RUN</span> on {{ name(run.server) }}
+            <template v-if="run.currentIce">
+              · approached {{ name(run.currentIce.cardId) }}
+              <span v-if="run.brokenSubroutines.length"> · {{ run.brokenSubroutines.length }} sub(s) broken</span>
+            </template>
+            <template v-else> · at {{ name(run.server) }}</template>
           </template>
+        </section>
 
-          <template v-else-if="!isHumanTurn">
-            <div class="banner-wait">
-              <template v-if="thinking">Corp is planning its move…</template>
-              <template v-else>Waiting for the Corp…</template>
-            </div>
-          </template>
+        <!-- Action panel: winner/waiting banners, access notice, prompt box
+             (incl. the discard picker) and the moves list. -->
+        <section class="action-row">
+          <action-panel
+            :state="state"
+            :human-turn="isHumanTurn"
+            :thinking="thinking"
+            :accessed-card-id="accessedCard ? accessedCard.cardId : null"
+            :prompt="prompt"
+            :legal="legal"
+            :general-moves="generalMoves"
+            :hand="hand"
+            :discard-selected="discardSelected"
+            :can-discard="canDiscard"
+            @move="play"
+            @zoom="zoom"
+            @discard-toggle="toggleDiscard"
+            @discard-submit="submitDiscard"
+            @open-access="openAccessZoom"
+          />
+        </section>
 
-          <template v-else>
-            <!-- Access decisions live on the card popup (rule 7.2.2), so the
-                 action panel shows nothing while one is pending. Clicking the
-                 notice reopens the popup. -->
-            <button
-              v-if="accessedCard"
-              class="banner-wait banner-access"
-              data-testid="access-notice"
-              @click="zoom(accessedCard.cardId)"
-            >
-              Accessing {{ name(accessedCard.cardId) }} — decide on the card
-            </button>
-
-            <div v-else-if="prompt" class="prompt-box" data-testid="prompt">
-              <div class="prompt-title">{{ promptTitle(prompt) }}</div>
-
-              <div v-if="prompt.kind === 'discard'" class="discard-picker">
-                <div class="hint">Choose {{ discardCount }} card(s) to discard:</div>
-                <div class="hand-row picker">
-                  <div
-                    v-for="c in hand"
-                    :key="c.id"
-                    class="pick-slot"
-                    :class="{ picked: discardSelected.includes(c.id) }"
-                    @click="toggleDiscard(c.id)"
-                  >
-                    <card-tile
-                      :card="{ cardId: c.cardId, rezzed: true, advancement: 0 }"
-                      :badge="discardSelected.includes(c.id) ? '✓' : ''"
-                      small
-                      clickable
-                      @zoom="zoom"
-                    />
-                  </div>
-                </div>
-                <button class="move-btn primary" :disabled="!canDiscard" @click="submitDiscard" data-testid="discard-submit">
-                  Discard selected
-                </button>
-              </div>
-
-              <div v-else class="moves">
+        <!-- Hand (own grip, direct grid child via .hand-area wrapper). -->
+        <section class="hand-area">
+          <div class="hand-row runner-hand" data-testid="human-hand">
+            <div v-for="c in hand" :key="c.id" class="hand-card">
+              <card-tile
+                :card="{ cardId: c.cardId, rezzed: true, advancement: 0 }"
+                clickable
+                @zoom="zoomHand(c)"
+              />
+              <div v-if="handActionsFor(c).length && zoomHandCardId !== c.id" class="card-actions">
                 <button
-                  v-for="m in legal"
+                  v-for="m in handActionsFor(c)"
                   :key="moveKey(m)"
-                  class="move-btn"
+                  class="move-btn card-action-btn"
                   @click="play(m)"
                   :data-move="m.kind"
-                >{{ label(m) }}</button>
+                >{{ shortActionLabel(m) }}</button>
               </div>
             </div>
-
-            <div v-else class="moves" data-testid="action-moves">
-              <button
-                v-for="m in generalMoves"
-                :key="moveKey(m)"
-                class="move-btn"
-                @click="play(m)"
-                :data-move="m.kind"
-              >{{ label(m) }}</button>
-            </div>
-          </template>
-        </div>
-      </section>
-
-      <!-- ================= HAND ================= -->
-      <section class="hand-area">
-        <div class="hand-row runner-hand" data-testid="human-hand">
-          <div v-for="c in hand" :key="c.id" class="hand-card">
-            <card-tile
-              :card="{ cardId: c.cardId, rezzed: true, advancement: 0 }"
-              clickable
-              @zoom="zoomHand(c)"
-            />
-            <div v-if="handActionsFor(c).length && zoomHandCardId !== c.id" class="card-actions">
-              <button
-                v-for="m in handActionsFor(c)"
-                :key="moveKey(m)"
-                class="move-btn card-action-btn"
-                @click="play(m)"
-                :data-move="m.kind"
-              >{{ shortActionLabel(m) }}</button>
-            </div>
+            <span v-if="!hand.length" class="empty-hand">(no cards in hand)</span>
           </div>
-          <span v-if="!hand.length" class="empty-hand">(no cards in hand)</span>
-        </div>
-      </section>
+        </section>
 
-      <div v-if="warnings.length" class="support-warnings" data-testid="warnings">
-        <span v-for="(w, i) in warnings" :key="i">⚠ {{ w }}</span>
-      </div>
+        <div v-if="warnings.length" class="support-warnings" data-testid="warnings">
+          <span v-for="(w, i) in warnings" :key="i">⚠ {{ w }}</span>
+        </div>
       </div><!-- /game-main -->
 
-      <!-- ================= LOG DOCK (right) ================= -->
+      <!-- Log dock (right sidebar). -->
       <aside class="log-dock" :class="{ collapsed: !logOpen }">
         <button
           class="log-toggle"
