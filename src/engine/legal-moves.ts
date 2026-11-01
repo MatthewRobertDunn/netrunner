@@ -12,6 +12,7 @@ import { randomAccessCandidateCount, specificAccessCandidates } from "./settle.t
 import {
   allServers,
   availableCredits,
+  corpInstalled,
   findCard,
   isCentral,
   isIcebreaker,
@@ -222,7 +223,7 @@ function corpActionMoves(state: GameState): Move[] {
   }
 
   // Advance and score installed cards.
-  for (const card of corpInstalledCardsLocal(state)) {
+  for (const card of corpInstalled(state)) {
     const def = cardDef(card.cardId);
     // Rule 1.18.3: Agendas can always be advanced; non-agenda cards only if printed
     // card text explicitly permits it (e.g. Urtica Cipher: "You can advance this asset.").
@@ -239,7 +240,7 @@ function corpActionMoves(state: GameState): Move[] {
   }
 
   // Rez installed non-ice cards (ice is rezzed during runs only).
-  for (const card of corpInstalledCardsLocal(state)) {
+  for (const card of corpInstalled(state)) {
     const def = cardDef(card.cardId);
     if (def.type !== "asset" && def.type !== "upgrade") continue;
     if (card.rezzed === true) continue;
@@ -249,7 +250,7 @@ function corpActionMoves(state: GameState): Move[] {
   }
 
   // Paid abilities on installed cards.
-  addAbilityMoves(state, "corp", corpInstalledCardsLocal(state), moves);
+  addAbilityMoves(state, "corp", corpInstalled(state), moves);
   return moves;
 }
 
@@ -511,11 +512,6 @@ function addAbilityMoves(
       }
     }
   }
-}
-
-/** All Corp cards installed in servers (root cards and ice). */
-function corpInstalledCardsLocal(state: GameState): CardInstance[] {
-  return state.servers.flatMap((s) => [...s.root, ...s.ice]);
 }
 
 function combinations(ids: string[], size: number): string[][] {

@@ -31,7 +31,7 @@ import {
   toDiscard,
 } from "./state.ts";
 import { rngNext } from "./rng.ts";
-import { beginCorpTurn, beginRunnerTurn, setGameOver } from "./turns.ts";
+import { enterDiscardPhase, setGameOver } from "./turns.ts";
 import type { CardInstance, GameState, ServerId } from "../types.ts";
 
 /** Resolve automatic rules until input is needed (or the game ends). */
@@ -74,8 +74,7 @@ export function settle(state: GameState): void {
 
     // Action phase: out of clicks -> discard phase (rule 5.6.3 / 5.7.2).
     if (state.turn.phase === "action" && player(state, state.turn.player).clicks === 0) {
-      state.turn.phase = "discard";
-      promptOrFinishDiscard(state);
+      enterDiscardPhase(state);
       if (state.prompts.length > 0) return;
       continue;
     }
@@ -87,45 +86,6 @@ export function settle(state: GameState): void {
   state.supportWarnings.push(
     "settle loop guard reached 1000 steps — the phase machine may be wedged",
   );
-}
-
-function promptOrFinishDiscard(state: GameState): void {
-  const side = state.turn.player;
-  const p = player(state, side);
-  // Flatline check before the Runner discards (rule 5.5.4a).
-  if (side === "runner" && maxHandSize(state, "runner") < 0) {
-    setGameOver(state, "corp", "Runner's maximum hand size dropped below 0");
-    return;
-  }
-  const max = maxHandSize(state, side);
-  if (p.hand.length > max) {
-    state.prompts.push({
-      kind: "discard",
-      id: state.nextPromptId++,
-      player: side,
-      count: p.hand.length - max,
-    });
-    return;
-  }
-  finishTurn(state);
-}
-
-function finishTurn(state: GameState): void {
-  if (state.winner) return;
-  const side = state.turn.player;
-  const leftover = player(state, side).clicks;
-  if (leftover > 0) state.log.push({ type: "lose-clicks", player: side, amount: leftover });
-  player(state, side).clicks = 0;
-  state.log.push({ type: "turn-end", player: side, turn: state.turn.number });
-  if (side === "corp") beginRunnerTurn(state);
-  else beginCorpTurn(state);
-}
-
-function maxHandSize(state: GameState, side: "corp" | "runner"): number {
-  const p = player(state, side);
-  const hubBonus =
-    side === "corp" && state.corp.score.some((c) => c.cardId === "superconducting_hub") ? 2 : 0;
-  return p.baseHandSize + p.maxHandSizeMod + hubBonus;
 }
 
 // ---------------------------------------------------------------------------
@@ -200,12 +160,15 @@ export function corpRezOptions(
   const run = state.run!;
   const options: { id: string; label: string; targetId: string; creditCost: number }[] = [];
   const ice = currentIce(state);
+  // The displayed cost must equal what rezzing charges (rule 1.16.8, plus the
+  // run's Tread Lightly increase for ice): `rezCostFor` is the single source
+  // of truth for both.
   if (ice && ice.rezzed !== true) {
     options.push({
       id: `rez-${ice.id}`,
-      label: `Rez ${cardDef(ice.cardId).title} (${rezSafeCost(state, ice)}[credit])`,
+      label: `Rez ${cardDef(ice.cardId).title} (${rezCostFor(state, ice)}[credit])`,
       targetId: ice.id,
-      creditCost: rezSafeCost(state, ice),
+      creditCost: rezCostFor(state, ice),
     });
   }
   for (const c of corpRootCards(state, run.server)) {
@@ -214,19 +177,12 @@ export function corpRezOptions(
     if (def.type !== "asset" && def.type !== "upgrade") continue;
     options.push({
       id: `rez-${c.id}`,
-      label: `Rez ${def.title} (${rezSafeCost(state, c)}[credit])`,
+      label: `Rez ${def.title} (${rezCostFor(state, c)}[credit])`,
       targetId: c.id,
-      creditCost: rezSafeCost(state, c),
+      creditCost: rezCostFor(state, c),
     });
   }
   return options;
-}
-
-function rezSafeCost(state: GameState, card: CardInstance): number {
-  // The displayed cost must equal what rezzing charges: the printed rez cost
-  // (rule 1.16.8), plus the run's increase for ice while Tread Lightly is
-  // active. `rezCostFor` is the single source of truth for both.
-  return rezCostFor(state, card);
 }
 
 function encounterStep(state: GameState): boolean {
@@ -552,5 +508,3 @@ export function takeMulligan(state: GameState): void {
 function pendingMulliganPlayer(state: GameState) {
   return state.prompts.find((p) => p.kind === "mulligan")?.player ?? "corp";
 }
-
-export { rngNext };

@@ -656,7 +656,15 @@ export interface ApplyMoveResult {
 /**
  * Options for `applyMove`. AI simulations that own their own state can pass
  * `mutate: true` to skip the defensive copy — the dominant cost in a
- * Monte-Carlo search. Callers must not reuse the original state afterwards.
+ * Monte-Carlo search.
+ *
+ * The engine normally copies the state before applying a move so a rejected
+ * move can never partially mutate the caller's state. AI simulations that
+ * already own their own state (a UCT search clone, a random playout) pay for
+ * that copy on every edge they walk. Passing `mutate: true` skips the copy
+ * and mutates `state` in place; the returned `ApplyMoveResult.state` is the
+ * same object. Callers must not reuse the original `state` after a mutated
+ * apply. The public engine API (`engine.applyMove`) never mutates.
  */
 export interface ApplyMoveOptions {
   mutate?: boolean;
@@ -755,12 +763,7 @@ export interface GameEngine {
   startGame(config: GameConfig): GameState;
   getLegalMoves(state: GameState, player: PlayerSide): Move[];
   /** Apply a legal move, or get a structured `IllegalMove` explanation. */
-  applyMove(
-    state: GameState,
-    player: PlayerSide,
-    move: Move,
-    opts?: ApplyMoveOptions,
-  ): ApplyMoveResult | IllegalMove;
+  applyMove(state: GameState, player: PlayerSide, move: Move): ApplyMoveResult | IllegalMove;
   /** Public game status (rules 10.2.2/10.2.3): same value for either viewer. */
   getPublicGameStatus(state: GameState): PublicGameStatus;
   /** Public game status as seen by `viewer`; Corp may see its own installed card ids. */
