@@ -12,9 +12,11 @@ phase (rule 5.3.1) and the Corp performs their mandatory draw (rule 5.3.2). Does
 6 cards in hand at the start of turn 1?
 
 **Answer.** **6 cards.** The draw phase is the first phase of the Corp's turn and the mandatory draw
-is not an action and does not cost a click. The engine therefore has the Corp draw a sixth card when
-`beginCorpTurn` is called for turn 1, before the action phase. The Runner has 5 cards because the
-Runner's turn has no draw phase (rule 5.3.3).
+is not an action and does not cost a click. The engine performs the mandatory draw inside
+`beginCorpTurn` (`src/engine/turns.ts`); on turn 1 that is called from `startGame`
+(`src/engine/setup.ts`) — or from `startFirstTurn` (`src/engine/apply.ts`) once the mulligan prompts
+have been answered — so the sixth card is in hand before any action can be taken. The Runner has 5
+cards because the Runner's turn has no draw phase (rule 5.3.3).
 
 **Consequence.** `tests/smoke_test.ts` asserts `corp.hand.length === 6` and
 `runner.hand.length === 5` after `startGame`.

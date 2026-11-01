@@ -1,12 +1,15 @@
 /**
  * publish.ts — build, ship, and deploy the latest release to the server.
  *
- * Runs from the repo root and does the whole thing:
+ * Runs from any working directory: the repo root is derived from this file's
+ * own location (import.meta.url), the same contract as
+ * scripts/export-docker-images.ts. It does the whole thing:
  *   1. (re)build the web bundle
  *   2. export the docker image tarball for the target arch
- *   3. docker load it there (tags netrunner:<arch>) — /workspace is mapped to
- *      /home/matty/code/denorunner on the host, so the tarball is already in
- *      place and needs no scp
+ *   3. docker load it there (tags netrunner:<arch>) — on the publish host the
+ *      checkout (/home/matty/code/denorunner) is the same directory as this
+ *      repo's release/, so the tarball is already in place and needs no scp
+ *      (publish-host topology; see HOST/REMOTE_DIR below)
  *   4. restart the systemd unit that runs the container
  *   5. remove the superseded image so disk usage stays flat
  *   6. poll the health endpoint until it returns 200
@@ -38,9 +41,43 @@ for (let i = 0; i < args.length; i++) {
   }
 }
 
+// Repo root, derived from this file's own URL so publish works from any
+// working directory (the same contract as scripts/export-docker-images.ts).
+const ROOT = new URL("../", import.meta.url).pathname;
+
+// Publish-host topology — specific to this repo's publish setup, not general.
+// HOST is the SSH target; REMOTE_DIR is the host-side directory that mirrors
+// this repo's release/ (the host mounts the checkout at
+// /home/matty/code/denorunner), which is why the tarball needs no scp.
 const HOST = "matty@192.168.0.2";
-const SSH_KEY = "./secrets/orange"; // gitignored; passed via -i, never installed
+const SSH_KEY = `${ROOT}secrets/orange`; // gitignored; passed via -i, never installed
 const REMOTE_DIR = "/home/matty/code/denorunner/release";
+
+/**
+ * Step 1/6 argv (spawned via Deno.execPath()). Declared once so the real step
+ * and the dry-run plan cannot drift apart.
+ */
+const BUILD_WEB_ARGS = [
+  "run",
+  "--allow-read",
+  "--allow-write",
+  "--allow-net",
+  "--allow-run",
+  `${ROOT}scripts/build-web.ts`,
+];
+
+/**
+ * Step 2/6 argv (spawned via Deno.execPath()). Declared once so the real step
+ * and the dry-run plan cannot drift apart.
+ */
+const EXPORT_IMAGES_ARGS = [
+  "run",
+  "--allow-read",
+  "--allow-write",
+  "--allow-run",
+  "--allow-env",
+  `${ROOT}scripts/export-docker-images.ts`,
+];
 
 /**
  * The arch the systemd unit actually deploys: read it out of ExecStartPre's
@@ -50,10 +87,10 @@ const REMOTE_DIR = "/home/matty/code/denorunner/release";
 function unitArch(): string {
   let unit: string;
   try {
-    unit = Deno.readTextFileSync("systemd/netrunner.service");
+    unit = Deno.readTextFileSync(`${ROOT}systemd/netrunner.service`);
   } catch {
     console.error(
-      "error: cannot read systemd/netrunner.service — run publish from the repo root",
+      `error: cannot read ${ROOT}systemd/netrunner.service — publish must run from a checkout of this repo`,
     );
     Deno.exit(1);
   }
@@ -80,14 +117,20 @@ if (ARCH !== DEPLOY_ARCH) {
   Deno.exit(1);
 }
 const REMOTE_TARBALL = `${REMOTE_DIR}/netrunner-${ARCH}.tar`;
-const LOCAL_TARBALL = `release/netrunner-${ARCH}.tar`;
+const LOCAL_TARBALL = `${ROOT}release/netrunner-${ARCH}.tar`;
 
 function cmd(name: string, args: string[]): Deno.Command {
   return new Deno.Command(name, {
     args,
+    cwd: ROOT,
     stdout: "inherit",
     stderr: "inherit",
   });
+}
+
+/** Render an argv the way the dry-run plan prints it (quote only args with whitespace). */
+function argvLine(argv: string[]): string {
+  return argv.map((a) => (a.includes(" ") ? JSON.stringify(a) : a)).join(" ");
 }
 
 function sshCmd(remoteArgs: string[]): Deno.Command {
@@ -142,13 +185,15 @@ if (dryRun) {
   console.log(`  arch:          ${ARCH} (deployed arch, from systemd/netrunner.service)`);
   console.log(`  host:          ${HOST} (ssh -i ${SSH_KEY})`);
   console.log(`  tarball:       ${REMOTE_TARBALL}`);
-  console.log(`                 (repo release/ is mapped to /home/matty/code/denorunner)`);
-  console.log(`  rollback copy: ${REMOTE_TARBALL}.prev (kept before overwrite)`);
   console.log(
-    `  1/6 rebuild web bundle (deno run --allow-read --allow-write --allow-net --allow-run scripts/build-web.ts)`,
+    `                 (on the host this is the same file as local ${LOCAL_TARBALL})`,
   );
+  console.log(`  rollback copy: ${REMOTE_TARBALL}.prev (kept before overwrite)`);
+  console.log(`  1/6 rebuild web bundle (${argvLine([Deno.execPath(), ...BUILD_WEB_ARGS])})`);
   console.log(
-    `  2/6 export docker images (deno run --allow-read --allow-write --allow-run --allow-env scripts/export-docker-images.ts → ${LOCAL_TARBALL})`,
+    `  2/6 export docker images (${
+      argvLine([Deno.execPath(), ...EXPORT_IMAGES_ARGS])
+    } → ${LOCAL_TARBALL})`,
   );
   console.log(`  3/6 docker load -i ${REMOTE_TARBALL} on ${HOST}`);
   console.log(`  4/6 systemctl --user restart netrunner.service on ${HOST}`);
@@ -171,37 +216,18 @@ try {
 
 // 1. Rebuild the web bundle so the shipped assets are current.
 console.log("==> 1/6 rebuild web bundle");
-run(
-  cmd(Deno.execPath(), [
-    "run",
-    "--allow-read",
-    "--allow-write",
-    "--allow-net",
-    "--allow-run",
-    "scripts/build-web.ts",
-  ]),
-  "build-web",
-);
+run(cmd(Deno.execPath(), BUILD_WEB_ARGS), "build-web");
 
 // 2. Export the docker image tarballs.
 console.log("==> 2/6 export docker images");
-run(
-  cmd(Deno.execPath(), [
-    "run",
-    "--allow-read",
-    "--allow-write",
-    "--allow-run",
-    "--allow-env",
-    "scripts/export-docker-images.ts",
-  ]),
-  "export-docker-images",
-);
+run(cmd(Deno.execPath(), EXPORT_IMAGES_ARGS), "export-docker-images");
 
-// 3. Load the image into the server's Docker. /workspace is mapped to
-//    /home/matty/code/denorunner on the host, so the tarball is already in
-//    place — no scp needed. Remember the old image id first so the
-//    now-untagged (dangling) previous version can be deleted after the
-//    restart instead of accumulating on the host.
+// 3. Load the image into the server's Docker. On the publish host the
+//    checkout (/home/matty/code/denorunner, see REMOTE_DIR) mirrors this
+//    repo's release/, so the tarball is already in place — no scp needed.
+//    Remember the old image id first so the now-untagged (dangling) previous
+//    version can be deleted after the restart instead of accumulating on the
+//    host.
 console.log("==> 3/6 docker load on server");
 const oldImageId = sshCapture(["docker", "images", "-q", `netrunner:${ARCH}`]).split("\n")[0] ?? "";
 run(sshCmd(["docker", "load", "-i", REMOTE_TARBALL]), "docker load");
@@ -253,7 +279,7 @@ for (let attempt = 0; attempt < 15; attempt++) {
   await new Promise((r) => setTimeout(r, 1000));
 }
 if (code === "200") {
-  console.log(`\n✓ published and running at http://192.168.0.2:8000/ (HTTP ${code})`);
+  console.log(`\n✓ published and running at http://${HOST.split("@")[1]}:8000/ (HTTP ${code})`);
 } else {
   console.error(`\n✗ published but health check returned HTTP ${code}`);
   Deno.exit(1);

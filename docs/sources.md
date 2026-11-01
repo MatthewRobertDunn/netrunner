@@ -2,7 +2,7 @@
 
 ## Rules
 
-- **Netrunner Comprehensive Rules v26.03.** Retrieved 2026-10-24. Text dump at
+- **Netrunner Comprehensive Rules v26.03.** Text dump at
   `docs/rules-v26.03.txt` (~7,312 lines). The HTML was fetched from the official Netrunner
   Comprehensive Rules page; the text dump was cleaned and verified against the following sections
   used by the engine:
@@ -31,7 +31,9 @@
 
 ## Card data
 
-- **NetrunnerDB API v3 public.** Retrieved 2026-10-24.
+- **NetrunnerDB API v3 public.** Retrieved 2026-10-24 (the date is recorded in the snapshots'
+  `_source.retrieved_at` field — `data/cards.json`, `data/starter-decks.json` — and in the raw
+  responses under `data/raw/`).
   - Runner starter deck:
     `https://api.netrunnerdb.com/api/v3/public/decklists/4b9cf488-5bd9-4415-a57a-0864d4d0e600`
   - Corp starter deck:

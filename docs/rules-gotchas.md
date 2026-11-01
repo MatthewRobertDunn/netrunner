@@ -15,10 +15,20 @@ covered by a test, the test is the thing that catches a reintroduction; re-readi
 of running the suite is how it goes stale. The two entries that survive here are the ones with
 **no** test:
 
-1. **Rule citations in comments go stale.** Known-fixed list: "4.6.10" (→ 4.6.8e/8.5.8/10.3.1h),
-   "4.6.7d/e" (→ 4.6.6d/e), "1.16.6b as rez cost", eval.ts "1.15.2"/"8.6"/"6.4". Fixed in the same
-   changeset as this file — don't reintroduce. When you touch a rule, re-read the cited section in
-   the rules doc, not the comment.
+1. **Rule citations in comments go stale — re-grep the rules file, don't trust the number.**
+   Known-fixed list, each arrow verified against the rules text: "4.6.10"/"4.6.10b" (→ 4.6.8e,
+   8.5.8, 10.3.1h — an emptied remote server ceases to exist at the checkpoint, and a run against
+   it ends neither successful nor unsuccessful), "4.6.7d/e" (→ 4.6.6d/e; 4.6.7d is the
+   Archives-zone rule and 4.6.7e does not exist), "1.16.6b as rez cost" (→ 1.16.8; 1.16.6b is the
+   ice *install* cost), eval.ts "1.15.2" (→ 1.17.1, agenda points), "8.6" (→ 10.5, tags), "6.4"
+   (→ 1.20 + 3.9.3, memory). Fixed in the same changeset as this file — don't reintroduce. When
+   you touch a rule, re-read the cited section in the rules doc, not the comment.
+
+   Beware when re-grepping: the rules dump is formatted one fragment per line, so a sub-item
+   citation like `4.6.8e` never matches a contiguous grep (`grep "4.6.8e"` returns 0 even though
+   rule 4.6.8 item e exists). Grep the section number with its trailing dot
+   (`grep -n "^4\.6\.8\." docs/rules-v26.03.txt`) and read the lettered items below it; a
+   0-match grep on a sub-item is a false positive, not proof that a citation is phantom.
 
 2. **Documented simplifications that are safe to keep (do not "fix" casually):** no faceup/facedown
    Archives split (whole pile hidden from the Runner); installing over a like card is forbidden
