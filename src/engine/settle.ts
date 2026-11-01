@@ -269,6 +269,13 @@ function stepBreach(state: GameState): boolean {
   }
   if (remaining.length === 1) {
     doAccessChoice(state, remaining[0]!.instanceId);
+    // A mid-access ability can end the game (rule 1.7.2d: lethal damage while
+    // accessing an installed Urtica Cipher flatlines the Runner). The winner is
+    // set mid-iteration, but `breach.accessing` was already assigned, so the
+    // plain park below would leave a live run/breach in the game-over state —
+    // return false instead and let the loop's winner cleanup (top of `settle`)
+    // clear prompts/run/breach.
+    if (state.winner) return false;
     return Boolean(state.breach?.accessing) || state.prompts.length > 0;
   }
   return true; // wait for the Runner's choice
@@ -484,8 +491,14 @@ export function checkVictory(state: GameState): void {
 // ---------------------------------------------------------------------------
 
 export function takeMulligan(state: GameState): void {
-  if (state.prompts.length > 0) state.prompts.shift();
-  const side = pendingMulliganPlayer(state);
+  // Read the prompt BEFORE popping it: `prompts[0]` names the player who is
+  // mulliganing (rule 1.6.6a). Popping first and then searching the remaining
+  // prompts for a mulligan would find the *next* mulligan (the Runner's, while
+  // the Corp is deciding) and reshuffle the wrong hand.
+  const prompt = state.prompts[0];
+  if (prompt?.kind !== "mulligan") return;
+  state.prompts.shift();
+  const side = prompt.player;
   const p = player(state, side);
   // Shuffle the starting hand back into the deck, then draw a new hand.
   for (const card of p.hand) {
@@ -510,8 +523,4 @@ export function takeMulligan(state: GameState): void {
     drawn++;
   }
   if (drawn > 0) state.log.push({ type: "draw", player: p.side, count: drawn });
-}
-
-function pendingMulliganPlayer(state: GameState) {
-  return state.prompts.find((p) => p.kind === "mulligan")?.player ?? "corp";
 }
