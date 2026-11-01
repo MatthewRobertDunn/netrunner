@@ -16,6 +16,8 @@
  *    true state's; hidden ice slots always receive an ICE definition and
  *    hidden root slots a non-ice Corp definition (rules 4.6.2, 4.6.6f).
  * 4. Reproducibility: same (view, ctx, seed) → deep-equal determinized states.
+ *
+ * One top-level test per property; the sub-cases are `t.step`s.
  */
 
 import {
@@ -110,66 +112,98 @@ function multiset(cards: CardInstance[]): Map<CardId, number> {
   return m;
 }
 
+/**
+ * A state with unrezzed ice AND an unrezzed remote root card (a facedown
+ * agenda), from the runner's point of view: the classic hidden-install case.
+ */
+function hiddenInstallsState(): GameState {
+  let state = newGameWithCorpHand(["offworld_office", "tithe"], 3);
+  const installAgenda = engine.getLegalMoves(state, "corp").find(
+    (m) => m.kind === "corp.install" && m.cardId === "offworld_office" && m.server === "new-remote",
+  );
+  assert(installAgenda && installAgenda.kind === "corp.install", "corp can install the agenda");
+  state = play(state, "corp", installAgenda).state;
+  const installIce = engine.getLegalMoves(state, "corp").find(
+    (m) => m.kind === "corp.install" && m.cardId === "tithe" && m.server === "remote-1",
+  );
+  assert(installIce && installIce.kind === "corp.install", "corp can protect the remote");
+  return endQuietly(play(state, "corp", installIce).state);
+}
+
+/** Spend remaining corp clicks so the turn passes (keeps the fixtures small). */
+function endQuietly(state: GameState): GameState {
+  let cur = state;
+  for (let i = 0; i < 10; i++) {
+    if (cur.turn.player !== "corp" || cur.winner) break;
+    const gain = engine.getLegalMoves(cur, "corp").find((m) => m.kind === "corp.gainCredits");
+    if (!gain) break;
+    cur = play(cur, "corp", gain).state;
+  }
+  return cur;
+}
+
 // ---------------------------------------------------------------------------
 // 1. Round-trip
 // ---------------------------------------------------------------------------
 
-Deno.test("determinize: view round-trips at many states, seeds and for both sides", () => {
-  for (const gameSeed of [1, 7, 42, 99]) {
-    // Walk one random game and check in at every decision point.
-    const decks = starterDeckConfigs();
-    let state = engine.startGame({
-      corp: decks.corp,
-      runner: decks.runner,
-      mode: "starter-decks",
-      seed: gameSeed,
-    });
-    const ai = new RandomAI();
-    for (let i = 0; i < 40 && !state.winner; i++) {
-      for (const side of ["corp", "runner"] as PlayerSide[]) {
-        const { view, det } = determinizeState(state, side, 100 + i);
-        assertEquals(
-          engine.getPlayerView(det, side),
-          view,
-          `seed ${gameSeed}, step ${i}, ${side}: view did not round-trip`,
-        );
+Deno.test("determinize: the view round-trips through determinization", async (t) => {
+  await t.step("at many states, seeds and for both sides", () => {
+    for (const gameSeed of [1, 7, 42, 99]) {
+      // Walk one random game and check in at every decision point.
+      const decks = starterDeckConfigs();
+      let state = engine.startGame({
+        corp: decks.corp,
+        runner: decks.runner,
+        mode: "starter-decks",
+        seed: gameSeed,
+      });
+      const ai = new RandomAI();
+      for (let i = 0; i < 40 && !state.winner; i++) {
+        for (const side of ["corp", "runner"] as PlayerSide[]) {
+          const { view, det } = determinizeState(state, side, 100 + i);
+          assertEquals(
+            engine.getPlayerView(det, side),
+            view,
+            `seed ${gameSeed}, step ${i}, ${side}: view did not round-trip`,
+          );
+        }
+        const actor = actorOf(state);
+        const legal = engine.getLegalMoves(state, actor);
+        if (legal.length === 0) break;
+        const result = engine.applyMove(state, actor, decide(ai, state, actor, legal, i));
+        if (result.kind === "illegal-move") break;
+        state = result.state;
       }
-      const actor = actorOf(state);
-      const legal = engine.getLegalMoves(state, actor);
-      if (legal.length === 0) break;
-      const result = engine.applyMove(state, actor, decide(ai, state, actor, legal, i));
-      if (result.kind === "illegal-move") break;
-      state = result.state;
     }
-  }
-});
+  });
 
-Deno.test("determinize: round-trips a game with installs, a run and a breach", () => {
-  // Ice in a remote, then a runner run against it: exercises facedown ice,
-  // rez windows, encounters and breach access candidates.
-  let state = installInNewRemoteAndEndTurn("tithe", 3);
-  const runMove = engine.getLegalMoves(state, "runner").find(
-    (m) => m.kind === "runner.run" && m.server === "remote-1",
-  );
-  assert(runMove && runMove.kind === "runner.run", "runner can run the remote");
-  state = play(state, "runner", runMove).state;
-  // The corp answers its rez window (rez or pass).
-  const prompt = state.prompts[0];
-  if (prompt && prompt.kind === "rez-window") {
-    const answer = engine.getLegalMoves(state, "corp").find(
-      (m) => m.kind === "prompt.answer" && m.promptId === prompt.id,
+  await t.step("round-trips a game with installs, a run and a breach", () => {
+    // Ice in a remote, then a runner run against it: exercises facedown ice,
+    // rez windows, encounters and breach access candidates.
+    let state = installInNewRemoteAndEndTurn("tithe", 3);
+    const runMove = engine.getLegalMoves(state, "runner").find(
+      (m) => m.kind === "runner.run" && m.server === "remote-1",
     );
-    assert(answer && answer.kind === "prompt.answer", "corp can answer the rez window");
-    state = play(state, "corp", answer).state;
-  }
-  for (const side of ["corp", "runner"] as PlayerSide[]) {
-    const { view, det } = determinizeState(state, side, 77);
-    assertEquals(
-      engine.getPlayerView(det, side),
-      view,
-      `${side}: view did not round-trip during a run`,
-    );
-  }
+    assert(runMove && runMove.kind === "runner.run", "runner can run the remote");
+    state = play(state, "runner", runMove).state;
+    // The corp answers its rez window (rez or pass).
+    const prompt = state.prompts[0];
+    if (prompt && prompt.kind === "rez-window") {
+      const answer = engine.getLegalMoves(state, "corp").find(
+        (m) => m.kind === "prompt.answer" && m.promptId === prompt.id,
+      );
+      assert(answer && answer.kind === "prompt.answer", "corp can answer the rez window");
+      state = play(state, "corp", answer).state;
+    }
+    for (const side of ["corp", "runner"] as PlayerSide[]) {
+      const { view, det } = determinizeState(state, side, 77);
+      assertEquals(
+        engine.getPlayerView(det, side),
+        view,
+        `${side}: view did not round-trip during a run`,
+      );
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -207,129 +241,101 @@ Deno.test("determinize: legal moves on the hypothesis equal the true legal moves
 // 3. Multiset discipline
 // ---------------------------------------------------------------------------
 
-/**
- * A state with unrezzed ice AND an unrezzed remote root card (a facedown
- * agenda), from the runner's point of view: the classic hidden-install case.
- */
-function hiddenInstallsState(): GameState {
-  let state = newGameWithCorpHand(["offworld_office", "tithe"], 3);
-  const installAgenda = engine.getLegalMoves(state, "corp").find(
-    (m) => m.kind === "corp.install" && m.cardId === "offworld_office" && m.server === "new-remote",
-  );
-  assert(installAgenda && installAgenda.kind === "corp.install", "corp can install the agenda");
-  state = play(state, "corp", installAgenda).state;
-  const installIce = engine.getLegalMoves(state, "corp").find(
-    (m) => m.kind === "corp.install" && m.cardId === "tithe" && m.server === "remote-1",
-  );
-  assert(installIce && installIce.kind === "corp.install", "corp can protect the remote");
-  return endQuietly(play(state, "corp", installIce).state);
-}
+Deno.test("determinize: hidden-zone multiset discipline", async (t) => {
+  await t.step("hidden installs land in the right slots with the right types", () => {
+    const state = hiddenInstallsState();
+    const { det } = determinizeState(state, "runner", 31);
 
-/** Spend remaining corp clicks so the turn passes (keeps the fixtures small). */
-function endQuietly(state: GameState): GameState {
-  let cur = state;
-  for (let i = 0; i < 10; i++) {
-    if (cur.turn.player !== "corp" || cur.winner) break;
-    const gain = engine.getLegalMoves(cur, "corp").find((m) => m.kind === "corp.gainCredits");
-    if (!gain) break;
-    cur = play(cur, "corp", gain).state;
-  }
-  return cur;
-}
-
-Deno.test("determinize: hidden installs land in the right slots with the right types", () => {
-  const state = hiddenInstallsState();
-  const { det } = determinizeState(state, "runner", 31);
-
-  // The runner must not learn the identities...
-  const runnerView = engine.getPlayerView(state, "runner");
-  const hidden = runnerView.corp.installed.filter((c) => c.cardId === "hidden");
-  assert(hidden.length === 2, "test setup: one facedown ice + one facedown root card");
-  assert(
-    hidden.some((c) => c.position === "ice") && hidden.some((c) => c.position === "root"),
-    "test setup: one hidden ice slot and one hidden root slot",
-  );
-
-  // ...but the hypothesis must fill ice slots with ice and root slots with
-  // non-ice corp cards (rules 4.6.2, 4.6.6f): never an agenda in an ice slot,
-  // never ice in a root.
-  const server = det.servers.find((s) => s.id === "remote-1")!;
-  for (const ice of server.ice) {
+    // The runner must not learn the identities...
+    const runnerView = engine.getPlayerView(state, "runner");
+    const hidden = runnerView.corp.installed.filter((c) => c.cardId === "hidden");
+    assert(hidden.length === 2, "test setup: one facedown ice + one facedown root card");
     assert(
-      cardDef(ice.cardId).type === "ice",
-      `ice slot ${ice.id} was dealt a ${cardDef(ice.cardId).type}`,
+      hidden.some((c) => c.position === "ice") && hidden.some((c) => c.position === "root"),
+      "test setup: one hidden ice slot and one hidden root slot",
     );
-  }
-  for (const root of server.root) {
-    const type = cardDef(root.cardId).type;
-    assert(
-      type === "asset" || type === "agenda" || type === "upgrade",
-      `root slot ${root.id} was dealt a ${type}`,
-    );
-  }
-});
 
-Deno.test("determinize: the hypothesis's total card multiset equals the true state's", () => {
-  const cases: GameState[] = [
-    newStarterGame(1),
-    newStarterGame(42),
-    hiddenInstallsState(),
-    randomGame(9, 8),
-  ];
-  for (const [i, state] of cases.entries()) {
-    for (const side of ["corp", "runner"] as PlayerSide[]) {
-      const { det } = determinizeState(state, side, 60 + i);
-      assertEquals(
-        multiset(allCards(det)),
-        multiset(allCards(state)),
-        `case ${i}, ${side}: card multiset diverged`,
+    // ...but the hypothesis must fill ice slots with ice and root slots with
+    // non-ice corp cards (rules 4.6.2, 4.6.6f): never an agenda in an ice slot,
+    // never ice in a root.
+    const server = det.servers.find((s) => s.id === "remote-1")!;
+    for (const ice of server.ice) {
+      assert(
+        cardDef(ice.cardId).type === "ice",
+        `ice slot ${ice.id} was dealt a ${cardDef(ice.cardId).type}`,
       );
     }
-  }
-});
-
-Deno.test("determinize: sampled identities come from the context's multisets", () => {
-  const state = hiddenInstallsState();
-  for (const side of ["corp", "runner"] as PlayerSide[]) {
-    const view = engine.getPlayerView(state, side);
-    const ctx = makeAIDecisionContext(state, side, 8);
-
-    // Expected hidden-zone contents: exactly the context's multisets (own deck
-    // + everything unseen), minus any card that is being accessed right now —
-    // its identity is already public (rule 7.2.1) and is pinned, not sampled.
-    const expected = new Map<CardId, number>();
-    for (const id of [...ctx.ownDeck, ...ctx.unseen]) {
-      expected.set(id, (expected.get(id) ?? 0) + 1);
+    for (const root of server.root) {
+      const type = cardDef(root.cardId).type;
+      assert(
+        type === "asset" || type === "agenda" || type === "upgrade",
+        `root slot ${root.id} was dealt a ${type}`,
+      );
     }
-    const accessed = view.breach?.accessing;
-    if (accessed) {
-      const n = (expected.get(accessed.cardId) ?? 0) - 1;
-      if (n <= 0) expected.delete(accessed.cardId);
-      else expected.set(accessed.cardId, n);
-    }
+  });
 
-    // Actual hidden-zone contents in the hypothesis: the viewer's own deck,
-    // the opponent's hand, the opponent's deck, and every card the view
-    // showed as "hidden" (facedown installs, facedown Archives).
-    const hiddenIds = new Set<string>();
-    for (const section of [view.corp, view.runner]) {
-      for (const v of [...section.discard, ...section.installed]) {
-        if (v.cardId === "hidden") hiddenIds.add(v.id);
+  await t.step("the hypothesis's total card multiset equals the true state's", () => {
+    const cases: GameState[] = [
+      newStarterGame(1),
+      newStarterGame(42),
+      hiddenInstallsState(),
+      randomGame(9, 8),
+    ];
+    for (const [i, state] of cases.entries()) {
+      for (const side of ["corp", "runner"] as PlayerSide[]) {
+        const { det } = determinizeState(state, side, 60 + i);
+        assertEquals(
+          multiset(allCards(det)),
+          multiset(allCards(state)),
+          `case ${i}, ${side}: card multiset diverged`,
+        );
       }
     }
-    const opponent: PlayerSide = side === "corp" ? "runner" : "corp";
-    const det = determinize(view, ctx, makeRng(8));
-    const actual = new Map<CardId, number>();
-    for (const card of allCards(det)) {
-      const inHiddenZone = card.zone === "deck" ||
-        hiddenIds.has(card.id) ||
-        (card.owner === opponent && card.zone === "hand");
-      if (!inHiddenZone) continue;
-      actual.set(card.cardId, (actual.get(card.cardId) ?? 0) + 1);
-    }
+  });
 
-    assertEquals(actual, expected, `${side}: hidden-zone contents diverged from the context`);
-  }
+  await t.step("sampled identities come from the context's multisets", () => {
+    const state = hiddenInstallsState();
+    for (const side of ["corp", "runner"] as PlayerSide[]) {
+      const view = engine.getPlayerView(state, side);
+      const ctx = makeAIDecisionContext(state, side, 8);
+
+      // Expected hidden-zone contents: exactly the context's multisets (own deck
+      // + everything unseen), minus any card that is being accessed right now —
+      // its identity is already public (rule 7.2.1) and is pinned, not sampled.
+      const expected = new Map<CardId, number>();
+      for (const id of [...ctx.ownDeck, ...ctx.unseen]) {
+        expected.set(id, (expected.get(id) ?? 0) + 1);
+      }
+      const accessed = view.breach?.accessing;
+      if (accessed) {
+        const n = (expected.get(accessed.cardId) ?? 0) - 1;
+        if (n <= 0) expected.delete(accessed.cardId);
+        else expected.set(accessed.cardId, n);
+      }
+
+      // Actual hidden-zone contents in the hypothesis: the viewer's own deck,
+      // the opponent's hand, the opponent's deck, and every card the view
+      // showed as "hidden" (facedown installs, facedown Archives).
+      const hiddenIds = new Set<string>();
+      for (const section of [view.corp, view.runner]) {
+        for (const v of [...section.discard, ...section.installed]) {
+          if (v.cardId === "hidden") hiddenIds.add(v.id);
+        }
+      }
+      const opponent: PlayerSide = side === "corp" ? "runner" : "corp";
+      const det = determinize(view, ctx, makeRng(8));
+      const actual = new Map<CardId, number>();
+      for (const card of allCards(det)) {
+        const inHiddenZone = card.zone === "deck" ||
+          hiddenIds.has(card.id) ||
+          (card.owner === opponent && card.zone === "hand");
+        if (!inHiddenZone) continue;
+        actual.set(card.cardId, (actual.get(card.cardId) ?? 0) + 1);
+      }
+
+      assertEquals(actual, expected, `${side}: hidden-zone contents diverged from the context`);
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------
