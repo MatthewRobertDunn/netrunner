@@ -10,50 +10,16 @@
  */
 
 import { engine, RandomAI, starterDeckConfigs } from "../src/mod.ts";
-import { continueRun, CORP_FILLER, newStarterGame, play } from "./helpers/fixtures.ts";
-import type { DeckConfig, GameState, Move, PlayerSide } from "../src/types.ts";
+import {
+  continueRun,
+  endCorpTurn,
+  newGameWithCorpHand,
+  newStarterGame,
+  play,
+} from "./helpers/fixtures.ts";
+import type { GameState, Move, PlayerSide } from "../src/types.ts";
 import { decide } from "./helpers/boundary.ts";
-import { assert, assertEquals } from "./helpers/assert.ts";
-
-// ---------------------------------------------------------------------------
-// Fixtures: deterministic corp decks via `orderedCards`
-// ---------------------------------------------------------------------------
-
-const CORP_IDENTITY = "the_syndicate_profit_over_principle";
-
-/** A corp deck whose top-to-bottom order is exactly `ordered`. */
-function orderedCorpDeck(ordered: string[]): DeckConfig {
-  const counts = new Map<string, number>();
-  for (const id of ordered) counts.set(id, (counts.get(id) ?? 0) + 1);
-  return {
-    identity: CORP_IDENTITY,
-    cards: [...counts].map(([cardId, count]) => ({ cardId, count })),
-    orderedCards: ordered,
-  };
-}
-
-function newGameWithCorpOrder(hand: string[], seed = 3): GameState {
-  const decks = starterDeckConfigs();
-  return engine.startGame({
-    corp: orderedCorpDeck([...hand, ...CORP_FILLER]),
-    runner: decks.runner,
-    mode: "starter-decks",
-    seed,
-  });
-}
-
-/** Spend the corp's remaining clicks and answer its discard prompt, ending its turn. */
-function endCorpTurn(state: GameState): GameState {
-  let cur = state;
-  for (let i = 0; i < 10; i++) {
-    if (cur.turn.player !== "corp" || cur.winner) break;
-    const legal = engine.getLegalMoves(cur, "corp");
-    if (legal.length === 0) break;
-    const gain = legal.find((m) => m.kind === "corp.gainCredits") ?? legal[0]!;
-    cur = play(cur, "corp", gain).state;
-  }
-  return cur;
-}
+import { assert, assertEquals, deepClone } from "./helpers/assert.ts";
 
 /**
  * HQ breach with random candidates pending: the runner ran HQ and the breach
@@ -66,7 +32,7 @@ function hqBreachState(seed = 3): GameState {
     (m) => m.kind === "runner.run" && m.server === "hq",
   );
   assert(run && run.kind === "runner.run", "runner can run HQ");
-  const after = continueRun(play(state, "runner", run).state);
+  const after = continueRun(play(state, "runner", run));
   assert(after.breach !== null, "the HQ run reaches a breach");
   assert(after.breach!.accessing === undefined, "the access choice is pending");
   return after;
@@ -78,18 +44,18 @@ function hqBreachState(seed = 3): GameState {
  * between it and the (random) top card of R&D.
  */
 function rdChoiceState(seed = 3): GameState {
-  let state = newGameWithCorpOrder(["manegarm_skunkworks"], seed);
+  let state = newGameWithCorpHand(["manegarm_skunkworks"], seed);
   const install = engine.getLegalMoves(state, "corp").find(
     (m) => m.kind === "corp.install" && m.cardId === "manegarm_skunkworks" && m.server === "rd",
   );
   assert(install && install.kind === "corp.install", "corp can install the upgrade in R&D");
-  state = play(state, "corp", install).state;
+  state = play(state, "corp", install);
   state = endCorpTurn(state);
   const run = engine.getLegalMoves(state, "runner").find(
     (m) => m.kind === "runner.run" && m.server === "rd",
   );
   assert(run && run.kind === "runner.run", "runner can run R&D");
-  const after = continueRun(play(state, "runner", run).state);
+  const after = continueRun(play(state, "runner", run));
   assert(after.breach !== null, "the R&D run reaches a breach");
   assert(after.breach!.accessing === undefined, "the access choice is pending");
   return after;
@@ -207,7 +173,7 @@ Deno.test("purity: getLegalMoves is pure even in random-draw simulations", () =>
   // AI simulations run with drawMode "random"; enumeration must not sample
   // there either (the deck card is only picked when the access is applied).
   const state = rdChoiceState();
-  const sim = JSON.parse(JSON.stringify(state)) as GameState;
+  const sim = deepClone(state) as GameState;
   sim.drawMode = "random";
   assertPure(sim, "runner");
 });

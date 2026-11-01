@@ -21,7 +21,7 @@ import {
 } from "./helpers/fixtures.ts";
 import type { GameState, Move } from "../src/types.ts";
 import { describeMove } from "../src/web/ui/util.ts";
-import { assert, assertDefined, assertEquals } from "./helpers/assert.ts";
+import { assert, assertDefined, assertEquals, deepClone } from "./helpers/assert.ts";
 
 // ---------------------------------------------------------------------------
 // Scenario builders (deterministic via ordered corp decks)
@@ -40,7 +40,7 @@ function installInNewRemote(seed: number): GameState {
     (m) => m.kind === "corp.install" && m.server === "new-remote",
   );
   assert(install && install.kind === "corp.install", "corp can install in a new remote");
-  return play(state, "corp", install).state;
+  return play(state, "corp", install);
 }
 
 /**
@@ -57,7 +57,7 @@ function rezzedIceEncounterState(seed = 3): GameState {
     (m) => m.kind === "prompt.answer" && m.optionId === rezOption.id,
   );
   assert(answer && answer.kind === "prompt.answer", "corp can choose the rez option");
-  const after = play(state, "corp", answer).state;
+  const after = play(state, "corp", answer);
   assert(after.run !== null, "a run is in progress");
   assert(after.run!.currentIceId !== undefined, "ice is approached/encountered");
   assert(installedIce(after, "remote-1").rezzed === true, "the ice is now rezzed");
@@ -74,14 +74,14 @@ function accessChoiceState(seed = 3): GameState {
     (m) => m.kind === "corp.install" && m.cardId === "nico_campaign" && m.server === "new-remote",
   );
   assert(installNico && installNico.kind === "corp.install", "corp can install nico");
-  state = play(state, "corp", installNico).state;
+  state = play(state, "corp", installNico);
   const installManegarm = engine.getLegalMoves(state, "corp").find(
     (m) =>
       m.kind === "corp.install" && m.cardId === "manegarm_skunkworks" &&
       m.server === "remote-1",
   );
   assert(installManegarm && installManegarm.kind === "corp.install", "corp can add the upgrade");
-  state = play(state, "corp", installManegarm).state;
+  state = play(state, "corp", installManegarm);
   const nico = assertDefined(
     state.servers.find((s) => s.id === "remote-1")?.root.find((c) => c.cardId === "nico_campaign"),
   );
@@ -89,13 +89,13 @@ function accessChoiceState(seed = 3): GameState {
     (m) => m.kind === "corp.rez" && m.targetId === nico.id,
   );
   assert(rez && rez.kind === "corp.rez", "corp can rez nico");
-  state = play(state, "corp", rez).state;
+  state = play(state, "corp", rez);
   state = endCorpTurn(state);
   const run = engine.getLegalMoves(state, "runner").find(
     (m) => m.kind === "runner.run" && m.server === "remote-1",
   );
   assert(run && run.kind === "runner.run", "runner can run the remote");
-  const after = continueRun(play(state, "runner", run).state);
+  const after = continueRun(play(state, "runner", run));
   assert(after.breach !== null, "the run breaches the remote");
   return after;
 }
@@ -157,11 +157,12 @@ Deno.test("visibility: hand and discard zone visibility", async (t) => {
     const corpView = engine.getPlayerView(state, "corp");
     const runnerView = engine.getPlayerView(state, "runner");
 
-    // The number of cards in a hand is open information (rule 4.3.4).
-    assert(corpView.runner.handCount >= 0);
-    assert(corpView.runner.deckCount >= 0);
-    assert(runnerView.corp.handCount >= 0);
-    assert(runnerView.corp.deckCount >= 0);
+    // The number of cards in a hand is open information (rule 4.3.4) — and
+    // the counts must match the true zones exactly.
+    assertEquals(corpView.runner.handCount, state.runner.hand.length);
+    assertEquals(corpView.runner.deckCount, state.runner.deck.length);
+    assertEquals(runnerView.corp.handCount, state.corp.hand.length);
+    assertEquals(runnerView.corp.deckCount, state.corp.deck.length);
 
     // Rule 4.3.2: the Runner's own hand is visible to the Runner and not to the
     // Corp; the Corp's own hand is visible to the Corp and not to the Runner.
@@ -180,9 +181,14 @@ Deno.test("visibility: hand and discard zone visibility", async (t) => {
   });
 
   await t.step("the runner's heap is open information, Archives is not", () => {
-    // Put a card in each discard: the runner trashes from grip via damage is
-    // hard to script, so use the discard phase — simply assert on whatever is
-    // present, and separately on a state with a known corp discard.
+    // Script a real discard first: the corp opens over max hand size, so
+    // ending its turn deterministically puts exactly one card in Archives.
+    const withDiscard = endCorpTurn(newStarterGame(3));
+    assertEquals(withDiscard.corp.discard.length, 1, "test setup: one card was discarded");
+    const discardedId = withDiscard.corp.discard[0]!.id;
+
+    // A fresh starter game has empty zones on both sides — assert against the
+    // live state so the case stays honest even if the setup ever changes.
     const state = newStarterGame(1);
     const corpView = engine.getPlayerView(state, "corp");
     const runnerView = engine.getPlayerView(state, "runner");
@@ -203,13 +209,17 @@ Deno.test("visibility: hand and discard zone visibility", async (t) => {
     // Rule 4.4.6c/1.21.2a: the corp examines its own facedown Archives; the
     // engine does not yet model the faceup/facedown split, so the runner
     // conservatively sees only "hidden" entries.
-    const withDiscard = endCorpTurn(newStarterGame(3));
     const forCorp = engine.getPlayerView(withDiscard, "corp");
     const forRunner = engine.getPlayerView(withDiscard, "runner");
     assertEquals(
       forCorp.corp.discard.map((c) => c.cardId),
       withDiscard.corp.discard.map((c) => c.cardId),
       "the corp sees its own Archives",
+    );
+    assertEquals(
+      forCorp.corp.discard.map((c) => c.id),
+      [discardedId],
+      "the corp's own discard is the scripted card",
     );
     assertEquals(
       forRunner.corp.discard.map((c) => c.cardId),
@@ -312,7 +322,7 @@ Deno.test("visibility: access decisions and labels stay anonymous for facedown c
       (m) => m.kind === "runner.accessCard" && m.targetId === manegarm.id,
     );
     assert(access && access.kind === "runner.accessCard", "the upgrade is offered for access");
-    const after = play(state, "runner", access).state;
+    const after = play(state, "runner", access);
 
     const runnerView = engine.getPlayerView(after, "runner");
     const prompt = runnerView.prompts[0]!;
@@ -409,7 +419,7 @@ Deno.test("fidelity: projection fields", async (t) => {
     assertEquals(view.runner.handSize, 5);
 
     // A hand-size modifier widens the maximum, not the current count.
-    const modded = JSON.parse(JSON.stringify(state)) as GameState;
+    const modded = deepClone(state) as GameState;
     modded.corp.maxHandSizeMod = 2;
     const moddedView = engine.getPlayerView(modded, "corp");
     assertEquals(moddedView.corp.handSize, 7);
@@ -422,7 +432,7 @@ Deno.test("fidelity: projection fields", async (t) => {
     assertEquals(view.winReason, state.winReason);
     assertEquals(view.warnings, [...state.supportWarnings]);
 
-    const finished = JSON.parse(JSON.stringify(state)) as GameState;
+    const finished = deepClone(state) as GameState;
     finished.winner = "runner";
     finished.winReason = "Runner reached the agenda point target";
     const finishedView = engine.getPlayerView(finished, "corp");

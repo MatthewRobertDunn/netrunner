@@ -14,6 +14,7 @@
 import { decide } from "./boundary.ts";
 import { engine } from "../../src/engine/facade.ts";
 import type { DeckConfig, GameAI, GameState, PlayerSide } from "../../src/types.ts";
+import { deepClone } from "./assert.ts";
 import { orderedCorpDeck, play } from "./fixtures.ts";
 import { starterDeckConfigs } from "../../src/decks/starter-decks-cyberclick-v1.ts";
 
@@ -32,7 +33,7 @@ export function burnUntil(
     const active = cur.turn.player;
     const moves = engine.getLegalMoves(cur, active);
     if (moves.length === 0) return cur;
-    cur = play(cur, active, moves[0]!).state;
+    cur = play(cur, active, moves[0]!);
   }
   return cur;
 }
@@ -50,7 +51,7 @@ export function nextTurnOf(state: GameState, side: PlayerSide, maxIters = 60): G
   for (let i = 0; i < maxIters && !cur.winner && cur.turn.player === starter; i++) {
     const moves = engine.getLegalMoves(cur, starter);
     if (moves.length === 0) break;
-    cur = play(cur, starter, moves[0]!).state;
+    cur = play(cur, starter, moves[0]!);
   }
   return burnUntil(cur, side, maxIters);
 }
@@ -72,12 +73,12 @@ export function resolveRun(state: GameState, maxIters = 80): GameState {
       moves.find((x) => x.kind === "runner.accessCard" || x.kind === "runner.accessRandom") ??
       moves.find((x) => x.kind === "prompt.answer");
     if (m) {
-      cur = play(cur, "runner", m).state;
+      cur = play(cur, "runner", m);
       continue;
     }
     const corpMoves = engine.getLegalMoves(cur, "corp");
     if (corpMoves.length > 0) {
-      cur = play(cur, "corp", corpMoves[0]!).state;
+      cur = play(cur, "corp", corpMoves[0]!);
       continue;
     }
     return cur;
@@ -90,6 +91,8 @@ export function resolveRun(state: GameState, maxIters = 80): GameState {
  *
  * Pulls each requested card from the front of the starter pool, leaving the
  * rest in its original order, so the scripted hand is deterministic.
+ * (`corpDeckStartingWith` in fixtures.ts is the same primitive exposed for
+ * direct deck-config use.)
  */
 export function corpDeckWithHand(hand: string[]): DeckConfig {
   const cfg = starterDeckConfigs().corp;
@@ -110,16 +113,16 @@ export function corpDeckWithHand(hand: string[]): DeckConfig {
 /**
  * Advance a game `steps` decisions with `ai` (through the information boundary).
  *
- * `decisionSeed` maps each decision index to the seed handed to the AI; the
- * default (`i`) matches the RandomAI/determinize callers, and the EvalAI
- * perf/boundary callers pass `i * 131 + 7` to keep their established playouts
- * byte-identical.
+ * `decisionSeed` maps each decision index to the seed handed to the AI; every
+ * caller passes its own (the RandomAI/determinize callers use `(i) => i`, the
+ * EvalAI perf/boundary callers use `(i) => i * 131 + 7` to keep their
+ * established playouts byte-identical).
  */
 export function randomGame(
   ai: GameAI,
   seed: number,
   steps: number,
-  decisionSeed: (i: number) => number = (i) => i,
+  decisionSeed: (i: number) => number,
 ): GameState {
   const decks = starterDeckConfigs();
   let state = engine.startGame({
@@ -165,7 +168,7 @@ export function permute<T>(list: T[], streamSeed: number): void {
  * Everything visible is untouched.
  */
 export function reorderHidden(state: GameState, side: PlayerSide, streamSeed: number): GameState {
-  const s = JSON.parse(JSON.stringify(state)) as GameState;
+  const s = deepClone(state) as GameState;
   const opponent: PlayerSide = side === "corp" ? "runner" : "corp";
   permute(s[opponent].deck, streamSeed);
   permute(s[opponent].hand, streamSeed + 1);

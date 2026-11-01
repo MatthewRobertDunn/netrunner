@@ -8,7 +8,7 @@
 import { installRealCss } from "./setup.ts"; // also bridges happy-dom onto globalThis
 import { mount } from "@vue/test-utils";
 import { assert, assertEquals } from "../helpers/assert.ts";
-import { createTestFixture, publicStatusFor } from "./fixture.ts";
+import { accessDecisionFixture, createTestFixture, publicStatusFor } from "./fixture.ts";
 import { engine } from "../../src/mod.ts";
 import type { Move, PlayerSide } from "../../src/types.ts";
 import GameScreen from "../../src/web/ui/game.ts";
@@ -222,23 +222,7 @@ Deno.test("GameScreen status dock side panel", async (t) => {
 
   await t.step("own credits tile takes the gain-credit action", async () => {
     for (const humanSide of ["corp", "runner"] as const) {
-      // Seed 42 opens on the Corp turn: three gains spend its clicks, then a
-      // one-card discard clears the discard phase to reach the Runner turn.
-      // (Corp opens over max hand size after the mandatory draw.)
-      let fx = createTestFixture(42, humanSide);
-      if (humanSide === "runner") {
-        const gains: Move[] = [{ kind: "corp.gainCredits" }, { kind: "corp.gainCredits" }, {
-          kind: "corp.gainCredits",
-        }];
-        fx = createTestFixture(42, humanSide, gains);
-        const drop = fx.state.corp.hand[0]!.id;
-        fx = createTestFixture(
-          42,
-          humanSide,
-          [...gains, { kind: "discard", player: "corp", cardInstanceIds: [drop] }],
-        );
-      }
-      const { state } = fx;
+      const { state } = dockActionFixture(humanSide);
       assertEquals(state.turn.player, humanSide, `it is ${humanSide}'s turn`);
       const wrapper = mount(GameScreen, { props: { state, humanSide } });
       const dock = wrapper.find('[data-testid="status-dock"]');
@@ -270,24 +254,7 @@ Deno.test("GameScreen status dock side panel", async (t) => {
 
   await t.step("own hand stat takes the draw action", async () => {
     for (const humanSide of ["corp", "runner"] as const) {
-      // Same fixtures as the gain-credit step: seed 42 opens on the Corp
-      // turn; for the runner seat the corp spends its clicks on three gains
-      // and one discard clears the discard phase. Both leave clicks + deck
-      // for the human, so the draw move is legal and the button is enabled.
-      let fx = createTestFixture(42, humanSide);
-      if (humanSide === "runner") {
-        const gains: Move[] = [{ kind: "corp.gainCredits" }, { kind: "corp.gainCredits" }, {
-          kind: "corp.gainCredits",
-        }];
-        fx = createTestFixture(42, humanSide, gains);
-        const drop = fx.state.corp.hand[0]!.id;
-        fx = createTestFixture(
-          42,
-          humanSide,
-          [...gains, { kind: "discard", player: "corp", cardInstanceIds: [drop] }],
-        );
-      }
-      const { state } = fx;
+      const { state } = dockActionFixture(humanSide);
       assertEquals(state.turn.player, humanSide, `it is ${humanSide}'s turn`);
       assert(
         engine.getLegalMoves(state, humanSide).some((m) => m.kind === `${humanSide}.draw`),
@@ -355,6 +322,27 @@ Deno.test("GameScreen status dock side panel", async (t) => {
     );
   });
 });
+
+/**
+ * The fixture for the two status-dock action steps: the CORP seat mounts the
+ * seed-42 opening board directly; the RUNNER seat needs the corp turn burned
+ * first (three gains spend its clicks, the mandatory one-card discard clears
+ * the discard phase), so the runner holds the turn with clicks to act.
+ */
+function dockActionFixture(humanSide: PlayerSide) {
+  if (humanSide === "corp") return createTestFixture(42, "corp");
+  const gains: Move[] = [
+    { kind: "corp.gainCredits" },
+    { kind: "corp.gainCredits" },
+    { kind: "corp.gainCredits" },
+  ];
+  const spent = createTestFixture(42, "corp", gains);
+  const drop = spent.state.corp.hand[0]!.id;
+  return createTestFixture(42, "corp", [
+    ...gains,
+    { kind: "discard", player: "corp", cardInstanceIds: [drop] },
+  ]);
+}
 
 Deno.test("GameScreen remotes: ice sits on the runner side in both seats", () => {
   // Structural DOM types: this repo typechecks without the DOM lib (see
@@ -442,16 +430,12 @@ Deno.test("GameScreen access popup: only the human's own access decision pops th
   // A runner access-decision prompt on a real card (corp grip card resolves
   // via findCardIn for the test; the engine always sets player: "runner").
   const accessedId = state.corp.hand[0]!.id;
-  const withAccess = (player: "corp" | "runner") => {
-    const s = structuredClone(state);
-    s.prompts = [{ kind: "access-decision", id: 999, player, cardId: accessedId } as never];
-    return s;
-  };
+  const withAccess = () => accessDecisionFixture(state, accessedId);
 
   // Human is corp, AI runner is accessing: no notice, and transitioning into
   // the access must not auto-open the zoom (the old flash-then-close).
   const opp = mount(GameScreen, { props: { state, humanSide: "corp" } });
-  await opp.setProps({ state: withAccess("runner") });
+  await opp.setProps({ state: withAccess() });
   assertEquals(
     opp.find('[data-testid="access-notice"]').exists(),
     false,
@@ -465,7 +449,7 @@ Deno.test("GameScreen access popup: only the human's own access decision pops th
 
   // Human is the runner accessing: the notice shows and the zoom auto-opens.
   const own = mount(GameScreen, { props: { state, humanSide: "runner" } });
-  await own.setProps({ state: withAccess("runner") });
+  await own.setProps({ state: withAccess() });
   assert(
     own.find('[data-testid="access-notice"]').exists(),
     "access notice for the human's own access",

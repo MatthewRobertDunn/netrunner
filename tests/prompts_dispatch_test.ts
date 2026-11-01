@@ -25,7 +25,7 @@
 
 import { engine, starterDeckConfigs } from "../src/mod.ts";
 import type { CardId, GameState, PlayerSide, Zone } from "../src/types.ts";
-import { play } from "./helpers/fixtures.ts";
+import { findInstalled, play } from "./helpers/fixtures.ts";
 import { corpDeckWithHand, nextTurnOf } from "./helpers/drive.ts";
 import { assert, assertDefined, assertEquals } from "./helpers/assert.ts";
 
@@ -40,14 +40,6 @@ function newGame(corpHand: CardId[]): GameState {
     mode: "starter-decks",
     seed: 3,
   });
-}
-
-/** The first installed corp card with the given card id (root or ice). */
-function findInstalled(state: GameState, cardId: CardId) {
-  for (const s of state.servers) {
-    for (const c of [...s.root, ...s.ice]) if (c.cardId === cardId) return c;
-  }
-  return undefined;
 }
 
 /** Any installed corp card with this instance id (root or ice). */
@@ -89,7 +81,7 @@ function answerChooseOne(state: GameState, side: PlayerSide, optionId: string): 
     player: side,
     promptId: prompt.id,
     optionId: option.id,
-  }).state;
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -104,18 +96,17 @@ function answerChooseOne(state: GameState, side: PlayerSide, optionId: string): 
 function seamlessMultiTargetState(): GameState {
   let s = newGame(["manegarm_skunkworks", "urtica_cipher", "seamless_launch", "hedge_fund"]);
   // Turn 1: install the upgrade (HQ root; upgrades may also create a remote).
-  s = play(s, "corp", { kind: "corp.install", cardId: "manegarm_skunkworks", server: "hq" }).state;
+  s = play(s, "corp", { kind: "corp.install", cardId: "manegarm_skunkworks", server: "hq" });
   s = nextTurnOf(s, "corp"); // corp turn 2
   // Turn 2: install the advanceable asset in a new remote, then end the turn.
-  s =
-    play(s, "corp", { kind: "corp.install", cardId: "urtica_cipher", server: "new-remote" }).state;
+  s = play(s, "corp", { kind: "corp.install", cardId: "urtica_cipher", server: "new-remote" });
   s = nextTurnOf(s, "corp"); // corp turn 3
   // Turn 3: play Seamless Launch (a single target would resolve silently).
   const playOp = engine.getLegalMoves(s, "corp").find((m) =>
     m.kind === "corp.playOperation" && m.cardId === "seamless_launch"
   );
   assertDefined(playOp, "Seamless Launch is playable");
-  return play(s, "corp", playOp!).state;
+  return play(s, "corp", playOp!);
 }
 
 Deno.test("seamless launch prompt: every chosen option places 2 counters, never rezzez (1.18.2)", async (t) => {
@@ -187,13 +178,13 @@ Deno.test("seamless launch prompt: every chosen option places 2 counters, never 
 
 Deno.test("seamless launch single target: counters placed without a prompt (no prompt or answered)", () => {
   let s = newGame(["manegarm_skunkworks", "seamless_launch"]);
-  s = play(s, "corp", { kind: "corp.install", cardId: "manegarm_skunkworks", server: "hq" }).state;
+  s = play(s, "corp", { kind: "corp.install", cardId: "manegarm_skunkworks", server: "hq" });
   s = nextTurnOf(s, "corp"); // corp turn 2
   const playOp = engine.getLegalMoves(s, "corp").find((m) =>
     m.kind === "corp.playOperation" && m.cardId === "seamless_launch"
   );
   assertDefined(playOp, "Seamless Launch is playable");
-  s = play(s, "corp", playOp!).state;
+  s = play(s, "corp", playOp!);
   // Only one legal target: no prompt is needed (or it is answered trivially).
   if (s.prompts.length > 0) {
     const prompt = assertDefined(chooseOnePrompt(s, "corp"), "a choose-one prompt is pending");
@@ -224,8 +215,8 @@ Deno.test("seamless launch single target: counters placed without a prompt (no p
 function branEncounterState(): GameState {
   let s = newGame(["bran_1_0", "palisade", "hedge_fund", "hedge_fund", "government_subsidy"]);
   // Turn 1: install Brân in a new remote, then gain the credits to rez it.
-  s = play(s, "corp", { kind: "corp.install", cardId: "bran_1_0", server: "new-remote" }).state;
-  s = play(s, "corp", { kind: "corp.gainCredits" }).state;
+  s = play(s, "corp", { kind: "corp.install", cardId: "bran_1_0", server: "new-remote" });
+  s = play(s, "corp", { kind: "corp.gainCredits" });
   s = nextTurnOf(s, "runner"); // end corp turn 1; the runner now acts
   // The corp keeps at least one ice card in HQ for the subroutine to install.
   const palisadeInHand = cardsIn(s, "corp", "hand").find((c) => c.cardId === "palisade");
@@ -235,7 +226,7 @@ function branEncounterState(): GameState {
     m.kind === "runner.run" && m.server === "remote-1"
   );
   assertDefined(run, "the runner can run the remote");
-  return play(s, "runner", run!).state;
+  return play(s, "runner", run!);
 }
 
 /** Answer the corp's rez window by rezzing `cardId`, or return the state. */
@@ -249,7 +240,7 @@ function answerRezWindow(state: GameState, cardId: CardId): GameState {
     player: "corp",
     promptId: prompt.id,
     optionId: option.id,
-  }).state;
+  });
 }
 
 /**
@@ -267,7 +258,7 @@ function branPromptState(): GameState {
       moves.find((m) => m.kind === "prompt.answer") ??
       moves[0];
     if (!pick) break;
-    s = play(s, side, pick).state;
+    s = play(s, side, pick);
     prompt = chooseOnePrompt(s, "corp");
   }
   const branPrompt = assertDefined(
@@ -378,7 +369,7 @@ Deno.test("regression: answering a choose-one option never rezzez a card (rule 8
       const kind = option.effect?.kind;
       const isRezInstruction = kind === "rez-card-free" || kind === "rez-card-paid";
       if (isRezInstruction) continue; // a genuine rez instruction: handled above
-      const after = play(promptState, "corp", move).state;
+      const after = play(promptState, "corp", move);
       const rezEvents = after.log.filter((e) => e.type === "rez");
       for (const event of rezEvents) {
         assert(

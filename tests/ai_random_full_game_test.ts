@@ -4,14 +4,13 @@
  */
 
 import { playGame, RandomAI } from "../src/ai/mod.ts";
-import { engine } from "../src/mod.ts";
+import { engine, starterDeckConfigs } from "../src/mod.ts";
 import type { GameAI } from "../src/ai/mod.ts";
-import { starterFixtures } from "./helpers/fixtures.ts";
 import { assert, assertEquals, assertTruthy } from "./helpers/assert.ts";
 
 /** Two RandomAIs play one full starter game for `seed` through `playGame`. */
 function randomFullGame(seed: number) {
-  const decks = starterFixtures();
+  const decks = starterDeckConfigs();
   const state = engine.startGame({
     corp: decks.corp,
     runner: decks.runner,
@@ -30,9 +29,18 @@ Deno.test("random AI vs random AI full games", async (t) => {
     assertTruthy(outcome.winner, `game should end; last turn ${outcome.state.turn.number}`);
     assertEquals(outcome.timedOut, false, "game must not hit the move cap");
     assert(outcome.moves > 0, "at least one move was applied");
+    // The winner is discriminated by HOW it won: either the agenda-point
+    // target (>= 7 points banked) or a terminal loss (flatline / decking) —
+    // anything else would mean the game ended without a real reason.
+    const winner = outcome.winner!;
+    const winnerPoints = winner === "corp"
+      ? outcome.state.corp.agendaPoints
+      : outcome.state.runner.agendaPoints;
+    const reason = outcome.winReason ?? "";
     assert(
-      outcome.winner === "corp" || outcome.winner === "runner" || outcome.winner === "draw",
-      `winner is a terminal value (${String(outcome.winner)})`,
+      winnerPoints >= 7 || /flatline|empty|deck/i.test(reason),
+      `winner ${winner} has ${winnerPoints} agenda points and reason "${reason}" — neither an ` +
+        `agenda-point win nor a flatline/decking`,
     );
     assertTruthy(outcome.winReason, "a terminal game records its win reason");
   });

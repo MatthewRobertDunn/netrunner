@@ -2,6 +2,11 @@
  * Tiny offline assertion helpers (no network, no dependencies).
  */
 
+/** Structured deep copy via JSON round-trip (GameState and friends are plain data). */
+export function deepClone<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
+}
+
 export function assertEquals<T>(actual: T, expected: T, msg?: string): void {
   const a = JSON.stringify(actual, sortKeys);
   const e = JSON.stringify(expected, sortKeys);

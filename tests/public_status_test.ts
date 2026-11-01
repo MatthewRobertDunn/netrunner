@@ -146,7 +146,7 @@ Deno.test("public status: unrezzed Corp card ids are hidden except from the Corp
         (m) => m.kind === "corp.install" && m.server === "new-remote",
       ),
     );
-    const after = play(state, "corp", install).state;
+    const after = play(state, "corp", install);
     const shared = engine.getPublicGameStatus(after);
     assert(
       shared.players.corp.installed.every((c) => c.cardId === "hidden"),
@@ -161,7 +161,7 @@ Deno.test("public status: unrezzed Corp card ids are hidden except from the Corp
         (m) => m.kind === "corp.install" && m.server === "new-remote",
       ),
     );
-    const after = play(state, "corp", install).state;
+    const after = play(state, "corp", install);
     const forCorp = engine.getPublicGameStatusFor(after, "corp");
     assert(
       forCorp.players.corp.installed.some((c) => c.cardId !== "hidden"),
@@ -175,7 +175,7 @@ Deno.test("public status: credits update after a Corp basic action", () => {
   const gain = assertDefined(
     engine.getLegalMoves(state, "corp").find((m) => m.kind === "corp.gainCredits"),
   );
-  const after = play(state, "corp", gain).state;
+  const after = play(state, "corp", gain);
   const shared = engine.getPublicGameStatus(after);
   assertEquals(shared.players.corp.credits, 6, "gaining credits is public knowledge");
   assertEquals(shared.players.corp.clicks, 2, "clicks spent are public knowledge");
@@ -189,7 +189,7 @@ Deno.test("public status: installed Runner cards are always public", () => {
       (m) => m.kind === "corp.install" && m.server === "new-remote",
     ),
   );
-  state = play(state, "corp", install).state;
+  state = play(state, "corp", install);
   const shared = engine.getPublicGameStatus(state);
   for (const card of shared.players.runner.installed) {
     assert(
@@ -207,7 +207,7 @@ Deno.test("public status: installed Runner cards are always public", () => {
     engine.getLegalMoves(state, "runner").find((m) => m.kind === "runner.install"),
     "the runner has an install move (the starter deck's first card is installable)",
   );
-  state = play(state, "runner", runnerInstall).state;
+  state = play(state, "runner", runnerInstall);
   const forCorp = engine.getPublicGameStatusFor(state, "corp");
   const forRunner = engine.getPublicGameStatusFor(state, "runner");
   assertEquals(
@@ -251,13 +251,13 @@ Deno.test("public status: run.currentIce respects the viewer", async (t) => {
         (m) => m.kind === "corp.install" && m.cardId === "tithe" && m.server === "new-remote",
       ),
     );
-    state = endCorpTurn(play(state, "corp", install).state);
+    state = endCorpTurn(play(state, "corp", install));
     const run = assertDefined(
       engine.getLegalMoves(state, "runner").find(
         (m) => m.kind === "runner.run" && m.server === "remote-1",
       ),
     );
-    state = play(state, "runner", run).state;
+    state = play(state, "runner", run);
     assert(state.run !== null && state.run.currentIceId !== undefined, "ice is approached");
 
     const forCorp = engine.getPublicGameStatusFor(state, "corp");
@@ -283,13 +283,13 @@ Deno.test("public status: run.currentIce respects the viewer", async (t) => {
         (m) => m.kind === "corp.install" && m.cardId === "tithe" && m.server === "new-remote",
       ),
     );
-    state = endCorpTurn(play(state, "corp", install).state);
+    state = endCorpTurn(play(state, "corp", install));
     const run = assertDefined(
       engine.getLegalMoves(state, "runner").find(
         (m) => m.kind === "runner.run" && m.server === "remote-1",
       ),
     );
-    state = play(state, "runner", run).state;
+    state = play(state, "runner", run);
     // The corp rezzes the approached ice out of its rez window.
     const prompt = state.prompts[0]!;
     assert(prompt.kind === "rez-window", "the rez window is pending");
@@ -299,7 +299,7 @@ Deno.test("public status: run.currentIce respects the viewer", async (t) => {
         (m) => m.kind === "prompt.answer" && m.optionId === option.id,
       ),
     );
-    state = play(state, "corp", answer).state;
+    state = play(state, "corp", answer);
 
     for (
       const view of [

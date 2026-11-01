@@ -14,11 +14,15 @@
  */
 
 import { engine } from "../src/mod.ts";
-import type { DeckConfig, GameState, Move } from "../src/types.ts";
-import { orderedCorpDeck, play } from "./helpers/fixtures.ts";
+import type { GameState, Move } from "../src/types.ts";
+import {
+  endCorpTurn,
+  orderedCorpDeck,
+  orderedRunnerDeck,
+  play,
+  repeated,
+} from "./helpers/fixtures.ts";
 import { assert, assertDefined } from "./helpers/assert.ts";
-
-const RUNNER_IDENTITY = "the_catalyst_convention_breaker";
 
 /**
  * Filler cards so the ordered decks survive several draws.
@@ -29,19 +33,8 @@ const RUNNER_IDENTITY = "the_catalyst_convention_breaker";
  * run the scripted hand dry; 25 copies of hedge_fund guarantee the draws keep
  * coming without changing any test assertion.
  */
-const CORP_FILLER_DRAW = Array.from({ length: 25 }, () => "hedge_fund");
-const RUNNER_FILLER_DRAW = Array.from({ length: 20 }, () => "sure_gamble");
-
-/** A runner deck whose top-to-bottom order is exactly `ordered`. */
-function orderedRunnerDeck(ordered: string[]): DeckConfig {
-  const counts = new Map<string, number>();
-  for (const id of ordered) counts.set(id, (counts.get(id) ?? 0) + 1);
-  return {
-    identity: RUNNER_IDENTITY,
-    cards: [...counts].map(([cardId, count]) => ({ cardId, count })),
-    orderedCards: ordered,
-  };
-}
+const CORP_FILLER_DRAW = repeated("hedge_fund", 25);
+const RUNNER_FILLER_DRAW = repeated("sure_gamble", 20);
 
 function startGame(corpOrdered: string[], runnerOrdered: string[], seed = 1): GameState {
   return engine.startGame({
@@ -52,18 +45,6 @@ function startGame(corpOrdered: string[], runnerOrdered: string[], seed = 1): Ga
   });
 }
 
-/** Spend corp clicks (and answer any discard prompt) until it is the Runner's turn. */
-function endCorpTurn(state: GameState): GameState {
-  let cur = state;
-  for (let i = 0; i < 15 && cur.turn.player === "corp" && !cur.winner; i++) {
-    const moves = engine.getLegalMoves(cur, "corp");
-    if (moves.length === 0) break;
-    const move = moves.find((m) => m.kind === "corp.gainCredits") ?? moves[0]!;
-    cur = play(cur, "corp", move).state;
-  }
-  return cur;
-}
-
 /** Corp turn 1: install the first hand card (ice) on HQ, then end the turn. */
 function corpInstallIceOnHqAndEndTurn(state: GameState): GameState {
   const iceId = state.corp.hand[0]!.cardId;
@@ -71,11 +52,11 @@ function corpInstallIceOnHqAndEndTurn(state: GameState): GameState {
     (m) => m.kind === "corp.install" && m.cardId === iceId && m.server === "hq",
   );
   assertDefined(install, `corp can install ${iceId} on HQ`);
-  return endCorpTurn(play(state, "corp", install!).state);
+  return endCorpTurn(play(state, "corp", install!), 15);
 }
 
 function sureGamble(state: GameState): GameState {
-  return play(state, "runner", { kind: "runner.playEvent", cardId: "sure_gamble" }).state;
+  return play(state, "runner", { kind: "runner.playEvent", cardId: "sure_gamble" });
 }
 
 function installProgram(state: GameState, cardId: string): GameState {
@@ -83,7 +64,7 @@ function installProgram(state: GameState, cardId: string): GameState {
     (m) => m.kind === "runner.install" && m.cardId === cardId,
   );
   assertDefined(move, `runner can install ${cardId}`);
-  return play(state, "runner", move!).state;
+  return play(state, "runner", move!);
 }
 
 function runHq(state: GameState): GameState {
@@ -91,7 +72,7 @@ function runHq(state: GameState): GameState {
     (m) => m.kind === "runner.run" && m.server === "hq",
   );
   assertDefined(move, "runner can run HQ");
-  return play(state, "runner", move!).state;
+  return play(state, "runner", move!);
 }
 
 /** Corp answers the pending rez window by rezzing the approached ice. */
@@ -105,7 +86,7 @@ function corpRezApproachedIce(state: GameState): GameState {
     player: "corp",
     promptId: prompt.id,
     optionId: option!.id,
-  }).state;
+  });
 }
 
 /** Play runner run-phase/access moves until the run fully ends. */
@@ -122,7 +103,7 @@ function drainRun(state: GameState): GameState {
       moves.find((m) => m.kind === "runner.resolveSubroutines") ??
       moves.find((m) => m.kind === "runner.jackOut");
     if (!move) break;
-    cur = play(cur, "runner", move).state;
+    cur = play(cur, "runner", move);
   }
   return cur;
 }
@@ -176,15 +157,15 @@ Deno.test("pump: strength boost expires at encounter end and when the run ends m
     // Encounter with rezzed Tithe (sentry, strength 1); Carmen (strength 2) pumps +3.
     const carmen = installed(state, "carmen");
     assert(state.run?.phase === "encounter-ice", "encounter in progress");
-    state = play(state, "runner", pumpMove(state, carmen.id)).state;
+    state = play(state, "runner", pumpMove(state, carmen.id));
     assert(
       installed(state, "carmen").strengthBoost === 3,
       "pump recorded a +3 strengthBoost during the encounter",
     );
 
     // Break both subroutines; the encounter completes while the run continues.
-    state = play(state, "runner", breakMove(state, carmen.id, 0)).state;
-    state = play(state, "runner", breakMove(state, carmen.id, 1)).state;
+    state = play(state, "runner", breakMove(state, carmen.id, 0));
+    state = play(state, "runner", breakMove(state, carmen.id, 1));
     assert(state.run !== null, "the run is still active after the encounter");
     assert(
       state.run!.phase !== "encounter-ice",
@@ -214,7 +195,7 @@ Deno.test("pump: strength boost expires at encounter end and when the run ends m
 
     // Encounter with rezzed Palisade (barrier, strength 2, end-the-run sub).
     const cleaver = installed(state, "cleaver");
-    state = play(state, "runner", pumpMove(state, cleaver.id)).state;
+    state = play(state, "runner", pumpMove(state, cleaver.id));
     assert(
       installed(state, "cleaver").strengthBoost === 1,
       "pump recorded a +1 strengthBoost during the encounter",
@@ -226,7 +207,7 @@ Deno.test("pump: strength boost expires at encounter end and when the run ends m
       m.kind === "runner.resolveSubroutines"
     );
     assertDefined(resolve, "resolveSubroutines offered");
-    state = play(state, "runner", resolve!).state;
+    state = play(state, "runner", resolve!);
     assert(state.run === null, "the run ended (state.run is null)");
     assert(
       installed(state, "cleaver").strengthBoost === undefined,
@@ -258,12 +239,12 @@ Deno.test("pump: Unity's static +X strength is not a pump and survives the sweep
   state = sureGamble(state);
   state = installProgram(state, "unity");
   state = installProgram(state, "cleaver");
-  state = play(state, "runner", { kind: "runner.gainCredits" }).state;
-  state = endCorpTurn(state);
+  state = play(state, "runner", { kind: "runner.gainCredits" });
+  state = endCorpTurn(state, 15);
   // Runner turn 2: gain a credit, sure_gamble (+9 net), install Carmen (3rd
   // icebreaker), run HQ. (Sure Gamble costs 5 and gains 9 here; without the
   // extra credit neither it nor Carmen's 5-credit install is affordable.)
-  state = play(state, "runner", { kind: "runner.gainCredits" }).state;
+  state = play(state, "runner", { kind: "runner.gainCredits" });
   state = sureGamble(state);
   state = installProgram(state, "carmen");
   state = runHq(state);
@@ -281,7 +262,7 @@ Deno.test("pump: Unity's static +X strength is not a pump and survives the sweep
   );
 
   // Pumping Unity must do nothing: the move exists but only records a warning.
-  state = play(state, "runner", pumpMove(state, unity.id)).state;
+  state = play(state, "runner", pumpMove(state, unity.id));
   assert(
     installed(state, "unity").strengthBoost === undefined,
     "Unity's strengthBoost is never written by a pump",
@@ -293,9 +274,9 @@ Deno.test("pump: Unity's static +X strength is not a pump and survives the sweep
 
   // Pump Cleaver, then break Diviner's subroutine with Unity; the encounter
   // completes while the run continues.
-  state = play(state, "runner", pumpMove(state, cleaver.id)).state;
+  state = play(state, "runner", pumpMove(state, cleaver.id));
   assert(installed(state, "cleaver").strengthBoost === 1, "Cleaver pumped +1");
-  state = play(state, "runner", breakMove(state, unity.id, 0)).state;
+  state = play(state, "runner", breakMove(state, unity.id, 0));
   assert(state.run !== null && state.run.phase !== "encounter-ice", "encounter over, run active");
   assert(
     installed(state, "cleaver").strengthBoost === undefined,
@@ -311,7 +292,7 @@ Deno.test("pump: Unity's static +X strength is not a pump and survives the sweep
   // a static bonus stored in strengthBoost, Unity's strength would drop to 1
   // and the break move below would not be offered.
   state = drainRun(state);
-  state = endCorpTurn(state); // runner t2 clicks are spent; play out the corp turn
+  state = endCorpTurn(state, 15); // runner t2 clicks are spent; play out the corp turn
   state = runHq(state);
   assert(state.run?.phase === "encounter-ice", "second encounter begins");
   assert(

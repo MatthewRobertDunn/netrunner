@@ -8,15 +8,9 @@
  */
 
 import { cardDef, engine, starterDeckConfigs } from "../src/mod.ts";
-import { continueRun } from "./helpers/fixtures.ts";
+import { continueRun, play } from "./helpers/fixtures.ts";
 import type { GameState, Move } from "../src/types.ts";
 import { assert, assertDefined, assertEquals } from "./helpers/assert.ts";
-
-function play(state: GameState, actor: "corp" | "runner", m: Move): GameState {
-  const r = engine.applyMove(state, actor, m);
-  assertDefined(r.kind === "applied" ? r.state : undefined, `move ${m.kind} applies`);
-  return (r as { state: GameState }).state;
-}
 
 function serverIds(state: GameState): string[] {
   return state.servers.map((s) => s.id);

@@ -10,7 +10,7 @@
  *    byte-identical. Catches shared references in any nested field.
  */
 
-import { assertEquals } from "./helpers/assert.ts";
+import { assertEquals, deepClone } from "./helpers/assert.ts";
 import { engine, randomAI, starterDeckConfigs, startGame } from "../src/mod.ts";
 import { fastCloneState } from "../src/engine/clone.ts";
 import type { GameState, Move, PlayerSide } from "../src/types.ts";
@@ -123,14 +123,17 @@ Deno.test("fastClone matches JSON round-trip and stays isolated", async (t) => {
     });
 
     // Force every optional CardInstance field onto the Corp identity (always
-    // present), then compare. Game semantics don't matter to the clone.
-    const card = state.corp.identity;
+    // present), then compare. Game semantics don't matter to the clone. The
+    // mutation contract (tests/helpers/fixtures.ts header) applies: the
+    // scenario edits a CLONE, never the state the engine handed out.
+    const scenario = deepClone(state);
+    const card = scenario.corp.identity;
     card.rezzed = true;
     card.advancement = 2;
     card.hostedCredits = 3;
     card.strengthBoost = 1;
-    card.server = state.servers[0]!.id;
+    card.server = scenario.servers[0]!.id;
     card.iceIndex = 0;
-    checkState(state, 7, -1);
+    checkState(scenario, 7, -1);
   });
 });

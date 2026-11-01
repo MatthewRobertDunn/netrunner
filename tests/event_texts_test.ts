@@ -30,18 +30,17 @@
  * `deno test --filter vrcation` can reach a single case.
  */
 
-import { engine, starterDeckConfigs } from "../src/mod.ts";
+import { engine } from "../src/mod.ts";
 import type {
   CardId,
   CardInstance,
-  DeckConfig,
   GameEvent,
   GameState,
   Move,
   PlayerSide,
   ServerId,
 } from "../src/types.ts";
-import { play } from "./helpers/fixtures.ts";
+import { countEvents, findInstalled, play, runnerDeckStartingWith } from "./helpers/fixtures.ts";
 import { burnUntil, corpDeckWithHand } from "./helpers/drive.ts";
 import { assert, assertDefined, assertEquals } from "./helpers/assert.ts";
 
@@ -49,23 +48,10 @@ import { assert, assertDefined, assertEquals } from "./helpers/assert.ts";
 // Fixtures
 // ---------------------------------------------------------------------------
 
-/** Runner deck whose opening hand starts with `first` (in order). */
-function runnerDeckWithFirst(first: CardId[]): DeckConfig {
-  const cfg = starterDeckConfigs().runner;
-  const rest = cfg.cards.flatMap((e) => Array<CardId>(e.count).fill(e.cardId));
-  const front: CardId[] = [];
-  for (const id of first) {
-    const i = rest.indexOf(id);
-    if (i < 0) throw new Error(`${id} is not in the runner starter pool`);
-    front.push(rest.splice(i, 1)[0]!);
-  }
-  return { identity: cfg.identity, cards: cfg.cards, orderedCards: [...front, ...rest] };
-}
-
 function newGame(corpHand: CardId[], runnerFirst: CardId[] = []): GameState {
   return engine.startGame({
     corp: corpDeckWithHand(corpHand),
-    runner: runnerDeckWithFirst(runnerFirst),
+    runner: runnerDeckStartingWith(runnerFirst),
     mode: "starter-decks",
     seed: 3,
   });
@@ -81,35 +67,27 @@ function bankCorpCredits(state: GameState, target: number): GameState {
       // Burn the Runner's turn (first-legal move) to get back to the Corp.
       const moves = engine.getLegalMoves(cur, "runner");
       if (moves.length === 0) return cur;
-      cur = play(cur, "runner", moves[0]!).state;
+      cur = play(cur, "runner", moves[0]!);
       continue;
     }
     if (cur.prompts.length > 0) {
       const drop = cur.corp.hand[0]?.id;
       if (!drop) return cur;
-      cur = play(cur, "corp", { kind: "discard", player: "corp", cardInstanceIds: [drop] }).state;
+      cur = play(cur, "corp", { kind: "discard", player: "corp", cardInstanceIds: [drop] });
       continue;
     }
     const gain = engine.getLegalMoves(cur, "corp").find((m) => m.kind === "corp.gainCredits");
     if (!gain) return cur;
-    cur = play(cur, "corp", gain).state;
+    cur = play(cur, "corp", gain);
   }
   return cur;
-}
-
-/** First installed corp card with the given card id (root or ice), if any. */
-function findInstalled(state: GameState, cardId: CardId): CardInstance | undefined {
-  for (const s of state.servers) {
-    for (const c of [...s.root, ...s.ice]) if (c.cardId === cardId) return c;
-  }
-  return undefined;
 }
 
 /** Drain the runner's clicks down by `toSpend`, using basic actions. */
 function spendRunnerClicks(state: GameState, toSpend: number): GameState {
   let cur = state;
   for (let i = 0; i < toSpend; i++) {
-    cur = play(cur, "runner", { kind: "runner.gainCredits" }).state;
+    cur = play(cur, "runner", { kind: "runner.gainCredits" });
   }
   return cur;
 }
@@ -129,17 +107,9 @@ function eventServers(state: GameState, cardId: CardId): (ServerId | undefined)[
     .map((m) => (m as { server?: ServerId }).server);
 }
 
-/** Count log events of one type (optionally filtered by player). */
-function countEvents(state: GameState, type: GameEvent["type"], player?: PlayerSide): number {
-  return state.log.filter((e) => {
-    if (e.type !== type) return false;
-    return player === undefined || (e as { player?: PlayerSide }).player === player;
-  }).length;
-}
-
 /** Events produced by one applied move, narrowed to the ones `type` names. */
-function typedEvents(result: ReturnType<typeof play>, type: GameEvent["type"]): GameEvent[] {
-  return result.events.filter((e) => e.type === type);
+function typedEvents(state: GameState, type: GameEvent["type"], since: number): GameEvent[] {
+  return state.log.slice(since).filter((e) => e.type === type);
 }
 
 /** The rez-window option targeting the ice at the Runner's position. */
@@ -173,10 +143,10 @@ function corpInstallIceThenEndTurn(
     m.kind === "corp.install" && m.cardId === iceId && m.server === server
   );
   assertDefined(install, `corp can install ${iceId} on ${server}`);
-  let cur = play(s, "corp", install!).state;
+  let cur = play(s, "corp", install!);
   const ice = assertDefined(findInstalled(cur, iceId), `${iceId} is installed`);
   while (cur.turn.player === "corp" && !cur.winner) {
-    cur = play(cur, "corp", { kind: "corp.gainCredits" }).state;
+    cur = play(cur, "corp", { kind: "corp.gainCredits" });
   }
   assertEquals(cur.turn.player, "runner", "the runner's turn begins");
   return { state: cur, ice };
@@ -193,10 +163,10 @@ Deno.test("event texts: vrcation draws 4, spends the event click, then loses one
   const handBefore = s.runner.hand.length;
   const vrcation = assertDefined(eventMove(s, "vrcation"), "VRcation is playable");
 
-  const result = play(s, "runner", vrcation);
-  const after = result.state;
+  const eventsFrom = s.log.length;
+  const after = play(s, "runner", vrcation);
 
-  const draws = typedEvents(result, "draw");
+  const draws = typedEvents(after, "draw", eventsFrom);
   assertEquals(draws.length, 1, "exactly one draw event");
   assertEquals((draws[0] as { count: number }).count, 4, "printed text draws exactly 4 cards");
   assertEquals(
@@ -210,11 +180,11 @@ Deno.test("event texts: vrcation draws 4, spends the event click, then loses one
     "the event click plus the 'lose click' clause both land",
   );
   assertEquals(
-    typedEvents(result, "spend-clicks").length,
+    typedEvents(after, "spend-clicks", eventsFrom).length,
     1,
     "exactly one spend-clicks(1): the event's trigger cost (rule 5.2.2a)",
   );
-  const loses = typedEvents(result, "lose-clicks");
+  const loses = typedEvents(after, "lose-clicks", eventsFrom);
   assertEquals(loses.length, 1, "exactly one lose-clicks(1) from the conditional clause");
   assertEquals(
     countEvents(after, "discard", "runner"),
@@ -232,18 +202,18 @@ Deno.test("event texts: vrcation played with no click remaining loses nothing", 
   assertEquals(s.runner.clicks, 1, "one click left for the event itself");
   const handBefore = s.runner.hand.length;
 
-  const result = play(s, "runner", eventMove(s, "vrcation")!);
-  const after = result.state;
+  const eventsFrom = s.log.length;
+  const after = play(s, "runner", eventMove(s, "vrcation")!);
 
   assertEquals(
-    (typedEvents(result, "draw")[0] as { count: number }).count,
+    (typedEvents(after, "draw", eventsFrom)[0] as { count: number }).count,
     4,
     "still draws exactly 4 cards",
   );
   assertEquals(after.runner.hand.length, handBefore + 3, "hand +3 (the event card left)");
   assertEquals(after.runner.clicks, 0, "the event click was the last one");
   assertEquals(
-    typedEvents(result, "lose-clicks").length,
+    typedEvents(after, "lose-clicks", eventsFrom).length,
     0,
     "the conditional clause does not fire with no click remaining",
   );
@@ -267,17 +237,17 @@ Deno.test("event texts: creative commission gains 5 credits and loses one click"
   const creditsBefore = s.runner.credits;
   const commission = assertDefined(eventMove(s, "creative_commission"), "the event is playable");
 
-  const result = play(s, "runner", commission);
-  const after = result.state;
+  const eventsFrom = s.log.length;
+  const after = play(s, "runner", commission);
 
   assertEquals(
-    (typedEvents(result, "gain-credits")[0] as { amount: number }).amount,
+    (typedEvents(after, "gain-credits", eventsFrom)[0] as { amount: number }).amount,
     5,
     "gains 5 credits",
   );
   assertEquals(after.runner.credits, creditsBefore + 4, "gains 5, pays the 1-credit play cost");
   assertEquals(after.runner.clicks, clicksBefore - 2, "the event click plus one lost click");
-  const loses = typedEvents(result, "lose-clicks");
+  const loses = typedEvents(after, "lose-clicks", eventsFrom);
   assertEquals(loses.length, 1, "exactly one lose-clicks(1) when a click remains");
   assertEquals((loses[0] as { amount: number }).amount, 1, "the clause loses exactly one click");
 });
@@ -289,8 +259,8 @@ Deno.test("event texts: creative commission loses no click with none remaining",
   assertEquals(s.runner.clicks, 1, "one click left for the event itself");
   const creditsBefore = s.runner.credits;
 
-  const result = play(s, "runner", eventMove(s, "creative_commission")!);
-  const after = result.state;
+  const eventsFrom = s.log.length;
+  const after = play(s, "runner", eventMove(s, "creative_commission")!);
 
   assertEquals(after.runner.clicks, 0, "only the event click was spent");
   assertEquals(
@@ -299,7 +269,7 @@ Deno.test("event texts: creative commission loses no click with none remaining",
     "the credits still resolve; only the click clause is skipped",
   );
   assertEquals(
-    typedEvents(result, "lose-clicks").length,
+    typedEvents(after, "lose-clicks", eventsFrom).length,
     0,
     "no click is lost when none remains (the old code logged one anyway)",
   );
@@ -323,11 +293,11 @@ Deno.test("event texts: hedge fund gains the printed 9 credits", () => {
     ),
     "hedge fund is playable",
   );
-  const result = play(s, "corp", move);
-  const after = result.state;
+  const eventsFrom = s.log.length;
+  const after = play(s, "corp", move);
 
   assertEquals(
-    (typedEvents(result, "gain-credits")[0] as { amount: number }).amount,
+    (typedEvents(after, "gain-credits", eventsFrom)[0] as { amount: number }).amount,
     9,
     "gains the printed 9 credits",
   );
@@ -347,11 +317,11 @@ Deno.test("event texts: government subsidy gains the printed 15 credits", () => 
     ),
     "government subsidy is playable",
   );
-  const result = play(s, "corp", move);
-  const after = result.state;
+  const eventsFrom = s.log.length;
+  const after = play(s, "corp", move);
 
   assertEquals(
-    (typedEvents(result, "gain-credits")[0] as { amount: number }).amount,
+    (typedEvents(after, "gain-credits", eventsFrom)[0] as { amount: number }).amount,
     15,
     "gains the printed 15 credits",
   );
@@ -376,8 +346,8 @@ Deno.test("event texts: tread lightly lets the runner choose the server and star
   );
 
   const tread = assertDefined(eventMove(s0, "tread_lightly", "rd"), "R&D is offered");
-  const result = play(s0, "runner", tread);
-  const after = result.state;
+  const eventsFrom = s0.log.length;
+  const after = play(s0, "runner", tread);
 
   assertEquals(after.run?.server, "rd", "the run initiated on the chosen server (R&D)");
   assertEquals(after.run?.source, "tread_lightly", "the run's source is the event");
@@ -388,7 +358,7 @@ Deno.test("event texts: tread lightly lets the runner choose the server and star
     "R&D counts as run this turn",
   );
   assertEquals(
-    typedEvents(result, "run-start").length,
+    typedEvents(after, "run-start", eventsFrom).length,
     1,
     "the run started inside the event's resolution (rule 5.2.2b)",
   );
@@ -401,7 +371,7 @@ Deno.test("event texts: tread lightly's +3 rez cost shows and charges on the run
   const s0 = setup.state;
 
   const tread = assertDefined(eventMove(s0, "tread_lightly", "rd"), "R&D is offered");
-  const after = play(s0, "runner", tread).state;
+  const after = play(s0, "runner", tread);
   assertEquals(after.run?.rezCostIncrease, 3, "the run carries the +3 rez-cost increase");
 
   const { ice, option } = iceRezOption(after);
@@ -415,7 +385,7 @@ Deno.test("event texts: tread lightly's +3 rez cost shows and charges on the run
     player: "corp",
     promptId: after.prompts[0]!.id,
     optionId: option.id,
-  }).state;
+  });
   assertEquals(before - rezzed.corp.credits, 6, "rezzing charges printed+3 exactly once");
   assertEquals(findInstalled(rezzed, "palisade")!.rezzed, true, "the ice is rezzed");
   // The encounter now begins: Palisade's one subroutine can end the run.
@@ -440,8 +410,8 @@ Deno.test("event texts: overclock starts the run as part of the event with 5 hos
   );
 
   const overclock = assertDefined(eventMove(s, "overclock", "rd"), "R&D is offered");
-  const result = play(s, "runner", overclock);
-  const after = result.state;
+  const eventsFrom = s.log.length;
+  const after = play(s, "runner", overclock);
 
   assertDefined(after.run, "the event initiated the run itself (rule 5.2.2b)");
   assertEquals(after.run!.server, "rd", "the run is on the chosen server");
@@ -462,7 +432,7 @@ Deno.test("event texts: overclock starts the run as part of the event with 5 hos
     "only the event click was spent — no extra click for a separate run",
   );
   assertEquals(
-    typedEvents(result, "run-start").length,
+    typedEvents(after, "run-start", eventsFrom).length,
     1,
     "the run started inside the event's resolution (rule 5.2.2b)",
   );
@@ -477,12 +447,12 @@ Deno.test("event texts: overclock's hosted credits pay the Manegarm toll during 
     m.kind === "corp.install" && m.cardId === "nico_campaign" && m.server === "new-remote"
   );
   assertDefined(installAsset, "the corp can install Nico Campaign in a new remote");
-  s = play(s, "corp", installAsset!).state;
+  s = play(s, "corp", installAsset!);
   const installUpgrade = engine.getLegalMoves(s, "corp").find((m) =>
     m.kind === "corp.install" && m.cardId === "manegarm_skunkworks" && m.server === "remote-1"
   );
   assertDefined(installUpgrade, "the corp can install the upgrade in remote-1");
-  s = play(s, "corp", installUpgrade!).state;
+  s = play(s, "corp", installUpgrade!);
   const manegarm = assertDefined(
     findInstalled(s, "manegarm_skunkworks"),
     "the upgrade is installed",
@@ -491,9 +461,9 @@ Deno.test("event texts: overclock's hosted credits pay the Manegarm toll during 
     m.kind === "corp.rez" && m.targetId === manegarm.id
   );
   assertDefined(rez, "corp.rez is offered for the installed upgrade");
-  s = play(s, "corp", rez!).state;
+  s = play(s, "corp", rez!);
   while (s.turn.player === "corp" && !s.winner) {
-    s = play(s, "corp", { kind: "corp.gainCredits" }).state;
+    s = play(s, "corp", { kind: "corp.gainCredits" });
   }
   s = burnUntil(s, "runner");
   assert(
@@ -507,14 +477,14 @@ Deno.test("event texts: overclock's hosted credits pay the Manegarm toll during 
   s.runner.credits = 1;
   assertEquals(s.runner.credits, 1, "the runner cannot pay the toll from the bank");
   const overclock = assertDefined(eventMove(s, "overclock", "remote-1"), "remote-1 is offered");
-  const after = play(s, "runner", overclock).state;
+  const after = play(s, "runner", overclock);
   assertEquals(after.run?.server, "remote-1", "the event started a run on remote-1");
   assertEquals(after.run?.fundCredits, 5, "the run carries the 5 hosted credits");
 
   // Approach the server: the movement phase parks for the jack-out choice.
   const cont = engine.getLegalMoves(after, "runner").find((m) => m.kind === "runner.continueRun");
   assertDefined(cont, "the run parks in the movement phase");
-  let cur = play(after, "runner", cont!).state;
+  let cur = play(after, "runner", cont!);
   const toll = cur.prompts[0];
   assert(toll && toll.kind === "choose-one", "the Manegarm toll prompt is pending");
 
@@ -525,7 +495,7 @@ Deno.test("event texts: overclock's hosted credits pay the Manegarm toll during 
     creditsOption,
     "the 5-credit toll option is offered — availableCredits counts the run fund",
   );
-  cur = play(cur, "runner", creditsOption!).state;
+  cur = play(cur, "runner", creditsOption!);
 
   assertEquals(cur.run?.fundCredits, 0, "the toll was paid from the hosted run fund (5 -> 0)");
   assertEquals(
@@ -541,18 +511,18 @@ Deno.test("event texts: overclock's hosted fund is bound to that run, not to a l
   // on a LATER turn has nothing to spend: "during that run" cannot leak.
   let s = newGame([], ["overclock"]);
   s = burnUntil(s, "runner");
-  s = play(s, "runner", eventMove(s, "overclock")!).state;
+  s = play(s, "runner", eventMove(s, "overclock")!);
   assertEquals(s.run?.fundCredits, 5, "the event's run carries the 5 hosted credits");
 
   // Play the event's run out to the end (no ice on HQ: approach, breach, access).
-  s = play(s, "runner", { kind: "runner.continueRun" }).state;
+  s = play(s, "runner", { kind: "runner.continueRun" });
   for (let i = 0; i < 20 && (s.run || s.breach) && !s.winner; i++) {
     const moves = engine.getLegalMoves(s, "runner");
     const next = moves.find((m) =>
       m.kind === "runner.accessRandom" || m.kind === "runner.accessCard"
     ) ?? moves.find((m) => m.kind === "runner.finishAccess");
     assertDefined(next, "the breach offers an access or finish-access move");
-    s = play(s, "runner", next!).state;
+    s = play(s, "runner", next!);
   }
   assertEquals(s.run, null, "the event's run has ended");
 
@@ -562,7 +532,7 @@ Deno.test("event texts: overclock's hosted fund is bound to that run, not to a l
     while (s.turn.player === side && !s.winner) {
       const moves = engine.getLegalMoves(s, s.turn.player);
       if (moves.length === 0) break;
-      s = play(s, s.turn.player, moves[0]!).state;
+      s = play(s, s.turn.player, moves[0]!);
     }
   }
   assertEquals(s.turn.player, "runner", "the next runner turn has begun");
@@ -571,7 +541,7 @@ Deno.test("event texts: overclock's hosted fund is bound to that run, not to a l
     0,
     "the hosted credits never survive to a later turn's run",
   );
-  s = play(s, "runner", { kind: "runner.run", server: "archives" }).state;
+  s = play(s, "runner", { kind: "runner.run", server: "archives" });
   assertEquals(
     s.run?.fundCredits,
     undefined,

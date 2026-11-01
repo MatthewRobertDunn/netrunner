@@ -8,7 +8,9 @@
  */
 
 import { engine, starterDeckConfigs } from "../../src/mod.ts";
-import type { GameState, Move, PlayerSide } from "../../src/types.ts";
+import type { GameState, Move, PlayerSide, Prompt } from "../../src/types.ts";
+import { play } from "../helpers/fixtures.ts";
+import { deepClone } from "../helpers/assert.ts";
 
 // The `moves` list is a heterogeneous bag of Move variants, so it is typed as
 // Move[] rather than a single literal variant. Callers previously cast to
@@ -22,14 +24,6 @@ function fresh(seed: number): GameState {
     mode: "starter-decks",
     seed,
   });
-}
-
-function play(state: GameState, side: "corp" | "runner", m: Move): GameState {
-  const r = engine.applyMove(state, side, m);
-  if (r.kind !== "applied") {
-    throw new Error(`move ${m.kind} rejected: ${(r as { reason: string }).reason}`);
-  }
-  return r.state;
 }
 
 /** Build a deterministic game state reached by playing `moves` in order. */
@@ -50,6 +44,22 @@ export function createTestFixture(
 /** Public game status for `humanSide`, like GameScreen renders. */
 export function publicStatusFor(state: GameState, humanSide: PlayerSide) {
   return engine.getPublicGameStatusFor(state, humanSide);
+}
+
+/**
+ * A state whose only prompt is a runner access-decision on `cardId` — the
+ * shape the access-zoom test needs. Built as a typed `Prompt` (never a cast),
+ * so an engine-side prompt-shape change fails here, not at the call site.
+ */
+export function accessDecisionFixture(
+  state: GameState,
+  cardId: string,
+  id = 999,
+): GameState {
+  const s = deepClone(state);
+  const prompt: Prompt = { kind: "access-decision", id, player: "runner", cardId };
+  s.prompts = [prompt];
+  return s;
 }
 
 // `palisadeInHand` and `freshCorpHandWithExtraPalisade` were deleted: nothing

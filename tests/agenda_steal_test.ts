@@ -10,17 +10,9 @@
  */
 
 import { cardDef, engine, starterDeckConfigs } from "../src/mod.ts";
-import { continueRun } from "./helpers/fixtures.ts";
+import { continueRun, play } from "./helpers/fixtures.ts";
 import type { GameState, Move } from "../src/types.ts";
 import { assert, assertDefined } from "./helpers/assert.ts";
-
-function play(state: GameState, side: "corp" | "runner", m: Move): GameState {
-  const r = engine.applyMove(state, side, m);
-  if (r.kind !== "applied") {
-    throw new Error(`move ${m.kind} rejected: ${(r as { reason: string }).reason}`);
-  }
-  return r.state;
-}
 
 function finishCorpTurn(state: GameState): GameState {
   let current = state;

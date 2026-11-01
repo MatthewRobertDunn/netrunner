@@ -13,9 +13,17 @@
  *    install only (Telework Contract) — rezzing never re-fires them.
  */
 
-import { engine, starterDeckConfigs } from "../src/mod.ts";
-import { endCorpTurn, newGameWithCorpHand, orderedCorpDeck, play } from "./helpers/fixtures.ts";
-import type { DeckConfig, GameEvent, GameState, Move, PlayerSide } from "../src/types.ts";
+import { engine } from "../src/mod.ts";
+import {
+  endCorpTurn,
+  findInstalled,
+  newGameWithCorpHand,
+  orderedCorpDeck,
+  play,
+  repeated,
+  runnerDeckStartingWith,
+} from "./helpers/fixtures.ts";
+import type { GameEvent, GameState, Move, PlayerSide } from "../src/types.ts";
 import { assert, assertDefined, assertEquals } from "./helpers/assert.ts";
 
 // ---------------------------------------------------------------------------
@@ -25,11 +33,6 @@ import { assert, assertDefined, assertEquals } from "./helpers/assert.ts";
 /** All log events of one type, narrowed. */
 function eventsOf<T extends GameEvent["type"]>(state: GameState, type: T) {
   return state.log.filter((e) => e.type === type) as Extract<GameEvent, { type: T }>[];
-}
-
-/** A corp card installed in some server's root or ice. */
-function findInstalled(state: GameState, cardId: string) {
-  return state.servers.flatMap((s) => [...s.root, ...s.ice]).find((c) => c.cardId === cardId);
 }
 
 /** Find a legal move or fail the test with `what`. */
@@ -43,31 +46,13 @@ function moveWhere(
   return assertDefined(m, `expected a legal move: ${what}`);
 }
 
-/** A runner deck whose top-to-bottom order starts with `top`. */
-function orderedRunnerDeck(top: string[]): DeckConfig {
-  const base = starterDeckConfigs().runner;
-  const pool = base.cards.flatMap((e) => Array<string>(e.count).fill(e.cardId));
-  for (const t of top) {
-    const i = pool.indexOf(t);
-    if (i >= 0) pool.splice(i, 1);
-  }
-  const ordered = [...top, ...pool];
-  const counts = new Map<string, number>();
-  for (const id of ordered) counts.set(id, (counts.get(id) ?? 0) + 1);
-  return {
-    identity: base.identity,
-    cards: [...counts].map(([cardId, count]) => ({ cardId, count })),
-    orderedCards: ordered,
-  };
-}
-
 /** Start a game with scripted opening hands for both sides (deterministic). */
 function gameWithHands(corpTop: string[], runnerTop: string[], seed = 3): GameState {
-  const filler = Array.from({ length: 30 }, () => "hedge_fund");
+  const filler = repeated("hedge_fund", 30);
   const corp = orderedCorpDeck([...corpTop, ...filler]);
   return engine.startGame({
     corp,
-    runner: orderedRunnerDeck(runnerTop),
+    runner: runnerDeckStartingWith(runnerTop),
     mode: "starter-decks",
     seed,
   });
@@ -81,7 +66,7 @@ function endRunnerTurn(state: GameState): GameState {
     const legal = engine.getLegalMoves(cur, "runner");
     if (legal.length === 0) break;
     const gain = legal.find((m) => m.kind === "runner.gainCredits") ?? legal[0]!;
-    cur = play(cur, "runner", gain).state;
+    cur = play(cur, "runner", gain);
   }
   return cur;
 }
@@ -97,13 +82,13 @@ function installAndRez(state: GameState, cardId: string): GameState {
       (m) => m.kind === "corp.install" && m.cardId === cardId && m.server === "new-remote",
       `install ${cardId}`,
     ),
-  ).state;
+  );
   const card = assertDefined(findInstalled(s, cardId), `${cardId} installed`);
   s = play(
     s,
     "corp",
     moveWhere(s, "corp", (m) => m.kind === "corp.rez" && m.targetId === card.id, `rez ${cardId}`),
-  ).state;
+  );
   return s;
 }
 
@@ -136,7 +121,7 @@ Deno.test("triggers: rez/install load-credits and Mayfly run-end trash", async (
         (m) => m.kind === "corp.install" && m.cardId === "tithe" && m.server === "new-remote",
         "install tithe",
       ),
-    ).state;
+    );
     state = play(
       state,
       "corp",
@@ -146,7 +131,7 @@ Deno.test("triggers: rez/install load-credits and Mayfly run-end trash", async (
         (m) => m.kind === "corp.install" && m.cardId === "nico_campaign" && m.server === "remote-1",
         "install nico in remote-1",
       ),
-    ).state;
+    );
     state = endCorpTurn(state);
     state = play(
       state,
@@ -157,7 +142,7 @@ Deno.test("triggers: rez/install load-credits and Mayfly run-end trash", async (
         (m) => m.kind === "runner.run" && m.server === "remote-1",
         "run remote-1",
       ),
-    ).state;
+    );
 
     const prompt = assertDefined(state.prompts[0], "a prompt is pending after approaching ice");
     assert(prompt.kind === "rez-window", "the pending prompt is the corp rez window");
@@ -175,7 +160,7 @@ Deno.test("triggers: rez/install load-credits and Mayfly run-end trash", async (
         (m) => m.kind === "prompt.answer" && m.optionId === option.id,
         "rez nico",
       ),
-    ).state;
+    );
 
     const after = assertDefined(findInstalled(state, "nico_campaign"), "nico still installed");
     assert(after.rezzed === true, "nico is rezzed from the rez window");
@@ -237,12 +222,12 @@ Deno.test("triggers: rez/install load-credits and Mayfly run-end trash", async (
           "take 3 from regolith",
         );
       // Turn 1: install (1 click) + 2 takes. Turn 2: 3 takes -> 15 - 15 = 0 -> trashed.
-      state = play(state, "corp", take3(state)).state;
-      state = play(state, "corp", take3(state)).state;
+      state = play(state, "corp", take3(state));
+      state = play(state, "corp", take3(state));
       state = endRunnerTurn(endCorpTurn(state));
-      state = play(state, "corp", take3(state)).state;
-      state = play(state, "corp", take3(state)).state;
-      state = play(state, "corp", take3(state)).state;
+      state = play(state, "corp", take3(state));
+      state = play(state, "corp", take3(state));
+      state = play(state, "corp", take3(state));
 
       const takes = eventsOf(state, "take-credits").filter((e) => e.targetId === reg.id);
       assertEquals(takes.length, 5, "five take-3 uses");
@@ -270,7 +255,7 @@ Deno.test("triggers: rez/install load-credits and Mayfly run-end trash", async (
           (m) => m.kind === "runner.install" && m.cardId === "telework_contract",
           "install telework",
         ),
-      ).state;
+      );
       const tw = assertDefined(
         state.runner.installed.find((c) => c.cardId === "telework_contract"),
         "telework installed",
@@ -300,7 +285,7 @@ Deno.test("triggers: rez/install load-credits and Mayfly run-end trash", async (
         (m) => m.kind === "runner.install" && m.cardId === "mayfly",
         "install mayfly",
       ),
-    ).state;
+    );
     const mayfly = assertDefined(
       state.runner.installed.find((c) => c.cardId === "mayfly"),
       "mayfly installed",
@@ -314,19 +299,19 @@ Deno.test("triggers: rez/install load-credits and Mayfly run-end trash", async (
         (m) => m.kind === "runner.run" && m.server === "archives",
         "run archives",
       ),
-    ).state;
+    );
     // The run parks in the movement phase (rule 6.9.4c); continuing reaches the
     // server. The breach auto-accesses the single Archives card; finish the
     // access to end the run.
     const cont = engine.getLegalMoves(state, "runner").find((m) => m.kind === "runner.continueRun");
     assertDefined(cont, "continueRun is offered in the movement phase");
-    state = play(state, "runner", cont!).state;
+    state = play(state, "runner", cont!);
     if (state.run !== null) {
       state = play(
         state,
         "runner",
         moveWhere(state, "runner", (m) => m.kind === "runner.finishAccess", "finish access"),
-      ).state;
+      );
     }
 
     assert(state.run === null, "the run has ended");
@@ -353,7 +338,7 @@ Deno.test("triggers: rez/install load-credits and Mayfly run-end trash", async (
           (m) => m.kind === "corp.install" && m.cardId === "bran_1_0" && m.server === "hq",
           "install bran on hq",
         ),
-      ).state;
+      );
       state = play(
         state,
         "corp",
@@ -363,7 +348,7 @@ Deno.test("triggers: rez/install load-credits and Mayfly run-end trash", async (
           (m) => m.kind === "corp.install" && m.cardId === "karuna" && m.server === "hq",
           "install karuna on hq (outermost)",
         ),
-      ).state;
+      );
       state = endCorpTurn(state);
       state = play(
         state,
@@ -374,13 +359,13 @@ Deno.test("triggers: rez/install load-credits and Mayfly run-end trash", async (
           (m) => m.kind === "runner.install" && m.cardId === "mayfly",
           "install mayfly",
         ),
-      ).state;
+      );
       const mayfly = assertDefined(state.runner.installed.find((c) => c.cardId === "mayfly"));
       state = play(
         state,
         "runner",
         moveWhere(state, "runner", (m) => m.kind === "runner.run" && m.server === "hq", "run hq"),
-      ).state;
+      );
 
       // Corp rez window: rez the approached (outermost) ice, Karuna.
       const prompt = assertDefined(state.prompts[0], "rez window pending");
@@ -403,7 +388,7 @@ Deno.test("triggers: rez/install load-credits and Mayfly run-end trash", async (
           (m) => m.kind === "prompt.answer" && m.optionId === rezOption.id,
           "rez karuna",
         ),
-      ).state;
+      );
 
       // Resolve the encounter: Karuna sub 0 (2 net damage, may jack out) queues a prompt.
       state = play(
@@ -415,7 +400,7 @@ Deno.test("triggers: rez/install load-credits and Mayfly run-end trash", async (
           (m) => m.kind === "runner.resolveSubroutines",
           "resolve subroutines",
         ),
-      ).state;
+      );
       const choice = assertDefined(state.prompts[0], "Karuna's jack-out prompt is pending");
       assert(choice.kind === "choose-one", "the pending prompt is a choice");
       assert(
@@ -431,7 +416,7 @@ Deno.test("triggers: rez/install load-credits and Mayfly run-end trash", async (
           (m) => m.kind === "prompt.answer" && m.optionId === "jack-out",
           "jack out",
         ),
-      ).state;
+      );
 
       assert(state.run === null, "the run ends immediately on the jack-out choice");
       const subs = eventsOf(state, "resolve-subroutine").filter((e) => e.cardId === karuna.id);
