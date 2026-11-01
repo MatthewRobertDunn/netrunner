@@ -18,10 +18,10 @@
  * layout splits evenly.
  */
 
-import { defineComponent } from "vue";
+import { computed, defineComponent, ref } from "vue";
 import type { PropType } from "vue";
 import type { Move, PlayerSide, PublicPlayerStatus } from "../../types.ts";
-import { cardTitle } from "./util.ts";
+import { cardTitle, imageFor } from "./util.ts";
 
 /** Glyph for a status block: Corp identity / Runner faction art. */
 function sideGlyph(side: PlayerSide): string {
@@ -53,7 +53,7 @@ export default defineComponent({
   },
   emits: ["move"],
   setup(
-    _props: {
+    props: {
       side: PlayerSide;
       stats: PublicPlayerStatus;
       agendaTarget: number;
@@ -63,7 +63,23 @@ export default defineComponent({
       drawMove: Move | null;
     },
   ) {
-    return { sideGlyph, discardName, cardTitle };
+    /**
+     * The glyph is the seat's actual identity card art (the identity is open
+     * information, rule 10.2.3), keyed off the card id like GameScreen's
+     * HQ identity face — not a hardcoded per-side faction logo, which showed
+     * Haas-Bioroid's mark for whichever Corp was seated. Falls back to the
+     * per-side faction SVG when the identity is hidden/unknown or its art
+     * failed to load.
+     */
+    const glyphFailed = ref(false);
+    const identityImg = computed<string | null>(() => {
+      const id = props.stats.identity.cardId;
+      return id && id !== "hidden" ? imageFor(id) : null;
+    });
+    const glyph = computed(() =>
+      !glyphFailed.value && identityImg.value ? identityImg.value : sideGlyph(props.side)
+    );
+    return { glyph, identityImg, glyphFailed, discardName, cardTitle };
   },
   template: `
     <section
@@ -73,28 +89,35 @@ export default defineComponent({
       :data-side="side"
     >
       <div class="status-who">
-        <img class="glyph-side" :src="sideGlyph(side)" alt="" />
+        <img
+          class="glyph-side"
+          :class="{ identity: !!identityImg && !glyphFailed }"
+          :src="glyph"
+          alt=""
+          @error="glyphFailed = true"
+        />
         <span class="who">{{ side === 'corp' ? 'CORP' : 'RUNNER' }}<template v-if="isOwn"> (you)</template></span>
         <span v-if="active" class="acting-tag">acting</span>
         <span v-if="!isOwn" class="opp-tag">opponent</span>
       </div>
       <div class="status-primary">
-        <button
-          v-if="isOwn"
+        <!-- The own credits tile doubles as the gain-credit button; the
+             opponent block renders the identical markup as an inert div
+             (<component :is> keeps one copy of the stat markup, mirroring
+             CardTile's button/div split). -->
+        <component
+          :is="isOwn ? 'button' : 'div'"
+          :type="isOwn ? 'button' : undefined"
           class="primary-stat credits"
           :class="{ clickable: !!gainMove }"
-          :disabled="!gainMove"
-          data-testid="gain-credit"
-          title="Gain 1 credit"
+          :disabled="isOwn ? !gainMove : undefined"
+          :data-testid="isOwn ? 'gain-credit' : undefined"
+          :title="isOwn ? 'Gain 1 credit' : undefined"
           @click="gainMove && $emit('move', gainMove)"
         >
           <img class="sym" src="assets/svg/credit.svg" alt="Credits" />
           <span class="primary-val">{{ stats.credits }}</span>
-        </button>
-        <div v-else class="primary-stat credits">
-          <img class="sym" src="assets/svg/credit.svg" alt="Credits" />
-          <span class="primary-val">{{ stats.credits }}</span>
-        </div>
+        </component>
         <div class="primary-stat agenda">
           <img class="sym" src="assets/svg/agenda.svg" alt="Agenda points" />
           <span class="primary-val">{{ stats.agendaPoints }}/{{ agendaTarget }}</span>
@@ -102,18 +125,18 @@ export default defineComponent({
       </div>
       <div class="status-secondary">
         <span class="stat"><img class="sym" src="assets/svg/click.svg" alt="Clicks" />{{ stats.clicks }}</span>
-        <button
-          v-if="isOwn"
+        <!-- The own hand stat doubles as the Draw 1 card button (span for the
+             opponent block), same single-markup treatment as the credits tile. -->
+        <component
+          :is="isOwn ? 'button' : 'span'"
+          :type="isOwn ? 'button' : undefined"
           class="stat"
           :class="{ clickable: !!drawMove }"
-          :disabled="!drawMove"
-          data-testid="draw-card"
-          title="Draw 1 card"
+          :disabled="isOwn ? !drawMove : undefined"
+          :data-testid="isOwn ? 'draw-card' : undefined"
+          :title="isOwn ? 'Draw 1 card' : undefined"
           @click="drawMove && $emit('move', drawMove)"
-        >
-          hand {{ stats.handCount }}/{{ stats.handSize }}
-        </button>
-        <span v-else class="stat">hand {{ stats.handCount }}/{{ stats.handSize }}</span>
+        >hand {{ stats.handCount }}/{{ stats.handSize }}</component>
         <span class="stat">deck {{ stats.deckCount }}</span>
         <span class="stat">{{ discardName(side) }} {{ stats.discardCount }}</span>
         <span v-if="side === 'runner' && stats.tags" class="stat"><img class="sym" src="assets/svg/tag.svg" alt="Tags" />{{ stats.tags }}</span>

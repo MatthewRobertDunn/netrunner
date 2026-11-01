@@ -4,8 +4,11 @@
  * Shows, in priority order: the winner banner, the waiting banner (the AI is
  * acting), the human's turn UI — an access notice (reopens the card popup),
  * a prompt box (discard picker or one button per legal move), or the general
- * moves list. It holds no game logic: every click bubbles up as a `move`,
- * `zoom`, or `discard` event for the root component to apply.
+ * moves list. It holds no game logic and never sees the engine state: the
+ * root passes scalars (`winner`/`winReason`), an `aiSideName` for the waiting
+ * banners, and a `label(move)` callback that resolves move labels against the
+ * authoritative state. Every click bubbles up as a `move` or `discard` event
+ * for the root component to apply.
  *
  * The DOM contract is pinned by tests/ui/game_screen_test.ts: the
  * `action-panel`, `action-moves`, `prompt`, `access-notice`, and
@@ -16,23 +19,27 @@
 
 import { computed, defineComponent } from "vue";
 import type { PropType } from "vue";
-import type { CardInstance, GameState, Move, Prompt } from "../../types.ts";
+import type { CardInstance, Move, PlayerSide, Prompt } from "../../types.ts";
 import CardTile from "./card-tile.ts";
-import { cardTitle, describeMove, promptTitle } from "./util.ts";
-
-function moveKey(m: Move): string {
-  return JSON.stringify(m);
-}
+import { cardTitle, moveKey, promptTitle } from "./util.ts";
 
 export default defineComponent({
   name: "ActionPanel",
   components: { CardTile },
   props: {
-    state: { type: Object as PropType<GameState>, required: true },
     /** Whether it is the human player's turn to act. */
     humanTurn: { type: Boolean, default: false },
     /** The AI is mid-decision (waiting banner wording). */
     thinking: { type: Boolean, default: false },
+    /** The side the AI plays, for the thinking/waiting banner wording. */
+    aiSideName: { type: String, default: "Corp" },
+    /** The game winner, or null while the game runs. */
+    winner: { type: String as PropType<PlayerSide | "draw" | null>, default: null },
+    /** Why the game ended (rendered next to the winner). */
+    winReason: { type: String as PropType<string | null>, default: null },
+    /** Human-readable label for a legal move — resolved by the root, which
+     *  owns the engine state (this panel stays logic-free). */
+    label: { type: Function as PropType<(m: Move) => string>, required: true },
     /** The card the human is accessing (shows the access notice). */
     accessedCardId: { type: String as PropType<string | null>, default: null },
     /** The human's own prompt, if any. */
@@ -48,11 +55,14 @@ export default defineComponent({
     /** Whether the current discard selection can be submitted. */
     canDiscard: { type: Boolean, default: false },
   },
-  emits: ["move", "zoom", "discard-toggle", "discard-submit", "open-access"],
+  emits: ["move", "discard-toggle", "discard-submit", "open-access"],
   setup(props: {
-    state: GameState;
     humanTurn: boolean;
     thinking: boolean;
+    aiSideName: string;
+    winner: PlayerSide | "draw" | null;
+    winReason: string | null;
+    label: (m: Move) => string;
     accessedCardId: string | null;
     prompt: Prompt | null;
     legal: Move[];
@@ -64,22 +74,22 @@ export default defineComponent({
     const discardCount = computed(() =>
       props.prompt && props.prompt.kind === "discard" ? props.prompt.count : 0
     );
-    /** Human-readable label for a move (viewer-aware). */
+    /** Human-readable label for a move — delegates to the root's callback. */
     function label(move: Move): string {
-      return describeMove(props.state, move);
+      return props.label(move);
     }
     return { label, moveKey, promptTitle, discardCount, cardTitle };
   },
   template: `
     <div class="action-panel" data-testid="action-panel">
-      <template v-if="state.winner">
-        <div class="banner-win">Winner: {{ state.winner }} <span v-if="state.winReason">({{ state.winReason }})</span></div>
+      <template v-if="winner">
+        <div class="banner-win">Winner: {{ winner }} <span v-if="winReason">({{ winReason }})</span></div>
       </template>
 
       <template v-else-if="!humanTurn">
         <div class="banner-wait">
-          <template v-if="thinking">Corp is planning its move…</template>
-          <template v-else>Waiting for the Corp…</template>
+          <template v-if="thinking">{{ aiSideName }} is planning its move…</template>
+          <template v-else>Waiting for the {{ aiSideName }}…</template>
         </div>
       </template>
 
@@ -101,6 +111,13 @@ export default defineComponent({
 
           <div v-if="prompt.kind === 'discard'" class="discard-picker">
             <div class="hint">Choose {{ discardCount }} card(s) to discard:</div>
+            <!-- Each slot is a real <button type="button"> whose single click
+                 toggles the pick (Enter/Space work the same). The tile inside
+                 is deliberately NOT clickable: a nested button would be
+                 invalid HTML with a double tab stop, and one click would both
+                 pick and open the zoom modal that blocks the next click. The
+                 tile tooltip still names the card; the hand shows the same
+                 cards zoomable. -->
             <div class="hand-row picker">
               <button
                 v-for="c in hand"
@@ -111,11 +128,10 @@ export default defineComponent({
                 @click="$emit('discard-toggle', c.id)"
               >
                 <card-tile
-                  :card="{ cardId: c.cardId, rezzed: true, advancement: 0 }"
+                  :card="c"
                   :badge="discardSelected.includes(c.id) ? '✓' : ''"
                   small
-                  clickable
-                  @zoom="$emit('zoom', c.cardId)"
+                  :clickable="false"
                 />
               </button>
             </div>

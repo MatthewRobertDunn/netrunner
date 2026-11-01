@@ -15,20 +15,23 @@
 
 import { computed, defineComponent } from "vue";
 import type { PropType } from "vue";
+import type { ViewCard } from "../../types.ts";
 import { cardOf, imageFor } from "./util.ts";
 
-interface CardInfo {
-  id?: string;
-  cardId: string;
-  rezzed?: boolean;
-  advancement?: number;
-  strength?: number;
-}
+/**
+ * The card fields a tile renders: definition id plus face counters. A
+ * projection of the real `ViewCard` (engine type) rather than a re-declared
+ * subset, so callers can pass a `CardInstance` or `ViewCard` directly.
+ */
+export type CardTileCard = Pick<
+  ViewCard,
+  "cardId" | "rezzed" | "advancement" | "strength"
+>;
 
 export default defineComponent({
   name: "CardTile",
   props: {
-    card: { type: Object as PropType<CardInfo | null>, default: null },
+    card: { type: Object as PropType<CardTileCard | null>, default: null },
     facedown: { type: Boolean, default: false },
     ice: { type: Boolean, default: false },
     highlight: { type: Boolean, default: false },
@@ -41,7 +44,7 @@ export default defineComponent({
   emits: ["zoom"],
   setup(
     props: {
-      card: CardInfo | null;
+      card: CardTileCard | null;
       facedown: boolean;
       ice: boolean;
       highlight: boolean;

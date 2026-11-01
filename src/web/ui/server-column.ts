@@ -14,7 +14,7 @@
  * this nesting are pinned by tests/ui/game_screen_test.ts (computed `order`).
  */
 
-import { defineComponent } from "vue";
+import { computed, defineComponent } from "vue";
 import type { PropType } from "vue";
 import type { Move, PublicServerStatus, ViewCard } from "../../types.ts";
 import CardTile from "./card-tile.ts";
@@ -84,19 +84,32 @@ export default defineComponent({
     function isCurrentIce(card: ViewCard): boolean {
       return props.currentIceId !== null && card.id === props.currentIceId;
     }
-    return { isCentralId, serverGlyphFor, remoteLabelFor, isCurrentIce, cardTitle };
+    /**
+     * Only the HQ server card opens the identity popup (the R&D/Archives
+     * glyph faces have nothing to zoom). It renders as a real
+     * `<button type="button">` when clickable — mirroring CardTile's
+     * button/div split so keyboard users can open the popup too — and stays
+     * an inert div otherwise. The emit is guarded here as well, so a stray
+     * click on another server card never reaches the root.
+     */
+    const hqClickable = computed(() => props.server.id === "hq" && !!props.identityImg);
+    return { isCentralId, serverGlyphFor, remoteLabelFor, isCurrentIce, hqClickable, cardTitle };
   },
   template: `
     <div class="server" :class="isCentralId(server.id) ? 'central' : 'remote'">
       <!-- Central servers (hq, rd, archives) keep their dedicated server
            card (corp back + glyph + name). HQ additionally shows the
            Corp's identity card (open information, rule 10.2.3); the
-           @error flag falls back to the glyph when the art is missing. -->
+           @error flag falls back to the glyph when the art is missing.
+           Only the HQ card (with art) is a clickable button; the other
+           central cards render the same markup as inert divs. -->
       <template v-if="isCentralId(server.id)">
-        <div
+        <component
+          :is="hqClickable ? 'button' : 'div'"
+          :type="hqClickable ? 'button' : undefined"
           class="server-card"
-          :class="{ clickable: server.id === 'hq' && identityImg }"
-          @click="$emit('zoom-identity', server.id)"
+          :class="{ clickable: hqClickable }"
+          @click="hqClickable && $emit('zoom-identity', server.id)"
         >
           <img class="corp-back-img" src="assets/corp-back.svg" alt="" />
           <div v-if="server.id === 'hq' && identityImg" class="server-card-face identity-face">
@@ -112,7 +125,7 @@ export default defineComponent({
             <img class="server-glyph" :src="serverGlyphFor(server.id)" :alt="cardTitle(server.id)" />
             <span class="server-name">{{ cardTitle(server.id) }}</span>
           </div>
-        </div>
+        </component>
       </template>
       <!-- Remotes: a small label nearest the corp side, shown only when the
            server has a root card or ice. -->
@@ -133,7 +146,7 @@ export default defineComponent({
         <template v-for="c in server.root" :key="c.id">
           <card-tile
             v-if="c.cardId !== 'hidden'"
-            :card="{ cardId: c.cardId, rezzed: c.rezzed, advancement: c.advancement }"
+            :card="c"
             small
             clickable
             @zoom="$emit('zoom', c.cardId)"

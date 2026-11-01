@@ -298,6 +298,14 @@ body {
   width: 22px;
   height: 22px;
 }
+/* Identity-card art used as a seat glyph (status dock + setup screen):
+   portrait art cropped into the square glyph slot, slightly rounded so it
+   reads as a card, not a squashed logo. Faction-SVG fallbacks keep the old
+   square look. */
+.glyph-side.identity {
+  object-fit: cover;
+  border-radius: 4px;
+}
 .status-who .who {
   font-weight: 700;
   letter-spacing: 1px;
@@ -339,41 +347,36 @@ body {
   font: inherit;
   color: inherit;
 }
-button.primary-stat.clickable {
+/* The own credits tile doubles as the gain-credit button and the own hand
+   stat as the Draw 1 card button; both are real <button>s in the own block
+   and inert elements in the opponent block (same markup, <component :is>).
+   The hover/focus/disabled treatment is shared; per-tile sizing stays below. */
+button.primary-stat.clickable,
+button.stat.clickable {
   cursor: pointer;
 }
-button.primary-stat.clickable:hover:not(:disabled) {
+button.primary-stat.clickable:hover:not(:disabled),
+button.stat.clickable:hover:not(:disabled) {
   border-color: var(--accent);
 }
-button.primary-stat.clickable:focus-visible {
+button.primary-stat.clickable:focus-visible,
+button.stat.clickable:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
-button.primary-stat:disabled {
+button.primary-stat:disabled,
+button.stat:disabled {
   cursor: default;
 }
-/* The own hand stat doubles as the Draw 1 card button, themed like the
-   credits tile (same background/border/radius, accent border on hover).
-   The .status-secondary .stat rule still supplies the small dim text look;
-   the font reset only swaps the browser's default button font back. */
+/* Per-tile sizing: the hand stat keeps the small dim text look; the font
+   reset only swaps the browser's default button font back. */
 button.stat.clickable {
-  cursor: pointer;
   padding: 3px 8px;
   background: var(--bg-2);
   border: 1px solid var(--line);
   border-radius: 8px;
   font: inherit;
   font-size: 13px;
-}
-button.stat.clickable:hover:not(:disabled) {
-  border-color: var(--accent);
-}
-button.stat.clickable:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
-}
-button.stat:disabled {
-  cursor: default;
 }
 .primary-stat .sym {
   width: 22px;
@@ -576,6 +579,19 @@ button.stat:disabled {
   width: 24px;
   height: 24px;
 }
+/* Only the HQ server card is clickable (it opens the identity popup). It
+   renders as a real <button type="button"> when the identity art is shown —
+   keyboard focusable, Enter/Space open the popup; this reset strips the
+   button chrome so it looks exactly like the div it replaced. */
+.server-card.clickable {
+  cursor: pointer;
+}
+button.server-card {
+  padding: 0;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+}
 /* HQ's identity-card face (rule 10.2.3: the identity is open information to
    both players). Portrait art cropped to the 66×92 server-card footprint;
    the label sits on a dark strip at the bottom for legibility. Long identity
@@ -757,9 +773,9 @@ button.stat:disabled {
 /* The pick slot is a real <button type="button"> (keyboard activatable, same
    treatment as the clickable card tiles). The .pick-slot class keeps its own
    transparent border; this reset strips the button chrome so the slot keeps
-   its plain picker look. Note the slot wraps a clickable card-tile, which is
-   itself a button: nesting is deliberate (matching the old div > div event
-   flow — the tile click zooms, the bubble to the slot toggles the pick). */
+   its plain picker look. The card tile inside is deliberately NOT clickable
+   (an inert div): one click = one pick toggle, no nested button and no zoom
+   popup swallowing the next click. */
 button.pick-slot {
   padding: 0;
   background: transparent;
