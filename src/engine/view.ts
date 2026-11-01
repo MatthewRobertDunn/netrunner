@@ -205,8 +205,10 @@ export function getPlayerView(state: GameState, viewer: PlayerSide): PlayerView 
 /**
  * A log event as `viewer` may see it. Every card id reference is filtered
  * through `cardVisibleTo`; anything the viewer is not entitled to see (a
- * facedown install, a card trashed from the opponent's hand by damage) becomes
- * "hidden". The event's shape is otherwise unchanged (rules 10.2.2, 4.2).
+ * facedown install, a Corp discard into facedown Archives) becomes "hidden".
+ * Announced actions are public (rule 10.2): a Runner install or a play that
+ * reached the open heap keeps its real id for both viewers. The event's shape
+ * is otherwise unchanged (rules 10.2.2, 4.2).
  */
 function visibleEvent(state: GameState, event: GameEvent, viewer: PlayerSide): GameEvent {
   const vis = (id: CardInstanceId): CardInstanceId | "hidden" =>

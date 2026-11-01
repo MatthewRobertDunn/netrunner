@@ -172,7 +172,10 @@ function movesForPrompt(state: GameState, playerSide: PlayerSide, prompt: Prompt
       if (!found) return [{ kind: "runner.finishAccess" }];
       const moves: Move[] = [{ kind: "runner.finishAccess" }];
       const trashCost = cardDef(found.card.cardId).trashCost;
-      if (trashCost !== null && trashCost > 0 && state.runner.credits >= trashCost) {
+      // Affordability counts the run fund (Overclock): `finishAccess` pays via
+      // `spendCredits`, which consumes `run.fundCredits` first — gate on the
+      // same calculator the payment uses (availableCredits), not the pool.
+      if (trashCost !== null && trashCost > 0 && availableCredits(state, "runner") >= trashCost) {
         moves.push({ kind: "runner.trashAccessed" });
       }
       return moves;

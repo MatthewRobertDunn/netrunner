@@ -125,11 +125,18 @@ export function corpInstalled(state: GameState): CardInstance[] {
 
 /**
  * Whether a card instance's identity is open information for `viewer`
- * (rules 10.2.2/10.2.3, 1.21, 4.6.2/4.6.3): cards the viewer owns, rezzed Corp
- * cards, scored agendas, identity cards, and the card currently being accessed
- * during a breach. Everything else — facedown Corp installs, the opponent's
- * hand, deck, and discard pile — stays hidden. A discard only becomes known
- * when its cards are actually accessed.
+ * (rules 10.2.2/10.2.3, 1.21, 4.6.2/4.6.3, 4.4.7b): cards the viewer owns,
+ * installed Runner cards (public to both players, rule 4.6.2), the Runner's
+ * heap (open to every viewer, rule 4.4.7b), rezzed Corp cards, scored agendas,
+ * identity cards, and the card currently being accessed during a breach.
+ * Everything else — facedown Corp installs (Archives included, pending the
+ * faceup/facedown split), the opponent's hand, and the opponent's deck — stays
+ * hidden. The Corp's Archives opens only to the Corp until the split is
+ * modeled (the same conservative deviation `discardView` documents); a hidden
+ * zone's cards only become known by being accessed or by being open by zone.
+ * Must stay aligned with the zone publication in `view.ts` (rule 10.2) and
+ * with `public-status.ts` — the two projections publish exactly the ids this
+ * predicate calls open.
  */
 export function cardVisibleTo(
   state: GameState,
@@ -140,6 +147,13 @@ export function cardVisibleTo(
   if (!found) return false; // unknown id → don't leak a title
   const card = found.card;
   if (card.owner === viewer) return true; // covers the identity card too
+  // Open information to BOTH players regardless of owner: installed Runner
+  // cards (rule 4.6.2) and the Runner's heap (rule 4.4.7b). Without this the
+  // Corp's view would list the card in `runner.installed`/`runner.discard`
+  // while redacting the very events that announced it (rule 10.2).
+  if (card.owner === "runner" && (card.zone === "play-area" || card.zone === "discard")) {
+    return true;
+  }
   // Scored agendas are open information (rule 10.2.3).
   if (card.zone === "score") return true;
   // Rezzed Corp cards are public; unrezzed ones are secret (rules 1.21.1a, 4.6.3).

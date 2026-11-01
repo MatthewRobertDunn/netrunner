@@ -493,6 +493,10 @@ export interface PlayerView {
     agendaPoints: number;
     identity: ViewCard;
     score: ViewCard[];
+    /**
+     * Installed Runner cards: open information to every viewer
+     * (rule 4.6.2 — installed Runner cards are public).
+     */
     installed: ViewCard[];
     /**
      * The Runner's hand: real card ids for the Runner viewer (rule 4.3.2),

@@ -513,6 +513,93 @@ Deno.test("event texts: overclock's hosted credits pay the Manegarm toll during 
   assertEquals(cur.run?.tollPaid, true, "the toll is marked paid and the run proceeds");
 });
 
+Deno.test("event texts: overclock's hosted fund pays an access trash the pool cannot", () => {
+  // The trash-affordability gate must count the run fund: `finishAccess` pays
+  // the trash cost via `spendCredits`, which consumes `run.fundCredits`
+  // (Overclock) BEFORE the pool. The offer was gated on `state.runner.credits`
+  // alone, so during an Overclock run with a 0-credit pool an accessed asset
+  // with trashCost ≤ 5 was silently not offered although paying would succeed.
+  // Nico Campaign: an unrezzed asset with trashCost 2. An unrezzed Manegarm
+  // Skunkworks keeps a second root candidate so the run (and the fund) is
+  // still alive after the trash; unrezzed, it raises no approach toll.
+  let s = newGame(["nico_campaign", "manegarm_skunkworks"], ["overclock"]);
+  const installAsset = engine.getLegalMoves(s, "corp").find(
+    (m) => m.kind === "corp.install" && m.cardId === "nico_campaign" && m.server === "new-remote",
+  );
+  assertDefined(installAsset, "the corp can install Nico Campaign in a new remote");
+  s = play(s, "corp", installAsset!);
+  const installUpgrade = engine.getLegalMoves(s, "corp").find(
+    (m) =>
+      m.kind === "corp.install" && m.cardId === "manegarm_skunkworks" &&
+      m.server === "remote-1",
+  );
+  assertDefined(installUpgrade, "the corp can add the unrezzed upgrade to remote-1");
+  s = play(s, "corp", installUpgrade!);
+  while (s.turn.player === "corp" && !s.winner) {
+    s = play(s, "corp", { kind: "corp.gainCredits" });
+  }
+  s = burnUntil(s, "runner");
+  const nico = assertDefined(
+    s.servers.find((x) => x.id === "remote-1")?.root.find((c) => c.cardId === "nico_campaign"),
+    "Nico Campaign is installed in remote-1",
+  );
+
+  // The event's own 1-credit cost drains the pool: fund 5, pool 0.
+  s = setCredits(s, "runner", 1);
+  const overclock = assertDefined(eventMove(s, "overclock", "remote-1"), "remote-1 is offered");
+  let cur = play(s, "runner", overclock);
+  assertEquals(cur.runner.credits, 0, "the pool is empty; only the run fund can pay a trash");
+  assertEquals(cur.run?.fundCredits, 5, "the run carries the 5 hosted credits");
+
+  // No rezzed ice, no toll: continue into the breach and pick the asset.
+  cur = play(cur, "runner", { kind: "runner.continueRun" });
+  const access = engine.getLegalMoves(cur, "runner").find(
+    (m) => m.kind === "runner.accessCard" && m.targetId === nico.id,
+  );
+  assertDefined(access, "the asset is offered for access");
+  cur = play(cur, "runner", access!);
+
+  // THE FIX: trashAccessed must be offered on fund credits alone (pool is 0).
+  const trash = engine.getLegalMoves(cur, "runner").find((m) => m.kind === "runner.trashAccessed");
+  assertDefined(trash, "the trash is offered — affordability counts the run fund");
+  cur = play(cur, "runner", trash!);
+
+  assertEquals(cur.run?.fundCredits, 3, "the 2-credit trash was paid from the run fund (5 → 3)");
+  assertEquals(cur.runner.credits, 0, "the empty pool was not overdrawn");
+  assert(
+    cur.corp.discard.some((c) => c.id === nico.id),
+    "the accessed asset was trashed to the Corp's discard",
+  );
+  const trashSpend = cur.log.filter(
+    (e): e is Extract<GameEvent, { type: "spend-credits" }> =>
+      e.type === "spend-credits" && e.player === "runner" && e.amount === 2,
+  );
+  assertEquals(
+    trashSpend.length,
+    1,
+    "exactly one spend-credits(2) event charged the trash (paid once)",
+  );
+
+  // The access on nico is resolved (the trash consumed the decision) and the
+  // run still has the upgrade to access: play it out to a successful end.
+  assert(
+    cur.prompts.every((p) => p.kind !== "access-decision" || p.cardId !== nico.id),
+    "the trash consumed the access decision on nico",
+  );
+  for (let i = 0; i < 20 && (cur.run || cur.breach) && !cur.winner; i++) {
+    const moves = engine.getLegalMoves(cur, "runner");
+    const next = moves.find((m) =>
+      m.kind === "runner.finishAccess" || m.kind === "runner.accessCard" ||
+      m.kind === "runner.accessRandom"
+    ) ?? moves.find((m) =>
+      m.kind === "runner.continueRun"
+    );
+    if (!next) break;
+    cur = play(cur, "runner", next!);
+  }
+  assertEquals(cur.run, null, "the run ended after the breach resolved");
+});
+
 Deno.test("event texts: overclock's hosted fund is bound to that run, not to a later one", () => {
   // The fund is placed on the run the event initiates (rule 5.2.2b), so a run
   // on a LATER turn has nothing to spend: "during that run" cannot leak.

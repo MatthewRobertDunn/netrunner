@@ -9,7 +9,7 @@
  */
 
 import type { CardDef } from "../../cards/catalogue.ts";
-import { tryCardDef } from "../../mod.ts";
+import { cardVisibleTo, tryCardDef } from "../../mod.ts";
 import type {
   CardId,
   CardInstance,
@@ -196,34 +196,6 @@ export function formatEvent(
 function cardIdOfInstance(state: GameState, id: CardInstanceId): string {
   const card = findCardIn(state, id);
   return card ? card.cardId : String(id);
-}
-
-/**
- * Whether the card instance's identity is public knowledge for `viewer`
- * (rules 10.2.2/10.2.3, 1.21, 4.6.2/4.6.3): rezzed Corp cards, cards the viewer
- * owns, scored agendas, the identity card, and the card currently being
- * accessed. Everything else — facedown Corp installs, the opponent's hand,
- * deck, and discard pile — stays hidden. A discard only becomes known when its
- * cards are actually accessed.
- */
-function cardVisibleTo(
-  state: GameState,
-  id: CardInstanceId,
-  viewer: PlayerSide,
-): boolean {
-  const card = findCardIn(state, id);
-  if (!card) return false; // unknown id → don't leak a title
-  if (card.owner === viewer) return true; // covers the identity card too
-  // Scored agendas are open information.
-  if (card.zone === "score") return true;
-  // Rezzed Corp cards are public; unrezzed ones are not.
-  if (card.rezzed === true) return true;
-  // The card currently being accessed is visible to the runner.
-  for (const p of state.prompts) {
-    if (p.kind === "access-decision" && p.cardId === id) return true;
-  }
-  if (state.breach?.accessing === id) return true;
-  return false;
 }
 
 /** Stable v-for key for a move object (structural equality). Shared by
