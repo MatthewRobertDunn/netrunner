@@ -108,27 +108,29 @@ function playGame(seed: number, maxMoves: number): void {
   checkState(state, seed, moves);
 }
 
-Deno.test("fastClone matches JSON round-trip and stays isolated at every state", () => {
-  for (const seed of [1, 2, 3, 7, 42]) playGame(seed, 2000);
-});
-
-Deno.test("fastClone copies optional card fields the engine sets during play", () => {
-  const decks = starterDeckConfigs();
-  const state = startGame({
-    corp: decks.corp,
-    runner: decks.runner,
-    mode: "starter-decks",
-    seed: 7,
+Deno.test("fastClone matches JSON round-trip and stays isolated", async (t) => {
+  await t.step("at every state of five full random games", () => {
+    for (const seed of [1, 2, 3, 7, 42]) playGame(seed, 2000);
   });
 
-  // Force every optional CardInstance field onto the Corp identity (always
-  // present), then compare. Game semantics don't matter to the clone.
-  const card = state.corp.identity;
-  card.rezzed = true;
-  card.advancement = 2;
-  card.hostedCredits = 3;
-  card.strengthBoost = 1;
-  card.server = state.servers[0]!.id;
-  card.iceIndex = 0;
-  checkState(state, 7, -1);
+  await t.step("copies optional card fields the engine sets during play", () => {
+    const decks = starterDeckConfigs();
+    const state = startGame({
+      corp: decks.corp,
+      runner: decks.runner,
+      mode: "starter-decks",
+      seed: 7,
+    });
+
+    // Force every optional CardInstance field onto the Corp identity (always
+    // present), then compare. Game semantics don't matter to the clone.
+    const card = state.corp.identity;
+    card.rezzed = true;
+    card.advancement = 2;
+    card.hostedCredits = 3;
+    card.strengthBoost = 1;
+    card.server = state.servers[0]!.id;
+    card.iceIndex = 0;
+    checkState(state, 7, -1);
+  });
 });
