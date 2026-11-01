@@ -137,61 +137,66 @@ function runnerTurnWithRedTeam(): GameState {
 // The ability's run counts toward the same-central-twice restriction
 // ---------------------------------------------------------------------------
 
-Deno.test("red team: the ability's run counts toward the same-central-twice restriction", () => {
-  let s = runnerTurnWithRedTeam();
-  assert(s.runner.ranServersThisTurn.length === 0, "no server has been run yet this turn");
+Deno.test("red team: the same-central-twice restriction (ability run + basic run)", async (t) => {
+  await t.step("the ability's run counts toward the same-central-twice restriction", () => {
+    let s = runnerTurnWithRedTeam();
+    assert(s.runner.ranServersThisTurn.length === 0, "no server has been run yet this turn");
 
-  const run = assertDefined(redTeamRunMove(s, "hq"), "the ability can run HQ");
-  s = play(s, "runner", run).state;
-  assert(s.run !== null, "the ability initiated a run");
-  assertEquals(
-    s.runner.ranServersThisTurn,
-    ["hq"],
-    "the ability's HQ run was recorded (like a basic runner.run)",
+    const run = assertDefined(redTeamRunMove(s, "hq"), "the ability can run HQ");
+    s = play(s, "runner", run).state;
+    assert(s.run !== null, "the ability initiated a run");
+    assertEquals(
+      s.runner.ranServersThisTurn,
+      ["hq"],
+      "the ability's HQ run was recorded (like a basic runner.run)",
+    );
+
+    // The restriction applies while Red Team is installed, so the basic
+    // `runner.run` move must not offer HQ again this turn.
+    s = resolveRun(s);
+    assert(!runTargets(s).includes("hq"), "a second basic run on HQ is not offered");
+    assert(runTargets(s).includes("rd"), "R&D has not been run, so it is still offered");
+    assert(
+      runTargets(s).includes("archives"),
+      "Archives has not been run, so it is still offered",
+    );
+  });
+
+  await t.step(
+    "the ability restricts only the central it ran, and the basic move mirrors it",
+    () => {
+      let s = newGame(["red_team"]);
+      s = burnUntil(s, "runner");
+      s = play(s, "runner", { kind: "runner.install", cardId: "red_team" }).state;
+      const red = installedRedTeam(s);
+
+      // A basic run on Archives first: the restriction applies to that central only.
+      s = play(s, "runner", { kind: "runner.run", server: "archives" }).state;
+      assertEquals(s.runner.ranServersThisTurn, ["archives"], "archives is recorded");
+      s = resolveRun(s);
+      assert(!runTargets(s).includes("archives"), "archives cannot be run again this turn");
+      assert(runTargets(s).includes("hq"), "HQ is still runnable with a basic move");
+
+      // The Red Team ability itself only offers centrals not yet run.
+      const offered = engine.getLegalMoves(s, "runner")
+        .filter((m) => m.kind === "runner.ability" && m.targetId === red.id && m.abilityIndex === 0)
+        .map((m) => (m as { server?: string }).server);
+      assertEquals(offered.sort(), ["hq", "rd"], "the ability excludes the already-run central");
+
+      // Using it on HQ keeps HQ restricted and leaves R&D alone.
+      const use = assertDefined(
+        engine.getLegalMoves(s, "runner").find((m) =>
+          m.kind === "runner.ability" && m.targetId === red.id && m.abilityIndex === 0 &&
+          m.server === "hq"
+        ),
+        "the ability can run HQ",
+      );
+      s = play(s, "runner", use).state;
+      s = resolveRun(s);
+      assert(!runTargets(s).includes("hq"), "HQ cannot be run again after the ability's run");
+      assert(runTargets(s).includes("rd"), "R&D is still runnable");
+    },
   );
-
-  // The restriction applies while Red Team is installed, so the basic
-  // `runner.run` move must not offer HQ again this turn.
-  s = resolveRun(s);
-  assert(!runTargets(s).includes("hq"), "a second basic run on HQ is not offered");
-  assert(runTargets(s).includes("rd"), "R&D has not been run, so it is still offered");
-  assert(
-    runTargets(s).includes("archives"),
-    "Archives has not been run, so it is still offered",
-  );
-});
-
-Deno.test("red team: the ability's run restricts only the central it ran, and the basic move mirrors it", () => {
-  let s = newGame(["red_team"]);
-  s = burnUntil(s, "runner");
-  s = play(s, "runner", { kind: "runner.install", cardId: "red_team" }).state;
-  const red = installedRedTeam(s);
-
-  // A basic run on Archives first: the restriction applies to that central only.
-  s = play(s, "runner", { kind: "runner.run", server: "archives" }).state;
-  assertEquals(s.runner.ranServersThisTurn, ["archives"], "archives is recorded");
-  s = resolveRun(s);
-  assert(!runTargets(s).includes("archives"), "archives cannot be run again this turn");
-  assert(runTargets(s).includes("hq"), "HQ is still runnable with a basic move");
-
-  // The Red Team ability itself only offers centrals not yet run.
-  const offered = engine.getLegalMoves(s, "runner")
-    .filter((m) => m.kind === "runner.ability" && m.targetId === red.id && m.abilityIndex === 0)
-    .map((m) => (m as { server?: string }).server);
-  assertEquals(offered.sort(), ["hq", "rd"], "the ability excludes the already-run central");
-
-  // Using it on HQ keeps HQ restricted and leaves R&D alone.
-  const use = assertDefined(
-    engine.getLegalMoves(s, "runner").find((m) =>
-      m.kind === "runner.ability" && m.targetId === red.id && m.abilityIndex === 0 &&
-      m.server === "hq"
-    ),
-    "the ability can run HQ",
-  );
-  s = play(s, "runner", use).state;
-  s = resolveRun(s);
-  assert(!runTargets(s).includes("hq"), "HQ cannot be run again after the ability's run");
-  assert(runTargets(s).includes("rd"), "R&D is still runnable");
 });
 
 // ---------------------------------------------------------------------------

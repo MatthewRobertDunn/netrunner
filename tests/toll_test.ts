@@ -139,98 +139,109 @@ function finishRunToEnd(state: GameState): GameState {
   return cur;
 }
 
-Deno.test("toll: paying 5 credits charges exactly once, sets tollPaid, and the run proceeds", () => {
-  const state = tollState();
-  assertEquals(state.runner.credits, 5, "runner starts with 5 credits");
-  assertEquals(offeredOptionIds(state), ["toll-credits", "toll-clicks", "toll-end"]);
+Deno.test("toll: answering the toll prompt (credits, clicks, or end) charges correctly", async (t) => {
+  await t.step("paying 5 credits charges exactly once, sets tollPaid, and the run proceeds", () => {
+    const state = tollState();
+    assertEquals(state.runner.credits, 5, "runner starts with 5 credits");
+    assertEquals(offeredOptionIds(state), ["toll-credits", "toll-clicks", "toll-end"]);
 
-  const result = answerToll(state, "toll-credits");
-  const after = result.state;
+    const result = answerToll(state, "toll-credits");
+    const after = result.state;
 
-  // Charged exactly once: 5 -> 0, a single spend-credits event, no second charge.
-  assertEquals(after.runner.credits, 0, "exactly 5 credits were spent (5 -> 0)");
-  assertEquals(
-    result.events.filter((e) =>
-      e.type === "spend-credits" && e.player === "runner" &&
-      e.amount === 5
-    ).length,
-    1,
-    "exactly one spend-credits(5) event for the runner",
+    // Charged exactly once: 5 -> 0, a single spend-credits event, no second charge.
+    assertEquals(after.runner.credits, 0, "exactly 5 credits were spent (5 -> 0)");
+    assertEquals(
+      result.events.filter((e) =>
+        e.type === "spend-credits" && e.player === "runner" &&
+        e.amount === 5
+      ).length,
+      1,
+      "exactly one spend-credits(5) event for the runner",
+    );
+    assertEquals(
+      countEvents(after, (e) => e.type === "lose-credits" && e.player === "runner"),
+      0,
+      "no lose-credits event: the toll is not charged a second time",
+    );
+
+    // The flag sticks and settle does not re-prompt.
+    assertEquals(after.run?.tollPaid, true, "run.tollPaid is set after paying");
+    assert(tollPrompt(after) === undefined, "no toll prompt is pending after paying");
+
+    // The run proceeds to the breach instead of ending.
+    assert(after.run !== null && after.breach !== null, "the run became successful (breach began)");
+    assert(
+      engine.getLegalMoves(after, "runner").some((m) => m.kind === "runner.accessCard"),
+      "the runner is offered access cards",
+    );
+
+    const end = finishRunToEnd(after);
+    assertEquals(end.run, null, "the run finished");
+    assertEquals(runEndEvent(end).successful, true, "the run ended successful");
+  });
+
+  await t.step(
+    "spending 2 clicks charges exactly once, sets tollPaid, and the run proceeds",
+    () => {
+      const state = tollState();
+      const clicksBefore = state.runner.clicks;
+      assertEquals(clicksBefore, 3, "runner has 3 clicks left after initiating the run");
+
+      const result = answerToll(state, "toll-clicks");
+      const after = result.state;
+
+      // Charged exactly once: one spend-clicks(2) event (state.spendClicks, via
+      // answerPrompt's generic clickCost spend), no second lose-clicks charge.
+      assertEquals(after.runner.clicks, clicksBefore - 2, "exactly 2 clicks were spent");
+      assertEquals(
+        result.events.filter((e) =>
+          e.type === "spend-clicks" && e.player === "runner" &&
+          e.amount === 2
+        ).length,
+        1,
+        "exactly one spend-clicks(2) event for the runner",
+      );
+      assertEquals(
+        countEvents(
+          after,
+          (e) => e.type === "lose-clicks" && e.player === "runner" && e.amount === 2,
+        ),
+        0,
+        "no lose-clicks(2) event: the toll is not charged a second time",
+      );
+      assertEquals(after.runner.credits, 5, "no credits were spent");
+
+      assertEquals(after.run?.tollPaid, true, "run.tollPaid is set after paying clicks");
+      assert(tollPrompt(after) === undefined, "no toll prompt is pending after paying");
+      assert(
+        after.run !== null && after.breach !== null,
+        "the run became successful (breach began)",
+      );
+
+      const end = finishRunToEnd(after);
+      assertEquals(end.run, null, "the run finished");
+      assertEquals(runEndEvent(end).successful, true, "the run ended successful");
+    },
   );
-  assertEquals(
-    countEvents(after, (e) => e.type === "lose-credits" && e.player === "runner"),
-    0,
-    "no lose-credits event: the toll is not charged a second time",
-  );
 
-  // The flag sticks and settle does not re-prompt.
-  assertEquals(after.run?.tollPaid, true, "run.tollPaid is set after paying");
-  assert(tollPrompt(after) === undefined, "no toll prompt is pending after paying");
+  await t.step("choosing to end the run ends it unsuccessful without charging anything", () => {
+    const state = tollState();
+    const result = answerToll(state, "toll-end");
+    const after = result.state;
 
-  // The run proceeds to the breach instead of ending.
-  assert(after.run !== null && after.breach !== null, "the run became successful (breach began)");
-  assert(
-    engine.getLegalMoves(after, "runner").some((m) => m.kind === "runner.accessCard"),
-    "the runner is offered access cards",
-  );
-
-  const end = finishRunToEnd(after);
-  assertEquals(end.run, null, "the run finished");
-  assertEquals(runEndEvent(end).successful, true, "the run ended successful");
-});
-
-Deno.test("toll: spending 2 clicks charges exactly once, sets tollPaid, and the run proceeds", () => {
-  const state = tollState();
-  const clicksBefore = state.runner.clicks;
-  assertEquals(clicksBefore, 3, "runner has 3 clicks left after initiating the run");
-
-  const result = answerToll(state, "toll-clicks");
-  const after = result.state;
-
-  // Charged exactly once: one spend-clicks(2) event (state.spendClicks, via
-  // answerPrompt's generic clickCost spend), no second lose-clicks charge.
-  assertEquals(after.runner.clicks, clicksBefore - 2, "exactly 2 clicks were spent");
-  assertEquals(
-    result.events.filter((e) =>
-      e.type === "spend-clicks" && e.player === "runner" &&
-      e.amount === 2
-    ).length,
-    1,
-    "exactly one spend-clicks(2) event for the runner",
-  );
-  assertEquals(
-    countEvents(after, (e) => e.type === "lose-clicks" && e.player === "runner" && e.amount === 2),
-    0,
-    "no lose-clicks(2) event: the toll is not charged a second time",
-  );
-  assertEquals(after.runner.credits, 5, "no credits were spent");
-
-  assertEquals(after.run?.tollPaid, true, "run.tollPaid is set after paying clicks");
-  assert(tollPrompt(after) === undefined, "no toll prompt is pending after paying");
-  assert(after.run !== null && after.breach !== null, "the run became successful (breach began)");
-
-  const end = finishRunToEnd(after);
-  assertEquals(end.run, null, "the run finished");
-  assertEquals(runEndEvent(end).successful, true, "the run ended successful");
-});
-
-Deno.test("toll: choosing to end the run ends it unsuccessful without charging anything", () => {
-  const state = tollState();
-  const result = answerToll(state, "toll-end");
-  const after = result.state;
-
-  assertEquals(after.run, null, "the run ended");
-  assertEquals(after.runner.credits, 5, "no credits were spent");
-  assertEquals(after.runner.clicks, 3, "no clicks were spent");
-  assertEquals(
-    result.events.filter((e) =>
-      e.type === "spend-credits" || e.type === "spend-clicks" || e.type === "lose-credits" ||
-      e.type === "lose-clicks"
-    ).length,
-    0,
-    "ending the run spends nothing",
-  );
-  assertEquals(runEndEvent(after).successful, false, "the run ended unsuccessful");
+    assertEquals(after.run, null, "the run ended");
+    assertEquals(after.runner.credits, 5, "no credits were spent");
+    assertEquals(after.runner.clicks, 3, "no clicks were spent");
+    assertEquals(
+      result.events.filter((e) =>
+        e.type === "spend-credits" || e.type === "spend-clicks" || e.type === "lose-credits" ||
+        e.type === "lose-clicks"
+      ).length,
+      0,
+      "ending the run spends nothing",
+    );
+    assertEquals(runEndEvent(after).successful, false, "the run ended unsuccessful");
+  });
 });
 
 Deno.test("toll: the 5-credit option is not offered when the runner has fewer than 5 credits", () => {

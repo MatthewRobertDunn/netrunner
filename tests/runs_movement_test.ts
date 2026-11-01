@@ -93,38 +93,90 @@ function findCarmenSeed(): number | null {
 
 // ---------------------------------------------------------------------------
 // 1. Jack-out (rules 6.1.5, 6.6.3, 6.9.4c)
+// 2. Runs past only unrezzed ice still declare success (rule 6.7.2)
+// 3. Regression: a rezzed-ice run still declares success via the new path
 // ---------------------------------------------------------------------------
 
-Deno.test("movement: the run parks in the movement phase and jack-out is legal", () => {
-  let cur = corpTurnWithIceOnRemote(["tithe"], 1);
-  cur = runServer(cur, "remote-1");
-  cur = corpPassesRezWindow(cur); // ice stays unrezzed and is passed
+Deno.test("movement: the movement phase parks the run for jack-out or continue (unrezzed and rezzed ice)", async (t) => {
+  await t.step(
+    "the run parks in the movement phase and jack-out is legal (rules 6.1.5, 6.6.3, 6.9.4c)",
+    () => {
+      let cur = corpTurnWithIceOnRemote(["tithe"], 1);
+      cur = runServer(cur, "remote-1");
+      cur = corpPassesRezWindow(cur); // ice stays unrezzed and is passed
 
-  // The movement phase is now a decision point for the Runner.
-  assertEquals(cur.run?.phase, "movement", "the run parks in the movement phase");
-  const kinds = moveKinds(cur, "runner");
-  assert(kinds.includes("runner.jackOut"), "jack-out is offered in the movement phase");
-  assert(kinds.includes("runner.continueRun"), "continue is offered in the movement phase");
+      // The movement phase is now a decision point for the Runner.
+      assertEquals(cur.run?.phase, "movement", "the run parks in the movement phase");
+      const kinds = moveKinds(cur, "runner");
+      assert(kinds.includes("runner.jackOut"), "jack-out is offered in the movement phase");
+      assert(kinds.includes("runner.continueRun"), "continue is offered in the movement phase");
 
-  const clicksBefore = cur.runner.clicks;
-  const creditsBefore = cur.runner.credits;
-  const jackOut = findMove(cur, "runner", "runner.jackOut");
-  assertDefined(jackOut, "jack-out move exists");
-  cur = play(cur, "runner", jackOut!).state;
+      const clicksBefore = cur.runner.clicks;
+      const creditsBefore = cur.runner.credits;
+      const jackOut = findMove(cur, "runner", "runner.jackOut");
+      assertDefined(jackOut, "jack-out move exists");
+      cur = play(cur, "runner", jackOut!).state;
 
-  assert(cur.run === null, "jacking out ends the run");
-  assert(cur.log.some((e) => e.type === "jack-out"), "the jack-out is logged");
-  assert(!cur.log.some((e) => e.type === "run-successful"), "no success is declared");
-  assert(!cur.log.some((e) => e.type === "breach"), "no breach happens");
-  const runEnd = cur.log.find((e) => e.type === "run-end");
-  assertDefined(runEnd, "the run-end event is logged");
-  assertEquals((runEnd as { successful: boolean }).successful, false, "the run ends unsuccessful");
-  assertEquals(cur.runner.clicks, clicksBefore, "jacking out spends no clicks");
-  assertEquals(cur.runner.credits, creditsBefore, "jacking out spends no credits");
+      assert(cur.run === null, "jacking out ends the run");
+      assert(cur.log.some((e) => e.type === "jack-out"), "the jack-out is logged");
+      assert(!cur.log.some((e) => e.type === "run-successful"), "no success is declared");
+      assert(!cur.log.some((e) => e.type === "breach"), "no breach happens");
+      const runEnd = cur.log.find((e) => e.type === "run-end");
+      assertDefined(runEnd, "the run-end event is logged");
+      assertEquals(
+        (runEnd as { successful: boolean }).successful,
+        false,
+        "the run ends unsuccessful",
+      );
+      assertEquals(cur.runner.clicks, clicksBefore, "jacking out spends no clicks");
+      assertEquals(cur.runner.credits, creditsBefore, "jacking out spends no credits");
+    },
+  );
+
+  await t.step("a run past only unrezzed ice declares success and breaches (rule 6.7.2)", () => {
+    let cur = corpTurnWithIceOnRemote(["tithe"], 1);
+    cur = runServer(cur, "remote-1");
+    cur = corpPassesRezWindow(cur); // the only ice is never rezzed
+
+    assertEquals(cur.run?.phase, "movement", "the run parks at the server");
+    assert(!cur.log.some((e) => e.type === "run-successful"), "not yet successful while parked");
+
+    cur = play(cur, "runner", findMove(cur, "runner", "runner.continueRun")!).state;
+
+    assert(cur.log.some((e) => e.type === "run-successful"), "run-successful event fires");
+    assert(cur.log.some((e) => e.type === "breach"), "a breach follows");
+    assertEquals(cur.runner.successfulRunThisTurn, true, "successfulRunThisTurn is set");
+    const runEnd = cur.log.find((e) => e.type === "run-end");
+    assertDefined(runEnd, "the run ends");
+    assertEquals((runEnd as { successful: boolean }).successful, true, "the run ends successful");
+  });
+
+  await t.step("a rezzed-ice run declares success through the movement phase", () => {
+    let cur = corpTurnWithIceOnRemote(["tithe"], 1);
+    cur = runServer(cur, "remote-1");
+    cur = corpRezzesInWindow(cur); // ice rezzed -> encounter
+    cur = play(cur, "runner", findMove(cur, "runner", "runner.resolveSubroutines")!).state;
+
+    assertEquals(cur.run?.phase, "movement", "the run parks in the movement phase");
+    assertEquals(cur.run?.position, 0, "at the innermost (only) ice");
+    assert(
+      moveKinds(cur, "runner").includes("runner.jackOut"),
+      "jack-out offered after the encounter",
+    );
+
+    cur = play(cur, "runner", findMove(cur, "runner", "runner.continueRun")!).state;
+
+    assert(cur.log.some((e) => e.type === "run-successful"), "run-successful event fires");
+    assert(cur.log.some((e) => e.type === "breach"), "a breach follows");
+    assertEquals(cur.runner.successfulRunThisTurn, true, "successfulRunThisTurn is set");
+    const runEnd = cur.log.find((e) => e.type === "run-end");
+    assertDefined(runEnd, "the run ends");
+    assertEquals((runEnd as { successful: boolean }).successful, true, "the run ends successful");
+  });
 });
 
 // ---------------------------------------------------------------------------
-// 2. Continue (rule 6.9.4d-f): pass ice and approach the next one
+// 4. Continue (rule 6.9.4d-f): pass ice and approach the next one
 // ---------------------------------------------------------------------------
 
 Deno.test("movement: continueRun passes the ice and approaches the next position", () => {
@@ -163,55 +215,6 @@ Deno.test("movement: continueRun passes the ice and approaches the next position
   cur = play(cur, "runner", findMove(cur, "runner", "runner.continueRun")!).state;
   assert(cur.log.some((e) => e.type === "run-successful"), "the run is declared successful");
   assertEquals(cur.runner.successfulRunThisTurn, true, "successfulRunThisTurn is set");
-});
-
-// ---------------------------------------------------------------------------
-// 3. Runs past only unrezzed ice still declare success (rule 6.7.2)
-// ---------------------------------------------------------------------------
-
-Deno.test("movement: a run past only unrezzed ice declares success and breaches", () => {
-  let cur = corpTurnWithIceOnRemote(["tithe"], 1);
-  cur = runServer(cur, "remote-1");
-  cur = corpPassesRezWindow(cur); // the only ice is never rezzed
-
-  assertEquals(cur.run?.phase, "movement", "the run parks at the server");
-  assert(!cur.log.some((e) => e.type === "run-successful"), "not yet successful while parked");
-
-  cur = play(cur, "runner", findMove(cur, "runner", "runner.continueRun")!).state;
-
-  assert(cur.log.some((e) => e.type === "run-successful"), "run-successful event fires");
-  assert(cur.log.some((e) => e.type === "breach"), "a breach follows");
-  assertEquals(cur.runner.successfulRunThisTurn, true, "successfulRunThisTurn is set");
-  const runEnd = cur.log.find((e) => e.type === "run-end");
-  assertDefined(runEnd, "the run ends");
-  assertEquals((runEnd as { successful: boolean }).successful, true, "the run ends successful");
-});
-
-// ---------------------------------------------------------------------------
-// 4. Regression: a rezzed-ice run still declares success via the new path
-// ---------------------------------------------------------------------------
-
-Deno.test("movement: a rezzed-ice run declares success through the movement phase", () => {
-  let cur = corpTurnWithIceOnRemote(["tithe"], 1);
-  cur = runServer(cur, "remote-1");
-  cur = corpRezzesInWindow(cur); // ice rezzed -> encounter
-  cur = play(cur, "runner", findMove(cur, "runner", "runner.resolveSubroutines")!).state;
-
-  assertEquals(cur.run?.phase, "movement", "the run parks in the movement phase");
-  assertEquals(cur.run?.position, 0, "at the innermost (only) ice");
-  assert(
-    moveKinds(cur, "runner").includes("runner.jackOut"),
-    "jack-out offered after the encounter",
-  );
-
-  cur = play(cur, "runner", findMove(cur, "runner", "runner.continueRun")!).state;
-
-  assert(cur.log.some((e) => e.type === "run-successful"), "run-successful event fires");
-  assert(cur.log.some((e) => e.type === "breach"), "a breach follows");
-  assertEquals(cur.runner.successfulRunThisTurn, true, "successfulRunThisTurn is set");
-  const runEnd = cur.log.find((e) => e.type === "run-end");
-  assertDefined(runEnd, "the run ends");
-  assertEquals((runEnd as { successful: boolean }).successful, true, "the run ends successful");
 });
 
 // ---------------------------------------------------------------------------

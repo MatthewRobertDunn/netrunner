@@ -156,73 +156,75 @@ const RUNNER_HAND = [
   "cleaver",
 ];
 
-Deno.test("pump: strength boost expires when the encounter ends", () => {
-  let state = startGame(["tithe", "hedge_fund", "hedge_fund"], RUNNER_HAND);
-  state = corpInstallIceOnHqAndEndTurn(state);
-  state = sureGamble(state);
-  state = installProgram(state, "carmen");
-  state = runHq(state);
-  state = corpRezApproachedIce(state);
+Deno.test("pump: strength boost expires at encounter end and when the run ends mid-encounter (rules 3.9.5b/3.9.5d)", async (t) => {
+  await t.step("strength boost expires when the encounter ends", () => {
+    let state = startGame(["tithe", "hedge_fund", "hedge_fund"], RUNNER_HAND);
+    state = corpInstallIceOnHqAndEndTurn(state);
+    state = sureGamble(state);
+    state = installProgram(state, "carmen");
+    state = runHq(state);
+    state = corpRezApproachedIce(state);
 
-  // Encounter with rezzed Tithe (sentry, strength 1); Carmen (strength 2) pumps +3.
-  const carmen = installed(state, "carmen");
-  assert(state.run?.phase === "encounter-ice", "encounter in progress");
-  state = play(state, "runner", pumpMove(state, carmen.id)).state;
-  assert(
-    installed(state, "carmen").strengthBoost === 3,
-    "pump recorded a +3 strengthBoost during the encounter",
-  );
+    // Encounter with rezzed Tithe (sentry, strength 1); Carmen (strength 2) pumps +3.
+    const carmen = installed(state, "carmen");
+    assert(state.run?.phase === "encounter-ice", "encounter in progress");
+    state = play(state, "runner", pumpMove(state, carmen.id)).state;
+    assert(
+      installed(state, "carmen").strengthBoost === 3,
+      "pump recorded a +3 strengthBoost during the encounter",
+    );
 
-  // Break both subroutines; the encounter completes while the run continues.
-  state = play(state, "runner", breakMove(state, carmen.id, 0)).state;
-  state = play(state, "runner", breakMove(state, carmen.id, 1)).state;
-  assert(state.run !== null, "the run is still active after the encounter");
-  assert(
-    state.run!.phase !== "encounter-ice",
-    `the encounter is over (phase ${state.run!.phase})`,
-  );
-  assert(
-    installed(state, "carmen").strengthBoost === undefined,
-    "strengthBoost is cleared at encounter end (rule 3.9.5b), before the run ends",
-  );
+    // Break both subroutines; the encounter completes while the run continues.
+    state = play(state, "runner", breakMove(state, carmen.id, 0)).state;
+    state = play(state, "runner", breakMove(state, carmen.id, 1)).state;
+    assert(state.run !== null, "the run is still active after the encounter");
+    assert(
+      state.run!.phase !== "encounter-ice",
+      `the encounter is over (phase ${state.run!.phase})`,
+    );
+    assert(
+      installed(state, "carmen").strengthBoost === undefined,
+      "strengthBoost is cleared at encounter end (rule 3.9.5b), before the run ends",
+    );
 
-  // Ending the run must not resurrect or matter either: still cleared.
-  state = drainRun(state);
-  assert(state.run === null, "run ended");
-  assert(
-    installed(state, "carmen").strengthBoost === undefined,
-    "strengthBoost still cleared after the run ended",
-  );
-});
+    // Ending the run must not resurrect or matter either: still cleared.
+    state = drainRun(state);
+    assert(state.run === null, "run ended");
+    assert(
+      installed(state, "carmen").strengthBoost === undefined,
+      "strengthBoost still cleared after the run ended",
+    );
+  });
 
-Deno.test("pump: strength boost expires when the run ends mid-encounter", () => {
-  let state = startGame(["palisade", "hedge_fund", "hedge_fund"], RUNNER_HAND);
-  state = corpInstallIceOnHqAndEndTurn(state);
-  state = sureGamble(state);
-  state = installProgram(state, "cleaver");
-  state = runHq(state);
-  state = corpRezApproachedIce(state);
+  await t.step("strength boost expires when the run ends mid-encounter", () => {
+    let state = startGame(["palisade", "hedge_fund", "hedge_fund"], RUNNER_HAND);
+    state = corpInstallIceOnHqAndEndTurn(state);
+    state = sureGamble(state);
+    state = installProgram(state, "cleaver");
+    state = runHq(state);
+    state = corpRezApproachedIce(state);
 
-  // Encounter with rezzed Palisade (barrier, strength 2, end-the-run sub).
-  const cleaver = installed(state, "cleaver");
-  state = play(state, "runner", pumpMove(state, cleaver.id)).state;
-  assert(
-    installed(state, "cleaver").strengthBoost === 1,
-    "pump recorded a +1 strengthBoost during the encounter",
-  );
+    // Encounter with rezzed Palisade (barrier, strength 2, end-the-run sub).
+    const cleaver = installed(state, "cleaver");
+    state = play(state, "runner", pumpMove(state, cleaver.id)).state;
+    assert(
+      installed(state, "cleaver").strengthBoost === 1,
+      "pump recorded a +1 strengthBoost during the encounter",
+    );
 
-  // Resolve the unbroken subroutine: Palisade ends the run mid-encounter, so
-  // the encounter never "completes" — finishRun must clear the boost.
-  const resolve = engine.getLegalMoves(state, "runner").find((m) =>
-    m.kind === "runner.resolveSubroutines"
-  );
-  assertDefined(resolve, "resolveSubroutines offered");
-  state = play(state, "runner", resolve!).state;
-  assert(state.run === null, "the run ended (state.run is null)");
-  assert(
-    installed(state, "cleaver").strengthBoost === undefined,
-    "strengthBoost is cleared when the run ends (rules 3.9.5b/3.9.5d)",
-  );
+    // Resolve the unbroken subroutine: Palisade ends the run mid-encounter, so
+    // the encounter never "completes" — finishRun must clear the boost.
+    const resolve = engine.getLegalMoves(state, "runner").find((m) =>
+      m.kind === "runner.resolveSubroutines"
+    );
+    assertDefined(resolve, "resolveSubroutines offered");
+    state = play(state, "runner", resolve!).state;
+    assert(state.run === null, "the run ended (state.run is null)");
+    assert(
+      installed(state, "cleaver").strengthBoost === undefined,
+      "strengthBoost is cleared when the run ends (rules 3.9.5b/3.9.5d)",
+    );
+  });
 });
 
 Deno.test("pump: Unity's static +X strength is not a pump and survives the sweep", () => {
