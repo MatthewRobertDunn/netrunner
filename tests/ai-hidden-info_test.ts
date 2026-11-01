@@ -30,7 +30,7 @@ import {
 import type { AIDecisionContext, GameState, PlayerSide, PlayerView } from "../src/types.ts";
 import { randomGame, reorderHidden } from "./helpers/drive.ts";
 import { decide } from "./helpers/boundary.ts";
-import { assert, assertEquals } from "./helpers/assert.ts";
+import { assert, assertEquals, deepClone } from "./helpers/assert.ts";
 
 function actorOf(state: GameState): PlayerSide {
   return state.prompts[0]?.player ?? state.turn.player;
@@ -43,7 +43,7 @@ function actorOf(state: GameState): PlayerSide {
 Deno.test("hidden info: determinization is invariant to hidden order", async (t) => {
   await t.step("determinize ignores the order of every hidden zone", () => {
     for (const seed of [1, 7, 42, 99, 2024]) {
-      const state = randomGame(new RandomAI(), seed, 6);
+      const state = randomGame(new RandomAI(), seed, 6, (i) => i);
       const actor = actorOf(state);
       const legal = engine.getLegalMoves(state, actor);
       if (legal.length < 2) continue;
@@ -79,7 +79,7 @@ Deno.test("hidden info: determinization is invariant to hidden order", async (t)
   });
 
   await t.step("determinize works for both sides at the same position", () => {
-    const state = randomGame(new RandomAI(), 42, 9);
+    const state = randomGame(new RandomAI(), 42, 9, (i) => i);
     for (const side of ["corp", "runner"] as const) {
       const view = engine.getPlayerView(state, side);
       const ctx = makeAIDecisionContext(state, side, 5);
@@ -100,7 +100,7 @@ Deno.test("hidden info: determinization is invariant to hidden order", async (t)
 Deno.test("hidden info: context and decision seeds carry no hidden state", async (t) => {
   await t.step("the context carries no instance ids and no rngState", () => {
     for (const seed of [3, 11, 77]) {
-      const state = randomGame(new RandomAI(), seed, 8);
+      const state = randomGame(new RandomAI(), seed, 8, (i) => i);
       for (const side of ["corp", "runner"] as const) {
         const ctx = makeAIDecisionContext(state, side, 123456);
 
@@ -117,7 +117,7 @@ Deno.test("hidden info: context and decision seeds carry no hidden state", async
 
         // Nothing in the context depends on state.rngState: changing it (with
         // the same caller seed) must not change the context.
-        const mutated = JSON.parse(JSON.stringify(state)) as GameState;
+        const mutated = deepClone(state) as GameState;
         mutated.rngState = (mutated.rngState ^ 0x5f3759df) | 0;
         assertEquals(
           makeAIDecisionContext(mutated, side, 123456),
@@ -130,7 +130,7 @@ Deno.test("hidden info: context and decision seeds carry no hidden state", async
 
   await t.step("the decision seed is a pure function of the view", () => {
     for (const seed of [3, 11, 77]) {
-      const state = randomGame(new RandomAI(), seed, 8);
+      const state = randomGame(new RandomAI(), seed, 8, (i) => i);
       const actor = actorOf(state);
       const view = engine.getPlayerView(state, actor);
 
@@ -165,7 +165,7 @@ Deno.test("hidden info: context and decision seeds carry no hidden state", async
   });
 
   await t.step("determinize output never echoes the true rngState", () => {
-    const state = randomGame(new RandomAI(), 7, 5);
+    const state = randomGame(new RandomAI(), 7, 5, (i) => i);
     const actor = actorOf(state);
     const ctx = makeAIDecisionContext(state, actor, 4242);
     const det = determinize(engine.getPlayerView(state, actor), ctx, makeRng(4242));

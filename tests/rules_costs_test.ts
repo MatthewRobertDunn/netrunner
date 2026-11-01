@@ -11,52 +11,23 @@
 
 import { cardDef, engine, starterDeckConfigs } from "../src/mod.ts";
 import type { CardId, DeckConfig, GameState, Move, ServerId } from "../src/types.ts";
-import { endCorpTurn, play } from "./helpers/fixtures.ts";
+import {
+  corpDeckStartingWith,
+  endCorpTurn,
+  play,
+  runnerDeckStartingWith,
+} from "./helpers/fixtures.ts";
 import { assert, assertDefined, assertEquals } from "./helpers/assert.ts";
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Corp deck config with `iceId` as the first card of the opening hand. */
-function corpDeckWith(iceId: CardId): DeckConfig {
-  const cfg = starterDeckConfigs().corp;
-  const rest = cfg.cards.flatMap((e) => Array<CardId>(e.count).fill(e.cardId));
-  const ordered = [iceId, ...rest.filter((id) => id !== iceId)];
-  const counts = new Map<CardId, number>();
-  for (const id of ordered) counts.set(id, (counts.get(id) ?? 0) + 1);
-  return {
-    identity: cfg.identity,
-    cards: [...counts].map(([cardId, count]) => ({ cardId, count })),
-    orderedCards: ordered,
-  };
-}
-
-/** Runner deck config with `hand` as the opening hand (in order). */
-function runnerDeckWith(hand: CardId[]): DeckConfig {
-  const cfg = starterDeckConfigs().runner;
-  const rest = cfg.cards.flatMap((e) => Array<CardId>(e.count).fill(e.cardId));
-  const remaining = new Map<CardId, number>();
-  for (const id of rest) remaining.set(id, (remaining.get(id) ?? 0) + 1);
-  const keep: CardId[] = [];
-  for (const id of rest) {
-    if (hand.includes(id) && (remaining.get(id) ?? 0) > 0) {
-      remaining.set(id, remaining.get(id)! - 1);
-      continue;
-    }
-    keep.push(id);
-  }
-  const ordered = [...hand, ...keep];
-  const counts = new Map<CardId, number>();
-  for (const id of ordered) counts.set(id, (counts.get(id) ?? 0) + 1);
-  return {
-    identity: cfg.identity,
-    cards: [...counts].map(([cardId, count]) => ({ cardId, count })),
-    orderedCards: ordered,
-  };
-}
-
-function startGameWith(corp: DeckConfig, runner: DeckConfig, seed = 3): GameState {
+function startGameWith(
+  corp: DeckConfig,
+  runner: DeckConfig,
+  seed = 3,
+): GameState {
   return engine.startGame({ corp, runner, mode: "starter-decks", seed });
 }
 
@@ -71,19 +42,19 @@ function rezWindowForIce(
   runServer: ServerId,
   seed = 3,
 ): GameState {
-  let state = startGameWith(corpDeckWith(iceId), starterDeckConfigs().runner, seed);
+  let state = startGameWith(corpDeckStartingWith([iceId]), starterDeckConfigs().runner, seed);
   const install = engine.getLegalMoves(state, "corp").find((m) =>
     m.kind === "corp.install" && m.cardId === iceId && m.server === installServer
   );
   assertDefined(install, `corp can install ${iceId} protecting ${installServer}`);
-  state = play(state, "corp", install!).state;
+  state = play(state, "corp", install!);
   state = endCorpTurn(state);
   assertEquals(state.turn.player, "runner");
   const run = engine.getLegalMoves(state, "runner").find((m) =>
     m.kind === "runner.run" && m.server === runServer
   );
   assertDefined(run, `runner can run ${runServer}`);
-  state = play(state, "runner", run!).state;
+  state = play(state, "runner", run!);
   const prompt = state.prompts[0];
   assert(
     prompt && prompt.kind === "rez-window",
@@ -118,7 +89,7 @@ function answerRezWindow(state: GameState, optionId: string): GameState {
     player: "corp",
     promptId: prompt.id,
     optionId,
-  } as Move).state;
+  } as Move);
 }
 
 /** Every ice definition in the starter corp pool. */
@@ -167,15 +138,15 @@ Deno.test("rez costs: rez-window displays and charges the printed cost (rules 1.
     const iceId: CardId = "palisade"; // printed rez cost 3
     assertEquals(cardDef(iceId).cost, 3, "fixture: Palisade prints a rez cost of 3");
     let state = startGameWith(
-      corpDeckWith(iceId),
-      runnerDeckWith(["tread_lightly"]),
+      corpDeckStartingWith([iceId]),
+      runnerDeckStartingWith(["tread_lightly"]),
     );
     // Corp installs Palisade protecting HQ, then ends its turn.
     const install = engine.getLegalMoves(state, "corp").find((m) =>
       m.kind === "corp.install" && m.cardId === iceId && m.server === "hq"
     );
     assertDefined(install, "corp can install Palisade protecting HQ");
-    state = play(state, "corp", install!).state;
+    state = play(state, "corp", install!);
     state = endCorpTurn(state);
 
     // Runner plays Tread Lightly (its enumerated run targets HQ).
@@ -183,7 +154,7 @@ Deno.test("rez costs: rez-window displays and charges the printed cost (rules 1.
       m.kind === "runner.playEvent" && m.cardId === "tread_lightly"
     );
     assertDefined(tread, "runner can play Tread Lightly");
-    state = play(state, "runner", tread!).state;
+    state = play(state, "runner", tread!);
     assert(state.run !== null, "Tread Lightly started a run");
     assertEquals(state.run!.rezCostIncrease, 3, "the run carries the +3 rez-cost increase");
 

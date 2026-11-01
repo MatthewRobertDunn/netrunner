@@ -12,19 +12,21 @@ import type { GameAI, GameState, Move, PlayerSide } from "../../src/types.ts";
 /**
  * Ask `ai` for a move as `side`, seeing only the view and the context.
  *
- * Note: AIs are pure functions of their inputs, so callers driving whole
- * games must vary `seed` per decision (the real shells derive it from the
- * view via `decisionSeedFor`); a constant seed repeats the same picks.
+ * `legal` is REQUIRED — the optional form used to silently fall back to
+ * `getLegalMoves(state, side)`, which let callers skip building the list they
+ * meant to offer. `seed` is REQUIRED too: AIs are pure functions of their
+ * inputs, so callers driving whole games must vary the seed per decision (the
+ * real shells derive it from the view via `decisionSeedFor`); a constant seed
+ * repeats the same picks.
  */
 export function decide(
   ai: GameAI,
   state: GameState,
   side: PlayerSide,
-  legal?: Move[],
-  seed = 1,
+  legal: Move[],
+  seed: number,
 ): Move {
-  const moves = legal ?? engine.getLegalMoves(state, side);
   const view = engine.getPlayerView(state, side);
   const ctx = makeAIDecisionContext(state, side, seed);
-  return ai.chooseMove(view, moves, ctx);
+  return ai.chooseMove(view, legal, ctx);
 }

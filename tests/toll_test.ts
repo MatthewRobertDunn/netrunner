@@ -19,7 +19,7 @@
 
 import { engine } from "../src/mod.ts";
 import { endCorpTurn, newGameWithCorpHand, play } from "./helpers/fixtures.ts";
-import type { ApplyMoveResult, GameState } from "../src/types.ts";
+import type { GameState } from "../src/types.ts";
 import { assert, assertDefined, assertEquals } from "./helpers/assert.ts";
 
 /**
@@ -34,13 +34,13 @@ function tollState(seed = 3): GameState {
     m.kind === "corp.install" && m.cardId === "nico_campaign" && m.server === "new-remote"
   );
   assertDefined(installAsset, "corp can install nico_campaign in a new remote");
-  state = play(state, "corp", installAsset!).state;
+  state = play(state, "corp", installAsset!);
 
   const installUpgrade = engine.getLegalMoves(state, "corp").find((m) =>
     m.kind === "corp.install" && m.cardId === "manegarm_skunkworks" && m.server === "remote-1"
   );
   assertDefined(installUpgrade, "corp can install manegarm_skunkworks in remote-1's root");
-  state = play(state, "corp", installUpgrade!).state;
+  state = play(state, "corp", installUpgrade!);
 
   const manegarm = state.servers
     .flatMap((s) => [...s.root, ...s.ice])
@@ -54,7 +54,7 @@ function tollState(seed = 3): GameState {
     m.kind === "corp.rez" && m.targetId === manegarm!.id
   );
   assertDefined(rez, "corp.rez move exists for the installed upgrade");
-  state = play(state, "corp", rez!).state;
+  state = play(state, "corp", rez!);
   assertEquals(
     state.servers.flatMap((s) => s.root).find((c) => c.cardId === "manegarm_skunkworks")
       ?.rezzed,
@@ -68,12 +68,12 @@ function tollState(seed = 3): GameState {
     m.kind === "runner.run" && m.server === "remote-1"
   );
   assertDefined(run, "runner can run remote-1");
-  state = play(state, "runner", run!).state;
+  state = play(state, "runner", run!);
   // The run parks in the movement phase (rule 6.9.4c); continuing reaches the
   // server, where the rezzed Manegarm raises its toll prompt.
   const cont = engine.getLegalMoves(state, "runner").find((m) => m.kind === "runner.continueRun");
   assertDefined(cont, "continueRun is offered in the movement phase");
-  state = play(state, "runner", cont!).state;
+  state = play(state, "runner", cont!);
 
   assert(tollPrompt(state) !== undefined, "the Manegarm toll prompt is pending");
   return state;
@@ -95,8 +95,8 @@ function offeredOptionIds(state: GameState): string[] {
   return ids;
 }
 
-/** Answer the pending toll prompt with `optionId`; returns the apply result. */
-function answerToll(state: GameState, optionId: string): ApplyMoveResult {
+/** Answer the pending toll prompt with `optionId`; returns the new state. */
+function answerToll(state: GameState, optionId: string): GameState {
   const move = engine.getLegalMoves(state, "runner").find((m) =>
     m.kind === "prompt.answer" && m.optionId === optionId
   );
@@ -134,7 +134,7 @@ function finishRunToEnd(state: GameState): GameState {
       moves.find((mm) => mm.kind === "runner.finishAccess") ??
       moves.find((mm) => mm.kind === "runner.accessCard") ??
       moves[0]!;
-    cur = play(cur, "runner", m).state;
+    cur = play(cur, "runner", m);
   }
   return cur;
 }
@@ -145,13 +145,13 @@ Deno.test("toll: answering the toll prompt (credits, clicks, or end) charges cor
     assertEquals(state.runner.credits, 5, "runner starts with 5 credits");
     assertEquals(offeredOptionIds(state), ["toll-credits", "toll-clicks", "toll-end"]);
 
-    const result = answerToll(state, "toll-credits");
-    const after = result.state;
+    const eventsBefore = state.log.length;
+    const after = answerToll(state, "toll-credits");
 
     // Charged exactly once: 5 -> 0, a single spend-credits event, no second charge.
     assertEquals(after.runner.credits, 0, "exactly 5 credits were spent (5 -> 0)");
     assertEquals(
-      result.events.filter((e) =>
+      after.log.slice(eventsBefore).filter((e) =>
         e.type === "spend-credits" && e.player === "runner" &&
         e.amount === 5
       ).length,
@@ -187,14 +187,14 @@ Deno.test("toll: answering the toll prompt (credits, clicks, or end) charges cor
       const clicksBefore = state.runner.clicks;
       assertEquals(clicksBefore, 3, "runner has 3 clicks left after initiating the run");
 
-      const result = answerToll(state, "toll-clicks");
-      const after = result.state;
+      const eventsBefore = state.log.length;
+      const after = answerToll(state, "toll-clicks");
 
       // Charged exactly once: one spend-clicks(2) event (state.spendClicks, via
       // answerPrompt's generic clickCost spend), no second lose-clicks charge.
       assertEquals(after.runner.clicks, clicksBefore - 2, "exactly 2 clicks were spent");
       assertEquals(
-        result.events.filter((e) =>
+        after.log.slice(eventsBefore).filter((e) =>
           e.type === "spend-clicks" && e.player === "runner" &&
           e.amount === 2
         ).length,
@@ -226,14 +226,14 @@ Deno.test("toll: answering the toll prompt (credits, clicks, or end) charges cor
 
   await t.step("choosing to end the run ends it unsuccessful without charging anything", () => {
     const state = tollState();
-    const result = answerToll(state, "toll-end");
-    const after = result.state;
+    const eventsBefore = state.log.length;
+    const after = answerToll(state, "toll-end");
 
     assertEquals(after.run, null, "the run ended");
     assertEquals(after.runner.credits, 5, "no credits were spent");
     assertEquals(after.runner.clicks, 3, "no clicks were spent");
     assertEquals(
-      result.events.filter((e) =>
+      after.log.slice(eventsBefore).filter((e) =>
         e.type === "spend-credits" || e.type === "spend-clicks" || e.type === "lose-credits" ||
         e.type === "lose-clicks"
       ).length,
@@ -253,8 +253,7 @@ Deno.test("toll: the 5-credit option is not offered when the runner has fewer th
   assertEquals(offered, ["toll-clicks", "toll-end"]);
 
   // The clicks option is still available and works from the low-credit state.
-  const result = answerToll(state, "toll-clicks");
-  const after = result.state;
+  const after = answerToll(state, "toll-clicks");
   assertEquals(after.runner.credits, 2, "credits untouched by the click toll");
   assertEquals(after.runner.clicks, 1, "exactly 2 clicks spent");
   assertEquals(after.run?.tollPaid, true, "run.tollPaid is set");
@@ -267,7 +266,7 @@ Deno.test("toll: the 5-credit option is not offered when the runner has fewer th
 Deno.test("toll: the prompt appears once per run — a second run re-prompts, a paid run never does", () => {
   let state = tollState();
   // Run 1: pay with clicks (3 -> 1 click left, credits untouched).
-  state = answerToll(state, "toll-clicks").state;
+  state = answerToll(state, "toll-clicks");
   assertEquals(state.run?.tollPaid, true);
   state = finishRunToEnd(state);
   assertEquals(state.run, null, "run 1 finished");
@@ -281,18 +280,17 @@ Deno.test("toll: the prompt appears once per run — a second run re-prompts, a 
     m.kind === "runner.run" && m.server === "remote-1"
   );
   assertDefined(run2, "the runner can run remote-1 again");
-  state = play(state, "runner", run2!).state;
+  state = play(state, "runner", run2!);
   // The run parks in the movement phase; continuing approaches the server and
   // raises the toll prompt again.
   const cont = engine.getLegalMoves(state, "runner").find((m) => m.kind === "runner.continueRun");
   assertDefined(cont, "run 2 parks in the movement phase");
-  state = play(state, "runner", cont!).state;
+  state = play(state, "runner", cont!);
   assert(tollPrompt(state) !== undefined, "run 2 approaches the rezzed upgrade: toll prompts");
   // With 0 clicks left after initiating run 2, only the credit option is offered.
   assertEquals(offeredOptionIds(state), ["toll-credits", "toll-end"]);
 
-  const result = answerToll(state, "toll-credits");
-  const after = result.state;
+  const after = answerToll(state, "toll-credits");
   assertEquals(after.runner.credits, 0, "run 2 paid exactly 5 credits");
   assertEquals(after.run?.tollPaid, true, "run 2's tollPaid is set");
   assert(tollPrompt(after) === undefined, "run 2 does not re-prompt after paying");

@@ -18,8 +18,8 @@
  */
 
 import { engine, starterDeckConfigs } from "../src/mod.ts";
-import type { CardId, DeckConfig, GameState, Move } from "../src/types.ts";
-import { continueRun, play } from "./helpers/fixtures.ts";
+import type { CardId, GameState, Move } from "../src/types.ts";
+import { play, runnerDeckStartingWith } from "./helpers/fixtures.ts";
 import { burnUntil, nextTurnOf, resolveRun } from "./helpers/drive.ts";
 import { assert, assertDefined, assertEquals } from "./helpers/assert.ts";
 
@@ -27,29 +27,10 @@ import { assert, assertDefined, assertEquals } from "./helpers/assert.ts";
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Runner deck whose opening hand starts with `first` (in order). */
-function runnerDeckWithFirst(first: CardId[]): DeckConfig {
-  const cfg = starterDeckConfigs().runner;
-  const rest = cfg.cards.flatMap((e) => Array<CardId>(e.count).fill(e.cardId));
-  for (const id of first) {
-    const i = rest.indexOf(id);
-    if (i < 0) throw new Error(`${id} is not in the runner starter pool`);
-    rest.splice(i, 1);
-  }
-  const ordered = [...first, ...rest];
-  const counts = new Map<string, number>();
-  for (const id of ordered) counts.set(id, (counts.get(id) ?? 0) + 1);
-  return {
-    identity: cfg.identity,
-    cards: [...counts].map(([cardId, count]) => ({ cardId, count })),
-    orderedCards: ordered,
-  };
-}
-
 function newGame(runnerFirst: CardId[] = []): GameState {
   return engine.startGame({
     corp: starterDeckConfigs().corp,
-    runner: runnerDeckWithFirst(runnerFirst),
+    runner: runnerDeckStartingWith(runnerFirst),
     mode: "starter-decks",
     seed: 3,
   });
@@ -80,7 +61,7 @@ function runTargets(state: GameState): string[] {
 function runnerTurnWithRedTeam(): GameState {
   let s = newGame(["red_team"]);
   s = burnUntil(s, "runner");
-  s = play(s, "runner", { kind: "runner.install", cardId: "red_team" }).state;
+  s = play(s, "runner", { kind: "runner.install", cardId: "red_team" });
   installedRedTeam(s); // asserts the install worked
   return s;
 }
@@ -95,7 +76,7 @@ Deno.test("red team: the same-central-twice restriction (ability run + basic run
     assert(s.runner.ranServersThisTurn.length === 0, "no server has been run yet this turn");
 
     const run = assertDefined(redTeamRunMove(s, "hq"), "the ability can run HQ");
-    s = play(s, "runner", run).state;
+    s = play(s, "runner", run);
     assert(s.run !== null, "the ability initiated a run");
     assertEquals(
       s.runner.ranServersThisTurn,
@@ -119,11 +100,11 @@ Deno.test("red team: the same-central-twice restriction (ability run + basic run
     () => {
       let s = newGame(["red_team"]);
       s = burnUntil(s, "runner");
-      s = play(s, "runner", { kind: "runner.install", cardId: "red_team" }).state;
+      s = play(s, "runner", { kind: "runner.install", cardId: "red_team" });
       const red = installedRedTeam(s);
 
       // A basic run on Archives first: the restriction applies to that central only.
-      s = play(s, "runner", { kind: "runner.run", server: "archives" }).state;
+      s = play(s, "runner", { kind: "runner.run", server: "archives" });
       assertEquals(s.runner.ranServersThisTurn, ["archives"], "archives is recorded");
       s = resolveRun(s);
       assert(!runTargets(s).includes("archives"), "archives cannot be run again this turn");
@@ -143,7 +124,7 @@ Deno.test("red team: the same-central-twice restriction (ability run + basic run
         ),
         "the ability can run HQ",
       );
-      s = play(s, "runner", use).state;
+      s = play(s, "runner", use);
       s = resolveRun(s);
       assert(!runTargets(s).includes("hq"), "HQ cannot be run again after the ability's run");
       assert(runTargets(s).includes("rd"), "R&D is still runnable");
@@ -158,14 +139,14 @@ Deno.test("red team: the same-central-twice restriction (ability run + basic run
 Deno.test("red team: the ability is not once per turn (printed text has no once-per-turn)", () => {
   let s = newGame(["red_team"]);
   s = burnUntil(s, "runner");
-  s = play(s, "runner", { kind: "runner.install", cardId: "red_team" }).state;
+  s = play(s, "runner", { kind: "runner.install", cardId: "red_team" });
 
   // 4 clicks on the turn: 1 to install, 3 left — three ability uses plus the
   // run resolutions still fit inside the turn.
   for (const server of ["hq", "rd", "archives"]) {
     const use = redTeamRunMove(s, server);
     assertDefined(use, `the ability is offered again for ${server} (no once-per-turn)`);
-    s = play(s, "runner", use!).state;
+    s = play(s, "runner", use!);
     s = resolveRun(s);
     assert(
       s.runner.ranServersThisTurn.includes(server as never),
@@ -181,7 +162,7 @@ Deno.test("red team: the ability is not once per turn (printed text has no once-
 
 Deno.test("red team: the restriction resets on the next runner turn", () => {
   let s = runnerTurnWithRedTeam();
-  s = play(s, "runner", assertDefined(redTeamRunMove(s, "hq"), "the ability can run HQ")).state;
+  s = play(s, "runner", assertDefined(redTeamRunMove(s, "hq"), "the ability can run HQ"));
   s = resolveRun(s);
   assert(!runTargets(s).includes("hq"), "HQ is restricted for the rest of this turn");
 
@@ -203,9 +184,11 @@ Deno.test("red team: a successful ability run takes 3 credits from the resource"
   const red = installedRedTeam(s);
   assertEquals(red.hostedCredits, 12, "installing loaded 12 credits onto Red Team");
   const creditsBefore = s.runner.credits;
-  s =
-    play(s, "runner", assertDefined(redTeamRunMove(s, "archives"), "the ability can run archives"))
-      .state;
+  s = play(
+    s,
+    "runner",
+    assertDefined(redTeamRunMove(s, "archives"), "the ability can run archives"),
+  );
   s = resolveRun(s);
   assertEquals(
     installedRedTeam(s).hostedCredits,
@@ -220,14 +203,14 @@ Deno.test("red team: a successful ability run takes 3 credits from the resource"
 Deno.test("red team: Red Team is trashed when the resource is empty", () => {
   let s = newGame(["red_team"]);
   s = burnUntil(s, "runner");
-  s = play(s, "runner", { kind: "runner.install", cardId: "red_team" }).state;
+  s = play(s, "runner", { kind: "runner.install", cardId: "red_team" });
 
   // Drain the resource: use the ability four times, resolving each run.
   for (let i = 0; i < 4; i++) {
     const server = ["hq", "rd", "archives", "hq"][i]!;
     const use = redTeamRunMove(s, server);
     if (!use) break; // every central already ran this turn: only 3 centrals exist
-    s = play(s, "runner", use).state;
+    s = play(s, "runner", use);
     s = resolveRun(s);
   }
   // 12 credits minus 4 successful runs is impossible (only 3 centrals), so check
@@ -238,7 +221,7 @@ Deno.test("red team: Red Team is trashed when the resource is empty", () => {
   if (left === 3) {
     const final = redTeamRunMove(s, "hq");
     if (final) {
-      s = play(s, "runner", final).state;
+      s = play(s, "runner", final);
       s = resolveRun(s);
     }
   }
@@ -247,6 +230,3 @@ Deno.test("red team: Red Team is trashed when the resource is empty", () => {
     "an empty Red Team is trashed ('When it is empty, trash it.')",
   );
 });
-
-// Silence unused import lint for `continueRun` when a variant is unused.
-void continueRun;

@@ -9,16 +9,9 @@
  */
 
 import { cardDef, engine, starterDeckConfigs } from "../src/mod.ts";
-import type { GameState, Move } from "../src/types.ts";
+import type { GameState } from "../src/types.ts";
+import { play } from "./helpers/fixtures.ts";
 import { assert, assertDefined } from "./helpers/assert.ts";
-
-function play(state: GameState, side: "corp" | "runner", m: Move): GameState {
-  const r = engine.applyMove(state, side, m);
-  if (r.kind !== "applied") {
-    throw new Error(`move ${m.kind} rejected: ${(r as { reason: string }).reason}`);
-  }
-  return r.state;
-}
 
 /** A starter-deck game at `seed`. */
 function fresh(seed: number): GameState {

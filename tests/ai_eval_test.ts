@@ -18,7 +18,6 @@ import {
   fastCloneState,
   makeAIDecisionContext,
   makeRng,
-  starterDeckConfigs,
 } from "../src/mod.ts";
 import { RandomAI } from "../src/ai/random.ts";
 import { playGame } from "../src/ai/play.ts";
@@ -26,15 +25,19 @@ import { evaluate } from "../src/ai/eval.ts";
 import { softmaxIndex } from "../src/ai/policy.ts";
 import type { AIDecisionContext, GameState, PlayerSide, PlayerView } from "../src/types.ts";
 import {
+  CORP_FILLER,
   endCorpTurn,
   newGameWithCorpHand,
   orderedCorpDeck,
   play,
-  starterFixtures,
+  setAgendaPoints,
+  setHand,
+  setInstalledAdvancement,
+  starterDeckPair,
 } from "./helpers/fixtures.ts";
 import { decide } from "./helpers/boundary.ts";
 import { randomGame, reorderHidden } from "./helpers/drive.ts";
-import { assert, assertDefined, assertEquals } from "./helpers/assert.ts";
+import { assert, assertDefined, assertEquals, deepClone } from "./helpers/assert.ts";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -45,12 +48,22 @@ function evalRandomGame(seed: number, steps: number): GameState {
   return randomGame(new EvalAI({ samples: 4 }), seed, steps, (i) => i * 131 + 7);
 }
 
+/**
+ * The rest of the corp deck for the "runs the game-winning agenda" scenario:
+ * identical to the shared `CORP_FILLER` pool except that the three
+ * superconducting_hub copies (off-world agenda points the runner could steal)
+ * are swapped for three extra hedge_funds, keeping the deck at 30 cards.
+ */
+const AGENDA_HEAVY_CORP_FILLER = CORP_FILLER.map((id) =>
+  id === "superconducting_hub" ? "hedge_fund" : id
+);
+
 // ---------------------------------------------------------------------------
 // 1. Full games: EvalAI completes games on both sides
 // ---------------------------------------------------------------------------
 
 Deno.test("EvalAI plays complete games on both sides", () => {
-  const decks = starterDeckConfigs();
+  const decks = starterDeckPair();
   for (const seed of [1, 2, 3, 4]) {
     for (const evalSide of ["corp", "runner"] as const) {
       const other: PlayerSide = evalSide === "corp" ? "runner" : "corp";
@@ -170,11 +183,11 @@ Deno.test("softmaxIndex spreads picks across a range of seeds", () => {
 });
 
 Deno.test("EvalAI varies its pick across similar positions", () => {
-  // A corp with a hedge-fund-only hand faces three close moves: draw, play
-  // hedge_fund, or gain credits. The eval's small deltas and the softmax
+  // A corp with a single hedge_fund in hand faces three close moves: draw,
+  // play hedge_fund, or gain credits. The eval's small deltas and the softmax
   // spread the pick across seeds — never one deterministic move.
-  const state = newGameWithCorpHand(["hedge_fund"]);
-  state.corp.hand = state.corp.hand.filter((c) => c.cardId === "hedge_fund").slice(0, 1);
+  const dealt = newGameWithCorpHand(["hedge_fund"]);
+  const state = setHand(dealt, "corp", ["hedge_fund"]);
   const legal = engine.getLegalMoves(state, "corp");
   assert(legal.length >= 3, `expected at least 3 legal moves, got ${legal.length}`);
 
@@ -195,23 +208,23 @@ Deno.test("EvalAI varies its pick across similar positions", () => {
 
 /** A corp with `agendaId` installed in a brand-new remote, advanced to its
  * requirement, with the corp already at 5 of 7 agenda points — scoring it
- * wins the game. */
+ * wins the game. The score/advancement setup goes through the clone-first
+ * fixture setters (see tests/helpers/fixtures.ts header), never in place. */
 function gameWinningAgendaState(agendaId: string): GameState {
   const state = newGameWithCorpHand([agendaId]);
   const install = engine.getLegalMoves(state, "corp").find(
     (m) => m.kind === "corp.install" && m.cardId === agendaId && m.server === "new-remote",
   );
   assertDefined(install, `the corp cannot install ${agendaId} in a new remote`);
-  const s = play(state, "corp", install!).state;
+  let s = play(state, "corp", install!);
   const server = s.servers.find((x) => x.id === "remote-1")!;
   const agenda = assertDefined(
     server.root.find((c) => c.cardId === agendaId),
     `the installed agenda is not in remote-1`,
   );
   const def = assertDefined(cardDef(agendaId), `unknown agenda ${agendaId}`);
-  agenda.advancement = def.advancementRequirement ?? 0;
-  s.corp.agendaPoints = 5;
-  return s;
+  s = setInstalledAdvancement(s, agenda.id, def.advancementRequirement ?? 0);
+  return setAgendaPoints(s, "corp", 5);
 }
 
 Deno.test("EvalAI takes a game-winning line", async (t) => {
@@ -233,43 +246,13 @@ Deno.test("EvalAI takes a game-winning line", async (t) => {
     // brand-new remote. The runner's hand is empty (so it can't install) and
     // the corp's hidden pool is agenda-heavy, so determinization makes the
     // remote read as an agenda in most worlds — and the AI runs it.
-    const ORDERED = [
-      "offworld_office",
-      "hedge_fund",
-      "hedge_fund",
-      "hedge_fund",
-      "government_subsidy",
-      "government_subsidy",
-      "offworld_office",
-      "offworld_office",
-      "send_a_message",
-      "send_a_message",
-      "send_a_message",
-      "superconducting_hub",
-      "superconducting_hub",
-      "superconducting_hub",
-      "seamless_launch",
-      "seamless_launch",
-      "seamless_launch",
-      "hedge_fund",
-      "government_subsidy",
-      "manegarm_skunkworks",
-      "manegarm_skunkworks",
-      "manegarm_skunkworks",
-      "tithe",
-      "tithe",
-      "tithe",
-      "whitespace",
-      "whitespace",
-      "whitespace",
-      "karuna",
-      "karuna",
-      "palisade",
-      "palisade",
-    ];
-    const decks = starterFixtures();
+    //
+    // Deck: the opening hand plus `AGENDA_HEAVY_CORP_FILLER` (the shared
+    // CORP_FILLER pool with its three superconducting_hub swapped for extra
+    // hedge_funds), so no hand-derived card counts are duplicated here.
+    const decks = starterDeckPair();
     let state = engine.startGame({
-      corp: orderedCorpDeck(ORDERED),
+      corp: orderedCorpDeck(["offworld_office", ...AGENDA_HEAVY_CORP_FILLER]),
       runner: decks.runner,
       mode: "starter-decks",
       seed: 3,
@@ -279,10 +262,10 @@ Deno.test("EvalAI takes a game-winning line", async (t) => {
         m.kind === "corp.install" && m.cardId === "offworld_office" && m.server === "new-remote",
     );
     assertDefined(install, "the corp cannot install offworld_office in a new remote");
-    state = play(state, "corp", install!).state;
+    state = play(state, "corp", install!);
     state = endCorpTurn(state);
-    state.runner.hand = [];
-    state.runner.agendaPoints = 5;
+    const emptied = setHand(state, "runner", []);
+    state = setAgendaPoints(emptied, "runner", 5);
 
     const legal = engine.getLegalMoves(state, "runner");
     const runs = legal.filter((m) => m.kind === "runner.run");
@@ -317,22 +300,18 @@ Deno.test("EvalAI takes a game-winning line", async (t) => {
 // 5. Eval properties: monotone in obvious goods, zero-sum, terminal short-circuit
 // ---------------------------------------------------------------------------
 
-function clone<T>(v: T): T {
-  return JSON.parse(JSON.stringify(v)) as T;
-}
-
 Deno.test("evaluate is monotone in obvious goods, zero-sum, and terminal", async (t) => {
   await t.step("monotone in obvious goods and zero-sum", () => {
     const state = newGameWithCorpHand(["hedge_fund"]);
 
     // More credits never lowers a side's own term.
-    const moreCredits = clone(state);
+    const moreCredits = deepClone(state);
     moreCredits.corp.credits += 1;
     assert(
       evaluate(moreCredits, "corp") > evaluate(state, "corp"),
       "corp credits must raise the corp term",
     );
-    const moreRunnerCredits = clone(state);
+    const moreRunnerCredits = deepClone(state);
     moreRunnerCredits.runner.credits += 1;
     assert(
       evaluate(moreRunnerCredits, "runner") > evaluate(state, "runner"),
@@ -340,7 +319,7 @@ Deno.test("evaluate is monotone in obvious goods, zero-sum, and terminal", async
     );
 
     // More scored agenda points never lowers the scorer's term.
-    const moreAgenda = clone(state);
+    const moreAgenda = deepClone(state);
     moreAgenda.corp.agendaPoints += 1;
     assert(
       evaluate(moreAgenda, "corp") > evaluate(state, "corp"),
@@ -348,7 +327,7 @@ Deno.test("evaluate is monotone in obvious goods, zero-sum, and terminal", async
     );
 
     // Tags hurt the runner.
-    const moreTags = clone(state);
+    const moreTags = deepClone(state);
     moreTags.runner.tags += 1;
     assert(
       evaluate(moreTags, "runner") < evaluate(state, "runner"),
@@ -367,13 +346,13 @@ Deno.test("evaluate is monotone in obvious goods, zero-sum, and terminal", async
 
   await t.step("short-circuits to +/-WIN on terminal positions", () => {
     const state = newGameWithCorpHand(["hedge_fund"]);
-    const won = clone(state);
+    const won = deepClone(state);
     won.winner = "corp";
     won.winReason = "test";
     assertEquals(evaluate(won, "corp"), 10_000);
     assertEquals(evaluate(won, "runner"), -10_000);
 
-    const drawn = clone(state);
+    const drawn = deepClone(state);
     drawn.winner = "draw";
     assertEquals(evaluate(drawn, "corp"), 0);
     assertEquals(evaluate(drawn, "runner"), 0);

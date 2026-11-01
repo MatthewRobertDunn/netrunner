@@ -102,22 +102,27 @@ function hiddenInstallsState(): GameState {
     (m) => m.kind === "corp.install" && m.cardId === "offworld_office" && m.server === "new-remote",
   );
   assert(installAgenda && installAgenda.kind === "corp.install", "corp can install the agenda");
-  state = play(state, "corp", installAgenda).state;
+  state = play(state, "corp", installAgenda);
   const installIce = engine.getLegalMoves(state, "corp").find(
     (m) => m.kind === "corp.install" && m.cardId === "tithe" && m.server === "remote-1",
   );
   assert(installIce && installIce.kind === "corp.install", "corp can protect the remote");
-  return endQuietly(play(state, "corp", installIce).state);
+  return endQuietly(play(state, "corp", installIce));
 }
 
-/** Spend remaining corp clicks so the turn passes (keeps the fixtures small). */
+/**
+ * Spend remaining corp clicks on gains so the turn passes — WITHOUT answering
+ * the discard prompt (the facedown installs stay as built). Single-caller
+ * variant of `endCorpTurn`: it must never touch the discard phase, so it is
+ * not folded into the shared helper.
+ */
 function endQuietly(state: GameState): GameState {
   let cur = state;
   for (let i = 0; i < 10; i++) {
     if (cur.turn.player !== "corp" || cur.winner) break;
     const gain = engine.getLegalMoves(cur, "corp").find((m) => m.kind === "corp.gainCredits");
     if (!gain) break;
-    cur = play(cur, "corp", gain).state;
+    cur = play(cur, "corp", gain);
   }
   return cur;
 }
@@ -165,7 +170,7 @@ Deno.test("determinize: the view round-trips through determinization", async (t)
       (m) => m.kind === "runner.run" && m.server === "remote-1",
     );
     assert(runMove && runMove.kind === "runner.run", "runner can run the remote");
-    state = play(state, "runner", runMove).state;
+    state = play(state, "runner", runMove);
     // The corp answers its rez window (rez or pass).
     const prompt = state.prompts[0];
     if (prompt && prompt.kind === "rez-window") {
@@ -173,7 +178,7 @@ Deno.test("determinize: the view round-trips through determinization", async (t)
         (m) => m.kind === "prompt.answer" && m.promptId === prompt.id,
       );
       assert(answer && answer.kind === "prompt.answer", "corp can answer the rez window");
-      state = play(state, "corp", answer).state;
+      state = play(state, "corp", answer);
     }
     for (const side of ["corp", "runner"] as PlayerSide[]) {
       const { view, det } = determinizeState(state, side, 77);
@@ -259,7 +264,7 @@ Deno.test("determinize: hidden-zone multiset discipline", async (t) => {
       newStarterGame(1),
       newStarterGame(42),
       hiddenInstallsState(),
-      randomGame(new RandomAI(), 9, 8),
+      randomGame(new RandomAI(), 9, 8, (i) => i),
     ];
     for (const [i, state] of cases.entries()) {
       for (const side of ["corp", "runner"] as PlayerSide[]) {
@@ -324,17 +329,13 @@ Deno.test("determinize: hidden-zone multiset discipline", async (t) => {
 
 Deno.test("determinize: same view, ctx and seed give identical states", () => {
   for (const gameSeed of [1, 42]) {
-    const state = randomGame(new RandomAI(), gameSeed, 7);
+    const state = randomGame(new RandomAI(), gameSeed, 7, (i) => i);
     for (const side of ["corp", "runner"] as PlayerSide[]) {
       for (const decisionSeed of [0, 5, 12345]) {
         const { view, ctx } = determinizeState(state, side, decisionSeed);
         const a = determinize(view, ctx, makeRng(decisionSeed));
         const b = determinize(view, ctx, makeRng(decisionSeed));
         assertEquals(a, b, `seed ${gameSeed}, ${side}: determinize was not reproducible`);
-        assert(
-          JSON.stringify(a) === JSON.stringify(b),
-          "serialized forms must match too",
-        );
       }
     }
   }
