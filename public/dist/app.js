@@ -4,7 +4,7 @@ var __export = (target, all) => {
     __defProp(target, name, { get: all[name], enumerable: true });
 };
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-dom/3.5.13/dist/runtime-dom.esm-bundler.js
+// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-dom/3.5.13/dist/runtime-dom.esm-bundler.js
 var runtime_dom_esm_bundler_exports = {};
 __export(runtime_dom_esm_bundler_exports, {
   BaseTransition: () => BaseTransition,
@@ -177,7 +177,7 @@ __export(runtime_dom_esm_bundler_exports, {
   withScopeId: () => withScopeId
 });
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/shared/3.5.13/dist/shared.esm-bundler.js
+// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/shared/3.5.13/dist/shared.esm-bundler.js
 // @__NO_SIDE_EFFECTS__
 function makeMap(str) {
   const map2 = /* @__PURE__ */ Object.create(null);
@@ -523,7 +523,7 @@ var stringifySymbol = (v, i = "") => {
   );
 };
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/reactivity/3.5.13/dist/reactivity.esm-bundler.js
+// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/reactivity/3.5.13/dist/reactivity.esm-bundler.js
 function warn(msg, ...args) {
   console.warn(`[Vue warn] ${msg}`, ...args);
 }
@@ -2200,7 +2200,7 @@ function traverse(value, depth = Infinity, seen2) {
   return value;
 }
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-core/3.5.13/dist/runtime-core.esm-bundler.js
+// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-core/3.5.13/dist/runtime-core.esm-bundler.js
 var stack = [];
 function pushWarningContext(vnode) {
   stack.push(vnode);
@@ -9588,7 +9588,7 @@ var resolveFilter = null;
 var compatUtils = null;
 var DeprecationTypes = null;
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-dom/3.5.13/dist/runtime-dom.esm-bundler.js
+// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-dom/3.5.13/dist/runtime-dom.esm-bundler.js
 var policy = void 0;
 var tt = typeof window !== "undefined" && window.trustedTypes;
 if (tt) {
@@ -11384,7 +11384,7 @@ var initDirectivesForSSR = () => {
   }
 };
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/compiler-core/3.5.13/dist/compiler-core.esm-bundler.js
+// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/compiler-core/3.5.13/dist/compiler-core.esm-bundler.js
 var FRAGMENT = Symbol(true ? `Fragment` : ``);
 var TELEPORT = Symbol(true ? `Teleport` : ``);
 var SUSPENSE = Symbol(true ? `Suspense` : ``);
@@ -16216,7 +16216,7 @@ var noopDirectiveTransform = () => ({
   props: []
 });
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/compiler-dom/3.5.13/dist/compiler-dom.esm-bundler.js
+// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/compiler-dom/3.5.13/dist/compiler-dom.esm-bundler.js
 var V_MODEL_RADIO = Symbol(true ? `vModelRadio` : ``);
 var V_MODEL_CHECKBOX = Symbol(true ? `vModelCheckbox` : ``);
 var V_MODEL_TEXT = Symbol(true ? `vModelText` : ``);
@@ -16852,7 +16852,7 @@ function compile2(src, options = {}) {
   }));
 }
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/vue/3.5.13/dist/vue.esm-bundler.js
+// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/vue/3.5.13/dist/vue.esm-bundler.js
 function initDev() {
   {
     initCustomFormatter();
@@ -23790,6 +23790,13 @@ var game_default = defineComponent({
     function playGainCredits() {
       if (gainCreditsMove.value) play(gainCreditsMove.value);
     }
+    const drawMove = computed2(() => {
+      if (!isHumanTurn.value || prompt.value || accessedCard.value) return null;
+      return legal.value.find((m) => m.kind === "corp.draw" || m.kind === "runner.draw") ?? null;
+    });
+    function playDraw() {
+      if (drawMove.value) play(drawMove.value);
+    }
     watch2(() => props.state, () => {
       discardSelected.value = [];
     });
@@ -23865,7 +23872,7 @@ var game_default = defineComponent({
     function isCardMove(m) {
       return m.kind === "runner.install" || m.kind === "runner.playEvent" || m.kind === "corp.install" || m.kind === "corp.playOperation";
     }
-    const generalMoves = computed2(() => legal.value.filter((m) => !isCardMove(m) && m.kind !== "runner.run" && m.kind !== "corp.gainCredits" && m.kind !== "runner.gainCredits"));
+    const generalMoves = computed2(() => legal.value.filter((m) => !isCardMove(m) && m.kind !== "runner.run" && m.kind !== "corp.gainCredits" && m.kind !== "runner.gainCredits" && m.kind !== "corp.draw" && m.kind !== "runner.draw"));
     function cardMoves(cardId) {
       if (!isHumanTurn.value || prompt.value) return [];
       return legal.value.filter((m) => {
@@ -23945,6 +23952,7 @@ var game_default = defineComponent({
       zoomActions,
       serverRows,
       gainCreditsMove,
+      drawMove,
       // methods
       label,
       name,
@@ -23953,6 +23961,7 @@ var game_default = defineComponent({
       submitDiscard,
       play,
       playGainCredits,
+      playDraw,
       playFromZoom,
       zoom,
       zoomHand,
@@ -24065,7 +24074,16 @@ var game_default = defineComponent({
           </div>
           <div class="status-secondary">
             <span class="stat"><img class="sym" src="assets/svg/click.svg" alt="Clicks" />{{ own.clicks }}</span>
-            <span class="stat">hand {{ own.handCount }}/{{ own.handSize }}</span>
+            <button
+              class="stat hand-draw"
+              :class="{ clickable: !!drawMove }"
+              :disabled="!drawMove"
+              data-testid="draw-card"
+              title="Draw 1 card"
+              @click="playDraw"
+            >
+              hand {{ own.handCount }}/{{ own.handSize }}
+            </button>
             <span class="stat">deck {{ own.deckCount }}</span>
             <span class="stat">{{ discardName(ownSide) }} {{ own.discardCount }}</span>
             <span v-if="ownSide === 'runner' && own.tags" class="stat"><img class="sym" src="assets/svg/tag.svg" alt="Tags" />{{ own.tags }}</span>

@@ -370,6 +370,29 @@ button.primary-stat.clickable:focus-visible {
 button.primary-stat:disabled {
   cursor: default;
 }
+/* The own hand stat doubles as the Draw 1 card button, themed like the
+   credits tile (same background/border/radius, accent border on hover).
+   The .status-secondary .stat rule still supplies the small dim text look;
+   the font reset only swaps the browser's default button font back. */
+button.stat.clickable {
+  cursor: pointer;
+  padding: 3px 8px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 13px;
+}
+button.stat.clickable:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+button.stat.clickable:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+button.stat:disabled {
+  cursor: default;
+}
 .primary-stat .sym {
   width: 22px;
   height: 22px;

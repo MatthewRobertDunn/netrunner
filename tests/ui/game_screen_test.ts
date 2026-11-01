@@ -9,6 +9,7 @@ import "./setup.ts";
 import { mount } from "@vue/test-utils";
 import { assert, assertEquals } from "../helpers/assert.ts";
 import { createTestFixture, publicStatusFor } from "./fixture.ts";
+import { engine } from "../../src/mod.ts";
 import type { Move, PlayerSide } from "../../src/types.ts";
 import GameScreen from "../../src/web/ui/game.ts";
 
@@ -264,6 +265,67 @@ Deno.test("GameScreen status dock side panel", async (t) => {
       assert(emitted && emitted.length === 1, `click emits one move (${humanSide})`);
       const move = emitted[0]![0] as { kind: string };
       assertEquals(move.kind, `${humanSide}.gainCredits`, "emits the gain-credit move");
+    }
+  });
+
+  await t.step("own hand stat takes the draw action", async () => {
+    for (const humanSide of ["corp", "runner"] as const) {
+      // Same fixtures as the gain-credit step: seed 42 opens on the Corp
+      // turn; for the runner seat the corp spends its clicks on three gains
+      // and one discard clears the discard phase. Both leave clicks + deck
+      // for the human, so the draw move is legal and the button is enabled.
+      let fx = createTestFixture(42, humanSide);
+      if (humanSide === "runner") {
+        const gains = [{ kind: "corp.gainCredits" }, { kind: "corp.gainCredits" }, {
+          kind: "corp.gainCredits",
+        }];
+        fx = createTestFixture(42, humanSide, gains as never[]);
+        const drop = fx.state.corp.hand[0]!.id;
+        fx = createTestFixture(
+          42,
+          humanSide,
+          [...gains, { kind: "discard", player: "corp", cardInstanceIds: [drop] }] as never[],
+        );
+      }
+      const { state } = fx;
+      assertEquals(state.turn.player, humanSide, `it is ${humanSide}'s turn`);
+      assert(
+        engine.getLegalMoves(state, humanSide).some((m) => m.kind === `${humanSide}.draw`),
+        `the ${humanSide}.draw move is legal (clicks + deck left)`,
+      );
+      const wrapper = mount(GameScreen, { props: { state, humanSide } });
+      const dock = wrapper.find('[data-testid="status-dock"]');
+      const own = dock.find('[data-testid="status-own"]');
+      const opp = dock.find('[data-testid="status-opponent"]');
+
+      // The draw move left the action panel for the hand tile.
+      const moves = wrapper.find('[data-testid="action-moves"]');
+      if (moves.exists()) {
+        assertEquals(
+          moves.findAll("button").filter((b) => b.text() === "Draw 1 card").length,
+          0,
+          `no Draw button in the action panel (${humanSide})`,
+        );
+      }
+
+      const draw = own.find('[data-testid="draw-card"]');
+      assert(draw.exists(), `own hand stat is the draw button (${humanSide})`);
+      assertEquals(draw.element.tagName.toLowerCase(), "button", "hand stat is a real button");
+      assert(draw.classes().includes("clickable"), "hand stat is clickable while legal");
+      assertEquals(draw.attributes("disabled"), undefined, "draw enabled on the human turn");
+      assertEquals(draw.attributes("title"), "Draw 1 card", "tooltip names the action");
+      assert(/^hand \d+\/\d+$/.test(draw.text().trim()), "visible hand text kept");
+
+      // Only the OWN block converts: the opponent's hand stat stays a span.
+      const oppHand = opp.findAll(".stat").filter((s) => s.text().trim().startsWith("hand"));
+      assertEquals(oppHand.length, 1, "opponent block shows its hand stat");
+      assertEquals(oppHand[0]!.element.tagName.toLowerCase(), "span", "opponent hand stays a span");
+
+      await draw.trigger("click");
+      const emitted = wrapper.emitted("move") as unknown[][] | undefined;
+      assert(emitted && emitted.length === 1, `click emits one move (${humanSide})`);
+      const move = emitted[0]![0] as { kind: string };
+      assertEquals(move.kind, `${humanSide}.draw`, "emits the draw move");
     }
   });
 
