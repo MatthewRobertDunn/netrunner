@@ -6,7 +6,9 @@
  *
  * The backdrop takes focus on mount (`onMounted`), so the Esc key reaches its
  * `@keydown.escape` handler without a prior click — the popup can always be
- * dismissed from the keyboard as soon as it opens.
+ * dismissed from the keyboard as soon as it opens. The backdrop doubles as
+ * the dialog element (`role="dialog"` + `aria-modal` + card-title label), so
+ * assistive tech announces the popup as the focus lands on it.
  *
  * While the Runner is accessing a card the popup also carries the access
  * decision buttons (rule 7.2.2: one mid-access window — pass, or the basic
@@ -52,6 +54,9 @@ export default defineComponent({
         v-if="cardId"
         ref="backdropRef"
         class="zoom-backdrop"
+        role="dialog"
+        aria-modal="true"
+        :aria-label="def ? def.title : cardId"
         @click.self="onClose"
         @keydown.escape="onClose"
         tabindex="0"

@@ -10,7 +10,6 @@
  * and builds the sanitized `PlayerView`, the legal moves, and the
  * `AIDecisionContext`; `chooseMove` never receives the `GameState`.
  */
-
 import { defineComponent, markRaw, shallowRef } from "vue";
 import type { Ref } from "vue";
 import {
@@ -22,23 +21,34 @@ import {
 } from "../mod.ts";
 import type { GameAI, GameState, Move, PlayerSide } from "../types.ts";
 import GameScreen from "./ui/game.ts";
-import { actorOf } from "./ui/util.ts";
+import { actorOf, imageFor } from "./ui/util.ts";
 
 interface StrengthPreset {
   name: string;
   iterations: number;
-  timeBudgetMs: number;
 }
 
-// The presets configure the evaluation AI: `iterations` maps to the number of
-// determinized worlds sampled per decision (measured: a 32-world, 1-ply
-// decision lands ~100-150ms on a mid-game position in this codebase, so the
-// presets stay comfortably inside their old time budgets).
+// The presets configure the evaluation AI: `iterations` is the number of
+// determinized worlds sampled per decision (the old advertised time budgets
+// never reached EvalAI — it only accepts samples/temperature/seedSalt — so
+// they are gone rather than dead weight in the interface).
 const PRESETS: StrengthPreset[] = [
-  { name: "Casual", iterations: 12, timeBudgetMs: 600 },
-  { name: "Normal", iterations: 24, timeBudgetMs: 1200 },
-  { name: "Strong", iterations: 48, timeBudgetMs: 2500 },
+  { name: "Casual", iterations: 12 },
+  { name: "Normal", iterations: 24 },
+  { name: "Strong", iterations: 48 },
 ];
+
+/**
+ * Glyphs for the setup screen's "You play" buttons, keyed off the actual
+ * starter-deck identity cards (same rule as the status dock: the identity is
+ * open information and marks the seat better than a hardcoded faction logo —
+ * the starter Corp is not Haas-Bioroid). The per-side faction SVGs stay as
+ * the fallback when a deck's identity art is missing.
+ */
+const SIDE_GLYPH: Record<PlayerSide, string> = {
+  runner: imageFor(starterDeckConfigs().runner.identity) ?? "assets/svg/faction-criminal.svg",
+  corp: imageFor(starterDeckConfigs().corp.identity) ?? "assets/svg/faction-hb.svg",
+};
 
 /** Clamped samples passed to EvalAI (bounds keep decisions snappy). */
 function clampSamples(iterations: number): number {
@@ -150,6 +160,7 @@ export default defineComponent({
       thinking,
       lastWarning,
       presets: PRESETS,
+      sideGlyph: SIDE_GLYPH,
       start,
       onMove,
     };
@@ -174,17 +185,16 @@ export default defineComponent({
           Human vs. the EvalAI opponent (determinized 1-ply evaluation with
           softmax move selection). Pick a side and a seed.
         </p>
-
         <div class="setup-grid">
           <div class="setup-block">
             <h2>You play</h2>
             <div class="row">
               <button class="pick" :class="{ on: humanSide === 'runner' }" @click="humanSide = 'runner'" data-testid="pick-runner">
-                <img class="glyph-side" src="assets/svg/faction-criminal.svg" alt="" />
+                <img class="glyph-side identity" :src="sideGlyph.runner" alt="" />
                 Runner <span class="dim">(AI plays Corp)</span>
               </button>
               <button class="pick" :class="{ on: humanSide === 'corp' }" @click="humanSide = 'corp'" data-testid="pick-corp">
-                <img class="glyph-side" src="assets/svg/faction-hb.svg" alt="" />
+                <img class="glyph-side identity" :src="sideGlyph.corp" alt="" />
                 Corp <span class="dim">(AI plays Runner)</span>
               </button>
             </div>
@@ -199,7 +209,7 @@ export default defineComponent({
                 class="pick"
                 :class="{ on: strength === i }"
                 @click="strength = i"
-              >{{ p.name }} <span class="dim">({{ p.iterations }} iters / {{ p.timeBudgetMs }}ms)</span></button>
+              >{{ p.name }} <span class="dim">({{ p.iterations }} worlds)</span></button>
             </div>
           </div>
 

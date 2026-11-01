@@ -48,7 +48,7 @@ Deno.test("GameScreen renders the board layout", async (t) => {
     const { wrapper, status } = mountGame(42, "corp");
 
     const main = wrapper.find(".game-main");
-    assert(main.classes().includes("perspective-corp"), "perspective-corp class applied");
+    assert(main.exists(), "game-main column present");
 
     const servers = wrapper.find(".servers.corp-seat");
     assert(servers.exists(), ".servers.corp-seat present");

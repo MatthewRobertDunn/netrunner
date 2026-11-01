@@ -28,8 +28,7 @@ import CardTile from "./card-tile.ts";
 import CardZoom from "./card-zoom.ts";
 import ServerColumn from "./server-column.ts";
 import StatusBlock from "./status-block.ts";
-import { cardDef } from "../../cards/catalogue.ts";
-import { engine } from "../../mod.ts";
+import { cardDef, engine } from "../../mod.ts";
 import type { CardInstance, GameState, Move, PlayerSide, PublicGameStatus } from "../../types.ts";
 import {
   actorOf,
@@ -39,13 +38,10 @@ import {
   formatEvent,
   handOf,
   imageFor,
+  moveKey,
   promptFor,
   serverLabel,
 } from "./util.ts";
-
-function moveKey(m: Move): string {
-  return JSON.stringify(m);
-}
 
 export default defineComponent({
   name: "GameScreen",
@@ -133,9 +129,23 @@ export default defineComponent({
           [...m.cardInstanceIds].sort().join(",") === selectedKey.value,
       );
     });
-    const events = computed<string[]>(() => {
-      const lines = props.state.log.map((e) => formatEvent(props.state, e, props.humanSide));
-      return lines.slice(-150).reverse();
+    /** The side the AI plays — the seat the human does not sit in. Names the
+     *  thinking/waiting banners in both seats (human-as-Corp is supported). */
+    const aiSideName = computed(() => (props.humanSide === "corp" ? "Runner" : "Corp"));
+    /** The log dock's lines: the newest 150 events, newest first. Slicing
+     *  before formatting keeps the per-state-change cost bounded, and each
+     *  line carries the event's original log index as its v-for key (keying a
+     *  reversed list by array position would make Vue reuse the wrong rows). */
+    const events = computed<{ key: number; line: string }[]>(() => {
+      const log = props.state.log;
+      const start = Math.max(0, log.length - 150);
+      return log
+        .slice(start)
+        .map((e, i) => ({
+          key: start + i,
+          line: formatEvent(props.state, e, props.humanSide),
+        }))
+        .reverse();
     });
     const warnings = computed<string[]>(() => props.state.supportWarnings.slice(-5));
     const run = computed(() => status.value.run);
@@ -372,6 +382,15 @@ export default defineComponent({
       }
     }
 
+    /**
+     * Human-readable label for a legal move, resolved against the
+     * authoritative state here (the trusted root) so ActionPanel receives
+     * only scalars and callbacks — no `GameState` at all.
+     */
+    function moveLabel(m: Move): string {
+      return describeMove(props.state, m);
+    }
+
     return {
       discardSelected,
       zoomCardId,
@@ -382,6 +401,7 @@ export default defineComponent({
       isAiTurn,
       corp,
       runner,
+      aiSideName,
       opponentSide,
       ownSide,
       opponent,
@@ -417,6 +437,7 @@ export default defineComponent({
       runMove,
       handActionsFor,
       shortActionLabel,
+      moveLabel,
       identityImgFailed,
     };
   },
@@ -443,7 +464,7 @@ export default defineComponent({
             <template v-if="state.winReason"> — {{ state.winReason }}</template>
           </span>
           <span v-if="!state.winner && isAiTurn && thinking" class="chip thinking" data-testid="ai-thinking">
-            Corp is thinking…
+            {{ aiSideName }} is thinking…
           </span>
           <span v-if="lastWarning" class="chip warn">{{ lastWarning }}</span>
         </div>
@@ -466,9 +487,9 @@ export default defineComponent({
         </div>
       </aside>
       <!-- .game-main stacks servers, banner, action panel, hand, warnings
-           top to bottom. The corp-seat class on .servers drives the CSS
-           "order" flip that puts ice on the runner side. -->
-      <div class="game-main" :class="'perspective-' + humanSide">
+           top to bottom. The corp-seat class on .servers (below) drives the
+           CSS "order" flip that puts ice on the runner side. -->
+      <div class="game-main">
       <!-- Servers: one ServerColumn per public server row; the corp-seat flip
            (ice on the runner side) is CSS "order" on .server.central and
            .server.remote children, keyed off .servers.corp-seat above. -->
@@ -511,9 +532,12 @@ export default defineComponent({
              (incl. the discard picker) and the moves list. -->
         <section class="action-row">
           <action-panel
-            :state="state"
             :human-turn="isHumanTurn"
             :thinking="thinking"
+            :ai-side-name="aiSideName"
+            :winner="state.winner"
+            :win-reason="state.winReason"
+            :label="moveLabel"
             :accessed-card-id="accessedCard ? accessedCard.cardId : null"
             :prompt="prompt"
             :legal="legal"
@@ -522,7 +546,6 @@ export default defineComponent({
             :discard-selected="discardSelected"
             :can-discard="canDiscard"
             @move="play"
-            @zoom="zoom"
             @discard-toggle="toggleDiscard"
             @discard-submit="submitDiscard"
             @open-access="openAccessZoom"
@@ -534,7 +557,7 @@ export default defineComponent({
           <div class="hand-row runner-hand" data-testid="human-hand">
             <div v-for="c in hand" :key="c.id" class="hand-card">
               <card-tile
-                :card="{ cardId: c.cardId, rezzed: true, advancement: 0 }"
+                :card="c"
                 clickable
                 @zoom="zoomHand(c)"
               />
@@ -567,7 +590,7 @@ export default defineComponent({
         <div v-if="logOpen" class="log-panel" data-testid="log-panel">
           <h3>Game log</h3>
           <ul>
-            <li v-for="(line, i) in events" :key="i">{{ line }}</li>
+            <li v-for="e in events" :key="e.key">{{ e.line }}</li>
           </ul>
         </div>
       </aside>

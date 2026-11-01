@@ -9,7 +9,7 @@
  */
 
 import type { CardDef } from "../../cards/catalogue.ts";
-import { tryCardDef } from "../../cards/catalogue.ts";
+import { tryCardDef } from "../../mod.ts";
 import type {
   CardId,
   CardInstance,
@@ -178,8 +178,20 @@ export function formatEvent(
       return `Corp advances ${visible(e.cardId)} (${e.amount} counter(s))`;
     case "score":
       return `Corp scores ${visible(e.cardId)} (${e.points} agenda point(s))`;
-    default:
-      return e.type;
+    case "steal":
+      // Only the Runner can steal an agenda (rule 7.2.3), so the actor is
+      // named directly — the event carries no player field.
+      return `Runner steals ${visible(e.cardId)} (${e.points} AP)`;
+    case "pump-strength":
+      return `+${e.amount} strength on ${visible(e.cardId)}`;
+    case "game-end":
+      return e.winner === "draw"
+        ? `Game ends in a draw — ${e.reason}`
+        : `${side(e.winner)} wins — ${e.reason}`;
+    default: {
+      const exhaustive: never = e;
+      return String((exhaustive as { type: string }).type);
+    }
   }
 }
 
@@ -214,6 +226,12 @@ function cardVisibleTo(
   }
   if (state.breach?.accessing === id) return true;
   return false;
+}
+
+/** Stable v-for key for a move object (structural equality). Shared by
+ *  GameScreen and ActionPanel, which both list moves. */
+export function moveKey(m: Move): string {
+  return JSON.stringify(m);
 }
 
 /** Human-readable label for a legal move. */

@@ -4,7 +4,7 @@ var __export = (target, all) => {
     __defProp(target, name, { get: all[name], enumerable: true });
 };
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-dom/3.5.13/dist/runtime-dom.esm-bundler.js
+// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-dom/3.5.13/dist/runtime-dom.esm-bundler.js
 var runtime_dom_esm_bundler_exports = {};
 __export(runtime_dom_esm_bundler_exports, {
   BaseTransition: () => BaseTransition,
@@ -177,7 +177,7 @@ __export(runtime_dom_esm_bundler_exports, {
   withScopeId: () => withScopeId
 });
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/shared/3.5.13/dist/shared.esm-bundler.js
+// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/shared/3.5.13/dist/shared.esm-bundler.js
 // @__NO_SIDE_EFFECTS__
 function makeMap(str) {
   const map2 = /* @__PURE__ */ Object.create(null);
@@ -523,7 +523,7 @@ var stringifySymbol = (v, i = "") => {
   );
 };
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/reactivity/3.5.13/dist/reactivity.esm-bundler.js
+// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/reactivity/3.5.13/dist/reactivity.esm-bundler.js
 function warn(msg, ...args) {
   console.warn(`[Vue warn] ${msg}`, ...args);
 }
@@ -2200,7 +2200,7 @@ function traverse(value, depth = Infinity, seen2) {
   return value;
 }
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-core/3.5.13/dist/runtime-core.esm-bundler.js
+// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-core/3.5.13/dist/runtime-core.esm-bundler.js
 var stack = [];
 function pushWarningContext(vnode) {
   stack.push(vnode);
@@ -9588,7 +9588,7 @@ var resolveFilter = null;
 var compatUtils = null;
 var DeprecationTypes = null;
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-dom/3.5.13/dist/runtime-dom.esm-bundler.js
+// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-dom/3.5.13/dist/runtime-dom.esm-bundler.js
 var policy = void 0;
 var tt = typeof window !== "undefined" && window.trustedTypes;
 if (tt) {
@@ -11384,7 +11384,7 @@ var initDirectivesForSSR = () => {
   }
 };
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/compiler-core/3.5.13/dist/compiler-core.esm-bundler.js
+// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/compiler-core/3.5.13/dist/compiler-core.esm-bundler.js
 var FRAGMENT = Symbol(true ? `Fragment` : ``);
 var TELEPORT = Symbol(true ? `Teleport` : ``);
 var SUSPENSE = Symbol(true ? `Suspense` : ``);
@@ -16216,7 +16216,7 @@ var noopDirectiveTransform = () => ({
   props: []
 });
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/compiler-dom/3.5.13/dist/compiler-dom.esm-bundler.js
+// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/compiler-dom/3.5.13/dist/compiler-dom.esm-bundler.js
 var V_MODEL_RADIO = Symbol(true ? `vModelRadio` : ``);
 var V_MODEL_CHECKBOX = Symbol(true ? `vModelCheckbox` : ``);
 var V_MODEL_TEXT = Symbol(true ? `vModelText` : ``);
@@ -16852,7 +16852,7 @@ function compile2(src, options = {}) {
   }));
 }
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/vue/3.5.13/dist/vue.esm-bundler.js
+// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/vue/3.5.13/dist/vue.esm-bundler.js
 function initDev() {
   {
     initCustomFormatter();
@@ -23459,8 +23459,16 @@ function formatEvent(state, e, viewer) {
       return `Corp advances ${visible(e.cardId)} (${e.amount} counter(s))`;
     case "score":
       return `Corp scores ${visible(e.cardId)} (${e.points} agenda point(s))`;
-    default:
-      return e.type;
+    case "steal":
+      return `Runner steals ${visible(e.cardId)} (${e.points} AP)`;
+    case "pump-strength":
+      return `+${e.amount} strength on ${visible(e.cardId)}`;
+    case "game-end":
+      return e.winner === "draw" ? `Game ends in a draw \u2014 ${e.reason}` : `${side(e.winner)} wins \u2014 ${e.reason}`;
+    default: {
+      const exhaustive = e;
+      return String(exhaustive.type);
+    }
   }
 }
 function cardIdOfInstance(state, id) {
@@ -23478,6 +23486,9 @@ function cardVisibleTo2(state, id, viewer) {
   }
   if (state.breach?.accessing === id) return true;
   return false;
+}
+function moveKey(m) {
+  return JSON.stringify(m);
 }
 function describeMove(state, move) {
   switch (move.kind) {
@@ -23672,19 +23683,12 @@ var card_tile_default = defineComponent({
 });
 
 // src/web/ui/action-panel.ts
-function moveKey(m) {
-  return JSON.stringify(m);
-}
 var action_panel_default = defineComponent({
   name: "ActionPanel",
   components: {
     CardTile: card_tile_default
   },
   props: {
-    state: {
-      type: Object,
-      required: true
-    },
     /** Whether it is the human player's turn to act. */
     humanTurn: {
       type: Boolean,
@@ -23694,6 +23698,27 @@ var action_panel_default = defineComponent({
     thinking: {
       type: Boolean,
       default: false
+    },
+    /** The side the AI plays, for the thinking/waiting banner wording. */
+    aiSideName: {
+      type: String,
+      default: "Corp"
+    },
+    /** The game winner, or null while the game runs. */
+    winner: {
+      type: String,
+      default: null
+    },
+    /** Why the game ended (rendered next to the winner). */
+    winReason: {
+      type: String,
+      default: null
+    },
+    /** Human-readable label for a legal move — resolved by the root, which
+     *  owns the engine state (this panel stays logic-free). */
+    label: {
+      type: Function,
+      required: true
     },
     /** The card the human is accessing (shows the access notice). */
     accessedCardId: {
@@ -23733,7 +23758,6 @@ var action_panel_default = defineComponent({
   },
   emits: [
     "move",
-    "zoom",
     "discard-toggle",
     "discard-submit",
     "open-access"
@@ -23741,7 +23765,7 @@ var action_panel_default = defineComponent({
   setup(props) {
     const discardCount = computed2(() => props.prompt && props.prompt.kind === "discard" ? props.prompt.count : 0);
     function label(move) {
-      return describeMove(props.state, move);
+      return props.label(move);
     }
     return {
       label,
@@ -23753,14 +23777,14 @@ var action_panel_default = defineComponent({
   },
   template: `
     <div class="action-panel" data-testid="action-panel">
-      <template v-if="state.winner">
-        <div class="banner-win">Winner: {{ state.winner }} <span v-if="state.winReason">({{ state.winReason }})</span></div>
+      <template v-if="winner">
+        <div class="banner-win">Winner: {{ winner }} <span v-if="winReason">({{ winReason }})</span></div>
       </template>
 
       <template v-else-if="!humanTurn">
         <div class="banner-wait">
-          <template v-if="thinking">Corp is planning its move\u2026</template>
-          <template v-else>Waiting for the Corp\u2026</template>
+          <template v-if="thinking">{{ aiSideName }} is planning its move\u2026</template>
+          <template v-else>Waiting for the {{ aiSideName }}\u2026</template>
         </div>
       </template>
 
@@ -23782,6 +23806,13 @@ var action_panel_default = defineComponent({
 
           <div v-if="prompt.kind === 'discard'" class="discard-picker">
             <div class="hint">Choose {{ discardCount }} card(s) to discard:</div>
+            <!-- Each slot is a real <button type="button"> whose single click
+                 toggles the pick (Enter/Space work the same). The tile inside
+                 is deliberately NOT clickable: a nested button would be
+                 invalid HTML with a double tab stop, and one click would both
+                 pick and open the zoom modal that blocks the next click. The
+                 tile tooltip still names the card; the hand shows the same
+                 cards zoomable. -->
             <div class="hand-row picker">
               <button
                 v-for="c in hand"
@@ -23792,11 +23823,10 @@ var action_panel_default = defineComponent({
                 @click="$emit('discard-toggle', c.id)"
               >
                 <card-tile
-                  :card="{ cardId: c.cardId, rezzed: true, advancement: 0 }"
+                  :card="c"
                   :badge="discardSelected.includes(c.id) ? '\u2713' : ''"
                   small
-                  clickable
-                  @zoom="$emit('zoom', c.cardId)"
+                  :clickable="false"
                 />
               </button>
             </div>
@@ -23870,6 +23900,9 @@ var card_zoom_default = defineComponent({
         v-if="cardId"
         ref="backdropRef"
         class="zoom-backdrop"
+        role="dialog"
+        aria-modal="true"
+        :aria-label="def ? def.title : cardId"
         @click.self="onClose"
         @keydown.escape="onClose"
         tabindex="0"
@@ -23992,11 +24025,13 @@ var server_column_default = defineComponent({
     function isCurrentIce(card) {
       return props.currentIceId !== null && card.id === props.currentIceId;
     }
+    const hqClickable = computed2(() => props.server.id === "hq" && !!props.identityImg);
     return {
       isCentralId,
       serverGlyphFor,
       remoteLabelFor,
       isCurrentIce,
+      hqClickable,
       cardTitle
     };
   },
@@ -24005,12 +24040,16 @@ var server_column_default = defineComponent({
       <!-- Central servers (hq, rd, archives) keep their dedicated server
            card (corp back + glyph + name). HQ additionally shows the
            Corp's identity card (open information, rule 10.2.3); the
-           @error flag falls back to the glyph when the art is missing. -->
+           @error flag falls back to the glyph when the art is missing.
+           Only the HQ card (with art) is a clickable button; the other
+           central cards render the same markup as inert divs. -->
       <template v-if="isCentralId(server.id)">
-        <div
+        <component
+          :is="hqClickable ? 'button' : 'div'"
+          :type="hqClickable ? 'button' : undefined"
           class="server-card"
-          :class="{ clickable: server.id === 'hq' && identityImg }"
-          @click="$emit('zoom-identity', server.id)"
+          :class="{ clickable: hqClickable }"
+          @click="hqClickable && $emit('zoom-identity', server.id)"
         >
           <img class="corp-back-img" src="assets/corp-back.svg" alt="" />
           <div v-if="server.id === 'hq' && identityImg" class="server-card-face identity-face">
@@ -24026,7 +24065,7 @@ var server_column_default = defineComponent({
             <img class="server-glyph" :src="serverGlyphFor(server.id)" :alt="cardTitle(server.id)" />
             <span class="server-name">{{ cardTitle(server.id) }}</span>
           </div>
-        </div>
+        </component>
       </template>
       <!-- Remotes: a small label nearest the corp side, shown only when the
            server has a root card or ice. -->
@@ -24047,7 +24086,7 @@ var server_column_default = defineComponent({
         <template v-for="c in server.root" :key="c.id">
           <card-tile
             v-if="c.cardId !== 'hidden'"
-            :card="{ cardId: c.cardId, rezzed: c.rezzed, advancement: c.advancement }"
+            :card="c"
             small
             clickable
             @zoom="$emit('zoom', c.cardId)"
@@ -24133,9 +24172,17 @@ var status_block_default = defineComponent({
   emits: [
     "move"
   ],
-  setup(_props) {
+  setup(props) {
+    const glyphFailed = ref(false);
+    const identityImg = computed2(() => {
+      const id = props.stats.identity.cardId;
+      return id && id !== "hidden" ? imageFor(id) : null;
+    });
+    const glyph = computed2(() => !glyphFailed.value && identityImg.value ? identityImg.value : sideGlyph(props.side));
     return {
-      sideGlyph,
+      glyph,
+      identityImg,
+      glyphFailed,
       discardName,
       cardTitle
     };
@@ -24148,28 +24195,35 @@ var status_block_default = defineComponent({
       :data-side="side"
     >
       <div class="status-who">
-        <img class="glyph-side" :src="sideGlyph(side)" alt="" />
+        <img
+          class="glyph-side"
+          :class="{ identity: !!identityImg && !glyphFailed }"
+          :src="glyph"
+          alt=""
+          @error="glyphFailed = true"
+        />
         <span class="who">{{ side === 'corp' ? 'CORP' : 'RUNNER' }}<template v-if="isOwn"> (you)</template></span>
         <span v-if="active" class="acting-tag">acting</span>
         <span v-if="!isOwn" class="opp-tag">opponent</span>
       </div>
       <div class="status-primary">
-        <button
-          v-if="isOwn"
+        <!-- The own credits tile doubles as the gain-credit button; the
+             opponent block renders the identical markup as an inert div
+             (<component :is> keeps one copy of the stat markup, mirroring
+             CardTile's button/div split). -->
+        <component
+          :is="isOwn ? 'button' : 'div'"
+          :type="isOwn ? 'button' : undefined"
           class="primary-stat credits"
           :class="{ clickable: !!gainMove }"
-          :disabled="!gainMove"
-          data-testid="gain-credit"
-          title="Gain 1 credit"
+          :disabled="isOwn ? !gainMove : undefined"
+          :data-testid="isOwn ? 'gain-credit' : undefined"
+          :title="isOwn ? 'Gain 1 credit' : undefined"
           @click="gainMove && $emit('move', gainMove)"
         >
           <img class="sym" src="assets/svg/credit.svg" alt="Credits" />
           <span class="primary-val">{{ stats.credits }}</span>
-        </button>
-        <div v-else class="primary-stat credits">
-          <img class="sym" src="assets/svg/credit.svg" alt="Credits" />
-          <span class="primary-val">{{ stats.credits }}</span>
-        </div>
+        </component>
         <div class="primary-stat agenda">
           <img class="sym" src="assets/svg/agenda.svg" alt="Agenda points" />
           <span class="primary-val">{{ stats.agendaPoints }}/{{ agendaTarget }}</span>
@@ -24177,18 +24231,18 @@ var status_block_default = defineComponent({
       </div>
       <div class="status-secondary">
         <span class="stat"><img class="sym" src="assets/svg/click.svg" alt="Clicks" />{{ stats.clicks }}</span>
-        <button
-          v-if="isOwn"
+        <!-- The own hand stat doubles as the Draw 1 card button (span for the
+             opponent block), same single-markup treatment as the credits tile. -->
+        <component
+          :is="isOwn ? 'button' : 'span'"
+          :type="isOwn ? 'button' : undefined"
           class="stat"
           :class="{ clickable: !!drawMove }"
-          :disabled="!drawMove"
-          data-testid="draw-card"
-          title="Draw 1 card"
+          :disabled="isOwn ? !drawMove : undefined"
+          :data-testid="isOwn ? 'draw-card' : undefined"
+          :title="isOwn ? 'Draw 1 card' : undefined"
           @click="drawMove && $emit('move', drawMove)"
-        >
-          hand {{ stats.handCount }}/{{ stats.handSize }}
-        </button>
-        <span v-else class="stat">hand {{ stats.handCount }}/{{ stats.handSize }}</span>
+        >hand {{ stats.handCount }}/{{ stats.handSize }}</component>
         <span class="stat">deck {{ stats.deckCount }}</span>
         <span class="stat">{{ discardName(side) }} {{ stats.discardCount }}</span>
         <span v-if="side === 'runner' && stats.tags" class="stat"><img class="sym" src="assets/svg/tag.svg" alt="Tags" />{{ stats.tags }}</span>
@@ -24202,9 +24256,6 @@ var status_block_default = defineComponent({
 });
 
 // src/web/ui/game.ts
-function moveKey2(m) {
-  return JSON.stringify(m);
-}
 var game_default = defineComponent({
   name: "GameScreen",
   components: {
@@ -24276,9 +24327,14 @@ var game_default = defineComponent({
         ...m.cardInstanceIds
       ].sort().join(",") === selectedKey.value);
     });
+    const aiSideName = computed2(() => props.humanSide === "corp" ? "Runner" : "Corp");
     const events = computed2(() => {
-      const lines = props.state.log.map((e) => formatEvent(props.state, e, props.humanSide));
-      return lines.slice(-150).reverse();
+      const log = props.state.log;
+      const start = Math.max(0, log.length - 150);
+      return log.slice(start).map((e, i) => ({
+        key: start + i,
+        line: formatEvent(props.state, e, props.humanSide)
+      })).reverse();
     });
     const warnings = computed2(() => props.state.supportWarnings.slice(-5));
     const run = computed2(() => status.value.run);
@@ -24433,6 +24489,9 @@ var game_default = defineComponent({
           return describeMove(props.state, m);
       }
     }
+    function moveLabel(m) {
+      return describeMove(props.state, m);
+    }
     return {
       discardSelected,
       zoomCardId,
@@ -24443,6 +24502,7 @@ var game_default = defineComponent({
       isAiTurn,
       corp,
       runner,
+      aiSideName,
       opponentSide,
       ownSide,
       opponent,
@@ -24465,7 +24525,7 @@ var game_default = defineComponent({
       hqIdentity,
       hqIdentityImg,
       name,
-      moveKey: moveKey2,
+      moveKey,
       toggleDiscard,
       submitDiscard,
       play,
@@ -24478,6 +24538,7 @@ var game_default = defineComponent({
       runMove,
       handActionsFor,
       shortActionLabel,
+      moveLabel,
       identityImgFailed
     };
   },
@@ -24504,7 +24565,7 @@ var game_default = defineComponent({
             <template v-if="state.winReason"> \u2014 {{ state.winReason }}</template>
           </span>
           <span v-if="!state.winner && isAiTurn && thinking" class="chip thinking" data-testid="ai-thinking">
-            Corp is thinking\u2026
+            {{ aiSideName }} is thinking\u2026
           </span>
           <span v-if="lastWarning" class="chip warn">{{ lastWarning }}</span>
         </div>
@@ -24527,9 +24588,9 @@ var game_default = defineComponent({
         </div>
       </aside>
       <!-- .game-main stacks servers, banner, action panel, hand, warnings
-           top to bottom. The corp-seat class on .servers drives the CSS
-           "order" flip that puts ice on the runner side. -->
-      <div class="game-main" :class="'perspective-' + humanSide">
+           top to bottom. The corp-seat class on .servers (below) drives the
+           CSS "order" flip that puts ice on the runner side. -->
+      <div class="game-main">
       <!-- Servers: one ServerColumn per public server row; the corp-seat flip
            (ice on the runner side) is CSS "order" on .server.central and
            .server.remote children, keyed off .servers.corp-seat above. -->
@@ -24572,9 +24633,12 @@ var game_default = defineComponent({
              (incl. the discard picker) and the moves list. -->
         <section class="action-row">
           <action-panel
-            :state="state"
             :human-turn="isHumanTurn"
             :thinking="thinking"
+            :ai-side-name="aiSideName"
+            :winner="state.winner"
+            :win-reason="state.winReason"
+            :label="moveLabel"
             :accessed-card-id="accessedCard ? accessedCard.cardId : null"
             :prompt="prompt"
             :legal="legal"
@@ -24583,7 +24647,6 @@ var game_default = defineComponent({
             :discard-selected="discardSelected"
             :can-discard="canDiscard"
             @move="play"
-            @zoom="zoom"
             @discard-toggle="toggleDiscard"
             @discard-submit="submitDiscard"
             @open-access="openAccessZoom"
@@ -24595,7 +24658,7 @@ var game_default = defineComponent({
           <div class="hand-row runner-hand" data-testid="human-hand">
             <div v-for="c in hand" :key="c.id" class="hand-card">
               <card-tile
-                :card="{ cardId: c.cardId, rezzed: true, advancement: 0 }"
+                :card="c"
                 clickable
                 @zoom="zoomHand(c)"
               />
@@ -24628,7 +24691,7 @@ var game_default = defineComponent({
         <div v-if="logOpen" class="log-panel" data-testid="log-panel">
           <h3>Game log</h3>
           <ul>
-            <li v-for="(line, i) in events" :key="i">{{ line }}</li>
+            <li v-for="e in events" :key="e.key">{{ e.line }}</li>
           </ul>
         </div>
       </aside>
@@ -24648,20 +24711,21 @@ var game_default = defineComponent({
 var PRESETS = [
   {
     name: "Casual",
-    iterations: 12,
-    timeBudgetMs: 600
+    iterations: 12
   },
   {
     name: "Normal",
-    iterations: 24,
-    timeBudgetMs: 1200
+    iterations: 24
   },
   {
     name: "Strong",
-    iterations: 48,
-    timeBudgetMs: 2500
+    iterations: 48
   }
 ];
+var SIDE_GLYPH = {
+  runner: imageFor(starterDeckConfigs().runner.identity) ?? "assets/svg/faction-criminal.svg",
+  corp: imageFor(starterDeckConfigs().corp.identity) ?? "assets/svg/faction-hb.svg"
+};
 function clampSamples(iterations) {
   return Math.min(64, Math.max(6, Math.round(iterations)));
 }
@@ -24757,6 +24821,7 @@ var app_default = defineComponent({
       thinking,
       lastWarning,
       presets: PRESETS,
+      sideGlyph: SIDE_GLYPH,
       start,
       onMove
     };
@@ -24781,17 +24846,16 @@ var app_default = defineComponent({
           Human vs. the EvalAI opponent (determinized 1-ply evaluation with
           softmax move selection). Pick a side and a seed.
         </p>
-
         <div class="setup-grid">
           <div class="setup-block">
             <h2>You play</h2>
             <div class="row">
               <button class="pick" :class="{ on: humanSide === 'runner' }" @click="humanSide = 'runner'" data-testid="pick-runner">
-                <img class="glyph-side" src="assets/svg/faction-criminal.svg" alt="" />
+                <img class="glyph-side identity" :src="sideGlyph.runner" alt="" />
                 Runner <span class="dim">(AI plays Corp)</span>
               </button>
               <button class="pick" :class="{ on: humanSide === 'corp' }" @click="humanSide = 'corp'" data-testid="pick-corp">
-                <img class="glyph-side" src="assets/svg/faction-hb.svg" alt="" />
+                <img class="glyph-side identity" :src="sideGlyph.corp" alt="" />
                 Corp <span class="dim">(AI plays Runner)</span>
               </button>
             </div>
@@ -24806,7 +24870,7 @@ var app_default = defineComponent({
                 class="pick"
                 :class="{ on: strength === i }"
                 @click="strength = i"
-              >{{ p.name }} <span class="dim">({{ p.iterations }} iters / {{ p.timeBudgetMs }}ms)</span></button>
+              >{{ p.name }} <span class="dim">({{ p.iterations }} worlds)</span></button>
             </div>
           </div>
 
