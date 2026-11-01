@@ -348,11 +348,13 @@ export default defineComponent({
 
     /**
      * Buttons for the card popup: access decisions when the accessed card is
-     * zoomed (rule 7.2.2), otherwise the single play/install row of the grip
-     * card it was opened from. The engine emits one move set per definition
-     * id, so this row is never doubled; the zoomed tile's own under-tile row
-     * hides while the popup is open (see template), so the row appears
-     * exactly once on screen. Empty for every other zoom.
+     * zoomed (rule 7.2.2), otherwise the play/install rows of the grip card
+     * it was opened from. Rows are keyed per legal move, and run-sourcing
+     * events (Jailbreak, Overclock, Tread Lightly) emit one move PER target
+     * server (legal-moves.ts), so one event can show several rows here — each
+     * labelled with its run target (see shortActionLabel). The zoomed tile's
+     * own under-tile row hides while the popup is open (see template), so no
+     * row appears twice on screen. Empty for every other zoom.
      */
     const zoomActions = computed<{ label: string; move: Move }[]>(() => {
       const id = zoomCardId.value;
@@ -375,6 +377,11 @@ export default defineComponent({
         case "corp.install":
           return `Install → ${serverLabel(m.server)}`;
         case "runner.playEvent":
+          // Run-sourcing events (Jailbreak, Overclock, Tread Lightly) emit one
+          // move PER target server (legal-moves.ts), so the label must name
+          // the run target — bare "Play" would render 2-5 identical buttons
+          // and the human would pick the run target blind.
+          return m.server ? `Play → ${serverLabel(m.server)}` : "Play";
         case "corp.playOperation":
           return "Play";
         default:
@@ -585,6 +592,7 @@ export default defineComponent({
         <button
           class="log-toggle"
           :title="logOpen ? 'Collapse log' : 'Expand log'"
+          :aria-label="logOpen ? 'Collapse log' : 'Expand log'"
           @click="logOpen = !logOpen"
         >{{ logOpen ? '›' : '‹' }}</button>
         <div v-if="logOpen" class="log-panel" data-testid="log-panel">

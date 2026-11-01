@@ -9,9 +9,12 @@
  * The DOM order below is ONE order for every case (server card/label -> root
  * row -> ice stack -> Run); the corp-seat visual flip (ice on the runner side)
  * is done in CSS via `order` on `.server.central` AND `.server.remote`
- * children (public/css/style.css), driven by the `corpSeat` prop. The
- * `.server.central` / `.server.remote` classes, the inner class names, and
- * this nesting are pinned by tests/ui/game_screen_test.ts (computed `order`).
+ * children (public/css/style.css), driven by the `corpSeat` prop — and the
+ * WITHIN-STACK order is flipped in the component (`iceSlots` below), because
+ * the engine lists ice innermost-first while the corp seat renders the stack
+ * top-down on the runner side. The `.server.central` / `.server.remote`
+ * classes, the inner class names, and this nesting are pinned by
+ * tests/ui/game_screen_test.ts (computed `order` + stack slot order).
  */
 
 import { computed, defineComponent } from "vue";
@@ -85,6 +88,21 @@ export default defineComponent({
       return props.currentIceId !== null && card.id === props.currentIceId;
     }
     /**
+     * The ice stack in render order. The engine lists ice innermost-first
+     * (`ServerState.ice`, types.ts), and this template renders the stack top
+     * to bottom, so in the RUNNER seat (server card above the stack) the
+     * innermost ice lands nearest the server card — physically correct. In
+     * the CORP seat the CSS `order` flip moves the whole stack to the runner
+     * side (above the card), which would render the INNERMOST ice farthest
+     * from the server card — the exact inverse of the physical stack — unless
+     * the array is reversed here. The reversal is deliberately in the
+     * component, not `flex-direction: column-reverse`: that would also flip
+     * the negative-margin overlap direction of `.ice-slot + .ice-slot`.
+     */
+    const iceSlots = computed<ViewCard[]>(() =>
+      props.corpSeat ? [...props.server.ice].reverse() : props.server.ice
+    );
+    /**
      * Only the HQ server card opens the identity popup (the R&D/Archives
      * glyph faces have nothing to zoom). It renders as a real
      * `<button type="button">` when clickable — mirroring CardTile's
@@ -93,7 +111,15 @@ export default defineComponent({
      * click on another server card never reaches the root.
      */
     const hqClickable = computed(() => props.server.id === "hq" && !!props.identityImg);
-    return { isCentralId, serverGlyphFor, remoteLabelFor, isCurrentIce, hqClickable, cardTitle };
+    return {
+      isCentralId,
+      serverGlyphFor,
+      remoteLabelFor,
+      isCurrentIce,
+      iceSlots,
+      hqClickable,
+      cardTitle,
+    };
   },
   template: `
     <div class="server" :class="isCentralId(server.id) ? 'central' : 'remote'">
@@ -131,7 +157,7 @@ export default defineComponent({
            server has a root card or ice. -->
       <template v-else>
         <div
-          v-if="server.root.length || server.ice.length || server.unrezzedIceCount"
+          v-if="server.root.length || server.ice.length"
           class="server-label"
         >{{ remoteLabelFor(server.id) }}</div>
       </template>
@@ -139,9 +165,9 @@ export default defineComponent({
            ice reserve a one-card root-slot space (blank, no glyph/back) so
            the layout doesn't jump when a root card is later installed; a
            completely empty remote draws nothing else at all (only its Run
-           button). Central roots hold at most an upgrade. unrezzedIceCount
-           covers ice the Runner cannot identify yet (public status redacts
-           the cards, the count stays open information). -->
+           button). Central roots hold at most an upgrade. server.ice keeps
+           unrezzed ice IN POSITION as "hidden" entries (identities are
+           redacted, the stack order stays open — rule 4.6.2). -->
       <div v-if="server.root.length" class="server-root-row">
         <template v-for="c in server.root" :key="c.id">
           <card-tile
@@ -155,12 +181,18 @@ export default defineComponent({
         </template>
       </div>
       <div
-        v-else-if="!isCentralId(server.id) && (server.ice.length || server.unrezzedIceCount)"
+        v-else-if="!isCentralId(server.id) && server.ice.length"
         class="server-root-row server-root-empty"
       ></div>
       <div class="server-ice-stack">
-        <div v-for="card in server.ice" :key="card.id" class="ice-slot">
+        <div
+          v-for="card in iceSlots"
+          :key="card.id"
+          class="ice-slot"
+          :class="{ facedown: card.cardId === 'hidden' }"
+        >
           <card-tile
+            v-if="card.cardId !== 'hidden'"
             :card="card"
             ice
             clickable
@@ -168,9 +200,19 @@ export default defineComponent({
             :badge="isCurrentIce(card) ? 'RUN' : ''"
             @zoom="$emit('zoom', card.cardId)"
           />
-        </div>
-        <div v-for="n in server.unrezzedIceCount" :key="'u' + server.id + n" class="ice-slot facedown">
-          <card-tile facedown ice corp />
+          <!-- Unrezzed ice arrives IN POSITION as a redacted entry: render it
+               on the facedown-tile path right where it physically sits. Its
+               real instance id survives the redaction, so the RUN badge and
+               highlight follow the approached facedown ice too (position is
+               open information, rule 4.6.2; identity stays hidden, 4.6.3). -->
+          <card-tile
+            v-else
+            facedown
+            ice
+            corp
+            :highlight="isCurrentIce(card)"
+            :badge="isCurrentIce(card) ? 'RUN' : ''"
+          />
         </div>
       </div>
       <button

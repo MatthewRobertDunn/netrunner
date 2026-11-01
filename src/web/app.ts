@@ -216,7 +216,13 @@ export default defineComponent({
           <div class="setup-block">
             <h2>Seed</h2>
             <div class="row">
-              <input class="seed-field" type="number" v-model.number="seed" data-testid="seed" />
+              <input
+                class="seed-field"
+                type="number"
+                v-model.number="seed"
+                data-testid="seed"
+                aria-label="Game seed"
+              />
               <button class="ghost-btn" @click="seed = Math.floor(Math.random() * 100000)">Random</button>
             </div>
           </div>

@@ -25,3 +25,16 @@ and the test that pins the fix.
    `accessActions`), so opponent accesses surface via the breach banner and log only. Files:
    `src/web/ui/game.ts`. Tests: `tests/ui/game_screen_test.ts` ("only the human's own access
    decision pops the zoom").
+
+3. **Ice stacks: order lives in TWO places, and unrezzed ice must stay IN POSITION.** The engine
+   lists ice innermost-first (`ServerState.ice`), but the corp seat renders the stack top-down on
+   the runner side, so ServerColumn reverses the array there (`iceSlots` computed) — without it the
+   corp seat draws mirrored stacks and the RUN badge runs the wrong way. Never "fix" this with
+   `flex-direction: column-reverse`: it also flips the `.ice-slot + .ice-slot` negative-margin
+   overlap. And the public DTO must keep unrezzed ice IN POSITION as `cardId: "hidden"` entries
+   (`public-status.ts`); the old `unrezzedIceCount` + append-a-count-after render drew mixed-rez
+   stacks inside-out (the exact inverse of the physical layout) and lost the RUN badge on approached
+   facedown ice. Files: `src/engine/public-status.ts`, `src/web/ui/server-column.ts`,
+   `public/css/style.css` (comments only). Tests: `tests/ui/game_screen_test.ts` ("multi-ice stack
+   renders outermost farthest in both seats", "approached facedown ice carries the RUN badge"),
+   `tests/public_status_test.ts` ("unrezzed ice stays in position as hidden entries").

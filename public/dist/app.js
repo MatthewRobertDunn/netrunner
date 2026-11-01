@@ -4,7 +4,7 @@ var __export = (target, all) => {
     __defProp(target, name, { get: all[name], enumerable: true });
 };
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-dom/3.5.13/dist/runtime-dom.esm-bundler.js
+// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-dom/3.5.13/dist/runtime-dom.esm-bundler.js
 var runtime_dom_esm_bundler_exports = {};
 __export(runtime_dom_esm_bundler_exports, {
   BaseTransition: () => BaseTransition,
@@ -177,7 +177,7 @@ __export(runtime_dom_esm_bundler_exports, {
   withScopeId: () => withScopeId
 });
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/shared/3.5.13/dist/shared.esm-bundler.js
+// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/shared/3.5.13/dist/shared.esm-bundler.js
 // @__NO_SIDE_EFFECTS__
 function makeMap(str) {
   const map2 = /* @__PURE__ */ Object.create(null);
@@ -523,7 +523,7 @@ var stringifySymbol = (v, i = "") => {
   );
 };
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/reactivity/3.5.13/dist/reactivity.esm-bundler.js
+// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/reactivity/3.5.13/dist/reactivity.esm-bundler.js
 function warn(msg, ...args) {
   console.warn(`[Vue warn] ${msg}`, ...args);
 }
@@ -2200,7 +2200,7 @@ function traverse(value, depth = Infinity, seen2) {
   return value;
 }
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-core/3.5.13/dist/runtime-core.esm-bundler.js
+// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-core/3.5.13/dist/runtime-core.esm-bundler.js
 var stack = [];
 function pushWarningContext(vnode) {
   stack.push(vnode);
@@ -9588,7 +9588,7 @@ var resolveFilter = null;
 var compatUtils = null;
 var DeprecationTypes = null;
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-dom/3.5.13/dist/runtime-dom.esm-bundler.js
+// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/runtime-dom/3.5.13/dist/runtime-dom.esm-bundler.js
 var policy = void 0;
 var tt = typeof window !== "undefined" && window.trustedTypes;
 if (tt) {
@@ -11384,7 +11384,7 @@ var initDirectivesForSSR = () => {
   }
 };
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/compiler-core/3.5.13/dist/compiler-core.esm-bundler.js
+// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/compiler-core/3.5.13/dist/compiler-core.esm-bundler.js
 var FRAGMENT = Symbol(true ? `Fragment` : ``);
 var TELEPORT = Symbol(true ? `Teleport` : ``);
 var SUSPENSE = Symbol(true ? `Suspense` : ``);
@@ -16216,7 +16216,7 @@ var noopDirectiveTransform = () => ({
   props: []
 });
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/@vue/compiler-dom/3.5.13/dist/compiler-dom.esm-bundler.js
+// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/@vue/compiler-dom/3.5.13/dist/compiler-dom.esm-bundler.js
 var V_MODEL_RADIO = Symbol(true ? `vModelRadio` : ``);
 var V_MODEL_CHECKBOX = Symbol(true ? `vModelCheckbox` : ``);
 var V_MODEL_TEXT = Symbol(true ? `vModelText` : ``);
@@ -16852,7 +16852,7 @@ function compile2(src, options = {}) {
   }));
 }
 
-// ../usr/local/share/deno/npm/registry.npmjs.org/vue/3.5.13/dist/vue.esm-bundler.js
+// ../../../../../../../../usr/local/share/deno/npm/registry.npmjs.org/vue/3.5.13/dist/vue.esm-bundler.js
 function initDev() {
   {
     initCustomFormatter();
@@ -22269,17 +22269,16 @@ function publicPlayer(state, side, viewer) {
 }
 function serverStatus(state, id, hideInstalled) {
   const s = state.servers.find((x) => x.id === id);
-  const iceVisible = s.ice.filter((c) => !hideInstalled || c.rezzed === true);
   return {
     id,
     root: s.root.map((c) => viewCard(c, {
       hidden: hideInstalled && c.rezzed !== true,
       position: "root"
     })),
-    ice: iceVisible.map((c) => viewCard(c, {
+    ice: s.ice.map((c) => viewCard(c, {
+      hidden: hideInstalled && c.rezzed !== true,
       position: "ice"
-    })),
-    unrezzedIceCount: s.ice.length - iceVisible.length
+    }))
   };
 }
 function publicServers(state, hideInstalled) {
@@ -23753,6 +23752,7 @@ var action_panel_default = defineComponent({
                 type="button"
                 class="pick-slot"
                 :class="{ picked: discardSelected.includes(c.id) }"
+                :aria-pressed="String(discardSelected.includes(c.id))"
                 @click="$emit('discard-toggle', c.id)"
               >
                 <card-tile
@@ -23816,8 +23816,15 @@ var card_zoom_default = defineComponent({
     const img = computed2(() => props.cardId ? imageFor(props.cardId) : null);
     const text = computed2(() => props.cardId ? plainCardText(props.cardId) : "");
     const backdropRef = ref(null);
+    let previousFocus = null;
     onMounted(() => {
+      const doc2 = globalThis;
+      previousFocus = doc2.document?.activeElement ?? null;
       backdropRef.value?.focus();
+    });
+    onUnmounted(() => {
+      previousFocus?.focus();
+      previousFocus = null;
     });
     return {
       def: def2,
@@ -23958,12 +23965,16 @@ var server_column_default = defineComponent({
     function isCurrentIce(card) {
       return props.currentIceId !== null && card.id === props.currentIceId;
     }
+    const iceSlots = computed2(() => props.corpSeat ? [
+      ...props.server.ice
+    ].reverse() : props.server.ice);
     const hqClickable = computed2(() => props.server.id === "hq" && !!props.identityImg);
     return {
       isCentralId,
       serverGlyphFor,
       remoteLabelFor,
       isCurrentIce,
+      iceSlots,
       hqClickable,
       cardTitle
     };
@@ -24004,7 +24015,7 @@ var server_column_default = defineComponent({
            server has a root card or ice. -->
       <template v-else>
         <div
-          v-if="server.root.length || server.ice.length || server.unrezzedIceCount"
+          v-if="server.root.length || server.ice.length"
           class="server-label"
         >{{ remoteLabelFor(server.id) }}</div>
       </template>
@@ -24012,9 +24023,9 @@ var server_column_default = defineComponent({
            ice reserve a one-card root-slot space (blank, no glyph/back) so
            the layout doesn't jump when a root card is later installed; a
            completely empty remote draws nothing else at all (only its Run
-           button). Central roots hold at most an upgrade. unrezzedIceCount
-           covers ice the Runner cannot identify yet (public status redacts
-           the cards, the count stays open information). -->
+           button). Central roots hold at most an upgrade. server.ice keeps
+           unrezzed ice IN POSITION as "hidden" entries (identities are
+           redacted, the stack order stays open \u2014 rule 4.6.2). -->
       <div v-if="server.root.length" class="server-root-row">
         <template v-for="c in server.root" :key="c.id">
           <card-tile
@@ -24028,12 +24039,18 @@ var server_column_default = defineComponent({
         </template>
       </div>
       <div
-        v-else-if="!isCentralId(server.id) && (server.ice.length || server.unrezzedIceCount)"
+        v-else-if="!isCentralId(server.id) && server.ice.length"
         class="server-root-row server-root-empty"
       ></div>
       <div class="server-ice-stack">
-        <div v-for="card in server.ice" :key="card.id" class="ice-slot">
+        <div
+          v-for="card in iceSlots"
+          :key="card.id"
+          class="ice-slot"
+          :class="{ facedown: card.cardId === 'hidden' }"
+        >
           <card-tile
+            v-if="card.cardId !== 'hidden'"
             :card="card"
             ice
             clickable
@@ -24041,9 +24058,19 @@ var server_column_default = defineComponent({
             :badge="isCurrentIce(card) ? 'RUN' : ''"
             @zoom="$emit('zoom', card.cardId)"
           />
-        </div>
-        <div v-for="n in server.unrezzedIceCount" :key="'u' + server.id + n" class="ice-slot facedown">
-          <card-tile facedown ice corp />
+          <!-- Unrezzed ice arrives IN POSITION as a redacted entry: render it
+               on the facedown-tile path right where it physically sits. Its
+               real instance id survives the redaction, so the RUN badge and
+               highlight follow the approached facedown ice too (position is
+               open information, rule 4.6.2; identity stays hidden, 4.6.3). -->
+          <card-tile
+            v-else
+            facedown
+            ice
+            corp
+            :highlight="isCurrentIce(card)"
+            :badge="isCurrentIce(card) ? 'RUN' : ''"
+          />
         </div>
       </div>
       <button
@@ -24416,6 +24443,7 @@ var game_default = defineComponent({
         case "corp.install":
           return `Install \u2192 ${serverLabel(m.server)}`;
         case "runner.playEvent":
+          return m.server ? `Play \u2192 ${serverLabel(m.server)}` : "Play";
         case "corp.playOperation":
           return "Play";
         default:
@@ -24619,6 +24647,7 @@ var game_default = defineComponent({
         <button
           class="log-toggle"
           :title="logOpen ? 'Collapse log' : 'Expand log'"
+          :aria-label="logOpen ? 'Collapse log' : 'Expand log'"
           @click="logOpen = !logOpen"
         >{{ logOpen ? '\u203A' : '\u2039' }}</button>
         <div v-if="logOpen" class="log-panel" data-testid="log-panel">
@@ -24810,7 +24839,13 @@ var app_default = defineComponent({
           <div class="setup-block">
             <h2>Seed</h2>
             <div class="row">
-              <input class="seed-field" type="number" v-model.number="seed" data-testid="seed" />
+              <input
+                class="seed-field"
+                type="number"
+                v-model.number="seed"
+                data-testid="seed"
+                aria-label="Game seed"
+              />
               <button class="ghost-btn" @click="seed = Math.floor(Math.random() * 100000)">Random</button>
             </div>
           </div>

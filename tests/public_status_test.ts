@@ -13,7 +13,7 @@
  */
 
 import { engine } from "../src/mod.ts";
-import type { GameState, ViewCard } from "../src/types.ts";
+import type { GameState, ServerId, ViewCard } from "../src/types.ts";
 import {
   endCorpTurn,
   newGameWithCorpHand,
@@ -84,7 +84,6 @@ Deno.test("public status: the shared DTO exposes both players' public informatio
     assertEquals(central.length, 3, "central servers always appear");
     for (const server of shared.servers) {
       assert(Array.isArray(server.root), "server.root is an array");
-      assertEquals(typeof server.unrezzedIceCount, "number");
       assert(Array.isArray(server.ice), "server.ice is an array");
       // Physical placement is open information (rule 4.6.2): root cards and ice
       // are marked, so a viewer always knows ice-vs-root even when the identity
@@ -166,6 +165,99 @@ Deno.test("public status: unrezzed Corp card ids are hidden except from the Corp
     assert(
       forCorp.players.corp.installed.some((c) => c.cardId !== "hidden"),
       "Corp sees the ids of its own installed cards",
+    );
+  });
+});
+
+Deno.test("public status: unrezzed ice stays in position as hidden entries", async (t) => {
+  // Rule 4.6.2: the ice STACK ORDER is open information; rule 4.6.3 keeps the
+  // identity of unrezzed ice hidden from the Runner. The DTO therefore keeps
+  // every ice card in its physical slot — unrezzed ones redacted in place —
+  // instead of reducing them to a count (which let the UI draw mixed-rez
+  // stacks inside-out).
+
+  /** A remote with Tithe installed innermost and Palisade outermost. */
+  function twoIceState(): GameState {
+    let state = newGameWithCorpHand(["tithe", "palisade"], 3);
+    const installs: [string, ServerId | "new-remote"][] = [
+      ["tithe", "new-remote"],
+      ["palisade", "remote-1"],
+    ];
+    for (const [cardId, server] of installs) {
+      const install = assertDefined(
+        engine.getLegalMoves(state, "corp").find(
+          (m) => m.kind === "corp.install" && m.cardId === cardId && m.server === server,
+        ),
+      );
+      state = play(state, "corp", install);
+    }
+    return state;
+  }
+
+  await t.step("mixed-rez stack: hidden entries keep the engine order", () => {
+    // Tithe installs first (innermost), Palisade second (outermost).
+    const state = twoIceState();
+    const trueIce = state.servers.find((s) => s.id === "remote-1")!.ice;
+    assertEquals(trueIce.map((c) => c.cardId), ["tithe", "palisade"]);
+
+    const shared = engine.getPublicGameStatus(state);
+    const sharedIce = shared.servers.find((s) => s.id === "remote-1")!.ice;
+    assertEquals(
+      sharedIce.map((c) => c.cardId),
+      ["hidden", "hidden"],
+      "unrezzed ice is redacted in place, not filtered out",
+    );
+    assertEquals(
+      sharedIce.map((c) => c.id),
+      trueIce.map((c) => c.id),
+      "the redacted entries keep the real instance ids (stack order is open)",
+    );
+    for (const card of sharedIce) assertEquals(card.position, "ice");
+
+    const forCorp = engine.getPublicGameStatusFor(state, "corp");
+    assertEquals(
+      forCorp.servers.find((s) => s.id === "remote-1")!.ice.map((c) => c.cardId),
+      ["tithe", "palisade"],
+      "the Corp sees its own unrezzed ice ids in position",
+    );
+  });
+
+  await t.step("a rezzed outer ice stays public while the inner one stays hidden", () => {
+    let state = twoIceState();
+    // Rez the OUTER ice (Palisade) out of a rez window: run the remote, and
+    // the corp rezzes the approached (outermost) ice.
+    state = endCorpTurn(state);
+    const run = assertDefined(
+      engine.getLegalMoves(state, "runner").find(
+        (m) => m.kind === "runner.run" && m.server === "remote-1",
+      ),
+    );
+    state = play(state, "runner", run);
+    const prompt = state.prompts[0]!;
+    assert(prompt.kind === "rez-window", "a corp rez window is pending");
+    // The approached ice is the outermost one (Palisade — rule 4.6.9d: newly
+    // installed ice protects the server outermost).
+    const option = assertDefined(
+      prompt.options.find((o) => {
+        if (o.targetId === undefined) return false;
+        const card = state.servers.find((s) => s.id === "remote-1")!.ice
+          .find((c) => c.id === o.targetId);
+        return card?.cardId === "palisade";
+      }),
+    );
+    const answer = assertDefined(
+      engine.getLegalMoves(state, "corp").find(
+        (m) => m.kind === "prompt.answer" && m.optionId === option.id,
+      ),
+    );
+    state = play(state, "corp", answer);
+
+    const shared = engine.getPublicGameStatus(state);
+    const sharedIce = shared.servers.find((s) => s.id === "remote-1")!.ice;
+    assertEquals(
+      sharedIce.map((c) => [c.cardId, c.rezzed] as const),
+      [["hidden", false], ["palisade", true]],
+      "rezzed ice is public in its true position; the inner unrezzed ice stays hidden in place",
     );
   });
 });

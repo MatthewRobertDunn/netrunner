@@ -461,7 +461,10 @@ button.stat.clickable {
   padding: 6px 4px;
 }
 /* Corp seat: central servers show ice on the runner side (top), so the
-   column reads ice stack -> root row -> server card -> Run button. */
+   column reads ice stack -> root row -> server card -> Run button. The
+   WITHIN-STACK order (outermost farthest from the server card) is not CSS —
+   ServerColumn reverses the engine's innermost-first ice array in its
+   `iceSlots` computed for the corp seat. */
 .servers.corp-seat .server.central .server-ice-stack {
   order: 1;
 }
@@ -510,7 +513,11 @@ button.stat.clickable {
 /* Ice is rendered horizontally (rule 4.6.9a): the tile keeps its portrait
    dimensions but is rotated 90° inside a landscape slot. The outermost ice
    (the first the Runner encounters) ends up farthest from the server card,
-   on the runner side of the column. */
+   on the runner side of the column — in BOTH seats: the corp seat renders
+   the stack top-down on the runner side, so ServerColumn's `iceSlots`
+   reverses the engine's innermost-first array there. Do NOT "fix" the order
+   here with `flex-direction: column-reverse`: it would also flip the
+   negative-margin overlap direction of the rule below. */
 .ice-slot {
   position: relative;
   width: 92px;

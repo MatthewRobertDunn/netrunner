@@ -7,11 +7,19 @@
 
 import { installRealCss } from "./setup.ts"; // also bridges happy-dom onto globalThis
 import { mount } from "@vue/test-utils";
-import { assert, assertEquals } from "../helpers/assert.ts";
+import { assert, assertDefined, assertEquals } from "../helpers/assert.ts";
 import { accessDecisionFixture, createTestFixture, publicStatusFor } from "./fixture.ts";
 import { engine } from "../../src/mod.ts";
 import type { Move, PlayerSide } from "../../src/types.ts";
 import GameScreen from "../../src/web/ui/game.ts";
+import {
+  corpDeckStartingWith,
+  endCorpTurn,
+  installInNewRemoteAndEndTurn,
+  play,
+  runnerDeckStartingWith,
+  starterDeckPair,
+} from "../helpers/fixtures.ts";
 
 /**
  * Mount GameScreen on a seed fixture (Corp perspective by default), optionally
@@ -458,4 +466,172 @@ Deno.test("GameScreen access popup: only the human's own access decision pops th
     own.find('[data-testid="card-zoom"]').exists(),
     "auto zoom for the human's own access",
   );
+});
+
+Deno.test("GameScreen run-sourcing events label their target server", () => {
+  // A scripted runner deck puts Jailbreak (run HQ or R&D, rule 5.2.2b) on
+  // top; the engine emits ONE runner.playEvent move PER target server, so
+  // the hand tile must show one distinct button per run target — bare
+  // "Play" would leave the human picking the run target blind.
+  const decks = starterDeckPair();
+  const scripted = engine.startGame({
+    corp: decks.corp,
+    runner: runnerDeckStartingWith(["jailbreak"]),
+    mode: "starter-decks",
+    seed: 42,
+  });
+  const state = endCorpTurn(scripted);
+  assertEquals(state.turn.player, "runner", "test setup: the runner holds the turn");
+
+  const wrapper = mount(GameScreen, { props: { state, humanSide: "runner" } });
+  const jailbreakTile = wrapper
+    .findAll('[data-testid="human-hand"] .hand-card')
+    .find((tile) =>
+      tile.findAll(".card-actions button").some((b) => b.text().startsWith("Play →"))
+    );
+  assertDefined(jailbreakTile, "the Jailbreak hand tile carries per-server play buttons");
+  assertEquals(
+    jailbreakTile!.findAll(".card-actions button").map((b) => b.text()),
+    ["Play → HQ", "Play → R&D"],
+    "one distinct label per run target, mirroring the corp.install branch",
+  );
+});
+
+Deno.test("GameScreen multi-ice stack renders outermost farthest in both seats", () => {
+  // The engine lists ice innermost-first (ServerState.ice, types.ts). The
+  // runner seat renders the stack top-down under the server card, which is
+  // already correct; the corp seat flips the stack to the runner side (top)
+  // via CSS `order`, so ServerColumn must reverse the array there — the run
+  // badge otherwise starts glued to the server card and moves AWAY as the
+  // run deepens.
+  installRealCss();
+
+  const decks = starterDeckPair();
+  let state = engine.startGame({
+    corp: corpDeckStartingWith(["tithe", "palisade"]),
+    runner: decks.runner,
+    mode: "starter-decks",
+    seed: 42,
+  });
+  const installs: [string, string][] = [
+    ["tithe", "new-remote"],
+    ["palisade", "remote-1"],
+  ];
+  for (const [cardId, server] of installs) {
+    const install = assertDefined(
+      engine.getLegalMoves(state, "corp").find(
+        (m) => m.kind === "corp.install" && m.cardId === cardId && m.server === server,
+      ),
+    );
+    state = play(state, "corp", install);
+  }
+  const ice = state.servers.find((s) => s.id === "remote-1")!.ice;
+  assertEquals(
+    ice.map((c) => c.cardId),
+    ["tithe", "palisade"],
+    "test setup: Tithe innermost, Palisade outermost",
+  );
+
+  // CORP seat: the stack renders top-down on the runner side, so the
+  // reversed array must put the OUTER ice first (farthest from the server
+  // card below). The corp viewer sees both unrezzed faces.
+  const corpView = mount(GameScreen, { props: { state, humanSide: "corp" } });
+  try {
+    const slots = corpView.find(".server.remote").findAll(".server-ice-stack .ice-slot");
+    assertEquals(slots.length, 2, "two ice slots render");
+    // CardTile's title carries the printed card name; use it to identify the
+    // instance in each slot (tiles carry no instance id in the DOM).
+    const names = slots.map((slot) =>
+      (slot.find(".card-tile").attributes("title") ?? "").split("\n")[0]
+    );
+    assertEquals(
+      names,
+      ["Palisade", "Tithe"],
+      "corp seat: outermost ice renders farthest from the server card",
+    );
+  } finally {
+    corpView.unmount();
+  }
+
+  // RUNNER seat after the corp rezzes the outer ice (the normal mid-run
+  // mixed-rez state): the rezzed face renders in its true OUTER position and
+  // the inner unrezzed ice stays in place as a facedown tile — never the
+  // inverse, and never a facedown count appended after the rezzed cards.
+  state = endCorpTurn(state);
+  const run = assertDefined(
+    engine.getLegalMoves(state, "runner").find(
+      (m) => m.kind === "runner.run" && m.server === "remote-1",
+    ),
+  );
+  state = play(state, "runner", run);
+  const prompt = state.prompts[0]!;
+  assert(prompt.kind === "rez-window", "a corp rez window is pending on the outer ice");
+  const option = assertDefined(
+    prompt.options.find((o) => {
+      if (o.targetId === undefined) return false;
+      const card = state.servers.find((s) => s.id === "remote-1")!.ice
+        .find((c) => c.id === o.targetId);
+      return card?.cardId === "palisade";
+    }),
+  );
+  const answer = assertDefined(
+    engine.getLegalMoves(state, "corp").find(
+      (m) => m.kind === "prompt.answer" && m.optionId === option.id,
+    ),
+  );
+  state = play(state, "corp", answer);
+  assert(
+    state.servers.find((s) => s.id === "remote-1")!.ice[1]!.rezzed === true,
+    "test setup: the outer ice is rezzed",
+  );
+
+  const runnerView = mount(GameScreen, { props: { state, humanSide: "runner" } });
+  try {
+    const slots = runnerView.find(".server.remote").findAll(".server-ice-stack .ice-slot");
+    assertEquals(slots.length, 2, "two ice slots render");
+    const names = slots.map((slot) =>
+      (slot.find(".card-tile").attributes("title") ?? "").split("\n")[0]
+    );
+    assertEquals(
+      names,
+      ["Facedown card", "Palisade"],
+      "runner seat: inner ice facedown in place, rezzed outer ice outermost",
+    );
+    assertEquals(
+      slots[1]!.find(".badge-counter").text(),
+      "RUN",
+      "the RUN badge follows the approached outer ice in its true position",
+    );
+  } finally {
+    runnerView.unmount();
+  }
+});
+
+Deno.test("GameScreen approached facedown ice carries the RUN badge", () => {
+  // Unrezzed ice stays IN POSITION as a redacted entry with its real instance
+  // id (rule 4.6.2: stack order open; 4.6.3: identity hidden), so the RUN
+  // badge/highlight follows the approached facedown tile instead of dying on
+  // the old separate facedown-count loop.
+  const state0 = installInNewRemoteAndEndTurn("tithe", 42);
+  const run = assertDefined(
+    engine.getLegalMoves(state0, "runner").find(
+      (m) => m.kind === "runner.run" && m.server === "remote-1",
+    ),
+  );
+  const state = play(state0, "runner", run);
+  assert(state.run?.currentIceId, "the run parks on the approached ice");
+
+  const wrapper = mount(GameScreen, { props: { state, humanSide: "runner" } });
+  const slot = wrapper.find(".server.remote .server-ice-stack .ice-slot");
+  assert(slot.exists(), "the facedown ice renders inside the ice stack");
+  assert(
+    slot.classes().includes("facedown"),
+    "the hidden ice slot keeps the facedown marker class",
+  );
+  const tile = slot.find(".card-tile");
+  assert(
+    tile.classes().includes("highlight"),
+    "the approached facedown ice is highlighted",
+  );
+  assertEquals(tile.find(".badge-counter").text(), "RUN", "RUN badge on the facedown ice");
 });
