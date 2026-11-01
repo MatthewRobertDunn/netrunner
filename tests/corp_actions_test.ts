@@ -135,215 +135,238 @@ function advanceTargetIds(state: GameState): string[] {
 // Rule 1.18.3: advance eligibility
 // ---------------------------------------------------------------------------
 
-Deno.test("advance: ice cannot be advanced; Urtica Cipher and agendas can (rule 1.18.3)", () => {
-  let s = newGame(["urtica_cipher", "palisade", "offworld_office"]);
-  s =
-    play(s, "corp", { kind: "corp.install", cardId: "urtica_cipher", server: "new-remote" }).state;
-  s = play(s, "corp", { kind: "corp.install", cardId: "palisade", server: "hq" }).state;
+Deno.test("corp actions: advance, install, breach, and event regressions", async (t) => {
+  await t.step(
+    "advance: ice cannot be advanced; Urtica Cipher and agendas can (rule 1.18.3)",
+    () => {
+      let s = newGame(["urtica_cipher", "palisade", "offworld_office"]);
+      s = play(s, "corp", { kind: "corp.install", cardId: "urtica_cipher", server: "new-remote" })
+        .state;
+      s = play(s, "corp", { kind: "corp.install", cardId: "palisade", server: "hq" }).state;
 
-  const urtica = assertDefined(findInstalled(s, "urtica_cipher"), "Urtica Cipher is installed");
-  const palisade = assertDefined(findInstalled(s, "palisade"), "ice is installed");
-  const targets = advanceTargetIds(s);
-  assert(
-    targets.includes(urtica.id),
-    "Urtica Cipher ('You can advance this asset.') is advanceable",
+      const urtica = assertDefined(findInstalled(s, "urtica_cipher"), "Urtica Cipher is installed");
+      const palisade = assertDefined(findInstalled(s, "palisade"), "ice is installed");
+      const targets = advanceTargetIds(s);
+      assert(
+        targets.includes(urtica.id),
+        "Urtica Cipher ('You can advance this asset.') is advanceable",
+      );
+      assert(!targets.includes(palisade.id), "ice is never advanceable");
+
+      // Spend the last click advancing Urtica; next turn the agenda must also be advanceable.
+      s = play(s, "corp", { kind: "corp.advance", targetId: urtica.id }).state;
+      s = nextTurnOf(s, "corp");
+      s = play(s, "corp", { kind: "corp.install", cardId: "offworld_office", server: "new-remote" })
+        .state;
+      const agenda = assertDefined(findInstalled(s, "offworld_office"), "the agenda is installed");
+      const targets2 = advanceTargetIds(s);
+      assert(targets2.includes(agenda.id), "agendas can always be advanced");
+      assert(targets2.includes(urtica.id), "Urtica Cipher remains advanceable");
+      assert(!targets2.includes(palisade.id), "ice is still not advanceable");
+    },
   );
-  assert(!targets.includes(palisade.id), "ice is never advanceable");
 
-  // Spend the last click advancing Urtica; next turn the agenda must also be advanceable.
-  s = play(s, "corp", { kind: "corp.advance", targetId: urtica.id }).state;
-  s = nextTurnOf(s, "corp");
-  s = play(s, "corp", { kind: "corp.install", cardId: "offworld_office", server: "new-remote" })
-    .state;
-  const agenda = assertDefined(findInstalled(s, "offworld_office"), "the agenda is installed");
-  const targets2 = advanceTargetIds(s);
-  assert(targets2.includes(agenda.id), "agendas can always be advanced");
-  assert(targets2.includes(urtica.id), "Urtica Cipher remains advanceable");
-  assert(!targets2.includes(palisade.id), "ice is still not advanceable");
-});
+  // ---------------------------------------------------------------------------
+  // Rule 5.2.6f: advance costs 1 credit
+  // ---------------------------------------------------------------------------
 
-// ---------------------------------------------------------------------------
-// Rule 5.2.6f: advance costs 1 credit
-// ---------------------------------------------------------------------------
+  await t.step(
+    "advance: costs 1 click and 1 credit, and is not offered at 0 credits (rule 5.2.6f)",
+    () => {
+      let s = newGame(["urtica_cipher"]);
+      s = play(s, "corp", { kind: "corp.install", cardId: "urtica_cipher", server: "new-remote" })
+        .state;
+      const urtica = assertDefined(findInstalled(s, "urtica_cipher"), "Urtica Cipher is installed");
 
-Deno.test("advance: costs 1 click and 1 credit, and is not offered at 0 credits (rule 5.2.6f)", () => {
-  let s = newGame(["urtica_cipher"]);
-  s =
-    play(s, "corp", { kind: "corp.install", cardId: "urtica_cipher", server: "new-remote" }).state;
-  const urtica = assertDefined(findInstalled(s, "urtica_cipher"), "Urtica Cipher is installed");
+      const creditsBefore = s.corp.credits;
+      s = play(s, "corp", { kind: "corp.advance", targetId: urtica.id }).state;
+      assertEquals(s.corp.credits, creditsBefore - 1, "advancing spent exactly 1 credit");
+      assertEquals(
+        findInstalled(s, "urtica_cipher")!.advancement ?? 0,
+        1,
+        "one counter was placed",
+      );
 
-  const creditsBefore = s.corp.credits;
-  s = play(s, "corp", { kind: "corp.advance", targetId: urtica.id }).state;
-  assertEquals(s.corp.credits, creditsBefore - 1, "advancing spent exactly 1 credit");
-  assertEquals(findInstalled(s, "urtica_cipher")!.advancement ?? 0, 1, "one counter was placed");
+      // Drain the corp to 0 credits by advancing across two more turns.
+      s = play(s, "corp", { kind: "corp.advance", targetId: urtica.id }).state; // turn 1, last click
+      s = nextTurnOf(s, "corp"); // corp turn 2
+      for (let i = 0; i < 3; i++) {
+        s = play(s, "corp", { kind: "corp.advance", targetId: urtica.id }).state;
+      }
+      assertEquals(s.corp.credits, 0, "the corp is at 0 credits");
+      s = nextTurnOf(s, "corp"); // corp turn 3: 3 clicks, 0 credits, action phase
 
-  // Drain the corp to 0 credits by advancing across two more turns.
-  s = play(s, "corp", { kind: "corp.advance", targetId: urtica.id }).state; // turn 1, last click
-  s = nextTurnOf(s, "corp"); // corp turn 2
-  for (let i = 0; i < 3; i++) {
-    s = play(s, "corp", { kind: "corp.advance", targetId: urtica.id }).state;
-  }
-  assertEquals(s.corp.credits, 0, "the corp is at 0 credits");
-  s = nextTurnOf(s, "corp"); // corp turn 3: 3 clicks, 0 credits, action phase
-
-  assertEquals(
-    advanceTargetIds(s).length,
-    0,
-    "corp.advance is not offered when the corp has 0 credits",
+      assertEquals(
+        advanceTargetIds(s).length,
+        0,
+        "corp.advance is not offered when the corp has 0 credits",
+      );
+      const rejected = engine.applyMove(s, "corp", { kind: "corp.advance", targetId: urtica.id });
+      assert(rejected.kind === "illegal-move", "corp.advance is rejected at 0 credits");
+    },
   );
-  const rejected = engine.applyMove(s, "corp", { kind: "corp.advance", targetId: urtica.id });
-  assert(rejected.kind === "illegal-move", "corp.advance is rejected at 0 credits");
-});
 
-// ---------------------------------------------------------------------------
-// Rules 8.5.2a / 8.5.2c / 4.6.8b: upgrades may create a new remote
-// ---------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // Rules 8.5.2a / 8.5.2c / 4.6.8b: upgrades may create a new remote
+  // ---------------------------------------------------------------------------
 
-Deno.test("install: an upgrade may be installed into a new remote server (rules 8.5.2a/8.5.2c, 4.6.8b)", () => {
-  const s = newGame(["manegarm_skunkworks"]);
-  const install = engine.getLegalMoves(s, "corp").find((m) =>
-    m.kind === "corp.install" && m.cardId === "manegarm_skunkworks" && m.server === "new-remote"
+  await t.step(
+    "install: an upgrade may be installed into a new remote server (rules 8.5.2a/8.5.2c, 4.6.8b)",
+    () => {
+      const s = newGame(["manegarm_skunkworks"]);
+      const install = engine.getLegalMoves(s, "corp").find((m) =>
+        m.kind === "corp.install" && m.cardId === "manegarm_skunkworks" && m.server === "new-remote"
+      );
+      assertDefined(install, "an upgrade is offered for a new remote server");
+      const after = play(s, "corp", install!).state;
+      const remote = after.servers.find((x) => x.id === "remote-1");
+      assert(remote !== undefined, "installing the upgrade created remote-1");
+      assert(
+        remote!.root.some((c) => c.cardId === "manegarm_skunkworks"),
+        "the upgrade sits in the new remote's root",
+      );
+    },
   );
-  assertDefined(install, "an upgrade is offered for a new remote server");
-  const after = play(s, "corp", install!).state;
-  const remote = after.servers.find((x) => x.id === "remote-1");
-  assert(remote !== undefined, "installing the upgrade created remote-1");
-  assert(
-    remote!.root.some((c) => c.cardId === "manegarm_skunkworks"),
-    "the upgrade sits in the new remote's root",
+
+  // ---------------------------------------------------------------------------
+  // Docklands Pass: first HQ breach of the turn (rule 7.3.5)
+  // ---------------------------------------------------------------------------
+
+  await t.step(
+    "breach: Docklands Pass still applies to the first HQ breach after a non-HQ breach",
+    () => {
+      let s = newGame([], ["docklands_pass"]);
+      s = burnUntil(s, "runner");
+      s = play(s, "runner", { kind: "runner.install", cardId: "docklands_pass" }).state;
+
+      // Breach a non-HQ server first (Archives): must not consume the bonus.
+      s = play(s, "runner", { kind: "runner.run", server: "archives" }).state;
+      assertEquals(
+        s.runner.hqBreachesThisTurn,
+        0,
+        "a non-HQ breach does not count toward the once-per-turn HQ counter",
+      );
+      s = resolveRun(s);
+
+      // Now breach HQ: Docklands Pass grants +1 access on the first HQ breach.
+      s = play(s, "runner", { kind: "runner.run", server: "hq" }).state;
+      s = continueMovement(s); // the run parks in movement (6.9.4c) before the breach
+      assert(s.breach !== null && s.breach.server === "hq", "the HQ breach began");
+      assertEquals(
+        s.breach!.randomAccessLimit,
+        2,
+        "first HQ breach of the turn with Docklands Pass installed: access 2",
+      );
+      s = resolveRun(s);
+
+      // A second HQ breach the same turn gets no bonus (once per turn).
+      s = play(s, "runner", { kind: "runner.run", server: "hq" }).state;
+      s = continueMovement(s);
+      assert(s.breach !== null && s.breach.server === "hq", "the second HQ breach began");
+      assertEquals(s.breach!.randomAccessLimit, 1, "second HQ breach of the turn: access 1 only");
+    },
   );
-});
 
-// ---------------------------------------------------------------------------
-// Docklands Pass: first HQ breach of the turn (rule 7.3.5)
-// ---------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // Seamless Launch printed text: any installed card, including upgrades
+  // ---------------------------------------------------------------------------
 
-Deno.test("breach: Docklands Pass still applies to the first HQ breach after a non-HQ breach", () => {
-  let s = newGame([], ["docklands_pass"]);
-  s = burnUntil(s, "runner");
-  s = play(s, "runner", { kind: "runner.install", cardId: "docklands_pass" }).state;
-
-  // Breach a non-HQ server first (Archives): must not consume the bonus.
-  s = play(s, "runner", { kind: "runner.run", server: "archives" }).state;
-  assertEquals(
-    s.runner.hqBreachesThisTurn,
-    0,
-    "a non-HQ breach does not count toward the once-per-turn HQ counter",
-  );
-  s = resolveRun(s);
-
-  // Now breach HQ: Docklands Pass grants +1 access on the first HQ breach.
-  s = play(s, "runner", { kind: "runner.run", server: "hq" }).state;
-  s = continueMovement(s); // the run parks in movement (6.9.4c) before the breach
-  assert(s.breach !== null && s.breach.server === "hq", "the HQ breach began");
-  assertEquals(
-    s.breach!.randomAccessLimit,
-    2,
-    "first HQ breach of the turn with Docklands Pass installed: access 2",
-  );
-  s = resolveRun(s);
-
-  // A second HQ breach the same turn gets no bonus (once per turn).
-  s = play(s, "runner", { kind: "runner.run", server: "hq" }).state;
-  s = continueMovement(s);
-  assert(s.breach !== null && s.breach.server === "hq", "the second HQ breach began");
-  assertEquals(s.breach!.randomAccessLimit, 1, "second HQ breach of the turn: access 1 only");
-});
-
-// ---------------------------------------------------------------------------
-// Seamless Launch printed text: any installed card, including upgrades
-// ---------------------------------------------------------------------------
-
-Deno.test("seamless launch: places 2 advancement counters on an upgrade", () => {
-  let s = newGame(["manegarm_skunkworks", "seamless_launch"]);
-  // Turn 1: install the upgrade only (it must not count as "installed this turn"
-  // for Seamless Launch on a later turn).
-  s = play(s, "corp", { kind: "corp.install", cardId: "manegarm_skunkworks", server: "hq" }).state;
-  s = nextTurnOf(s, "corp"); // corp turn 2 (the upgrade was not installed this turn)
-  const playOp = engine.getLegalMoves(s, "corp").find((m) =>
-    m.kind === "corp.playOperation" && m.cardId === "seamless_launch"
-  );
-  assertDefined(playOp, "Seamless Launch is playable");
-  s = play(s, "corp", playOp!).state;
-  const upgrade = assertDefined(
-    findInstalled(s, "manegarm_skunkworks"),
-    "the upgrade is installed",
-  );
-  assertEquals(
-    upgrade.advancement ?? 0,
-    2,
-    "Seamless Launch placed 2 counters on the upgrade ('1 installed card')",
-  );
-});
-
-// ---------------------------------------------------------------------------
-// Overclock: the run is part of the event, so the fund is bound to that run
-// ---------------------------------------------------------------------------
-
-Deno.test("overclock: the event's own run carries the fund; a later turn's run does not", () => {
-  const overclockMove = (state: GameState) =>
-    engine.getLegalMoves(state, "runner").find((m) =>
-      m.kind === "runner.playEvent" && m.cardId === "overclock" && m.server === "hq"
+  await t.step("seamless launch: places 2 advancement counters on an upgrade", () => {
+    let s = newGame(["manegarm_skunkworks", "seamless_launch"]);
+    // Turn 1: install the upgrade only (it must not count as "installed this turn"
+    // for Seamless Launch on a later turn).
+    s =
+      play(s, "corp", { kind: "corp.install", cardId: "manegarm_skunkworks", server: "hq" }).state;
+    s = nextTurnOf(s, "corp"); // corp turn 2 (the upgrade was not installed this turn)
+    const playOp = engine.getLegalMoves(s, "corp").find((m) =>
+      m.kind === "corp.playOperation" && m.cardId === "seamless_launch"
     );
+    assertDefined(playOp, "Seamless Launch is playable");
+    s = play(s, "corp", playOp!).state;
+    const upgrade = assertDefined(
+      findInstalled(s, "manegarm_skunkworks"),
+      "the upgrade is installed",
+    );
+    assertEquals(
+      upgrade.advancement ?? 0,
+      2,
+      "Seamless Launch placed 2 counters on the upgrade ('1 installed card')",
+    );
+  });
 
-  // The premises of this test changed with the printed text: "Place 5[credit]
-  // on this event, THEN RUN ANY SERVER" (rule 5.2.2b + docs/rules-gotchas.md #8)
-  // makes the run part of the event's resolution, not a separate, click-cost
-  // action. So the fund no longer sits in `pendingRunFund` waiting for a later
-  // run — it is placed on the run the event starts, and `initiateRun` clears
-  // `pendingRunFund`, so a fund can never survive to a later turn at all.
-  let s = newGame([], ["overclock"]);
-  s = burnUntil(s, "runner");
-  const clicksBefore = s.runner.clicks;
-  const oc1 = assertDefined(overclockMove(s), "Overclock is playable");
-  s = play(s, "runner", oc1).state;
+  // ---------------------------------------------------------------------------
+  // Overclock: the run is part of the event, so the fund is bound to that run
+  // ---------------------------------------------------------------------------
 
-  assertEquals(s.run?.server, "hq", "the event initiated the run itself");
-  assertEquals(s.run?.source, "overclock", "the run's source is the event");
-  assertEquals(s.run?.fundCredits, 5, "the event's run can spend the hosted credits");
-  assertEquals(s.runner.pendingRunFund, 0, "nothing is banked for a later run");
-  assertEquals(
-    s.runner.clicks,
-    clicksBefore - 1,
-    "only the event's click was spent — no extra click for a separate run",
-  );
+  await t.step(
+    "overclock: the event's own run carries the fund; a later turn's run does not",
+    () => {
+      const overclockMove = (state: GameState) =>
+        engine.getLegalMoves(state, "runner").find((m) =>
+          m.kind === "runner.playEvent" && m.cardId === "overclock" && m.server === "hq"
+        );
 
-  // Finish the event's run, then take the runner's turn and the corp's turn.
-  for (let i = 0; i < 20 && (s.run || s.breach) && !s.winner; i++) {
-    const moves = engine.getLegalMoves(s, "runner");
-    const next = moves.find((m) =>
-      m.kind === "runner.accessRandom" || m.kind === "runner.accessCard"
-    ) ?? moves.find((m) => m.kind === "runner.finishAccess") ??
-      moves.find((m) => m.kind === "runner.continueRun");
-    assertDefined(next, "the breach/run offers a decision");
-    s = play(s, "runner", next!).state;
-  }
-  assertEquals(s.run, null, "the event's run has ended");
+      // The premises of this test changed with the printed text: "Place 5[credit]
+      // on this event, THEN RUN ANY SERVER" (rule 5.2.2b + docs/rules-gotchas.md #8)
+      // makes the run part of the event's resolution, not a separate, click-cost
+      // action. So the fund no longer sits in `pendingRunFund` waiting for a later
+      // run — it is placed on the run the event starts, and `initiateRun` clears
+      // `pendingRunFund`, so a fund can never survive to a later turn at all.
+      let s = newGame([], ["overclock"]);
+      s = burnUntil(s, "runner");
+      const clicksBefore = s.runner.clicks;
+      const oc1 = assertDefined(overclockMove(s), "Overclock is playable");
+      s = play(s, "runner", oc1).state;
 
-  let t = newGame([], ["overclock"]);
-  t = burnUntil(t, "runner");
-  t = play(t, "runner", overclockMove(t)!).state;
-  assertEquals(t.run?.fundCredits, 5, "the same-turn event run carries the hosted credits");
-  while (t.turn.player === "runner" && !t.winner) {
-    const moves = engine.getLegalMoves(t, "runner");
-    if (moves.length === 0) break;
-    t = play(t, "runner", moves[0]!).state;
-  }
-  t = burnUntil(t, "corp");
-  while (t.turn.player === "corp" && !t.winner) {
-    const moves = engine.getLegalMoves(t, "corp");
-    if (moves.length === 0) break;
-    t = play(t, "corp", moves[0]!).state;
-  }
-  t = burnUntil(t, "runner");
-  assertEquals(
-    t.runner.pendingRunFund,
-    0,
-    "the Overclock host is cleared by the next runner turn (nothing to spend)",
-  );
-  t = play(t, "runner", { kind: "runner.run", server: "archives" }).state;
-  assert(
-    t.run?.fundCredits === undefined,
-    "a run on a later turn has no Overclock fund ('during that run')",
+      assertEquals(s.run?.server, "hq", "the event initiated the run itself");
+      assertEquals(s.run?.source, "overclock", "the run's source is the event");
+      assertEquals(s.run?.fundCredits, 5, "the event's run can spend the hosted credits");
+      assertEquals(s.runner.pendingRunFund, 0, "nothing is banked for a later run");
+      assertEquals(
+        s.runner.clicks,
+        clicksBefore - 1,
+        "only the event's click was spent — no extra click for a separate run",
+      );
+
+      // Finish the event's run, then take the runner's turn and the corp's turn.
+      for (let i = 0; i < 20 && (s.run || s.breach) && !s.winner; i++) {
+        const moves = engine.getLegalMoves(s, "runner");
+        const next = moves.find((m) =>
+          m.kind === "runner.accessRandom" || m.kind === "runner.accessCard"
+        ) ??
+          moves.find((m) => m.kind === "runner.finishAccess") ??
+          moves.find((m) => m.kind === "runner.continueRun");
+        assertDefined(next, "the breach/run offers a decision");
+        s = play(s, "runner", next!).state;
+      }
+      assertEquals(s.run, null, "the event's run has ended");
+
+      let t = newGame([], ["overclock"]);
+      t = burnUntil(t, "runner");
+      t = play(t, "runner", overclockMove(t)!).state;
+      assertEquals(t.run?.fundCredits, 5, "the same-turn event run carries the hosted credits");
+      while (t.turn.player === "runner" && !t.winner) {
+        const moves = engine.getLegalMoves(t, "runner");
+        if (moves.length === 0) break;
+        t = play(t, "runner", moves[0]!).state;
+      }
+      t = burnUntil(t, "corp");
+      while (t.turn.player === "corp" && !t.winner) {
+        const moves = engine.getLegalMoves(t, "corp");
+        if (moves.length === 0) break;
+        t = play(t, "corp", moves[0]!).state;
+      }
+      t = burnUntil(t, "runner");
+      assertEquals(
+        t.runner.pendingRunFund,
+        0,
+        "the Overclock host is cleared by the next runner turn (nothing to spend)",
+      );
+      t = play(t, "runner", { kind: "runner.run", server: "archives" }).state;
+      assert(
+        t.run?.fundCredits === undefined,
+        "a run on a later turn has no Overclock fund ('during that run')",
+      );
+    },
   );
 });
