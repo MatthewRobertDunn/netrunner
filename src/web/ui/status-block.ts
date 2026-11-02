@@ -5,17 +5,20 @@
  *
  * Purely presentational: it renders the viewer-aware public player object and
  * never reads engine state. The optional interactive tiles — the own credits
- * tile (gain-credit basic action) and the own hand stat (draw basic action) —
+ * tile (gain-credit basic action) and the own hand tile (draw basic action) —
  * are enabled by passing their legal moves as props (`gainMove` / `drawMove`);
  * clicks bubble up as `move` events for the root component to apply. The
- * opponent block passes neither prop, so both tiles render as inert stat
- * elements exactly as before.
+ * opponent block passes neither prop, so both tiles render as inert elements
+ * exactly as before. Credits + agenda form the two-tile primary row; the
+ * hand tile shares their size but keeps the hand stat's usual slot in the
+ * secondary grid, with a deck glyph in place of the word "hand".
  *
  * The DOM contract is pinned by tests/ui/game_screen_test.ts: the
  * `status-opponent` / `status-own` testids, the per-side `data-side`
  * attribute, `<side>-score` on the score strip, the real `<button>` tags for
- * the interactive tiles and the scored-agenda mini-cards, and the
- * `.status-block` classes the dock's CSS layout splits evenly.
+ * the interactive tiles (`gain-credit`, `draw-card`) and the scored-agenda
+ * mini-cards, and the `.status-block` classes the dock's CSS layout splits
+ * evenly.
  */
 
 import { computed, defineComponent, ref } from "vue";
@@ -141,18 +144,24 @@ export default defineComponent({
       </div>
       <div class="status-secondary">
         <span class="stat"><img class="sym" src="assets/svg/click.svg" alt="Clicks" />{{ stats.clicks }}</span>
-        <!-- The own hand stat doubles as the Draw 1 card button (span for the
-             opponent block), same single-markup treatment as the credits tile. -->
+        <!-- The own hand tile doubles as the Draw 1 card button (inert div
+             for the opponent block), same single-markup treatment as the
+             credits tile. It keeps the hand stat's usual grid slot but
+             shares the primary tiles' size, and the deck glyph stands in
+             for the word "hand". -->
         <component
-          :is="isOwn ? 'button' : 'span'"
+          :is="isOwn ? 'button' : 'div'"
           :type="isOwn ? 'button' : undefined"
-          class="stat"
+          class="primary-stat hand"
           :class="{ clickable: !!drawMove }"
           :disabled="isOwn ? !drawMove : undefined"
           :data-testid="isOwn ? 'draw-card' : undefined"
           :title="isOwn ? 'Draw 1 card' : undefined"
           @click="drawMove && $emit('move', drawMove)"
-        >hand {{ stats.handCount }}/{{ stats.handSize }}</component>
+        >
+          <img class="sym" src="assets/svg/deck.svg" alt="Hand" />
+          <span class="primary-val">{{ stats.handCount }}/{{ stats.handSize }}</span>
+        </component>
         <span class="stat">deck {{ stats.deckCount }}</span>
         <span class="stat">{{ discardName(side) }} {{ stats.discardCount }}</span>
         <span v-if="side === 'runner' && stats.tags" class="stat"><img class="sym" src="assets/svg/tag.svg" alt="Tags" />{{ stats.tags }}</span>

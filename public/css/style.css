@@ -354,35 +354,21 @@ button.chip-btn {
   color: inherit;
 }
 /* The own credits tile doubles as the gain-credit button and the own hand
-   stat as the Draw 1 card button; both are real <button>s in the own block
+   tile as the Draw 1 card button; both are real <button>s in the own block
    and inert elements in the opponent block (same markup, <component :is>).
-   The hover/focus/disabled treatment is shared; per-tile sizing stays below. */
-button.primary-stat.clickable,
-button.stat.clickable {
+   Hover/focus/disabled treatment is shared. */
+button.primary-stat.clickable {
   cursor: pointer;
 }
-button.primary-stat.clickable:hover:not(:disabled),
-button.stat.clickable:hover:not(:disabled) {
+button.primary-stat.clickable:hover:not(:disabled) {
   border-color: var(--accent);
 }
-button.primary-stat.clickable:focus-visible,
-button.stat.clickable:focus-visible {
+button.primary-stat.clickable:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
-button.primary-stat:disabled,
-button.stat:disabled {
+button.primary-stat:disabled {
   cursor: default;
-}
-/* Per-tile sizing: the hand stat keeps the small dim text look; the font
-   reset only swaps the browser's default button font back. */
-button.stat.clickable {
-  padding: 3px 8px;
-  background: var(--bg-2);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  font: inherit;
-  font-size: 13px;
 }
 .primary-stat .sym {
   width: 22px;
@@ -396,6 +382,9 @@ button.stat.clickable {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 4px 10px;
+  /* The hand tile is primary-stat sized in this grid; centering the small
+     stats keeps them from stretching to its row height. */
+  align-items: center;
 }
 .status-secondary .stat {
   display: inline-flex;

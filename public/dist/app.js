@@ -24449,18 +24449,24 @@ var status_block_default = defineComponent({
       </div>
       <div class="status-secondary">
         <span class="stat"><img class="sym" src="assets/svg/click.svg" alt="Clicks" />{{ stats.clicks }}</span>
-        <!-- The own hand stat doubles as the Draw 1 card button (span for the
-             opponent block), same single-markup treatment as the credits tile. -->
+        <!-- The own hand tile doubles as the Draw 1 card button (inert div
+             for the opponent block), same single-markup treatment as the
+             credits tile. It keeps the hand stat's usual grid slot but
+             shares the primary tiles' size, and the deck glyph stands in
+             for the word "hand". -->
         <component
-          :is="isOwn ? 'button' : 'span'"
+          :is="isOwn ? 'button' : 'div'"
           :type="isOwn ? 'button' : undefined"
-          class="stat"
+          class="primary-stat hand"
           :class="{ clickable: !!drawMove }"
           :disabled="isOwn ? !drawMove : undefined"
           :data-testid="isOwn ? 'draw-card' : undefined"
           :title="isOwn ? 'Draw 1 card' : undefined"
           @click="drawMove && $emit('move', drawMove)"
-        >hand {{ stats.handCount }}/{{ stats.handSize }}</component>
+        >
+          <img class="sym" src="assets/svg/deck.svg" alt="Hand" />
+          <span class="primary-val">{{ stats.handCount }}/{{ stats.handSize }}</span>
+        </component>
         <span class="stat">deck {{ stats.deckCount }}</span>
         <span class="stat">{{ discardName(side) }} {{ stats.discardCount }}</span>
         <span v-if="side === 'runner' && stats.tags" class="stat"><img class="sym" src="assets/svg/tag.svg" alt="Tags" />{{ stats.tags }}</span>

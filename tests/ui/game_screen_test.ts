@@ -214,11 +214,12 @@ Deno.test("GameScreen status dock side panel", async (t) => {
         assert(text.includes(String(expected.handCount)), `${side} hand count`);
         assert(text.includes(String(expected.deckCount)), `${side} deck count`);
         assert(text.includes(String(expected.discardCount)), `${side} discard count`);
-        // Credits + agenda points are the prominent stats.
+        // Credits + agenda points are the prominent tiles (the hand tile
+        // shares their look but lives in the secondary grid).
         assertEquals(
-          block.findAll(".primary-stat").length,
+          block.find(".status-primary").findAll(".primary-stat").length,
           2,
-          `${side} has prominent credits + agenda stats`,
+          `${side} has prominent credits + agenda tiles`,
         );
       }
 
@@ -263,7 +264,7 @@ Deno.test("GameScreen status dock side panel", async (t) => {
     }
   });
 
-  await t.step("own hand stat takes the draw action", async () => {
+  await t.step("own hand tile takes the draw action", async () => {
     for (const humanSide of ["corp", "runner"] as const) {
       const { state } = dockActionFixture(humanSide);
       assertEquals(state.turn.player, humanSide, `it is ${humanSide}'s turn`);
@@ -287,17 +288,31 @@ Deno.test("GameScreen status dock side panel", async (t) => {
       }
 
       const draw = own.find('[data-testid="draw-card"]');
-      assert(draw.exists(), `own hand stat is the draw button (${humanSide})`);
-      assertEquals(draw.element.tagName.toLowerCase(), "button", "hand stat is a real button");
-      assert(draw.classes().includes("clickable"), "hand stat is clickable while legal");
+      assert(draw.exists(), `own hand tile is the draw button (${humanSide})`);
+      assertEquals(draw.element.tagName.toLowerCase(), "button", "hand tile is a real button");
+      assert(draw.classes().includes("primary-stat"), "hand tile shares the primary tile look");
+      assert(
+        draw.element.parentElement?.classList.contains("status-secondary"),
+        "hand tile keeps its slot in the secondary grid",
+      );
+      assert(draw.classes().includes("clickable"), "hand tile is clickable while legal");
       assertEquals(draw.attributes("disabled"), undefined, "draw enabled on the human turn");
       assertEquals(draw.attributes("title"), "Draw 1 card", "tooltip names the action");
-      assert(/^hand \d+\/\d+$/.test(draw.text().trim()), "visible hand text kept");
+      assert(/^\d+\/\d+$/.test(draw.text().trim()), "hand tile shows count/hand-size");
 
-      // Only the OWN block converts: the opponent's hand stat stays a span.
-      const oppHand = opp.findAll(".stat").filter((s) => s.text().trim().startsWith("hand"));
-      assertEquals(oppHand.length, 1, "opponent block shows its hand stat");
-      assertEquals(oppHand[0]!.element.tagName.toLowerCase(), "span", "opponent hand stays a span");
+      // Only the OWN block converts: the opponent's hand tile stays an inert div.
+      const oppHand = opp.find(".primary-stat.hand");
+      assert(oppHand.exists(), "opponent block shows its hand tile");
+      assertEquals(
+        oppHand.element.tagName.toLowerCase(),
+        "div",
+        "opponent hand stays an inert div",
+      );
+      assertEquals(
+        oppHand.find('[data-testid="draw-card"]').exists(),
+        false,
+        "opponent hand tile has no draw button",
+      );
 
       await draw.trigger("click");
       const emitted = wrapper.emitted("move") as unknown[][] | undefined;
