@@ -149,8 +149,6 @@ export interface RunState {
   rezCostIncrease?: number;
   /** Manegarm Skunkworks toll has been satisfied this run. */
   tollPaid?: boolean;
-  /** Encounter has begun for the current approach (guards duplicate logs). */
-  encounterStarted?: boolean;
 }
 
 export interface BreachState {
@@ -335,8 +333,6 @@ export interface PlayerState {
   hqBreachesThisTurn: number;
   /** Once-per-turn ability tracking, keyed `${instanceId}:${abilityIndex}`. */
   usedOncePerTurn: string[];
-  /** Credits banked for the next run this turn (Overclock). */
-  pendingRunFund: number;
 }
 
 export interface GameState {

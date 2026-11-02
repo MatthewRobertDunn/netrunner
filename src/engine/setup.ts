@@ -226,7 +226,6 @@ function freshPlayer(side: PlayerSide, identityId: string, index: number): {
       ranServersThisTurn: [],
       hqBreachesThisTurn: 0,
       usedOncePerTurn: [],
-      pendingRunFund: 0,
     },
   };
 }

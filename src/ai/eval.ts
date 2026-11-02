@@ -169,7 +169,7 @@ function playerTerm(state: GameState, side: PlayerSide): number {
   if (toGo >= 1 && toGo <= 2) s += W_TARGET_PROXIMITY * (3 - toGo);
 
   // Resources.
-  s += W_CREDIT * (me.credits + me.pendingRunFund);
+  s += W_CREDIT * me.credits;
   s += W_CLICK * me.clicks;
   s += (side === "corp" ? W_CORP_HAND : W_RUNNER_HAND) * me.hand.length;
   if (me.deck.length <= 3) s -= W_DECK_DANGER * (4 - me.deck.length);

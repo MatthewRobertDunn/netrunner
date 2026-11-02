@@ -46,6 +46,7 @@ import {
   runnerInstallCost,
   serverById,
   serverExists,
+  setGameOver,
   spendClicks,
   spendCredits,
 } from "./state.ts";
@@ -194,10 +195,12 @@ function applyResolvedMove(state: GameState, playerSide: PlayerSide, move: Move)
     }
     case "corp.draw": {
       spendClicks(state, "corp", 1);
+      // Unreachable defense-in-depth: enumeration never offers a basic draw
+      // from an empty R&D — the mandatory-draw loss (rule 1.7.2c) is handled
+      // in beginCorpTurn. setGameOver still flips the phase to game-over if a
+      // fabricated move ever lands here.
       if (state.corp.deck.length === 0) {
-        state.winner = "runner";
-        state.winReason = "Corp drew from an empty R&D";
-        state.log.push({ type: "game-end", winner: "runner", reason: state.winReason });
+        setGameOver(state, "runner", "Corp drew from an empty R&D");
         return;
       }
       drawCards(state, "corp", 1);
@@ -250,10 +253,11 @@ function applyResolvedMove(state: GameState, playerSide: PlayerSide, move: Move)
       const verbal = runner.installed.some((c) =>
         triggersOf(c.cardId).some((t) => t.kind === "first-basic-draw-double")
       );
+      // Unreachable defense-in-depth: enumeration never offers a basic draw
+      // from an empty Stack. setGameOver still flips the phase to game-over if
+      // a fabricated move ever lands here.
       if (runner.deck.length === 0) {
-        state.winner = "corp";
-        state.winReason = "Runner drew from an empty Stack";
-        state.log.push({ type: "game-end", winner: "corp", reason: state.winReason });
+        setGameOver(state, "corp", "Runner drew from an empty Stack");
         return;
       }
       const count = verbal && !runner.basicDrawThisTurn ? 2 : 1;

@@ -79,8 +79,6 @@ export function rezCard(
 
 /** Initiate a run; sets up the run state and the initiation phase. */
 export function initiateRun(state: GameState, server: ServerId, source?: string): void {
-  const fund = state.runner.pendingRunFund;
-  state.runner.pendingRunFund = 0;
   state.run = {
     server,
     position: null,
@@ -90,7 +88,6 @@ export function initiateRun(state: GameState, server: ServerId, source?: string)
     successful: false,
     unsuccessful: false,
     source,
-    fundCredits: fund > 0 ? fund : undefined,
   };
   state.breach = null;
   state.log.push({ type: "run-start", server, source });
@@ -125,7 +122,6 @@ export function beginEncounter(state: GameState): void {
   run.phase = "encounter-ice";
   run.broken = [];
   run.resolved = [];
-  run.encounterStarted = true;
   // Safety: each encounter starts with no leftover pumps, making "no boost
   // outside an encounter" (rule 3.9.5b) local to the encounter. All pumps in
   // the card pool are encounter-duration; a "for the remainder of this run"
@@ -157,7 +153,6 @@ function passCurrentIce(state: GameState): void {
   run.position -= 1;
   run.phase = "approach-ice";
   run.currentIceId = ice[run.position]!.id;
-  run.encounterStarted = false;
   state.log.push({ type: "approach-ice", cardId: run.currentIceId });
 }
 
