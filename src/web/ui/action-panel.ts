@@ -94,6 +94,10 @@ export default defineComponent({
       </template>
 
       <template v-else>
+        <!-- Everything below is the own sheet's Actions area: the access
+             notice, the prompt box, or the general moves list. -->
+        <h3 class="sheet-heading">Actions</h3>
+
         <!-- Access decisions live on the card popup (rule 7.2.2), so the
              action panel shows nothing while one is pending. Clicking the
              notice reopens the popup. -->

@@ -11,7 +11,7 @@ deno check src/mod.ts
 deno check src/web/entry.ts   # the Vue UI; src/mod.ts does not import it
 # (deno not on PATH? it lives at /usr/local/bin/deno — see the note below)
 
-# Format check, lint, check, and test suite in one task (119 tests / 164 steps;
+# Format check, lint, check, and test suite in one task (120 tests / 170 steps;
 # ~27 s measured 2026-11-01)
 deno task verify
 
@@ -76,10 +76,10 @@ deno task publish
   input view (events excepted). `public-status.ts` is the both-players intersection.
 - **Rules citations:** engine comments cite rules like "rule 7.1.6". When touching rule logic, read
   the cited section in `docs/rules-v26.03.txt` — see `docs/rules-gotchas.md` for known trip-hazards.
-  When a bug fixes/lands, add a gotchas entry in the same commit so the trap isn't reintroduced
-  (the review loop asks for this). Never edit `docs/rules-v26.03.txt`; recorded interpretations live
-  in `docs/rules-questions.md` — and if an implementation changes, update the doc the same commit
-  (a stale doc is a silent lie).
+  When a bug fixes/lands, add a gotchas entry in the same commit so the trap isn't reintroduced (the
+  review loop asks for this). Never edit `docs/rules-v26.03.txt`; recorded interpretations live in
+  `docs/rules-questions.md` — and if an implementation changes, update the doc the same commit (a
+  stale doc is a silent lie).
 - **Prompt answers are moves too.** `prompt.answer` is the only way to resolve Seamless Launch,
   Brân, Send a Message, Manegarm, and other decisions — card-effect regressions hide at the prompt
   boundary, so every choose-one option must be answered end-to-end in a test. See the "Pinned by
@@ -144,5 +144,5 @@ or commits.
     config directly with `crane mutate`, bypassing the Dockerfile entirely (there is no Dockerfile
     anymore — it was deleted after exactly this divergence broke a deploy). Change the CMD there.
 12. **`crane mutate --cmd` comma-splits its value.** `--cmd "--allow-env=PORT,AUTO_PORT"` becomes
-    two CMD entries (`--allow-env=PORT`, `AUTO_PORT`) and Deno tries to run `AUTO_PORT` as a
-    script. Pass repeated flags instead: `--cmd "--allow-env=PORT" --cmd "--allow-env=AUTO_PORT"`.
+    two CMD entries (`--allow-env=PORT`, `AUTO_PORT`) and Deno tries to run `AUTO_PORT` as a script.
+    Pass repeated flags instead: `--cmd "--allow-env=PORT" --cmd "--allow-env=AUTO_PORT"`.

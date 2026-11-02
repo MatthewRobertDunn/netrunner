@@ -30,13 +30,12 @@ access phase (after the Runner breaches), or only after the Runner finishes acce
 
 **Answer.** **At the end of the run, after the access phase.** The engine trashes Mayfly in
 `finishRun` (`src/engine/runs.ts`), which every run end funnels through: after the access phase
-completes, when the Runner jacks out, or when the run is otherwise ended. (If the game ends
-mid-run, `settle` clears the run without calling `finishRun`, so the delayed ability never
-resolves — the game is already over.) This is the conservative reading and matches the "trash this
-program when this run ends" trigger timing: per rule 9.6.13 the ability is a delayed conditional
-ability that resolves when the run ends, and per rule 6.8.5 conditions related to a run ending are
-met at step 6.9.6d, when the run timing structure is complete — not as soon as an "end the run"
-effect resolves.
+completes, when the Runner jacks out, or when the run is otherwise ended. (If the game ends mid-run,
+`settle` clears the run without calling `finishRun`, so the delayed ability never resolves — the
+game is already over.) This is the conservative reading and matches the "trash this program when
+this run ends" trigger timing: per rule 9.6.13 the ability is a delayed conditional ability that
+resolves when the run ends, and per rule 6.8.5 conditions related to a run ending are met at step
+6.9.6d, when the run timing structure is complete — not as soon as an "end the run" effect resolves.
 
 ---
 

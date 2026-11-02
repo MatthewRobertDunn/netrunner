@@ -24,6 +24,7 @@
 import { computed, defineComponent, ref, watch } from "vue";
 import type { PropType } from "vue";
 import ActionPanel from "./action-panel.ts";
+import CardSheet, { buildSheetGroups, INSTALLED_ACTION_KINDS } from "./card-sheet.ts";
 import CardTile from "./card-tile.ts";
 import CardZoom from "./card-zoom.ts";
 import ServerColumn from "./server-column.ts";
@@ -46,7 +47,7 @@ import {
 
 export default defineComponent({
   name: "GameScreen",
-  components: { ActionPanel, CardTile, CardZoom, ServerColumn, StatusBlock },
+  components: { ActionPanel, CardSheet, CardTile, CardZoom, ServerColumn, StatusBlock },
   props: {
     state: { type: Object as PropType<GameState>, required: true },
     humanSide: { type: String as PropType<PlayerSide>, required: true },
@@ -223,12 +224,44 @@ export default defineComponent({
     const serverRows = computed(() => status.value.servers);
 
     /**
+     * The human's interaction is blocked while a prompt or access decision
+     * owns the decision (the ActionPanel takes over then); per-card actions
+     *  on the own sheet are silenced in that window.
+     */
+    const blocked = computed(() =>
+      Boolean(props.state.winner || prompt.value || accessedCard.value)
+    );
+
+    /** The own sheet's card groups: precomputed rows with per-card actions. */
+    const ownGroups = computed(() =>
+      buildSheetGroups({
+        state: props.state,
+        side: props.humanSide,
+        isOwn: true,
+        legal: legal.value,
+        blocked: blocked.value,
+      })
+    );
+    /** The opponent sheet's card groups: titles and counters only, never
+     *  actions (another player's decisions are not this seat's interface). */
+    const opponentGroups = computed(() =>
+      buildSheetGroups({
+        state: props.state,
+        side: opponentSide.value,
+        isOwn: false,
+        legal: [],
+        blocked: true,
+      })
+    );
+
+    /**
      * Move-kind groups used to route moves between the UI surfaces: `card`
      * kinds render on their hand-card tile (and its popup), `tile` kinds live
      * on the side-panel status tiles (gain-credit on the credits tile, draw on
-     * the hand stat), and `run` kinds have their own per-server Run buttons.
-     * One map instead of three hand-maintained lists — a new move kind joins
-     * exactly one group. */
+     * the hand stat), `run` kinds have their own per-server Run buttons, and
+     * `installed` kinds live under their card in the card sheet. One map
+     * instead of four hand-maintained lists — a new move kind joins exactly
+     * one group. */
     const MOVE_KIND_GROUPS = {
       card: new Set<string>([
         "runner.install",
@@ -367,11 +400,16 @@ export default defineComponent({
      *  deliberately excluded: every server already has its own Run button
      *  under it, so listing them here too only duplicates the row. The
      *  gain-credit and draw moves live on the own credits/hand tiles in
-     *  the side panel, so they are excluded here too. */
+     *  the side panel, so they are excluded here too. Installed-card actions
+     *  (abilities, break, pump) live under their card in the card sheet, so
+     *  they are excluded here as well — the no-duplicates rule. */
     const generalMoves = computed<Move[]>(
       () =>
         legal.value.filter((m: Move) =>
-          !isCardMove(m) && !MOVE_KIND_GROUPS.run.has(m.kind) && !hostedOnTile(m)
+          !isCardMove(m) &&
+          !MOVE_KIND_GROUPS.run.has(m.kind) &&
+          !hostedOnTile(m) &&
+          !INSTALLED_ACTION_KINDS.has(m.kind)
         ),
     );
 
@@ -491,6 +529,8 @@ export default defineComponent({
       handActionsFor,
       shortActionLabel,
       moveLabel,
+      ownGroups,
+      opponentGroups,
       identityImgFailed,
     };
   },
@@ -581,30 +621,6 @@ export default defineComponent({
           </template>
         </section>
 
-        <!-- Action panel: winner/waiting banners, access notice, prompt box
-             (incl. the discard picker) and the moves list. -->
-        <section class="action-row">
-          <action-panel
-            :human-turn="isHumanTurn"
-            :thinking="thinking"
-            :ai-side-name="aiSideName"
-            :winner="state.winner"
-            :win-reason="state.winReason"
-            :label="moveLabel"
-            :accessed-card-id="accessedCard ? accessedCard.cardId : null"
-            :prompt="prompt"
-            :legal="legal"
-            :general-moves="generalMoves"
-            :hand="hand"
-            :discard-selected="discardSelected"
-            :can-discard="canDiscard"
-            @move="play"
-            @discard-toggle="toggleDiscard"
-            @discard-submit="submitDiscard"
-            @open-access="openAccessZoom"
-          />
-        </section>
-
         <!-- Hand (own grip, direct grid child via .hand-area wrapper). -->
         <section class="hand-area">
           <div class="hand-row runner-hand" data-testid="human-hand">
@@ -632,6 +648,55 @@ export default defineComponent({
           <span v-for="(w, i) in warnings" :key="i">⚠ {{ w }}</span>
         </div>
       </div><!-- /game-main -->
+
+      <!-- Card dock: the vertical sidebar between the board and the game log.
+           Opponent sheet on top, own sheet at the bottom, splitting the
+           viewport 50/50 (the same treatment as the status dock). The own
+           sheet carries the ActionPanel (winner/waiting banners, access
+           notice, prompt box incl. the discard picker, and the general
+           moves list) in its Actions area; its card groups add the
+           per-card action buttons (abilities, break, pump) below each
+           installed card. -->
+        <section class="card-dock" data-testid="card-dock">
+          <card-sheet
+            :side="opponentSide"
+            :is-own="false"
+            :active="state.turn.player === opponentSide"
+            :groups="opponentGroups"
+            @move="play"
+            @zoom="zoom"
+          />
+          <card-sheet
+            :side="ownSide"
+            :is-own="true"
+            :active="state.turn.player === ownSide"
+            :groups="ownGroups"
+            @move="play"
+            @zoom="zoom"
+          >
+            <template #actions>
+              <action-panel
+                :human-turn="isHumanTurn"
+                :thinking="thinking"
+                :ai-side-name="aiSideName"
+                :winner="state.winner"
+                :win-reason="state.winReason"
+                :label="moveLabel"
+                :accessed-card-id="accessedCard ? accessedCard.cardId : null"
+                :prompt="prompt"
+                :legal="legal"
+                :general-moves="generalMoves"
+                :hand="hand"
+                :discard-selected="discardSelected"
+                :can-discard="canDiscard"
+                @move="play"
+                @discard-toggle="toggleDiscard"
+                @discard-submit="submitDiscard"
+                @open-access="openAccessZoom"
+              />
+            </template>
+          </card-sheet>
+        </section>
 
       <!-- Log dock (right sidebar). -->
       <aside class="log-dock" :class="{ collapsed: !logOpen }">

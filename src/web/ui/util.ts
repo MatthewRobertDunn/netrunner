@@ -304,10 +304,13 @@ export function describeMove(state: GameState, move: Move): string {
         ? prompt.options.find((o) => o.id === move.optionId)
         : undefined;
       if (option) {
+        // Option labels that already embed their cost (the rez window prints
+        // "Rez X (3[credit])") must not get the cost appended a second time.
+        const embedsCost = /\[(?:credit|click)\]/.test(option.label);
         const costs: string[] = [];
         if (option.creditCost) costs.push(`${option.creditCost} [credit]`);
         if (option.clickCost) costs.push(`${option.clickCost} [click]`);
-        return option.label + (costs.length ? ` (${costs.join(", ")})` : "");
+        return option.label + (costs.length && !embedsCost ? ` (${costs.join(", ")})` : "");
       }
       // The reserved "pass" answer (see `PromptOption.id`) is the engine's
       // decline/cancel — it has no option entry to look up in some prompts

@@ -16913,6 +16913,7 @@ __export(mod_exports, {
   RandomAI: () => RandomAI,
   applyMove: () => applyMove,
   availableCredits: () => availableCredits,
+  breakAbilityDef: () => breakAbilityDef,
   cardDef: () => cardDef,
   cardSupportReport: () => cardSupportReport,
   cardVisibleTo: () => cardVisibleTo,
@@ -16926,7 +16927,9 @@ __export(mod_exports, {
   getPublicGameStatusFor: () => getPublicGameStatusFor,
   makeAIDecisionContext: () => makeAIDecisionContext,
   makeRng: () => makeRng,
+  paidAbilitiesOf: () => paidAbilitiesOf,
   playGame: () => playGame,
+  pumpAbilityDef: () => pumpAbilityDef,
   randomAI: () => randomAI,
   startGame: () => startGame,
   starterDeckConfigs: () => starterDeckConfigs,
@@ -18882,6 +18885,9 @@ function pumpAbilityDef(cardId) {
 }
 function subroutinesOf(cardId) {
   return behaviors.get(cardId)?.subroutines ?? [];
+}
+function paidAbilitiesOf(cardId) {
+  return behaviors.get(cardId)?.paidAbilities ?? [];
 }
 function triggersOf(cardId) {
   return behaviors.get(cardId)?.triggers ?? [];
@@ -23503,10 +23509,11 @@ function describeMove(state, move) {
       const prompt = state.prompts.find((p2) => p2.id === move.promptId);
       const option = prompt && "options" in prompt ? prompt.options.find((o) => o.id === move.optionId) : void 0;
       if (option) {
+        const embedsCost = /\[(?:credit|click)\]/.test(option.label);
         const costs = [];
         if (option.creditCost) costs.push(`${option.creditCost} [credit]`);
         if (option.clickCost) costs.push(`${option.clickCost} [click]`);
-        return option.label + (costs.length ? ` (${costs.join(", ")})` : "");
+        return option.label + (costs.length && !embedsCost ? ` (${costs.join(", ")})` : "");
       }
       if (move.optionId === PASS_OPTION_ID) return "Decline";
       return move.optionId;
@@ -23752,6 +23759,10 @@ var action_panel_default = defineComponent({
       </template>
 
       <template v-else>
+        <!-- Everything below is the own sheet's Actions area: the access
+             notice, the prompt box, or the general moves list. -->
+        <h3 class="sheet-heading">Actions</h3>
+
         <!-- Access decisions live on the card popup (rule 7.2.2), so the
              action panel shows nothing while one is pending. Clicking the
              notice reopens the popup. -->
@@ -23821,6 +23832,200 @@ var action_panel_default = defineComponent({
         </div>
       </template>
     </div>
+  `
+});
+
+// src/web/ui/card-sheet.ts
+var SHEET_GROUP_TYPES = [
+  "program",
+  "hardware",
+  "resource"
+];
+var SHEET_GROUP_TITLES = {
+  program: "Programs",
+  hardware: "Hardware",
+  resource: "Resources"
+};
+function sheetTokens(card) {
+  const tokens = [];
+  if (card.hostedCredits) tokens.push({
+    kind: "credits",
+    value: card.hostedCredits
+  });
+  const printed = cardOf(card.cardId)?.strength ?? null;
+  if (printed !== null) {
+    tokens.push({
+      kind: "strength",
+      value: printed + (card.strengthBoost ?? 0)
+    });
+  }
+  return tokens;
+}
+function installedAction(card, move) {
+  switch (move.kind) {
+    case "runner.ability": {
+      const def2 = paidAbilitiesOf(card.cardId)[move.abilityIndex];
+      const base = def2?.title ?? `Ability ${move.abilityIndex + 1}`;
+      return {
+        key: moveKey(move),
+        label: move.server ? `${base} \u2014 ${serverLabel(move.server)}` : base,
+        move,
+        clickCost: def2?.clickCost,
+        creditCost: def2?.creditCost
+      };
+    }
+    case "runner.breakSubroutine": {
+      return {
+        key: moveKey(move),
+        label: `Break sub ${move.subIndex + 1}`,
+        move,
+        creditCost: breakAbilityDef(card.cardId)?.creditCost
+      };
+    }
+    case "runner.pumpIcebreaker": {
+      const pump = pumpAbilityDef(card.cardId);
+      return {
+        key: moveKey(move),
+        label: pump ? `+${pump.amount} strength` : "Pump strength",
+        move,
+        creditCost: pump?.creditCost
+      };
+    }
+    default:
+      return {
+        key: moveKey(move),
+        label: move.kind,
+        move
+      };
+  }
+}
+function actionsForCard(card, legal) {
+  return legal.filter((m) => {
+    switch (m.kind) {
+      case "runner.ability":
+        return m.targetId === card.id;
+      case "runner.breakSubroutine":
+      case "runner.pumpIcebreaker":
+        return m.programId === card.id;
+      default:
+        return false;
+    }
+  });
+}
+var INSTALLED_ACTION_KINDS = /* @__PURE__ */ new Set([
+  "runner.ability",
+  "runner.breakSubroutine",
+  "runner.pumpIcebreaker"
+]);
+function buildSheetGroups(opts) {
+  if (opts.side !== "runner") return [];
+  const groups = [];
+  for (const type of SHEET_GROUP_TYPES) {
+    const cards2 = [];
+    for (const card of opts.state.runner.installed) {
+      if (cardOf(card.cardId)?.type !== type) continue;
+      cards2.push({
+        id: card.id,
+        cardId: card.cardId,
+        title: cardTitle(card.cardId),
+        tokens: sheetTokens(card),
+        actions: opts.isOwn && !opts.blocked ? actionsForCard(card, opts.legal).map((m) => installedAction(card, m)) : []
+      });
+    }
+    if (cards2.length) groups.push({
+      key: type,
+      title: SHEET_GROUP_TITLES[type],
+      cards: cards2
+    });
+  }
+  return groups;
+}
+var card_sheet_default = defineComponent({
+  name: "CardSheet",
+  props: {
+    /** Which player this sheet shows (drives colors and the empty note). */
+    side: {
+      type: String,
+      required: true
+    },
+    /** Whether this is the human player's own sheet (actions allowed). */
+    isOwn: {
+      type: Boolean,
+      default: false
+    },
+    /** Whether this side is the turn's acting player (highlight). */
+    active: {
+      type: Boolean,
+      default: false
+    },
+    /** Precomputed groups (see buildSheetGroups). */
+    groups: {
+      type: Array,
+      required: true
+    }
+  },
+  emits: [
+    "move",
+    "zoom"
+  ],
+  setup() {
+    return {};
+  },
+  template: `
+    <section
+      class="card-sheet"
+      :class="[side, { own: isOwn, active }]"
+      :data-testid="isOwn ? 'sheet-own' : 'sheet-opponent'"
+      :data-side="side"
+    >
+      <header class="sheet-who">
+        <span class="who">{{ side === 'corp' ? 'CORP' : 'RUNNER' }}<template v-if="isOwn"> (you)</template></span>
+        <span v-if="active" class="acting-tag">acting</span>
+        <span v-if="!isOwn" class="opp-tag">opponent</span>
+      </header>
+      <div class="sheet-body">
+        <slot name="actions"></slot>
+        <section v-for="g in groups" :key="g.key" class="sheet-group" :data-group="g.key">
+          <h3 class="sheet-heading">{{ g.title }}</h3>
+          <div v-for="row in g.cards" :key="row.id" class="sheet-card" :data-card-id="row.cardId">
+            <button
+              type="button"
+              class="sheet-card-title"
+              :title="row.title + ' \u2014 click for the card text'"
+              @click="$emit('zoom', row.cardId)"
+            >{{ row.title }}</button>
+            <div v-if="row.tokens.length" class="sheet-tokens">
+              <span
+                v-for="(t, i) in row.tokens"
+                :key="i"
+                class="sheet-token"
+                :class="t.kind"
+                :title="t.kind === 'credits' ? 'Hosted credits' : 'Strength'"
+              >
+                <img v-if="t.kind === 'credits'" class="sym" src="assets/svg/credit.svg" alt="credits" />
+                <em v-else class="tok-name">str</em>{{ t.value }}
+              </span>
+            </div>
+            <div v-if="row.actions.length" class="sheet-card-actions">
+              <button
+                v-for="a in row.actions"
+                :key="a.key"
+                class="move-btn card-action-btn"
+                :data-move="a.move.kind"
+                @click="$emit('move', a.move)"
+              >
+                <span v-if="a.clickCost" class="cost"><img class="sym" src="assets/svg/click.svg" alt="clicks" />{{ a.clickCost }}</span>
+                <span v-if="a.creditCost" class="cost"><img class="sym" src="assets/svg/credit.svg" alt="credits" />{{ a.creditCost }}</span>
+                <span class="lbl">{{ a.label }}</span>
+              </button>
+            </div>
+          </div>
+        </section>
+        <div v-if="!groups.length" class="sheet-empty">
+          {{ side === 'corp' ? 'Corp cards are on the board.' : 'No cards installed.' }}
+        </div>
+      </div>
+    </section>
   `
 });
 
@@ -24299,6 +24504,7 @@ var game_default = defineComponent({
   name: "GameScreen",
   components: {
     ActionPanel: action_panel_default,
+    CardSheet: card_sheet_default,
     CardTile: card_tile_default,
     CardZoom: card_zoom_default,
     ServerColumn: server_column_default,
@@ -24428,6 +24634,21 @@ var game_default = defineComponent({
       return actions;
     });
     const serverRows = computed2(() => status.value.servers);
+    const blocked = computed2(() => Boolean(props.state.winner || prompt.value || accessedCard.value));
+    const ownGroups = computed2(() => buildSheetGroups({
+      state: props.state,
+      side: props.humanSide,
+      isOwn: true,
+      legal: legal.value,
+      blocked: blocked.value
+    }));
+    const opponentGroups = computed2(() => buildSheetGroups({
+      state: props.state,
+      side: opponentSide.value,
+      isOwn: false,
+      legal: [],
+      blocked: true
+    }));
     const MOVE_KIND_GROUPS = {
       card: /* @__PURE__ */ new Set([
         "runner.install",
@@ -24514,7 +24735,7 @@ var game_default = defineComponent({
     function runMove(server) {
       return legal.value.find((m) => m.kind === "runner.run" && m.server === server);
     }
-    const generalMoves = computed2(() => legal.value.filter((m) => !isCardMove(m) && !MOVE_KIND_GROUPS.run.has(m.kind) && !hostedOnTile(m)));
+    const generalMoves = computed2(() => legal.value.filter((m) => !isCardMove(m) && !MOVE_KIND_GROUPS.run.has(m.kind) && !hostedOnTile(m) && !INSTALLED_ACTION_KINDS.has(m.kind)));
     function cardMoves(cardId) {
       if (!isHumanTurn.value || prompt.value) return [];
       return legal.value.filter((m) => MOVE_KIND_GROUPS.card.has(m.kind) && "cardId" in m && m.cardId === cardId);
@@ -24603,6 +24824,8 @@ var game_default = defineComponent({
       handActionsFor,
       shortActionLabel,
       moveLabel,
+      ownGroups,
+      opponentGroups,
       identityImgFailed
     };
   },
@@ -24693,30 +24916,6 @@ var game_default = defineComponent({
           </template>
         </section>
 
-        <!-- Action panel: winner/waiting banners, access notice, prompt box
-             (incl. the discard picker) and the moves list. -->
-        <section class="action-row">
-          <action-panel
-            :human-turn="isHumanTurn"
-            :thinking="thinking"
-            :ai-side-name="aiSideName"
-            :winner="state.winner"
-            :win-reason="state.winReason"
-            :label="moveLabel"
-            :accessed-card-id="accessedCard ? accessedCard.cardId : null"
-            :prompt="prompt"
-            :legal="legal"
-            :general-moves="generalMoves"
-            :hand="hand"
-            :discard-selected="discardSelected"
-            :can-discard="canDiscard"
-            @move="play"
-            @discard-toggle="toggleDiscard"
-            @discard-submit="submitDiscard"
-            @open-access="openAccessZoom"
-          />
-        </section>
-
         <!-- Hand (own grip, direct grid child via .hand-area wrapper). -->
         <section class="hand-area">
           <div class="hand-row runner-hand" data-testid="human-hand">
@@ -24744,6 +24943,55 @@ var game_default = defineComponent({
           <span v-for="(w, i) in warnings" :key="i">\u26A0 {{ w }}</span>
         </div>
       </div><!-- /game-main -->
+
+      <!-- Card dock: the vertical sidebar between the board and the game log.
+           Opponent sheet on top, own sheet at the bottom, splitting the
+           viewport 50/50 (the same treatment as the status dock). The own
+           sheet carries the ActionPanel (winner/waiting banners, access
+           notice, prompt box incl. the discard picker, and the general
+           moves list) in its Actions area; its card groups add the
+           per-card action buttons (abilities, break, pump) below each
+           installed card. -->
+        <section class="card-dock" data-testid="card-dock">
+          <card-sheet
+            :side="opponentSide"
+            :is-own="false"
+            :active="state.turn.player === opponentSide"
+            :groups="opponentGroups"
+            @move="play"
+            @zoom="zoom"
+          />
+          <card-sheet
+            :side="ownSide"
+            :is-own="true"
+            :active="state.turn.player === ownSide"
+            :groups="ownGroups"
+            @move="play"
+            @zoom="zoom"
+          >
+            <template #actions>
+              <action-panel
+                :human-turn="isHumanTurn"
+                :thinking="thinking"
+                :ai-side-name="aiSideName"
+                :winner="state.winner"
+                :win-reason="state.winReason"
+                :label="moveLabel"
+                :accessed-card-id="accessedCard ? accessedCard.cardId : null"
+                :prompt="prompt"
+                :legal="legal"
+                :general-moves="generalMoves"
+                :hand="hand"
+                :discard-selected="discardSelected"
+                :can-discard="canDiscard"
+                @move="play"
+                @discard-toggle="toggleDiscard"
+                @discard-submit="submitDiscard"
+                @open-access="openAccessZoom"
+              />
+            </template>
+          </card-sheet>
+        </section>
 
       <!-- Log dock (right sidebar). -->
       <aside class="log-dock" :class="{ collapsed: !logOpen }">

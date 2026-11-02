@@ -13,13 +13,25 @@ and the test that pins the fix.
    sat _inside_ `.action-row`, whose panel is only as tall as its buttons). The 50/50 status-dock
    split had the same disease: the halves divided a log-driven page height instead of the viewport.
    Now: `.game` aligns to `flex-start`, and `.game-main` hands its leftover height to `.servers`
-   (`flex: 1 0 auto` with `min-height: 340px` — the play area grows, while the action panel and
-   hand keep their content sizes). Both docks are `position: sticky` capped to `100vh - 24px` with
-   internal scroll. **Manual check only — no `deno test` pins this.** Re-measure
-   `actionRowH == actionPanelH` and confirm the action→hand gap is exactly the 10px grid gap in the
-   browser after touching this layout. Files: `public/css/style.css`.
+   (`flex: 1 0 auto` with `min-height: 340px` — the play area grows, while the action panel and hand
+   keep their content sizes). Both docks are `position: sticky` capped to `100vh - 24px` with
+   internal scroll. **Manual check only — no `deno test` pins this.** Confirm the servers/board
+   fills the play column, and that no dock drives the page height (see entry 2 for the dock that
+   replaced the action row). Files: `public/css/style.css`.
 
-2. **The access zoom is the human's decision prompt, not any access.** `accessedCard` in
+2. **The card dock replaced the action row; it lives beside the board, not inside `.game-main`.**
+   The vertical sidebar (opponent sheet on top, own sheet at the bottom, splitting the viewport
+   50/50 like the status dock) is a direct child of `.game`, between the play column and the log
+   dock. Written first inside `.game-main`, the play column's `flex: 1` absorbed it and the dock
+   collapsed into a 250px black strip under the board. The own sheet carries the ActionPanel through
+   an `#actions` slot; the panel's chrome is suppressed inside the sheet
+   (`.sheet-body > .action-panel`), so the Actions area reads as a section heading, not a box inside
+   a box. The old `actionRowH == actionPanelH` measurement above is superseded: re-measure the two
+   sheets' equal heights and the dock's bottom line against the other docks instead. Files:
+   `src/web/ui/game.ts`, `src/web/ui/card-sheet.ts`, `public/css/style.css`. Tests:
+   `tests/ui/game_screen_test.ts` ("card dock: sheets, per-card actions, no duplicates").
+
+3. **The access zoom is the human's decision prompt, not any access.** `accessedCard` in
    `src/web/ui/game.ts` resolved every `access-decision` prompt, so during the AI Runner's turn the
    zoom auto-opened on each access and closed ~60ms later when the AI answered — a dialog flashing
    with no possible input. It now only resolves prompts with `player === humanSide` (same gate in
@@ -27,7 +39,22 @@ and the test that pins the fix.
    `src/web/ui/game.ts`. Tests: `tests/ui/game_screen_test.ts` ("only the human's own access
    decision pops the zoom").
 
-3. **Ice stacks: order lives in TWO places, and unrezzed ice must stay IN POSITION.** The engine
+4. **A sheet card row has exactly one button (the title) on opponent sheets.** The title is a zoom
+   button; token chips and per-card actions are `<span>`/`<button>` children of the row, but the row
+   itself is not a button container. The opponent sheet must never render actions — another player's
+   decisions are not this seat's interface — so the row's only button is the title. A test asserting
+   `row.findAll("button").length === 1` pins this. Files: `src/web/ui/card-sheet.ts`. Tests:
+   `tests/ui/game_screen_test.ts`.
+
+5. **Installed-card actions are routed by a shared kind table, not by hand-maintained lists.**
+   `INSTALLED_ACTION_KINDS` in `src/web/ui/card-sheet.ts` (`runner.ability`,
+   `runner.breakSubroutine`, `runner.pumpIcebreaker`) is the single place that decides which moves
+   render under a card; GameScreen's `generalMoves` filters the same set out of the Actions list.
+   Adding a new under-card action kind updates exactly one table — duplicating the filter in two
+   places is how duplicates (the same "Break sub 1" button under the program AND in the Actions
+   list) get introduced. Files: `src/web/ui/card-sheet.ts`, `src/web/ui/game.ts`.
+
+6. **Ice stacks: order lives in TWO places, and unrezzed ice must stay IN POSITION.** The engine
    lists ice innermost-first (`ServerState.ice`), but the corp seat renders the stack top-down on
    the runner side, so ServerColumn reverses the array there (`iceSlots` computed) — without it the
    corp seat draws mirrored stacks and the RUN badge runs the wrong way. Never "fix" this with

@@ -38,7 +38,13 @@
  */
 
 import { cardDef, tryCardDef } from "./cards/catalogue.ts";
-import { cardSupportReport, supportStatus } from "./cards/effects.ts";
+import {
+  breakAbilityDef,
+  cardSupportReport,
+  paidAbilitiesOf,
+  pumpAbilityDef,
+  supportStatus,
+} from "./cards/effects.ts";
 import {
   starterDeckConfigs,
   starterPoolCardIds,
@@ -102,8 +108,11 @@ export function starterDeckSupport() {
 }
 
 export {
+  breakAbilityDef,
   cardDef,
   cardSupportReport,
+  paidAbilitiesOf,
+  pumpAbilityDef,
   starterDeckConfigs,
   starterPoolCardIds,
   supportStatus,

@@ -10,7 +10,7 @@ import { mount } from "@vue/test-utils";
 import { assert, assertDefined, assertEquals } from "../helpers/assert.ts";
 import { accessDecisionFixture, createTestFixture, publicStatusFor } from "./fixture.ts";
 import { engine } from "../../src/mod.ts";
-import type { Move, PlayerSide } from "../../src/types.ts";
+import type { GameState, Move, PlayerSide } from "../../src/types.ts";
 import GameScreen from "../../src/web/ui/game.ts";
 import {
   continueRun,
@@ -741,5 +741,135 @@ Deno.test("GameScreen truthful labels, banner wording, and hosted counters", asy
     const texts = wrapper.findAll(".prompt-box .moves button").map((b) => b.text());
     assert(texts.includes("Decline"), `a Decline button renders, got: ${texts.join(" | ")}`);
     assertEquals(texts.includes("pass"), false, "the raw reserved id never renders");
+  });
+});
+
+Deno.test("GameScreen card dock: sheets, per-card actions, no duplicates", async (t) => {
+  /**
+   * A runner-turn state with Smartware Distributor installed: the resource's
+   * "[click]: Place 3 credits" paid ability becomes a per-card action button
+   * on the runner's own sheet, and its hosted credits render as a token.
+   */
+  function runnerWithSmartware(plays: Move[] = []): GameState {
+    const decks = starterDeckPair();
+    let state = engine.startGame({
+      corp: decks.corp,
+      runner: runnerDeckStartingWith(["smartware_distributor"]),
+      mode: "starter-decks",
+      seed: 5,
+    });
+    state = endCorpTurn(state);
+    const install = engine.getLegalMoves(state, "runner").find(
+      (m) => m.kind === "runner.install" && m.cardId === "smartware_distributor",
+    );
+    if (!install || install.kind !== "runner.install") {
+      throw new Error("the runner cannot install smartware_distributor on turn 1");
+    }
+    state = play(state, "runner", install);
+    for (const m of plays) state = play(state, "runner", m);
+    return state;
+  }
+
+  await t.step("opponent sheet renders on top, own sheet below, per seat", () => {
+    for (const humanSide of ["corp", "runner"] as const) {
+      const { state } = createTestFixture(42, humanSide);
+      const wrapper = mount(GameScreen, { props: { state, humanSide } });
+      const sheets = wrapper.findAll('[data-testid="card-dock"] > .card-sheet');
+      assertEquals(sheets.length, 2, `two sheets in the dock (${humanSide})`);
+      assertEquals(
+        sheets[0]!.attributes("data-side"),
+        humanSide === "corp" ? "runner" : "corp",
+        `the opponent sheet is first (${humanSide})`,
+      );
+      assertEquals(
+        sheets[1]!.attributes("data-side"),
+        humanSide,
+        `own sheet is second (${humanSide})`,
+      );
+      assertEquals(sheets[0]!.attributes("data-testid"), "sheet-opponent", "opponent testid");
+      assertEquals(sheets[1]!.attributes("data-testid"), "sheet-own", "own testid");
+    }
+  });
+
+  await t.step("the runner's own sheet lists installed cards with per-card actions", () => {
+    const state = runnerWithSmartware();
+    const wrapper = mount(GameScreen, { props: { state, humanSide: "runner" } });
+    const own = wrapper.find('[data-testid="sheet-own"]');
+    const resourceGroup = own.find('.sheet-group[data-group="resource"]');
+    assert(resourceGroup.exists(), "a Resources group renders on the own sheet");
+    const row = resourceGroup.find('.sheet-card[data-card-id="smartware_distributor"]');
+    assert(row.exists(), "the Smartware Distributor row renders");
+    assertEquals(row.find(".sheet-card-title").text().trim(), "Smartware Distributor");
+    const actions = row.findAll(".sheet-card-actions button");
+    assertEquals(actions.length, 1, "one ability button under the card");
+    assert(
+      actions[0]!.text().includes("Place 3 credits"),
+      `the printed ability title labels the button, got: ${actions[0]!.text()}`,
+    );
+    assertEquals(actions[0]!.attributes("data-move"), "runner.ability");
+  });
+
+  await t.step("per-card actions never duplicate in the Actions list", () => {
+    const state = runnerWithSmartware();
+    const wrapper = mount(GameScreen, { props: { state, humanSide: "runner" } });
+    const general = wrapper.find('[data-testid="action-moves"]');
+    assert(general.exists(), "the Actions list renders");
+    assertEquals(
+      general.findAll('button[data-move="runner.ability"]').length,
+      0,
+      "no ability button in the general Actions list",
+    );
+  });
+
+  await t.step("playing the ability loads a hosted-credit token on the card", () => {
+    const state = runnerWithSmartware();
+    const ability = engine.getLegalMoves(state, "runner").find((m) => m.kind === "runner.ability");
+    if (!ability || ability.kind !== "runner.ability") throw new Error("no ability move offered");
+    const loaded = play(state, "runner", ability);
+    const wrapper = mount(GameScreen, { props: { state: loaded, humanSide: "runner" } });
+    const row = wrapper.find('.sheet-card[data-card-id="smartware_distributor"]');
+    const token = row.find(".sheet-token.credits");
+    assert(token.exists(), "a hosted-credits token renders under the card");
+    assertEquals(token.text().trim(), "3", "the token reads the hosted credit count");
+  });
+
+  await t.step("the opponent sheet shows cards and tokens but never actions", () => {
+    // Same state, corp seat: the runner's installed resource is public, the
+    // runner's decisions are not the corp's interface.
+    const state = runnerWithSmartware();
+    const wrapper = mount(GameScreen, { props: { state, humanSide: "corp" } });
+    const opp = wrapper.find('[data-testid="sheet-opponent"]');
+    const row = opp.find('.sheet-card[data-card-id="smartware_distributor"]');
+    assert(row.exists(), "the opponent runner's installed card is listed");
+    assertEquals(
+      row.findAll("button").length,
+      1,
+      "the row's only button is the title (zoom); no action buttons",
+    );
+    assertEquals(row.find(".sheet-card-actions").exists(), false, "no action row at all");
+    // The corp's own sheet: actions only, no card groups (corp cards are on
+    // the board).
+    const own = wrapper.find('[data-testid="sheet-own"]');
+    assertEquals(
+      own.findAll(".sheet-group").length,
+      0,
+      "the corp's own sheet lists no card groups",
+    );
+    assert(
+      own.text().includes("Corp cards are on the board."),
+      "the corp sheet explains its empty card area",
+    );
+  });
+
+  await t.step("clicking a sheet card title opens the zoom popup", async () => {
+    const state = runnerWithSmartware();
+    const wrapper = mount(GameScreen, { props: { state, humanSide: "runner" } });
+    const title = wrapper.find(
+      '.sheet-card[data-card-id="smartware_distributor"] .sheet-card-title',
+    );
+    await title.trigger("click");
+    const zoom = wrapper.find('[data-testid="card-zoom"]');
+    assert(zoom.exists(), "the zoom popup opened from the sheet");
+    assert(zoom.text().includes("Smartware Distributor"), "the popup shows the card");
   });
 });

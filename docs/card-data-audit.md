@@ -89,5 +89,5 @@ and a `decks` object with `runner` and `corp` entries, each containing:
 | `follows_basic_deckbuilding_rules` | NetrunnerDB basic-deckbuilding validity flag |
 
 The engine's `DeckConfig` shape is `{ identity, cards: { cardId, count }[] }`; the fixture loader
-(`src/decks/starter-decks-cyberclick-v1.ts`) drops the identity entry from `cards` and re-adds it
-as `identity`.
+(`src/decks/starter-decks-cyberclick-v1.ts`) drops the identity entry from `cards` and re-adds it as
+`identity`.

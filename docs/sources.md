@@ -2,10 +2,9 @@
 
 ## Rules
 
-- **Netrunner Comprehensive Rules v26.03.** Text dump at
-  `docs/rules-v26.03.txt` (~7,312 lines). The HTML was fetched from the official Netrunner
-  Comprehensive Rules page; the text dump was cleaned and verified against the following sections
-  used by the engine:
+- **Netrunner Comprehensive Rules v26.03.** Text dump at `docs/rules-v26.03.txt` (~7,312 lines). The
+  HTML was fetched from the official Netrunner Comprehensive Rules page; the text dump was cleaned
+  and verified against the following sections used by the engine:
   - 1.6.4–1.6.7 (starting credits, starting hand, mulligans, first turn)
   - 1.7 (ending the game: flatline, decking, agenda-point target)
   - 10.2 (public/private information)
