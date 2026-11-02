@@ -23939,7 +23939,9 @@ var card_sheet_default = defineComponent({
       type: Boolean,
       default: false
     },
-    /** Whether this side is the turn's acting player (highlight). */
+    /** Whether this side is the turn's acting player (border highlight
+     *  only — the ACTING badge lives in the status dock's block, and a
+     *  second badge here was just noise). */
     active: {
       type: Boolean,
       default: false
@@ -23966,7 +23968,6 @@ var card_sheet_default = defineComponent({
     >
       <header class="sheet-who">
         <span class="who">{{ side === 'corp' ? 'CORP' : 'RUNNER' }}<template v-if="isOwn"> (you)</template></span>
-        <span v-if="active" class="acting-tag">acting</span>
         <span v-if="!isOwn" class="opp-tag">opponent</span>
       </header>
       <div class="sheet-body">

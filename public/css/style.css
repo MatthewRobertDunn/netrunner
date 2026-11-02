@@ -750,18 +750,11 @@ button.server-card {
   letter-spacing: 0.6px;
   color: var(--dim);
 }
-.sheet-who .acting-tag,
 .sheet-who .opp-tag {
   font-size: 10px;
   font-weight: 700;
   padding: 1px 7px;
   border-radius: 10px;
-}
-.sheet-who .acting-tag {
-  background: var(--accent);
-  color: #04131f;
-}
-.sheet-who .opp-tag {
   background: var(--bg-2);
   color: var(--dim);
 }
