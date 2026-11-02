@@ -23966,10 +23966,9 @@ var card_sheet_default = defineComponent({
       :data-testid="isOwn ? 'sheet-own' : 'sheet-opponent'"
       :data-side="side"
     >
-      <header class="sheet-who">
-        <span class="who">{{ side === 'corp' ? 'CORP' : 'RUNNER' }}<template v-if="isOwn"> (you)</template></span>
-        <span v-if="!isOwn" class="opp-tag">opponent</span>
-      </header>
+      <!-- No header: which seat a sheet shows is carried by its position in
+           the dock (opponent on top, own at the bottom) and its side-colored
+           border, not by a label \u2014 the status dock names the players. -->
       <div class="sheet-body">
         <slot name="actions"></slot>
         <section v-for="g in groups" :key="g.key" class="sheet-group" :data-group="g.key">

@@ -738,26 +738,6 @@ button.server-card {
   border-color: var(--accent);
   box-shadow: 0 0 0 1px var(--accent) inset;
 }
-.sheet-who {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: none;
-}
-.sheet-who .who {
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.6px;
-  color: var(--dim);
-}
-.sheet-who .opp-tag {
-  font-size: 10px;
-  font-weight: 700;
-  padding: 1px 7px;
-  border-radius: 10px;
-  background: var(--bg-2);
-  color: var(--dim);
-}
 .sheet-body {
   flex: 1 1 0;
   min-height: 0;
