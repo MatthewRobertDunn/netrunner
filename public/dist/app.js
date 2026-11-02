@@ -19566,8 +19566,6 @@ function rezCard(state, card, free = false) {
   return true;
 }
 function initiateRun(state, server, source) {
-  const fund = state.runner.pendingRunFund;
-  state.runner.pendingRunFund = 0;
   state.run = {
     server,
     position: null,
@@ -19576,8 +19574,7 @@ function initiateRun(state, server, source) {
     resolved: [],
     successful: false,
     unsuccessful: false,
-    source,
-    fundCredits: fund > 0 ? fund : void 0
+    source
   };
   state.breach = null;
   state.log.push({
@@ -19615,7 +19612,6 @@ function beginEncounter(state) {
   run.phase = "encounter-ice";
   run.broken = [];
   run.resolved = [];
-  run.encounterStarted = true;
   expireIcebreakerPumps(state);
   state.log.push({
     type: "encounter-ice",
@@ -19639,7 +19635,6 @@ function passCurrentIce(state) {
   run.position -= 1;
   run.phase = "approach-ice";
   run.currentIceId = ice[run.position].id;
-  run.encounterStarted = false;
   state.log.push({
     type: "approach-ice",
     cardId: run.currentIceId
@@ -20274,7 +20269,6 @@ function resetTurnState(state, side) {
   p2.ranServersThisTurn = [];
   p2.hqBreachesThisTurn = 0;
   p2.usedOncePerTurn = [];
-  p2.pendingRunFund = 0;
 }
 function beginCorpTurn(state) {
   resetTurnState(state, "corp");
@@ -21384,13 +21378,7 @@ function applyResolvedMove(state, playerSide, move) {
     case "corp.draw": {
       spendClicks(state, "corp", 1);
       if (state.corp.deck.length === 0) {
-        state.winner = "runner";
-        state.winReason = "Corp drew from an empty R&D";
-        state.log.push({
-          type: "game-end",
-          winner: "runner",
-          reason: state.winReason
-        });
+        setGameOver(state, "runner", "Corp drew from an empty R&D");
         return;
       }
       drawCards(state, "corp", 1);
@@ -21437,13 +21425,7 @@ function applyResolvedMove(state, playerSide, move) {
       const runner = state.runner;
       const verbal = runner.installed.some((c) => triggersOf(c.cardId).some((t) => t.kind === "first-basic-draw-double"));
       if (runner.deck.length === 0) {
-        state.winner = "corp";
-        state.winReason = "Runner drew from an empty Stack";
-        state.log.push({
-          type: "game-end",
-          winner: "corp",
-          reason: state.winReason
-        });
+        setGameOver(state, "corp", "Runner drew from an empty Stack");
         return;
       }
       const count = verbal && !runner.basicDrawThisTurn ? 2 : 1;
@@ -21863,8 +21845,7 @@ function basePlayerState(view, side) {
     hqBreachesThisTurn: section.turnState.hqBreachesThisTurn,
     usedOncePerTurn: [
       ...section.turnState.usedOncePerTurn
-    ],
-    pendingRunFund: section.turnState.pendingRunFund
+    ]
   };
 }
 function promptFromStub(stub) {
@@ -22017,8 +21998,7 @@ function determinize(view, ctx, rng) {
     source: view.run.source,
     fundCredits: view.run.fundCredits,
     rezCostIncrease: view.run.rezCostIncrease,
-    tollPaid: view.run.tollPaid,
-    encounterStarted: view.run.phase === "encounter-ice"
+    tollPaid: view.run.tollPaid
   } : null;
   const breach = view.breach ? {
     server: view.breach.server,
@@ -22508,8 +22488,7 @@ function freshPlayer(side, identityId, index) {
       successfulRunThisTurn: false,
       ranServersThisTurn: [],
       hqBreachesThisTurn: 0,
-      usedOncePerTurn: [],
-      pendingRunFund: 0
+      usedOncePerTurn: []
     }
   };
 }
@@ -22656,7 +22635,13 @@ function turnStateOf(state, side) {
     usedOncePerTurn: [
       ...p2.usedOncePerTurn
     ],
-    pendingRunFund: p2.pendingRunFund
+    /**
+     * Always 0 — Overclock's fund rides on `run.fundCredits`, never on the
+     * player. The key stays in the view because it is part of the fingerprint
+     * `decisionSeedFor` hashes (src/ai/context.ts): removing it would change
+     * every AI decision seed and every EvalAI game.
+     */
+    pendingRunFund: 0
   };
 }
 function currentIceView(state, viewer) {
@@ -23013,7 +22998,7 @@ function playerTerm(state, side) {
   s += W_AGENDA_POINT * me.agendaPoints;
   const toGo = state.agendaPointTarget - me.agendaPoints;
   if (toGo >= 1 && toGo <= 2) s += W_TARGET_PROXIMITY * (3 - toGo);
-  s += W_CREDIT * (me.credits + me.pendingRunFund);
+  s += W_CREDIT * me.credits;
   s += W_CLICK * me.clicks;
   s += (side === "corp" ? W_CORP_HAND : W_RUNNER_HAND) * me.hand.length;
   if (me.deck.length <= 3) s -= W_DECK_DANGER * (4 - me.deck.length);
