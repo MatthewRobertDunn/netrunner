@@ -1,25 +1,27 @@
 /**
  * ActionPanel: the action-row panel (extracted from GameScreen).
  *
- * Shows, in priority order: the winner banner, the waiting banner (the AI is
- * acting), the human's turn UI — an access notice (reopens the card popup),
- * a prompt box (discard picker or one button per legal move), or the general
- * moves list. It holds no game logic and never sees the engine state: the
- * root passes scalars (`winner`/`winReason`), an `aiSideName` for the waiting
- * banners, and a `label(move)` callback that resolves move labels against the
- * authoritative state. Every click bubbles up as a `move` or `discard` event
- * for the root component to apply.
+ * Shows, in priority order: the waiting banner (the AI is acting), the
+ * human's turn UI — an access notice (reopens the card popup), a prompt box
+ * (discard picker or one button per legal move), or the general moves list.
+ * The game-over announcement is NOT here: it is the WinModal, a dialog over
+ * the play surface (a win banner in this narrow per-card sidebar read as a
+ * stray control). It holds no game logic and never sees the engine state:
+ * the root passes scalars (`aiSideName` for the waiting banner) and a
+ * `label(move)` callback that resolves move labels against the authoritative
+ * state. Every click bubbles up as a `move` or `discard` event for the root
+ * component to apply.
  *
  * The DOM contract is pinned by tests/ui/game_screen_test.ts: the
  * `action-panel`, `action-moves`, `prompt`, `access-notice`, and
- * `discard-submit` testids, and the `.banner-win` / `.banner-wait` /
+ * `discard-submit` testids, and the `.banner-wait` /
  * `.banner-access` / `.prompt-box` / `.discard-picker` / `.pick-slot` /
  * `.moves` / `.move-btn` classes.
  */
 
 import { computed, defineComponent } from "vue";
 import type { PropType } from "vue";
-import type { CardInstance, Move, PlayerSide, Prompt } from "../../types.ts";
+import type { CardInstance, Move, Prompt } from "../../types.ts";
 import CardTile from "./card-tile.ts";
 import { cardTitle, moveKey, promptTitle } from "./util.ts";
 
@@ -33,10 +35,6 @@ export default defineComponent({
     thinking: { type: Boolean, default: false },
     /** The side the AI plays, for the thinking/waiting banner wording. */
     aiSideName: { type: String, default: "Corp" },
-    /** The game winner, or null while the game runs. */
-    winner: { type: String as PropType<PlayerSide | "draw" | null>, default: null },
-    /** Why the game ended (rendered next to the winner). */
-    winReason: { type: String as PropType<string | null>, default: null },
     /** Human-readable label for a legal move — resolved by the root, which
      *  owns the engine state (this panel stays logic-free). */
     label: { type: Function as PropType<(m: Move) => string>, required: true },
@@ -60,8 +58,6 @@ export default defineComponent({
     humanTurn: boolean;
     thinking: boolean;
     aiSideName: string;
-    winner: PlayerSide | "draw" | null;
-    winReason: string | null;
     label: (m: Move) => string;
     accessedCardId: string | null;
     prompt: Prompt | null;
@@ -82,11 +78,7 @@ export default defineComponent({
   },
   template: `
     <div class="action-panel" data-testid="action-panel">
-      <template v-if="winner">
-        <div class="banner-win">Winner: {{ winner }} <span v-if="winReason">({{ winReason }})</span></div>
-      </template>
-
-      <template v-else-if="!humanTurn">
+      <template v-if="!humanTurn">
         <div class="banner-wait">
           <template v-if="thinking">{{ aiSideName }} is planning its move…</template>
           <template v-else>Waiting for the {{ aiSideName }}…</template>

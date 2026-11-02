@@ -23674,16 +23674,6 @@ var action_panel_default = defineComponent({
       type: String,
       default: "Corp"
     },
-    /** The game winner, or null while the game runs. */
-    winner: {
-      type: String,
-      default: null
-    },
-    /** Why the game ended (rendered next to the winner). */
-    winReason: {
-      type: String,
-      default: null
-    },
     /** Human-readable label for a legal move — resolved by the root, which
      *  owns the engine state (this panel stays logic-free). */
     label: {
@@ -23747,11 +23737,7 @@ var action_panel_default = defineComponent({
   },
   template: `
     <div class="action-panel" data-testid="action-panel">
-      <template v-if="winner">
-        <div class="banner-win">Winner: {{ winner }} <span v-if="winReason">({{ winReason }})</span></div>
-      </template>
-
-      <template v-else-if="!humanTurn">
+      <template v-if="!humanTurn">
         <div class="banner-wait">
           <template v-if="thinking">{{ aiSideName }} is planning its move\u2026</template>
           <template v-else>Waiting for the {{ aiSideName }}\u2026</template>
@@ -24499,6 +24485,86 @@ var status_block_default = defineComponent({
   `
 });
 
+// src/web/ui/win-modal.ts
+var win_modal_default = defineComponent({
+  name: "WinModal",
+  props: {
+    /** The game winner (drives the dialog's name line). */
+    winner: {
+      type: String,
+      required: true
+    },
+    /** Why the game ended (rendered under the winner). */
+    winReason: {
+      type: String,
+      default: null
+    }
+  },
+  emits: [
+    "new-game",
+    "dismiss"
+  ],
+  setup() {
+    const backdropRef = ref(null);
+    let previousFocus = null;
+    onMounted(() => {
+      const doc2 = globalThis;
+      previousFocus = doc2.document?.activeElement ?? null;
+      backdropRef.value?.focus();
+    });
+    onUnmounted(() => {
+      previousFocus?.focus();
+      previousFocus = null;
+    });
+    function trapTab(e) {
+      const root = backdropRef.value;
+      if (!root) return;
+      const stops = [
+        root
+      ];
+      const buttons = root.querySelectorAll("button");
+      for (let i = 0; i < buttons.length; i++) {
+        const button = buttons[i];
+        if (!button.disabled) stops.push(button);
+      }
+      const doc2 = globalThis;
+      const current = doc2.document?.activeElement;
+      const at = current ? stops.indexOf(current) : -1;
+      const from = at === -1 ? 0 : at;
+      e.preventDefault();
+      const next = e.shiftKey ? stops[(from - 1 + stops.length) % stops.length] : stops[(from + 1) % stops.length];
+      next?.focus();
+    }
+    return {
+      backdropRef,
+      trapTab
+    };
+  },
+  template: `
+    <div
+      ref="backdropRef"
+      class="win-backdrop"
+      role="dialog"
+      aria-modal="true"
+      :aria-label="'Game over: ' + winner"
+      @click.self="$emit('dismiss')"
+      @keydown.escape="$emit('dismiss')"
+      @keydown.tab="trapTab"
+      tabindex="0"
+      data-testid="win-modal"
+    >
+      <div class="win-card">
+        <div class="win-eyebrow">Game over</div>
+        <div class="win-name">{{ winner }}</div>
+        <p v-if="winReason" class="win-reason">{{ winReason }}</p>
+        <button class="move-btn primary" @click="$emit('new-game')" data-testid="win-new-game">
+          New game
+        </button>
+      </div>
+    </div>
+  `
+});
+
 // src/web/ui/game.ts
 var game_default = defineComponent({
   name: "GameScreen",
@@ -24508,7 +24574,8 @@ var game_default = defineComponent({
     CardTile: card_tile_default,
     CardZoom: card_zoom_default,
     ServerColumn: server_column_default,
-    StatusBlock: status_block_default
+    StatusBlock: status_block_default,
+    WinModal: win_modal_default
   },
   props: {
     state: {
@@ -24634,6 +24701,11 @@ var game_default = defineComponent({
       return actions;
     });
     const serverRows = computed2(() => status.value.servers);
+    const winDismissed = ref(false);
+    watch2(() => props.state.winner, () => {
+      winDismissed.value = false;
+    });
+    const winModalOpen = computed2(() => Boolean(props.state.winner) && !winDismissed.value);
     const blocked = computed2(() => Boolean(props.state.winner || prompt.value || accessedCard.value));
     const ownGroups = computed2(() => buildSheetGroups({
       state: props.state,
@@ -24803,6 +24875,8 @@ var game_default = defineComponent({
       serverRows,
       gainCreditsMove,
       drawMove,
+      winDismissed,
+      winModalOpen,
       hqIdentity,
       hqIdentityImg,
       name,
@@ -24847,10 +24921,19 @@ var game_default = defineComponent({
           <button class="ghost-btn" @click="$emit('new-game')">New game</button>
         </div>
         <div v-if="state.winner || (!state.winner && isAiTurn && thinking) || lastWarning" class="status-alerts">
-          <span v-if="state.winner" class="chip win" data-testid="winner">
+          <!-- The Winner chip doubles as the win-modal reopen button: the
+               dialog is dismissible (review the final board), so the chip is
+               its way back. -->
+          <button
+            v-if="state.winner"
+            class="chip win chip-btn"
+            data-testid="winner"
+            title="Show the game-over dialog again"
+            @click="winDismissed = false"
+          >
             Winner: {{ state.winner }}
             <template v-if="state.winReason"> \u2014 {{ state.winReason }}</template>
-          </span>
+          </button>
           <span v-if="!state.winner && isAiTurn && thinking" class="chip thinking" data-testid="ai-thinking">
             {{ aiSideName }} is thinking\u2026
           </span>
@@ -24947,8 +25030,8 @@ var game_default = defineComponent({
       <!-- Card dock: the vertical sidebar between the board and the game log.
            Opponent sheet on top, own sheet at the bottom, splitting the
            viewport 50/50 (the same treatment as the status dock). The own
-           sheet carries the ActionPanel (winner/waiting banners, access
-           notice, prompt box incl. the discard picker, and the general
+           sheet carries the ActionPanel (waiting banner, access notice,
+           prompt box incl. the discard picker, and the general
            moves list) in its Actions area; its card groups add the
            per-card action buttons (abilities, break, pump) below each
            installed card. -->
@@ -24974,8 +25057,6 @@ var game_default = defineComponent({
                 :human-turn="isHumanTurn"
                 :thinking="thinking"
                 :ai-side-name="aiSideName"
-                :winner="state.winner"
-                :win-reason="state.winReason"
                 :label="moveLabel"
                 :accessed-card-id="accessedCard ? accessedCard.cardId : null"
                 :prompt="prompt"
@@ -25015,6 +25096,19 @@ var game_default = defineComponent({
         :actions="zoomActions"
         @close="closeZoom"
         @move="playFromZoom"
+      />
+
+      <!-- Game over: a dialog over the play surface (the announcement used to
+           be a banner in the action panel, which is now the card dock's
+           Actions area \u2014 too narrow to announce an ending). Esc/backdrop
+           dismiss to the final board; the status dock's Winner chip reopens;
+           the button restarts. -->
+      <win-modal
+        v-if="winModalOpen"
+        :winner="state.winner"
+        :win-reason="state.winReason"
+        @new-game="$emit('new-game')"
+        @dismiss="winDismissed = true"
       />
     </div>
   `

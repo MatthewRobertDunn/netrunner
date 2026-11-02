@@ -14,7 +14,8 @@
  *                      (opponent + own, one component instead of two copies)
  *   - ServerColumn   — one server column (server card/label, root row, ice
  *                      stack, Run button; corp-seat flip stays in CSS)
- *   - ActionPanel    — winner/waiting banners, access notice, prompt box
+ *   - ActionPanel    — waiting banner, access notice, prompt box, moves list
+ *   - WinModal      — the game-over dialog (winner + win reason + New game)
  *                      (incl. the discard picker) and the moves list
  *
  * Layout: Corp across the top (servers, ice), run/breach banner in the
@@ -29,6 +30,7 @@ import CardTile from "./card-tile.ts";
 import CardZoom from "./card-zoom.ts";
 import ServerColumn from "./server-column.ts";
 import StatusBlock from "./status-block.ts";
+import WinModal from "./win-modal.ts";
 import { availableCredits, cardDef, engine } from "../../mod.ts";
 import type { CardInstance, GameState, Move, PlayerSide, PublicGameStatus } from "../../types.ts";
 import {
@@ -47,7 +49,7 @@ import {
 
 export default defineComponent({
   name: "GameScreen",
-  components: { ActionPanel, CardSheet, CardTile, CardZoom, ServerColumn, StatusBlock },
+  components: { ActionPanel, CardSheet, CardTile, CardZoom, ServerColumn, StatusBlock, WinModal },
   props: {
     state: { type: Object as PropType<GameState>, required: true },
     humanSide: { type: String as PropType<PlayerSide>, required: true },
@@ -222,6 +224,20 @@ export default defineComponent({
     });
 
     const serverRows = computed(() => status.value.servers);
+
+    /**
+     * The game-over dialog: open the moment the game ends; Esc or a backdrop
+     * click dismisses it to the final board (the ending stays reviewable),
+     * and the status dock's Winner chip reopens it. A new game resets the
+     * dismissal. The old win banner in the action panel is gone — a full-
+     * width announcement in the narrow per-card sidebar read as a stray
+     * control (docs/ui-gotchas.md, the card-dock entry).
+     */
+    const winDismissed = ref(false);
+    watch(() => props.state.winner, () => {
+      winDismissed.value = false;
+    });
+    const winModalOpen = computed(() => Boolean(props.state.winner) && !winDismissed.value);
 
     /**
      * The human's interaction is blocked while a prompt or access decision
@@ -508,6 +524,8 @@ export default defineComponent({
       serverRows,
       gainCreditsMove,
       drawMove,
+      winDismissed,
+      winModalOpen,
       hqIdentity,
       hqIdentityImg,
       name,
@@ -552,10 +570,19 @@ export default defineComponent({
           <button class="ghost-btn" @click="$emit('new-game')">New game</button>
         </div>
         <div v-if="state.winner || (!state.winner && isAiTurn && thinking) || lastWarning" class="status-alerts">
-          <span v-if="state.winner" class="chip win" data-testid="winner">
+          <!-- The Winner chip doubles as the win-modal reopen button: the
+               dialog is dismissible (review the final board), so the chip is
+               its way back. -->
+          <button
+            v-if="state.winner"
+            class="chip win chip-btn"
+            data-testid="winner"
+            title="Show the game-over dialog again"
+            @click="winDismissed = false"
+          >
             Winner: {{ state.winner }}
             <template v-if="state.winReason"> — {{ state.winReason }}</template>
-          </span>
+          </button>
           <span v-if="!state.winner && isAiTurn && thinking" class="chip thinking" data-testid="ai-thinking">
             {{ aiSideName }} is thinking…
           </span>
@@ -652,8 +679,8 @@ export default defineComponent({
       <!-- Card dock: the vertical sidebar between the board and the game log.
            Opponent sheet on top, own sheet at the bottom, splitting the
            viewport 50/50 (the same treatment as the status dock). The own
-           sheet carries the ActionPanel (winner/waiting banners, access
-           notice, prompt box incl. the discard picker, and the general
+           sheet carries the ActionPanel (waiting banner, access notice,
+           prompt box incl. the discard picker, and the general
            moves list) in its Actions area; its card groups add the
            per-card action buttons (abilities, break, pump) below each
            installed card. -->
@@ -679,8 +706,6 @@ export default defineComponent({
                 :human-turn="isHumanTurn"
                 :thinking="thinking"
                 :ai-side-name="aiSideName"
-                :winner="state.winner"
-                :win-reason="state.winReason"
                 :label="moveLabel"
                 :accessed-card-id="accessedCard ? accessedCard.cardId : null"
                 :prompt="prompt"
@@ -720,6 +745,19 @@ export default defineComponent({
         :actions="zoomActions"
         @close="closeZoom"
         @move="playFromZoom"
+      />
+
+      <!-- Game over: a dialog over the play surface (the announcement used to
+           be a banner in the action panel, which is now the card dock's
+           Actions area — too narrow to announce an ending). Esc/backdrop
+           dismiss to the final board; the status dock's Winner chip reopens;
+           the button restarts. -->
+      <win-modal
+        v-if="winModalOpen"
+        :winner="state.winner"
+        :win-reason="state.winReason"
+        @new-game="$emit('new-game')"
+        @dismiss="winDismissed = true"
       />
     </div>
   `,

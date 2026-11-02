@@ -222,6 +222,12 @@ body {
   color: var(--win);
   border-color: var(--win);
 }
+/* A chip that is a real button (the Winner chip reopens the win modal);
+   the button reset keeps the chip look. */
+button.chip-btn {
+  cursor: pointer;
+  font: inherit;
+}
 .chip.thinking {
   color: var(--accent);
   border-color: var(--accent);
@@ -892,7 +898,6 @@ button.server-card {
   border-radius: 10px;
   padding: 12px;
 }
-.banner-win,
 .banner-wait {
   display: grid;
   place-items: center;
@@ -909,11 +914,6 @@ button.server-card {
 .banner-access:hover {
   border-color: var(--accent);
   color: var(--text);
-}
-.banner-win {
-  color: var(--win);
-  font-weight: 700;
-  font-size: 18px;
 }
 
 .prompt-title {
@@ -1387,6 +1387,56 @@ button.card-tile {
 .zoom-enter-from,
 .zoom-leave-to {
   opacity: 0;
+}
+
+/* Win modal (game-over dialog) ----------------------------------------- */
+/* Same contract as the zoom backdrop: fixed overlay, focus on open, Esc
+   closes (restarts), focus trap on Tab. The card is a centred panel with
+   the winner in accent type — the announcement the old banner-win in the
+   action panel used to make. */
+.win-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  background: rgba(4, 8, 16, 0.82);
+  backdrop-filter: blur(4px);
+  padding: 24px;
+}
+.win-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 30px 44px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+  text-align: center;
+  max-width: 420px;
+}
+.win-eyebrow {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1.6px;
+  color: var(--dim);
+}
+.win-name {
+  font-size: 30px;
+  font-weight: 800;
+  color: var(--win);
+  text-transform: capitalize;
+}
+.win-reason {
+  margin: 0;
+  color: var(--dim);
+  font-size: 13px;
+}
+.win-card .move-btn {
+  margin-top: 10px;
+  padding: 8px 22px;
 }
 
 @media (max-width: 720px) {

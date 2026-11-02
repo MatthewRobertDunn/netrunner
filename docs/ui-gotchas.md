@@ -54,7 +54,17 @@ and the test that pins the fix.
    places is how duplicates (the same "Break sub 1" button under the program AND in the Actions
    list) get introduced. Files: `src/web/ui/card-sheet.ts`, `src/web/ui/game.ts`.
 
-6. **Ice stacks: order lives in TWO places, and unrezzed ice must stay IN POSITION.** The engine
+6. **Game over is a modal, not a sidebar banner.** The win announcement lived in the action panel
+   when that was a full-width row; once the panel moved into the card dock's own sheet (a narrow
+   per-card sidebar), the banner read as a stray control half its width. The announcement is now
+   WinModal (a dialog over the play surface, same focus-trap contract as CardZoom) that opens
+   automatically on `state.winner` and is dismissible — Esc/backdrop reveal the final board, and the
+   status dock's Winner chip (`data-testid="winner"`, a real `<button>`) reopens it. Don't move the
+   announcement back into ActionPanel on the next "the modal is annoying" pass; make the modal less
+   intrusive instead. Files: `src/web/ui/win-modal.ts`, `src/web/ui/game.ts`. Tests:
+   `tests/ui/game_screen_test.ts` ("win modal").
+
+7. **Ice stacks: order lives in TWO places, and unrezzed ice must stay IN POSITION.** The engine
    lists ice innermost-first (`ServerState.ice`), but the corp seat renders the stack top-down on
    the runner side, so ServerColumn reverses the array there (`iceSlots` computed) — without it the
    corp seat draws mirrored stacks and the RUN badge runs the wrong way. Never "fix" this with

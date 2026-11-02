@@ -11,7 +11,7 @@ deno check src/mod.ts
 deno check src/web/entry.ts   # the Vue UI; src/mod.ts does not import it
 # (deno not on PATH? it lives at /usr/local/bin/deno — see the note below)
 
-# Format check, lint, check, and test suite in one task (120 tests / 170 steps;
+# Format check, lint, check, and test suite in one task (121 tests / 173 steps;
 # ~27 s measured 2026-11-01)
 deno task verify
 

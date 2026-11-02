@@ -7,7 +7,7 @@
 
 import { installRealCss } from "./setup.ts"; // also bridges happy-dom onto globalThis
 import { mount } from "@vue/test-utils";
-import { assert, assertDefined, assertEquals } from "../helpers/assert.ts";
+import { assert, assertDefined, assertEquals, deepClone } from "../helpers/assert.ts";
 import { accessDecisionFixture, createTestFixture, publicStatusFor } from "./fixture.ts";
 import { engine } from "../../src/mod.ts";
 import type { GameState, Move, PlayerSide } from "../../src/types.ts";
@@ -871,5 +871,55 @@ Deno.test("GameScreen card dock: sheets, per-card actions, no duplicates", async
     const zoom = wrapper.find('[data-testid="card-zoom"]');
     assert(zoom.exists(), "the zoom popup opened from the sheet");
     assert(zoom.text().includes("Smartware Distributor"), "the popup shows the card");
+  });
+});
+
+Deno.test("GameScreen win modal", async (t) => {
+  /** A finished game: the fixture state with the winner stamped on. */
+  function wonGame(winner: "corp" | "runner" | "draw", reason: string) {
+    const { state } = createTestFixture(42, "corp");
+    const won = deepClone(state);
+    won.winner = winner;
+    won.winReason = reason;
+    return won;
+  }
+
+  await t.step("a won game pops the dialog, not a sidebar banner", () => {
+    const state = wonGame("corp", "agenda points");
+    const wrapper = mount(GameScreen, { props: { state, humanSide: "corp" } });
+    const modal = wrapper.find('[data-testid="win-modal"]');
+    assert(modal.exists(), "the win dialog renders over the board");
+    assert(modal.text().includes("corp"), "the dialog names the winner");
+    assert(modal.text().includes("agenda points"), "the dialog shows the win reason");
+    assertEquals(
+      wrapper.find(".banner-win").exists(),
+      false,
+      "no win banner in the card-dock sidebar",
+    );
+    const panel = wrapper.find('[data-testid="action-panel"]');
+    if (panel.exists()) {
+      assertEquals(panel.text().includes("Winner:"), false, "the Actions area stays an interface");
+    }
+  });
+
+  await t.step("the dialog's New game button restarts", async () => {
+    const state = wonGame("runner", "flatline");
+    const wrapper = mount(GameScreen, { props: { state, humanSide: "corp" } });
+    const button = wrapper.find('[data-testid="win-new-game"]');
+    assert(button.exists(), "the dialog carries a New game button");
+    await button.trigger("click");
+    assert(wrapper.emitted("new-game"), "new-game bubbles to the root");
+  });
+
+  await t.step("Esc dismisses to the final board; the Winner chip reopens", async () => {
+    const state = wonGame("corp", "agenda points");
+    const wrapper = mount(GameScreen, { props: { state, humanSide: "corp" } });
+    await wrapper.find('[data-testid="win-modal"]').trigger("keydown.escape");
+    assertEquals(wrapper.find('[data-testid="win-modal"]').exists(), false, "dismissed");
+    // The final board stays reviewable: the status dock keeps the winner chip.
+    const chip = wrapper.find('[data-testid="winner"]');
+    assert(chip.exists(), "the status dock keeps the Winner chip");
+    await chip.trigger("click");
+    assert(wrapper.find('[data-testid="win-modal"]').exists(), "the chip reopens the dialog");
   });
 });
