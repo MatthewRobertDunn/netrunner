@@ -834,11 +834,14 @@ button.server-card {
 }
 /* Under-card actions are the same buttons as the action panel's row, but
    stacked vertically and cost-chipped — the card title is printed above,
-   so the label names only the effect. */
+   so the label names only the effect. The button is a flex row so the
+   declared gap separates the cost chips from the label (as a plain
+   text button the spans ran together: "1Place 3 credits"). */
 .sheet-card-actions .move-btn {
+  display: flex;
+  align-items: center;
   padding: 3px 6px;
   font-size: 11px;
-  text-align: left;
   justify-content: flex-start;
   gap: 6px;
 }
