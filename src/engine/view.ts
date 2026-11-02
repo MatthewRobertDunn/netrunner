@@ -63,7 +63,13 @@ function turnStateOf(state: GameState, side: PlayerSide): PlayerTurnState {
     ranServersThisTurn: [...p.ranServersThisTurn],
     hqBreachesThisTurn: p.hqBreachesThisTurn,
     usedOncePerTurn: [...p.usedOncePerTurn],
-    pendingRunFund: p.pendingRunFund,
+    /**
+     * Always 0 — Overclock's fund rides on `run.fundCredits`, never on the
+     * player. The key stays in the view because it is part of the fingerprint
+     * `decisionSeedFor` hashes (src/ai/context.ts): removing it would change
+     * every AI decision seed and every EvalAI game.
+     */
+    pendingRunFund: 0,
   };
 }
 

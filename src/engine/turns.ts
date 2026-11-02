@@ -21,7 +21,6 @@ function resetTurnState(state: GameState, side: PlayerSide): void {
   p.ranServersThisTurn = [];
   p.hqBreachesThisTurn = 0;
   p.usedOncePerTurn = [];
-  p.pendingRunFund = 0;
 }
 
 /** Begin the Corp's turn: turn-begin abilities then the mandatory draw. */

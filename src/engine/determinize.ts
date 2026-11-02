@@ -183,7 +183,6 @@ function basePlayerState(view: PlayerView, side: PlayerSide): PlayerState {
     ranServersThisTurn: [...section.turnState.ranServersThisTurn],
     hqBreachesThisTurn: section.turnState.hqBreachesThisTurn,
     usedOncePerTurn: [...section.turnState.usedOncePerTurn],
-    pendingRunFund: section.turnState.pendingRunFund,
   };
 }
 
@@ -399,7 +398,6 @@ export function determinize(view: PlayerView, ctx: AIDecisionContext, rng: Rng):
       fundCredits: view.run.fundCredits,
       rezCostIncrease: view.run.rezCostIncrease,
       tollPaid: view.run.tollPaid,
-      encounterStarted: view.run.phase === "encounter-ice",
     }
     : null;
 

@@ -13,7 +13,7 @@
  *  - Tread Lightly could only run HQ: the move was offered without a `server`
  *    field and `playRunnerEvent` defaulted to HQ. Printed: "Run any server."
  *  - Overclock split the event from the run: the engine banked the hostile
- *    credits in `pendingRunFund` for a LATER, separately-clicked run while
+ *    credits on the player state for a LATER, separately-clicked run while
  *    `legal-moves.ts` offered `server: hq/rd` variants the applier ignored.
  *    Printed: "... then run any server" (see docs/rules-gotchas.md #8).
  *
@@ -407,6 +407,7 @@ Deno.test("event texts: overclock starts the run as part of the event with 5 hos
   let s = newGame([], ["overclock"]);
   s = burnUntil(s, "runner");
   const clicksBefore = s.runner.clicks;
+  const creditsBefore = s.runner.credits;
 
   // The card names "any server" (no corp installs here, so the three centrals).
   assertEquals(
@@ -428,9 +429,9 @@ Deno.test("event texts: overclock starts the run as part of the event with 5 hos
     "the 5 hosted credits sit on the run state, spendable during that run",
   );
   assertEquals(
-    after.runner.pendingRunFund,
-    0,
-    "nothing is banked for a later run: 'during that run' cannot leak (gotchas #8)",
+    after.runner.credits,
+    creditsBefore - 1,
+    "nothing is banked for a later run: the 5 credits are hosted on the run (gotchas #8)",
   );
   assertEquals(
     after.runner.clicks,
@@ -651,8 +652,8 @@ Deno.test("event texts: overclock's hosted fund is bound to that run, not to a l
   }
   assertEquals(s.turn.player, "runner", "the next runner turn has begun");
   assertEquals(
-    s.runner.pendingRunFund,
-    0,
+    s.run?.fundCredits,
+    undefined,
     "the hosted credits never survive to a later turn's run",
   );
   s = play(s, "runner", { kind: "runner.run", server: "archives" });

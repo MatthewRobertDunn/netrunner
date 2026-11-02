@@ -5,6 +5,9 @@
  * defined here as typed data that the rules engine interprets. Never parse
  * English card text at runtime.
  *
+ * Consumed by src/engine/effects.ts, which resolves subroutines/triggers/paid
+ * abilities against these definitions.
+ *
  * The engine NEVER compares a card id string (`cardId === "..."`) to decide a
  * rule: it looks the card up here and consults the typed hook. A card with a
  * new engine-level rule is implemented by adding the hook to its entry — the

@@ -1,6 +1,9 @@
 /**
  * Card effect execution: subroutines, triggers and paid abilities.
  *
+ * The behavior REGISTRY lives in src/cards/effects.ts (typed hooks); this
+ * module executes engine-side effects and dispatches on it.
+ *
  * Every effect is keyed by card id and implemented as typed code. English card
  * text is never parsed at runtime.
  */

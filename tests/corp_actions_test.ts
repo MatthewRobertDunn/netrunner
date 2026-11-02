@@ -227,19 +227,24 @@ Deno.test("corp actions: advance, install, breach, and event regressions", async
       // The premises of this test changed with the printed text: "Place 5[credit]
       // on this event, THEN RUN ANY SERVER" (rule 5.2.2b + docs/rules-gotchas.md #8)
       // makes the run part of the event's resolution, not a separate, click-cost
-      // action. So the fund no longer sits in `pendingRunFund` waiting for a later
-      // run — it is placed on the run the event starts, and `initiateRun` clears
-      // `pendingRunFund`, so a fund can never survive to a later turn at all.
+      // action. So the fund is never banked on the player waiting for a later
+      // run — it is placed on the run the event starts, and no run can inherit
+      // a fund from an earlier one, so it can never survive to a later turn.
       let s = newGame([], ["overclock"]);
       s = burnUntil(s, "runner");
       const clicksBefore = s.runner.clicks;
+      const creditsBefore = s.runner.credits;
       const oc1 = assertDefined(overclockMove(s), "Overclock is playable");
       s = play(s, "runner", oc1);
 
       assertEquals(s.run?.server, "hq", "the event initiated the run itself");
       assertEquals(s.run?.source, "overclock", "the run's source is the event");
       assertEquals(s.run?.fundCredits, 5, "the event's run can spend the hosted credits");
-      assertEquals(s.runner.pendingRunFund, 0, "nothing is banked for a later run");
+      assertEquals(
+        s.runner.credits,
+        creditsBefore - 1,
+        "the 5 credits are hosted on the run, not banked on the player for a later run",
+      );
       assertEquals(
         s.runner.clicks,
         clicksBefore - 1,
@@ -276,8 +281,8 @@ Deno.test("corp actions: advance, install, breach, and event regressions", async
       }
       t = burnUntil(t, "runner");
       assertEquals(
-        t.runner.pendingRunFund,
-        0,
+        t.run?.fundCredits,
+        undefined,
         "the Overclock host is cleared by the next runner turn (nothing to spend)",
       );
       t = play(t, "runner", { kind: "runner.run", server: "archives" });
