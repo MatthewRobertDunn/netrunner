@@ -11,13 +11,19 @@ deno check src/mod.ts
 deno check src/web/entry.ts   # the Vue UI; src/mod.ts does not import it
 # (deno not on PATH? it lives at /usr/local/bin/deno — see the note below)
 
-# Format check, lint, check, and test suite in one task (106 tests / 142 steps;
+# Format check, lint, check, and test suite in one task (119 tests / 164 steps;
 # ~27 s measured 2026-11-01)
 deno task verify
 
 # AI sanity: EvalAI vs RandomAI win rates + move variety (~18 s measured
 # 2026-11-01: 24 full games — 12 seeds x both sides)
 deno run --allow-read scripts/check-ai.ts
+
+# Whole-game invariant sweep: structural + redaction + move-cost checks after
+# every move across 96 random games (~9 s). Deterministic; run after engine
+# changes or before publishing. The suite-sized version lives in
+# tests/invariants_test.ts (12 games, part of deno task verify).
+deno task check-invariants
 
 # Rebuild the web bundle (committed to git; the Docker image ships it as-is)
 deno run --allow-all scripts/build-web.ts

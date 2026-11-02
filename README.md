@@ -25,9 +25,11 @@ invariants, and the mistakes worth not repeating.
 - **Visible support status.** Every card has a `CardBehavior` definition keyed by card id (rules
   text is never parsed). `supportStatus` / `starterDeckSupport` report `supported` / `partial` /
   `unsupported` per card.
-- **Tested.** `deno task test` runs 106 tests (142 named sub-steps) across setup, cards, runs,
+- **Tested.** `deno task test` runs 119 tests (164 named sub-steps) across setup, cards, runs,
   servers, visibility, rules-costs, prompts, triggers, pump expiry, determinism, public-status, AI
-  playthrough, and starter-deck playtest suites.
+  playthrough, and starter-deck playtest suites. `deno task check-invariants` additionally walks 96
+  full random games asserting whole-game invariants after every move (structural shape, view
+  redaction, fixed move costs) — ~9 s, deterministic, run after engine changes or before publishing.
 - **AI players.** `src/ai/mod.ts` exposes a `GameAI` interface (`name`,
   `chooseMove(view: PlayerView, legal: Move[], ctx: AIDecisionContext)` — AIs never receive the
   `GameState`, only a sanitized `PlayerView`, the legal moves, and a per-decision
@@ -281,9 +283,11 @@ src/
                       status-block, util
 tests/                Smoke, cards, setup, runs, servers, visibility, determinism,
                       public-status, prompts, AI playthrough, starter-deck playtest suites
-  helpers/            assert.ts, fixtures.ts, boundary.ts, drive.ts (shared test helpers)
+  helpers/            assert.ts, fixtures.ts, boundary.ts, drive.ts, invariants.ts
+                      (shared test helpers)
 scripts/              import-starter-decks.ts, fetch-card-images.ts, build-web.ts,
-                      check-ai.ts, publish.ts, export-docker-images.ts (dev only)
+                      check-ai.ts, check-invariants.ts, publish.ts,
+                      export-docker-images.ts (dev only)
 ```
 
 ## Rules version
