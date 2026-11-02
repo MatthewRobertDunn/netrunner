@@ -24376,7 +24376,8 @@ var status_block_default = defineComponent({
     }
   },
   emits: [
-    "move"
+    "move",
+    "zoom"
   ],
   setup(props) {
     const glyphFailed = ref(false);
@@ -24466,19 +24467,30 @@ var status_block_default = defineComponent({
         <span v-if="side === 'corp' && stats.tags" class="stat">bad pub {{ stats.tags }}</span>
       </div>
       <span v-if="stats.score.length" class="score-strip" :data-testid="side + '-score'">
+        <!-- Scored agendas are open information (rule 4.4.7b); each mini-card
+             is a button that opens the card zoom, same as the sheet titles. -->
         <template v-for="c in stats.score" :key="c.id">
-          <img
+          <button
             v-if="!scoreImgFailed.includes(c.id)"
-            class="mini-card"
-            :src="'images/' + c.cardId + '.webp'"
-            :alt="cardTitle(c.cardId)"
-            @error="onScoreImgError(c.id)"
-          />
-          <span
+            type="button"
+            class="mini-card mini-card-btn"
+            :title="'View ' + cardTitle(c.cardId)"
+            @click="$emit('zoom', c.cardId)"
+          >
+            <img
+              class="mini-card-img"
+              :src="'images/' + c.cardId + '.webp'"
+              :alt="cardTitle(c.cardId)"
+              @error="onScoreImgError(c.id)"
+            />
+          </button>
+          <button
             v-else
+            type="button"
             class="mini-card mini-card-text"
-            :title="cardTitle(c.cardId)"
-          >{{ cardTitle(c.cardId) }}</span>
+            :title="'View ' + cardTitle(c.cardId)"
+            @click="$emit('zoom', c.cardId)"
+          >{{ cardTitle(c.cardId) }}</button>
         </template>
       </span>
     </section>
@@ -24944,6 +24956,7 @@ var game_default = defineComponent({
           :stats="opponent"
           :agenda-target="status.agendaPointTarget"
           :active="state.turn.player === opponentSide"
+          @zoom="zoom"
         />
         <status-block
           :side="ownSide"
@@ -24953,6 +24966,7 @@ var game_default = defineComponent({
           is-own
           :gain-move="gainCreditsMove"
           :draw-move="drawMove"
+          @zoom="zoom"
           @move="play"
         />
         </div>

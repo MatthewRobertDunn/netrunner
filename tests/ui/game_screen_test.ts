@@ -9,7 +9,7 @@ import { installRealCss } from "./setup.ts"; // also bridges happy-dom onto glob
 import { mount } from "@vue/test-utils";
 import { assert, assertDefined, assertEquals, deepClone } from "../helpers/assert.ts";
 import { accessDecisionFixture, createTestFixture, publicStatusFor } from "./fixture.ts";
-import { engine } from "../../src/mod.ts";
+import { cardDef, engine } from "../../src/mod.ts";
 import type { GameState, Move, PlayerSide } from "../../src/types.ts";
 import GameScreen from "../../src/web/ui/game.ts";
 import {
@@ -304,6 +304,36 @@ Deno.test("GameScreen status dock side panel", async (t) => {
       assert(emitted && emitted.length === 1, `click emits one move (${humanSide})`);
       const move = emitted[0]![0] as { kind: string };
       assertEquals(move.kind, `${humanSide}.draw`, "emits the draw move");
+    }
+  });
+
+  await t.step("scored-agenda mini-cards open the zoom", async () => {
+    for (const humanSide of ["corp", "runner"] as const) {
+      const { state } = createTestFixture(42, humanSide);
+      // Stamp a scored agenda onto the fixture: move a corp agenda from the
+      // deck into score (the strip renders the public status DTO of it).
+      const deckAt = state.corp.deck.findIndex((c) => cardDef(c.cardId).type === "agenda");
+      assert(deckAt >= 0, "fixture corp deck contains an agenda");
+      const agenda = assertDefined(state.corp.deck.splice(deckAt, 1)[0], "agenda card");
+      state.corp.score = [{ ...agenda, zone: "score" }];
+      const wrapper = mount(GameScreen, { props: { state, humanSide } });
+
+      const strip = wrapper.find('[data-testid="corp-score"]');
+      assert(strip.exists(), `corp score strip renders (${humanSide})`);
+      const card = strip.find("button.mini-card");
+      assert(card.exists(), "the scored agenda mini-card is a button");
+      assert(
+        (card.attributes("title") ?? "").startsWith("View "),
+        "the mini-card tooltips the zoom",
+      );
+
+      await card.trigger("click");
+      const zoom = wrapper.find('[data-testid="card-zoom"]');
+      assert(zoom.exists(), `the zoom popup opened from the strip (${humanSide})`);
+      assert(
+        zoom.text().includes(cardDef(agenda.cardId).title),
+        "the popup shows the scored agenda",
+      );
     }
   });
 

@@ -11,7 +11,8 @@
  * the three big template clusters are extracted components:
  *
  *   - StatusBlock    — one player's `<section class="status-block">` panel
- *                      (opponent + own, one component instead of two copies)
+ *                      (opponent + own, one component instead of two copies;
+ *                      its scored-agenda mini-cards emit `zoom`)
  *   - ServerColumn   — one server column (server card/label, root row, ice
  *                      stack, Run button; corp-seat flip stays in CSS)
  *   - ActionPanel    — waiting banner, access notice, prompt box, moves list
@@ -593,6 +594,7 @@ export default defineComponent({
           :stats="opponent"
           :agenda-target="status.agendaPointTarget"
           :active="state.turn.player === opponentSide"
+          @zoom="zoom"
         />
         <status-block
           :side="ownSide"
@@ -602,6 +604,7 @@ export default defineComponent({
           is-own
           :gain-move="gainCreditsMove"
           :draw-move="drawMove"
+          @zoom="zoom"
           @move="play"
         />
         </div>

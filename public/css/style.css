@@ -444,6 +444,25 @@ button.stat.clickable {
   color: var(--text);
   overflow-wrap: break-word;
 }
+/* Scored-agenda mini-cards are buttons (click opens the card zoom); the
+   reset keeps the small art footprint the plain image had, and hover lifts
+   the border like every other clickable tile. */
+button.mini-card {
+  padding: 0;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+}
+button.mini-card:hover {
+  border-color: var(--accent);
+}
+button.mini-card .mini-card-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 2px;
+}
 
 /* Servers ------------------------------------------------------------ */
 

@@ -25,7 +25,7 @@ invariants, and the mistakes worth not repeating.
 - **Visible support status.** Every card has a `CardBehavior` definition keyed by card id (rules
   text is never parsed). `supportStatus` / `starterDeckSupport` report `supported` / `partial` /
   `unsupported` per card.
-- **Tested.** `deno task test` runs 121 tests (173 named sub-steps) across setup, cards, runs,
+- **Tested.** `deno task test` runs 121 tests (174 named sub-steps) across setup, cards, runs,
   servers, visibility, rules-costs, prompts, triggers, pump expiry, determinism, public-status, AI
   playthrough, and starter-deck playtest suites. `deno task check-invariants` additionally walks 96
   full random games asserting whole-game invariants after every move (structural shape, view

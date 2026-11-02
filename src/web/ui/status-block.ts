@@ -14,8 +14,8 @@
  * The DOM contract is pinned by tests/ui/game_screen_test.ts: the
  * `status-opponent` / `status-own` testids, the per-side `data-side`
  * attribute, `<side>-score` on the score strip, the real `<button>` tags for
- * the interactive tiles, and the `.status-block` classes the dock's CSS
- * layout splits evenly.
+ * the interactive tiles and the scored-agenda mini-cards, and the
+ * `.status-block` classes the dock's CSS layout splits evenly.
  */
 
 import { computed, defineComponent, ref } from "vue";
@@ -51,7 +51,7 @@ export default defineComponent({
     /** Legal draw move: turns the hand stat into the action button. */
     drawMove: { type: Object as PropType<Move | null>, default: null },
   },
-  emits: ["move"],
+  emits: ["move", "zoom"],
   setup(
     props: {
       side: PlayerSide;
@@ -159,19 +159,30 @@ export default defineComponent({
         <span v-if="side === 'corp' && stats.tags" class="stat">bad pub {{ stats.tags }}</span>
       </div>
       <span v-if="stats.score.length" class="score-strip" :data-testid="side + '-score'">
+        <!-- Scored agendas are open information (rule 4.4.7b); each mini-card
+             is a button that opens the card zoom, same as the sheet titles. -->
         <template v-for="c in stats.score" :key="c.id">
-          <img
+          <button
             v-if="!scoreImgFailed.includes(c.id)"
-            class="mini-card"
-            :src="'images/' + c.cardId + '.webp'"
-            :alt="cardTitle(c.cardId)"
-            @error="onScoreImgError(c.id)"
-          />
-          <span
+            type="button"
+            class="mini-card mini-card-btn"
+            :title="'View ' + cardTitle(c.cardId)"
+            @click="$emit('zoom', c.cardId)"
+          >
+            <img
+              class="mini-card-img"
+              :src="'images/' + c.cardId + '.webp'"
+              :alt="cardTitle(c.cardId)"
+              @error="onScoreImgError(c.id)"
+            />
+          </button>
+          <button
             v-else
+            type="button"
             class="mini-card mini-card-text"
-            :title="cardTitle(c.cardId)"
-          >{{ cardTitle(c.cardId) }}</span>
+            :title="'View ' + cardTitle(c.cardId)"
+            @click="$emit('zoom', c.cardId)"
+          >{{ cardTitle(c.cardId) }}</button>
         </template>
       </span>
     </section>
