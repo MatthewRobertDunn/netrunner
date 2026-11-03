@@ -20,8 +20,8 @@ position, art alt text, or button label. Build selectors as CSS conjunctions
   only by `data-instance` (e.g. `runner-2005` vs `runner-2007`); `data-card-id`
   names the card definition (`unity`).
 - `data-sub` and `data-ability` are **1-based** to match visible labels.
-- There are zero `data-testid` attributes, the UI never reads any `data-*`
-  attribute, and `data-action` never appears on a non-clickable element.
+- There are zero `data-testid` attributes in the DOM, and the UI never reads any
+  `data-*` attribute.
 - The contract is pinned by `tests/ui/game_screen_test.ts` and
   `tests/ui/card_zoom_test.ts`, and documented in `docs/ui-gotchas.md` (entry 8).
   If a selector below stops matching, fix the source, not the skill.

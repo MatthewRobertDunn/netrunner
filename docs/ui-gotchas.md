@@ -103,11 +103,11 @@ and the test that pins the fix.
      (`setup|turn|servers|
      hand|warnings|actions|log|score-<side>`), `data-modal` (`zoom|win`),
      `data-banner` (`run|breach`), `data-state` (`thinking|waiting`), `data-prompt` (prompt kind).
-     The rules that keep it clean: `data-testid` never appears on a clickable (there are none in
-     `src/web/` at all); `data-action` never appears on a non-clickable; and the UI never READS any
-     of these attributes (no `querySelector`/`dataset` in `src/`, no CSS styled off `data-*`) — they
-     are write-only test hooks, so renaming one can never change behavior. Move buttons get their
-     attributes from `moveActionAttrs(move)` in `src/web/ui/util.ts` (a new parameter on a move kind
-     flows through automatically); only genuinely non-move controls hand-write their attributes.
-     Files: `src/web/ui/util.ts` (the helper), every `src/web/ui/*.ts` render site. Tests:
-     `tests/ui/game_screen_test.ts`, `tests/ui/card_zoom_test.ts` (assert the attributes directly).
+     The rules that keep it clean: there are no `data-testid` attributes in `src/web/` at all; and
+     the UI never READS any of these attributes (no `querySelector`/`dataset` in `src/`, no CSS
+     styled off `data-*`) — they are write-only test hooks, so renaming one can never change
+     behavior. Move buttons get their attributes from `moveActionAttrs(move)` in
+     `src/web/ui/util.ts` (a new parameter on a move kind flows through automatically); only
+     genuinely non-move controls hand-write their attributes. Files: `src/web/ui/util.ts` (the
+     helper), every `src/web/ui/*.ts` render site. Tests: `tests/ui/game_screen_test.ts`,
+     `tests/ui/card_zoom_test.ts` (assert the attributes directly).
