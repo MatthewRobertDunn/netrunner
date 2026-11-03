@@ -10,8 +10,9 @@
  * clicks bubble up as `move` events for the root component to apply. The
  * opponent block passes neither prop, so both tiles render as inert elements
  * exactly as before. Credits + agenda form the two-tile primary row; the
- * hand tile shares their size but keeps the hand stat's usual slot in the
- * secondary grid, with a deck glyph in place of the word "hand".
+ * clicks and hand tiles share their size but keep their usual slots in the
+ * secondary grid (the hand tile is the Draw 1 card button; clicks is an
+ * inert counter), with a deck glyph in place of the word "hand".
  *
  * The DOM contract is pinned by tests/ui/game_screen_test.ts: the
  * `status-opponent` / `status-own` testids, the per-side `data-side`
@@ -143,7 +144,13 @@ export default defineComponent({
         </div>
       </div>
       <div class="status-secondary">
-        <span class="stat"><img class="sym" src="assets/svg/click.svg" alt="Clicks" />{{ stats.clicks }}</span>
+        <!-- The clicks counter shares the primary tiles' size (it has no
+             action, so it stays an inert div in both seats) but keeps the
+             clicks stat's usual grid slot. -->
+        <div class="primary-stat clicks">
+          <img class="sym" src="assets/svg/click.svg" alt="Clicks" />
+          <span class="primary-val">{{ stats.clicks }}</span>
+        </div>
         <!-- The own hand tile doubles as the Draw 1 card button (inert div
              for the opponent block), same single-markup treatment as the
              credits tile. It keeps the hand stat's usual grid slot but

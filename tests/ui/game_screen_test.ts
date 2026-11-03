@@ -221,6 +221,19 @@ Deno.test("GameScreen status dock side panel", async (t) => {
           2,
           `${side} has prominent credits + agenda tiles`,
         );
+        // The clicks counter shares the primary tile look but stays an inert
+        // div in its usual secondary-grid slot (no action attaches to it).
+        const clicksTile = block.find(".primary-stat.clicks");
+        assert(clicksTile.exists(), `${side} clicks tile present`);
+        assertEquals(
+          clicksTile.element.tagName.toLowerCase(),
+          "div",
+          `${side} clicks tile is inert`,
+        );
+        assert(
+          clicksTile.element.parentElement?.classList.contains("status-secondary"),
+          `${side} clicks tile keeps its secondary-grid slot`,
+        );
       }
 
       // Correct zone names: Corp Archives, Runner Heap (never "heap" for corp).

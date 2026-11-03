@@ -24448,7 +24448,13 @@ var status_block_default = defineComponent({
         </div>
       </div>
       <div class="status-secondary">
-        <span class="stat"><img class="sym" src="assets/svg/click.svg" alt="Clicks" />{{ stats.clicks }}</span>
+        <!-- The clicks counter shares the primary tiles' size (it has no
+             action, so it stays an inert div in both seats) but keeps the
+             clicks stat's usual grid slot. -->
+        <div class="primary-stat clicks">
+          <img class="sym" src="assets/svg/click.svg" alt="Clicks" />
+          <span class="primary-val">{{ stats.clicks }}</span>
+        </div>
         <!-- The own hand tile doubles as the Draw 1 card button (inert div
              for the opponent block), same single-markup treatment as the
              credits tile. It keeps the hand stat's usual grid slot but
