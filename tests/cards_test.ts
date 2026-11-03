@@ -53,6 +53,13 @@ Deno.test("catalogue: starter-pool card definitions", async (t) => {
     const unity = cardDef("unity");
     assertEquals(unity.strength, 1);
     assertEquals(unity.memoryCost, 1);
+    // Unity's "+X strength" is a real pump whose amount scales with the
+    // board (rule 3.9.5b) — never a static strength hook.
+    const unityBehavior = behaviors.get("unity");
+    assertEquals(unityBehavior?.pumpAbility?.creditCost, 1);
+    assertEquals(unityBehavior?.pumpAbility?.dynamicAmount, { kind: "icebreakers-installed" });
+    assertEquals(unityBehavior?.pumpAbility?.amount, undefined);
+    assertEquals(unityBehavior?.staticStrength, undefined);
     const carmen = cardDef("carmen");
     assertEquals(carmen.strength, 2);
     const cleaver = cardDef("cleaver");

@@ -22,7 +22,7 @@ import {
   play,
   repeated,
 } from "./helpers/fixtures.ts";
-import { assert, assertDefined } from "./helpers/assert.ts";
+import { assert, assertDefined, assertEquals } from "./helpers/assert.ts";
 
 /**
  * Filler cards so the ordered decks survive several draws.
@@ -216,7 +216,7 @@ Deno.test("pump: strength boost expires at encounter end and when the run ends m
   });
 });
 
-Deno.test("pump: Unity's static +X strength is not a pump and survives the sweep", () => {
+Deno.test("pump: Unity's +X is a real pump (rule 3.9.5b), expired by the sweep", () => {
   const runnerDeck = [
     "unity",
     "cleaver",
@@ -251,56 +251,60 @@ Deno.test("pump: Unity's static +X strength is not a pump and survives the sweep
   state = corpRezApproachedIce(state);
 
   const unity = installed(state, "unity");
-  const cleaver = installed(state, "cleaver");
-  // Unity's strength = installed icebreakers (3) >= Diviner's 3, so Unity can
-  // interface even though its printed strength is 1 — the +X is static.
+  // Rule 3.9.5g: Unity interfaces only while its strength is >= the ice's.
+  // Printed strength 1 < Diviner's 3, so no break move until it is pumped —
+  // the "+X = installed icebreakers" boost is bought with credits, never free.
   assert(
-    engine.getLegalMoves(state, "runner").some(
+    !engine.getLegalMoves(state, "runner").some(
       (m) => m.kind === "runner.breakSubroutine" && m.programId === unity.id,
     ),
-    "Unity (3 icebreakers installed) can break Diviner (strength 3)",
+    "Unity at printed strength 1 cannot interface with Diviner (strength 3)",
   );
 
-  // Pumping Unity must do nothing: the move exists but only records a warning.
+  // Pumping Unity is a real pump: +X for the encounter, X = installed
+  // icebreakers including Unity itself (3 here), paid with 1 credit.
+  const creditsBefore = state.runner.credits;
   state = play(state, "runner", pumpMove(state, unity.id));
-  assert(
-    installed(state, "unity").strengthBoost === undefined,
-    "Unity's strengthBoost is never written by a pump",
+  assertEquals(installed(state, "unity").strengthBoost, 3, "Unity pumped +3 (X = 3 breakers)");
+  assertEquals(
+    state.runner.credits,
+    creditsBefore - 1,
+    "the pump cost 1 credit",
   );
   assert(
-    state.supportWarnings.some((w) => w.includes("Unity")),
-    "the static-strength support warning was recorded",
+    !state.supportWarnings.some((w) => w.includes("Unity")),
+    "no static-strength support warning",
   );
 
-  // Pump Cleaver, then break Diviner's subroutine with Unity; the encounter
-  // completes while the run continues.
-  state = play(state, "runner", pumpMove(state, cleaver.id));
-  assert(installed(state, "cleaver").strengthBoost === 1, "Cleaver pumped +1");
+  // The boosted strength opens the break move; break Diviner's subroutine
+  // with Unity and the encounter completes while the run continues.
   state = play(state, "runner", breakMove(state, unity.id, 0));
   assert(state.run !== null && state.run.phase !== "encounter-ice", "encounter over, run active");
   assert(
-    installed(state, "cleaver").strengthBoost === undefined,
-    "Cleaver's pump expired at encounter end",
-  );
-  assert(
     installed(state, "unity").strengthBoost === undefined,
-    "the sweep left Unity's strengthBoost untouched (it was never set)",
+    "Unity's pump expired at encounter end (rule 3.9.5b)",
   );
 
   // Second run on the same rezzed ice (next runner turn — turn 2's clicks are
-  // spent): Unity's static +X must still be intact — if the sweep had cleared
-  // a static bonus stored in strengthBoost, Unity's strength would drop to 1
-  // and the break move below would not be offered.
+  // spent): Unity is back to strength 1, so the break move is gone until the
+  // runner pumps again — and the fresh pump re-evaluates X from the board.
   state = drainRun(state);
   state = endCorpTurn(state, 15); // runner t2 clicks are spent; play out the corp turn
   state = runHq(state);
   assert(state.run?.phase === "encounter-ice", "second encounter begins");
   assert(
-    engine.getLegalMoves(state, "runner").some(
+    !engine.getLegalMoves(state, "runner").some(
       (m) => m.kind === "runner.breakSubroutine" && m.programId === unity.id,
     ),
-    "Unity's static strength survives the pump-expiry sweep",
+    "the sweep restored Unity to printed strength 1 (no free interface)",
   );
+  state = play(state, "runner", pumpMove(state, unity.id));
+  assertEquals(
+    installed(state, "unity").strengthBoost,
+    3,
+    "the second pump re-evaluates X (still 3 icebreakers installed)",
+  );
+  state = play(state, "runner", breakMove(state, unity.id, 0));
   state = drainRun(state);
   assert(state.run === null, "final run ended");
 });

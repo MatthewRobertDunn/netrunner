@@ -400,24 +400,13 @@ function iceCovered(state: GameState, def: ReturnType<typeof cardDef>): boolean 
     const match = breakDef.breaks.length === 0 ||
       iceSubtypes.some((s) => breakDef.breaks.includes(s));
     if (!match) continue;
-    // Unity's effective strength grows with the board (staticStrength
-    // `icebreakers-installed`); pumpable breakers can pay their way up — so
-    // being a bit weaker still counts as cover. The +2 is an eval heuristic
-    // approximating the hook: it is not the engine's current-strength formula
-    // (which is count-1), it is a "pumpable breakers cover weaker ice" discount.
-    const effective = (pd.strength ?? 0) + unityEvalBonus(program);
+    // Pumpable breakers can pay their way up, so being a bit weaker than the
+    // ice still counts as strength cover.
+    const effective = pd.strength ?? 0;
     const canPump = behaviors.get(program.cardId)?.pumpAbility !== undefined;
     if (effective >= (def.strength ?? 0) || canPump) return true;
   }
   return false;
-}
-
-/** Eval-only approximation of Unity's static strength: +2 per installed
- * icebreaker. The hook is `staticStrength: { kind: "icebreakers-installed" }`
- * (engine current strength = printed 1 + count - 1); this +2 is a hand-tuned
- * discount so a pumpable breaker counts as cover for weaker ice. */
-function unityEvalBonus(program: CardInstance): number {
-  return behavior(program.cardId)?.staticStrength?.kind === "icebreakers-installed" ? 2 : 0;
 }
 
 /** What the card currently being accessed is worth to the accessing runner. */

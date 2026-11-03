@@ -84,8 +84,9 @@ function sheetTokens(card: CardInstance): SheetToken[] {
 
 /** Short label + declared costs for one of an installed card's legal actions.
  *  The card title is the row above the button, so the label names only the
- *  effect ("Place 3 credits", "Break sub 2", "+2 strength"). */
-function installedAction(card: CardInstance, move: Move): SheetAction {
+ *  effect ("Place 3 credits", "Break sub 2", "+2 strength"). `icebreakers` is
+ *  the live count of installed icebreakers for dynamic pump labels (Unity). */
+function installedAction(card: CardInstance, move: Move, icebreakers: number): SheetAction {
   switch (move.kind) {
     case "runner.ability": {
       // One paid-ability move per printed ability (and per server for
@@ -113,9 +114,17 @@ function installedAction(card: CardInstance, move: Move): SheetAction {
     }
     case "runner.pumpIcebreaker": {
       const pump = pumpAbilityDef(card.cardId);
+      // A dynamic pump shows the X the engine would apply right now (Unity:
+      // X = installed icebreakers including this one, evaluated at
+      // activation, rule 3.9.5b); a fixed pump shows its printed amount.
+      const label = !pump
+        ? "Pump strength"
+        : pump.dynamicAmount
+        ? `+${icebreakers} strength`
+        : `+${pump.amount} strength`;
       return {
         key: moveKey(move),
-        label: pump ? `+${pump.amount} strength` : "Pump strength",
+        label,
         move,
         creditCost: pump?.creditCost,
       };
@@ -169,6 +178,12 @@ export function buildSheetGroups(opts: {
 }): SheetGroup[] {
   if (opts.side !== "runner") return [];
   const groups: SheetGroup[] = [];
+  // Live X for dynamic pump labels: Unity's "+X = installed icebreakers"
+  // (including itself) is evaluated at activation, so the button previews the
+  // amount a pump would add right now.
+  const icebreakers = opts.state.runner.installed.filter(
+    (c) => cardOf(c.cardId)?.subtypes.includes("icebreaker"),
+  ).length;
   for (const type of SHEET_GROUP_TYPES) {
     const cards: SheetCardRow[] = [];
     for (const card of opts.state.runner.installed) {
@@ -179,7 +194,7 @@ export function buildSheetGroups(opts: {
         title: cardTitle(card.cardId),
         tokens: sheetTokens(card),
         actions: opts.isOwn && !opts.blocked
-          ? actionsForCard(card, opts.legal).map((m) => installedAction(card, m))
+          ? actionsForCard(card, opts.legal).map((m) => installedAction(card, m, icebreakers))
           : [],
       });
     }

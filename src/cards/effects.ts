@@ -60,23 +60,27 @@ export interface BreakAbilityDef {
 export interface PumpAbilityDef {
   creditCost: number;
   /**
-   * Strength gained per activation. A value here is always a real pump; a card
-   * whose strength is STATIC (Unity's "+X = installed icebreakers") declares
-   * that in `staticStrength` instead and the engine refuses to pump it.
+   * Strength gained per activation. Exactly one of `amount` (a fixed pump,
+   * e.g. Carmen's "+3") or `dynamicAmount` (a board-scaling pump, e.g.
+   * Unity's "+X") must be set. Either way this is a real pump: rule 3.9.5b
+   * gives every paid icebreaker strength-modifying ability the implicit
+   * duration "for the remainder of the current encounter".
    */
-  amount: number;
+  amount?: number;
+  /** X = number of installed icebreakers, including this one (Unity). */
+  dynamicAmount?: { kind: "icebreakers-installed" };
 }
 
 /**
  * Static strength modifiers, consulted wherever current strength is computed.
  * They are recomputed from the board and never stored in `strengthBoost`, so
- * the pump-expiry sweep (rule 3.9.5b) cannot clobber them.
+ * the pump-expiry sweep (rule 3.9.5b) cannot clobber them. Only board-anchored
+ * strength that is NOT bought with an activation belongs here — a paid "+X"
+ * ability is a pump (see PumpAbilityDef), never a static modifier.
  */
 export type StaticStrengthDef =
-  /** Strength equals the number of installed icebreakers (Unity). */
-  | { kind: "icebreakers-installed" }
   /** +amount while installed protecting a remote server (Palisade). */
-  | { kind: "bonus-if-remote"; amount: number };
+  { kind: "bonus-if-remote"; amount: number };
 
 /** What a card's paid ability does once its click cost is paid. */
 export type PaidAbilityEffectDef =
@@ -195,7 +199,7 @@ export interface CardBehavior {
   advanceable?: boolean;
   /** Install-cost discount (Carmen: 2 less after a successful run this turn). */
   installDiscount?: { kind: "after-successful-run"; amount: number };
-  /** Static strength modifier (Unity / Palisade) — never a pump. */
+  /** Static strength modifier (Palisade) — board-anchored, never a pump. */
   staticStrength?: StaticStrengthDef;
   /** Restriction this card imposes on all runs (Red Team, rule 6.3.2a). */
   runRestriction?: { kind: "central-once-per-turn" };
@@ -247,12 +251,14 @@ const B: CardBehavior[] = [
     cardId: "unity",
     support: "supported",
     breakAbility: { breaks: ["code_gate"], creditCost: 1 },
-    pumpAbility: { creditCost: 1, amount: 1 },
-    // Unity prints "1[credit]: +1 strength", but its strength is STATIC
-    // ("+X = installed icebreakers"), so the pump entry only serves to offer
-    // the (no-op) pump move; the engine computes strength from staticStrength
-    // and refuses to pump a card that has it (rule 3.9.5b).
-    staticStrength: { kind: "icebreakers-installed" },
+    // Unity prints "1[credit]: +X strength. X is equal to the number of
+    // installed icebreakers (including this one)." — a real strength pump
+    // whose amount scales with the board. Rule 3.9.5b gives every paid
+    // icebreaker strength-modifying ability the implicit duration "for the
+    // remainder of the current encounter", and X is evaluated at activation,
+    // so the boost rides `strengthBoost` and expires with the encounter like
+    // any other pump (never a staticStrength hook).
+    pumpAbility: { creditCost: 1, dynamicAmount: { kind: "icebreakers-installed" } },
   },
   {
     cardId: "sure_gamble",

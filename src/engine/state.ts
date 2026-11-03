@@ -408,10 +408,10 @@ export function setGameOver(state: GameState, winner: PlayerSide | "draw", reaso
  * (its sole writer is `pumpIcebreaker` in apply.ts) and every consumer reads it
  * with `?? 0`, so clearing it to `undefined` restores printed strength.
  *
- * Unity is unaffected by design: its "+X = installed icebreakers" strength is a
- * static ability recomputed on the fly in legal-moves.ts `currentIceStrength`
- * and is never stored in `strengthBoost` (`pumpIcebreaker` refuses to pump
- * Unity), so this sweep cannot clobber it.
+ * Unity rides the sweep like every other pump: its "+X = installed icebreakers"
+ * is a real strength pump whose amount is evaluated at activation (rule
+ * 3.9.5b), so its boost lives in `strengthBoost` and expires with the
+ * encounter — it is not a static strength modifier.
  */
 export function expireIcebreakerPumps(state: GameState): void {
   for (const card of state.runner.installed) {

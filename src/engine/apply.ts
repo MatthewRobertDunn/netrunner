@@ -4,13 +4,7 @@
  */
 
 import { cardDef, isIce } from "../cards/catalogue.ts";
-import {
-  behavior,
-  breakAbilityDef,
-  pumpAbilityDef,
-  subroutinesOf,
-  triggersOf,
-} from "../cards/effects.ts";
+import { breakAbilityDef, pumpAbilityDef, subroutinesOf, triggersOf } from "../cards/effects.ts";
 import { fastCloneState } from "./clone.ts";
 import {
   applyChoice,
@@ -38,6 +32,7 @@ import {
   findCard,
   gainCredits,
   isCentral,
+  isIcebreaker,
   memoryLimit,
   memoryUsed,
   moveCardTo,
@@ -576,19 +571,18 @@ function pumpIcebreaker(state: GameState, programId: string): void {
   if (!program) return;
   const pump = pumpAbilityDef(program.cardId);
   if (!pump) return;
-  if (behavior(program.cardId)?.staticStrength) {
-    // A static "+X" strength (Unity's "installed icebreakers") is recomputed
-    // from the board, never stored in `strengthBoost` (rule 3.9.5b) — pumping
-    // it is a no-op that says so.
-    state.supportWarnings.push(
-      `${cardDef(program.cardId).title}'s +X strength is static, not a pump`,
-    );
-    return;
-  }
   if (availableCredits(state, "runner") < pump.creditCost) return;
   spendCredits(state, "runner", pump.creditCost);
-  program.strengthBoost = (program.strengthBoost ?? 0) + pump.amount;
-  state.log.push({ type: "pump-strength", cardId: program.id, amount: pump.amount });
+  // Rule 3.9.5b: a paid ability that modifies an icebreaker's strength has an
+  // implicit duration of "for the remainder of the current encounter" — the
+  // boost rides `strengthBoost` and the pump-expiry sweep clears it. A dynamic
+  // amount (Unity's "+X = installed icebreakers, including this one") is
+  // evaluated at activation, so later board changes only affect later pumps.
+  const amount = pump.dynamicAmount
+    ? state.runner.installed.filter((c) => isIcebreaker(c)).length
+    : pump.amount ?? 0;
+  program.strengthBoost = (program.strengthBoost ?? 0) + amount;
+  state.log.push({ type: "pump-strength", cardId: program.id, amount });
 }
 
 /** Resolve unbroken subroutines in order, stopping for prompts. */

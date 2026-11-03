@@ -78,6 +78,12 @@ assertions. They live in the test files as the authoritative regression record:
   `Deno.test("visibility: announced Runner actions are open to the Corp (rules 10.2, 4.4.7b)")`
 - Trash affordability counts the run fund, not pool credits alone —
   `Deno.test("event texts: overclock's hosted fund pays an access trash the pool cannot")`
+- Unity's "+X = installed icebreakers (including this one)" is a real pump with the implicit
+  encounter duration (rule 3.9.5b) — X is evaluated at activation, the boost rides `strengthBoost`,
+  and the sweep expires it like any other pump. It is never a `staticStrength` hook (that misreading
+  made the strength free and permanent, and the pump a no-op warning) —
+  `Deno.test("pump: Unity's +X is a real pump (rule 3.9.5b), expired by the sweep")` in
+  `tests/pump_expiry_test.ts` and the behavior assertions in `tests/cards_test.ts`
 - Accessed cards stay visible to the Runner for the remainder of the breach (7.3.1a) —
   `Deno.test("visibility: accessed cards stay visible for the remainder of the breach (rule 7.3.1a)")`
 - Read the prompt BEFORE popping it: each mulligan reshuffles the prompting player's own hand

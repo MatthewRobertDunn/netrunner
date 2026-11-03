@@ -18398,16 +18398,18 @@ var B = [
       ],
       creditCost: 1
     },
+    // Unity prints "1[credit]: +X strength. X is equal to the number of
+    // installed icebreakers (including this one)." — a real strength pump
+    // whose amount scales with the board. Rule 3.9.5b gives every paid
+    // icebreaker strength-modifying ability the implicit duration "for the
+    // remainder of the current encounter", and X is evaluated at activation,
+    // so the boost rides `strengthBoost` and expires with the encounter like
+    // any other pump (never a staticStrength hook).
     pumpAbility: {
       creditCost: 1,
-      amount: 1
-    },
-    // Unity prints "1[credit]: +1 strength", but its strength is STATIC
-    // ("+X = installed icebreakers"), so the pump entry only serves to offer
-    // the (no-op) pump move; the engine computes strength from staticStrength
-    // and refuses to pump a card that has it (rule 3.9.5b).
-    staticStrength: {
-      kind: "icebreakers-installed"
+      dynamicAmount: {
+        kind: "icebreakers-installed"
+      }
     }
   },
   {
@@ -21120,7 +21122,7 @@ function addBreakMoves(state, ice, moves) {
     return !run.broken.includes(i) && !run.resolved.includes(i);
   });
   if (unbroken.length === 0) return;
-  const iceStrength = currentIceStrength(state, ice);
+  const iceStrength = currentIceStrength(ice);
   if (breakAbilityDef(ice.cardId)?.bioroid === true && state.runner.clicks >= 1 && state.runner.installed.some((c) => isIcebreaker(c))) {
     for (const subIndex of unbroken) {
       moves.push({
@@ -21133,7 +21135,7 @@ function addBreakMoves(state, ice, moves) {
   for (const program of state.runner.installed) {
     if (!isIcebreaker(program)) continue;
     if (breakAbilityDef(ice.cardId)?.bioroid !== true) {
-      const strengthOk = currentIceStrength(state, program) >= iceStrength;
+      const strengthOk = currentIceStrength(program) >= iceStrength;
       for (const subIndex of unbroken) {
         if (strengthOk) {
           const breakDef = breakAbilityDef(program.cardId);
@@ -21160,18 +21162,13 @@ function addBreakMoves(state, ice, moves) {
     }
   }
 }
-function currentIceStrength(state, card) {
+function currentIceStrength(card) {
   const printed = cardDef(card.cardId).strength ?? 0;
-  let extra = card.strengthBoost ?? 0;
   const ss = behavior(card.cardId)?.staticStrength;
-  if (ss?.kind === "icebreakers-installed") {
-    const count = state.runner.installed.filter((c) => isIcebreaker(c)).length;
-    extra = count - 1;
-  }
   if (ss?.kind === "bonus-if-remote" && (card.server?.startsWith("remote-") ?? false)) {
     return printed + (ss.amount ?? 0) + (card.strengthBoost ?? 0);
   }
-  return printed + extra;
+  return printed + (card.strengthBoost ?? 0);
 }
 function breachMoves(state, playerSide) {
   const moveList = [];
@@ -21697,17 +21694,14 @@ function pumpIcebreaker(state, programId) {
   if (!program) return;
   const pump = pumpAbilityDef(program.cardId);
   if (!pump) return;
-  if (behavior(program.cardId)?.staticStrength) {
-    state.supportWarnings.push(`${cardDef(program.cardId).title}'s +X strength is static, not a pump`);
-    return;
-  }
   if (availableCredits(state, "runner") < pump.creditCost) return;
   spendCredits(state, "runner", pump.creditCost);
-  program.strengthBoost = (program.strengthBoost ?? 0) + pump.amount;
+  const amount = pump.dynamicAmount ? state.runner.installed.filter((c) => isIcebreaker(c)).length : pump.amount ?? 0;
+  program.strengthBoost = (program.strengthBoost ?? 0) + amount;
   state.log.push({
     type: "pump-strength",
     cardId: program.id,
-    amount: pump.amount
+    amount
   });
 }
 function resolveEncounter(state) {
@@ -23154,14 +23148,11 @@ function iceCovered(state, def2) {
     if (!breakDef) continue;
     const match = breakDef.breaks.length === 0 || iceSubtypes.some((s) => breakDef.breaks.includes(s));
     if (!match) continue;
-    const effective = (pd.strength ?? 0) + unityEvalBonus(program);
+    const effective = pd.strength ?? 0;
     const canPump = behaviors.get(program.cardId)?.pumpAbility !== void 0;
     if (effective >= (def2.strength ?? 0) || canPump) return true;
   }
   return false;
-}
-function unityEvalBonus(program) {
-  return behavior(program.cardId)?.staticStrength?.kind === "icebreakers-installed" ? 2 : 0;
 }
 function pendingAccessTerm(state, id) {
   if (!id) return 0;
@@ -23847,7 +23838,7 @@ function sheetTokens(card) {
   }
   return tokens;
 }
-function installedAction(card, move) {
+function installedAction(card, move, icebreakers) {
   switch (move.kind) {
     case "runner.ability": {
       const def2 = paidAbilitiesOf(card.cardId)[move.abilityIndex];
@@ -23870,9 +23861,10 @@ function installedAction(card, move) {
     }
     case "runner.pumpIcebreaker": {
       const pump = pumpAbilityDef(card.cardId);
+      const label = !pump ? "Pump strength" : pump.dynamicAmount ? `+${icebreakers} strength` : `+${pump.amount} strength`;
       return {
         key: moveKey(move),
-        label: pump ? `+${pump.amount} strength` : "Pump strength",
+        label,
         move,
         creditCost: pump?.creditCost
       };
@@ -23906,6 +23898,7 @@ var INSTALLED_ACTION_KINDS = /* @__PURE__ */ new Set([
 function buildSheetGroups(opts) {
   if (opts.side !== "runner") return [];
   const groups = [];
+  const icebreakers = opts.state.runner.installed.filter((c) => cardOf(c.cardId)?.subtypes.includes("icebreaker")).length;
   for (const type of SHEET_GROUP_TYPES) {
     const cards2 = [];
     for (const card of opts.state.runner.installed) {
@@ -23915,7 +23908,7 @@ function buildSheetGroups(opts) {
         cardId: card.cardId,
         title: cardTitle(card.cardId),
         tokens: sheetTokens(card),
-        actions: opts.isOwn && !opts.blocked ? actionsForCard(card, opts.legal).map((m) => installedAction(card, m)) : []
+        actions: opts.isOwn && !opts.blocked ? actionsForCard(card, opts.legal).map((m) => installedAction(card, m, icebreakers)) : []
       });
     }
     if (cards2.length) groups.push({

@@ -404,7 +404,7 @@ function addBreakMoves(state: GameState, ice: CardInstance, moves: Move[]): void
     return !run.broken.includes(i) && !run.resolved.includes(i);
   });
   if (unbroken.length === 0) return;
-  const iceStrength = currentIceStrength(state, ice);
+  const iceStrength = currentIceStrength(ice);
 
   // Brân 1.0: lose [click] to break 1 subroutine — any installed icebreaker,
   // no strength requirement (declared by the ice's `bioroid` break; recorded
@@ -425,7 +425,7 @@ function addBreakMoves(state: GameState, ice: CardInstance, moves: Move[]): void
   for (const program of state.runner.installed) {
     if (!isIcebreaker(program)) continue;
     if (breakAbilityDef(ice.cardId)?.bioroid !== true) {
-      const strengthOk = currentIceStrength(state, program) >= iceStrength;
+      const strengthOk = currentIceStrength(program) >= iceStrength;
       for (const subIndex of unbroken) {
         if (strengthOk) {
           const breakDef = breakAbilityDef(program.cardId);
@@ -452,20 +452,16 @@ function addBreakMoves(state: GameState, ice: CardInstance, moves: Move[]): void
 }
 
 /** Strength of an ice/icebreaker, including static modifiers. */
-function currentIceStrength(state: GameState, card: CardInstance): number {
+function currentIceStrength(card: CardInstance): number {
   const printed = cardDef(card.cardId).strength ?? 0;
-  let extra = card.strengthBoost ?? 0;
+  // Temporary pumps ride in `strengthBoost` (rule 3.9.5b); board-anchored
+  // static modifiers (Palisade) are recomputed from `staticStrength`.
   const ss = behavior(card.cardId)?.staticStrength;
-  if (ss?.kind === "icebreakers-installed") {
-    // Unity's +X is static (not a pump): its strength equals installed icebreakers.
-    const count = state.runner.installed.filter((c) => isIcebreaker(c)).length;
-    extra = count - 1; // printed strength 1 already counted
-  }
   if (ss?.kind === "bonus-if-remote" && (card.server?.startsWith("remote-") ?? false)) {
     // Palisade: +2 strength while protecting a remote server.
     return printed + (ss.amount ?? 0) + (card.strengthBoost ?? 0);
   }
-  return printed + extra;
+  return printed + (card.strengthBoost ?? 0);
 }
 
 function breachMoves(state: GameState, playerSide: PlayerSide): Move[] {
