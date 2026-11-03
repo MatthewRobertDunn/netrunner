@@ -25,9 +25,13 @@ Deno.test("CardZoom: actions, move emission, and the Close fallback", async (t) 
     assertEquals(buttons.length, 2);
     assertEquals(buttons[0]!.text(), "Trash (3 [credit])");
     assertEquals(buttons[1]!.text(), "Finish access");
+    // Annotation contract: zoom action buttons carry the move's attributes
+    // (data-action + parameters), same as every other move button.
+    assertEquals(buttons[0]!.attributes("data-action"), "runner.trashAccessed");
+    assertEquals(buttons[1]!.attributes("data-action"), "runner.finishAccess");
     // With actions shown there is no Close button.
     assertEquals(
-      wrapper.findAll('[data-testid="zoom-close"]').length,
+      wrapper.findAll('[data-action="close"]').length,
       0,
       "no Close button while actions are shown",
     );
@@ -45,7 +49,7 @@ Deno.test("CardZoom: actions, move emission, and the Close fallback", async (t) 
 
   await t.step("without actions shows a single Close button that emits `close`", () => {
     const wrapper = mount(CardZoom, { props: { cardId: "palisade" } });
-    const close = wrapper.findAll('[data-testid="zoom-close"]');
+    const close = wrapper.findAll('[data-action="close"]');
     assertEquals(close.length, 1, "exactly one Close button");
     close[0]!.trigger("click");
     const closed = (wrapper.emitted()["close"] as unknown[][]) ?? [];
@@ -67,8 +71,8 @@ Deno.test("CardZoom: the focus trap keeps Tab inside the dialog", () => {
     // does not move focus to elements in a detached tree.
     attachTo: "body",
   });
-  const backdrop = wrapper.find('[data-testid="card-zoom"]');
-  const close = wrapper.find('[data-testid="zoom-close"]');
+  const backdrop = wrapper.find('[data-modal="zoom"]');
+  const close = wrapper.find('[data-action="close"]');
   assertEquals(active(), backdrop.element, "the backdrop takes focus on mount");
 
   // Tab from the backdrop reaches the Close button (the only other stop)...
@@ -94,7 +98,7 @@ Deno.test("CardZoom: the focus trap keeps Tab inside the dialog", () => {
     },
     attachTo: "body",
   });
-  const modal = multi.find('[data-testid="card-zoom"]');
+  const modal = multi.find('[data-modal="zoom"]');
   const stops = multi.findAll("button");
   assertEquals(stops.length, 2, "two action buttons, no Close");
   modal.trigger("keydown", { key: "Tab" });

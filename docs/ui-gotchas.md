@@ -59,9 +59,9 @@ and the test that pins the fix.
    per-card sidebar), the banner read as a stray control half its width. The announcement is now
    WinModal (a dialog over the play surface, same focus-trap contract as CardZoom) that opens
    automatically on `state.winner` and is dismissible — Esc/backdrop reveal the final board, and the
-   status dock's Winner chip (`data-testid="winner"`, a real `<button>`) reopens it. Don't move the
-   announcement back into ActionPanel on the next "the modal is annoying" pass; make the modal less
-   intrusive instead. Files: `src/web/ui/win-modal.ts`, `src/web/ui/game.ts`. Tests:
+   status dock's Winner chip (`data-action="show-result"`, a real `<button>`) reopens it. Don't move
+   the announcement back into ActionPanel on the next "the modal is annoying" pass; make the modal
+   less intrusive instead. Files: `src/web/ui/win-modal.ts`, `src/web/ui/game.ts`. Tests:
    `tests/ui/game_screen_test.ts` ("win modal").
 
 7. **Ice stacks: order lives in TWO places, and unrezzed ice must stay IN POSITION.** The engine
@@ -76,3 +76,38 @@ and the test that pins the fix.
    `public/css/style.css` (comments only). Tests: `tests/ui/game_screen_test.ts` ("multi-ice stack
    renders outermost farthest in both seats", "approached facedown ice carries the RUN badge"),
    `tests/public_status_test.ts` ("unrezzed ice stays in position as hidden entries").
+
+8. **Every clickable carries `data-action` + parameter attributes — never `data-testid`.** The DOM
+   contract for browser agents (and any scripted driving of the UI) is purely composite:
+   `[data-action="runner.run"][data-server="hq"]`,
+   `[data-action="prompt.answer"][data-option="pass"]`,
+   `[data-action="discard-pick"][data-card-id="unity"]`. The older scheme baked parameters into
+   positional testid strings (`run-remote-2`), and that is exactly why coverage rotted: a control
+   whose identity needed a second or third dimension (which subroutine? which option? which copy?)
+   had nowhere to put it, so instead of breaking the convention it got NO annotation — pick-slots,
+   hand-card buttons, prompt answers, zoom action buttons, and presets were all unreachable by
+   attribute. Composite attributes fix the cause: each dimension gets its own named attribute, so a
+   new capability is a new attribute, not a new string format. The vocabulary:
+   - Clickables: `data-action` = the engine move kind (`runner.run`, `prompt.answer`,
+     `corp.install`, `runner.ability`, …) when the button plays a move, else a UI verb (`zoom`,
+     `close`, `discard-pick`, `discard-submit`, `open-access`, `show-result`, `new-game`,
+     `toggle-log`, `pick-side`, `pick-preset`, `random-seed`, `set-seed`, `start`).
+   - Move parameters (own attributes): `data-server`, `data-card-id` (definition id, e.g. `unity`),
+     `data-instance` (copy/instance id), `data-target` (target instance), `data-sub` and
+     `data-ability` (1-based, matching the visible label), `data-option` (engine optionId; the
+     reserved decline is `data-option="pass"`), `data-preset`.
+   - Scoping: `data-side` (`corp|runner`), `data-own` (`true|false` — `[data-own="true"]` is this
+     seat's interface, `false` the mirror), `data-card-pos` (ice position, innermost = 1; DOM order
+     flips with the corp-seat CSS flip, positions do not), `data-group` (sheet group).
+   - Non-interactive markers: `data-dock` (`status|card|log`), `data-panel`
+     (`setup|turn|servers|
+     hand|warnings|actions|log|score-<side>`), `data-modal` (`zoom|win`),
+     `data-banner` (`run|breach`), `data-state` (`thinking|waiting`), `data-prompt` (prompt kind).
+     The rules that keep it clean: `data-testid` never appears on a clickable (there are none in
+     `src/web/` at all); `data-action` never appears on a non-clickable; and the UI never READS any
+     of these attributes (no `querySelector`/`dataset` in `src/`, no CSS styled off `data-*`) — they
+     are write-only test hooks, so renaming one can never change behavior. Move buttons get their
+     attributes from `moveActionAttrs(move)` in `src/web/ui/util.ts` (a new parameter on a move kind
+     flows through automatically); only genuinely non-move controls hand-write their attributes.
+     Files: `src/web/ui/util.ts` (the helper), every `src/web/ui/*.ts` render site. Tests:
+     `tests/ui/game_screen_test.ts`, `tests/ui/card_zoom_test.ts` (assert the attributes directly).

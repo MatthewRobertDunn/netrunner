@@ -22,7 +22,7 @@ import { defineComponent } from "vue";
 import type { PropType } from "vue";
 import { breakAbilityDef, paidAbilitiesOf, pumpAbilityDef } from "../../mod.ts";
 import type { CardInstance, GameState, Move, PlayerSide } from "../../types.ts";
-import { cardOf, cardTitle, moveKey, serverLabel } from "./util.ts";
+import { cardOf, cardTitle, moveActionAttrs, moveKey, serverLabel } from "./util.ts";
 
 /** A counter chip under a sheet card (hosted credits, effective strength). */
 export interface SheetToken {
@@ -219,26 +219,33 @@ export default defineComponent({
   },
   emits: ["move", "zoom"],
   setup() {
-    return {};
+    return { moveActionAttrs };
   },
   template: `
     <section
       class="card-sheet"
       :class="[side, { own: isOwn, active }]"
-      :data-testid="isOwn ? 'sheet-own' : 'sheet-opponent'"
       :data-side="side"
+      :data-own="String(isOwn)"
     >
       <!-- No header: which seat a sheet shows is carried by its position in
            the dock (opponent on top, own at the bottom) and its side-colored
-           border, not by a label — the status dock names the players. -->
+           border, not by a label — the status dock names the players. The
+           data-side/data-own pair is the annotation contract's scoping
+           attributes: [data-own="true"] is this seat's interface. -->
       <div class="sheet-body">
         <slot name="actions"></slot>
         <section v-for="g in groups" :key="g.key" class="sheet-group" :data-group="g.key">
           <h3 class="sheet-heading">{{ g.title }}</h3>
-          <div v-for="row in g.cards" :key="row.id" class="sheet-card" :data-card-id="row.cardId">
+          <!-- data-card-id names the card, data-instance the copy: with two
+               copies of a card installed, both rows share the card id and
+               differ only by instance (the buttons beneath repeat the
+               instance via the move's programId/targetId). -->
+          <div v-for="row in g.cards" :key="row.id" class="sheet-card" :data-card-id="row.cardId" :data-instance="row.id">
             <button
               type="button"
               class="sheet-card-title"
+              data-action="zoom"
               :title="row.title + ' — click for the card text'"
               @click="$emit('zoom', row.cardId)"
             >{{ row.title }}</button>
@@ -259,7 +266,7 @@ export default defineComponent({
                 v-for="a in row.actions"
                 :key="a.key"
                 class="move-btn card-action-btn"
-                :data-move="a.move.kind"
+                v-bind="moveActionAttrs(a.move)"
                 @click="$emit('move', a.move)"
               >
                 <span v-if="a.clickCost" class="cost"><img class="sym" src="assets/svg/click.svg" alt="clicks" />{{ a.clickCost }}</span>

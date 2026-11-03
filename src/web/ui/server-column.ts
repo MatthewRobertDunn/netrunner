@@ -82,20 +82,26 @@ export default defineComponent({
       return props.currentIceId !== null && card.id === props.currentIceId;
     }
     /**
-     * The ice stack in render order. The engine lists ice innermost-first
-     * (`ServerState.ice`, types.ts), and this template renders the stack top
-     * to bottom, so in the RUNNER seat (server card above the stack) the
-     * innermost ice lands nearest the server card — physically correct. In
-     * the CORP seat the CSS `order` flip moves the whole stack to the runner
-     * side (above the card), which would render the INNERMOST ice farthest
-     * from the server card — the exact inverse of the physical stack — unless
-     * the array is reversed here. The reversal is deliberately in the
-     * component, not `flex-direction: column-reverse`: that would also flip
-     * the negative-margin overlap direction of `.ice-slot + .ice-slot`.
+     * The ice stack in render order, paired with each card's engine position
+     * (innermost ice = position 1, matching `ServerState.ice`'s order). The
+     * engine lists ice innermost-first (`ServerState.ice`, types.ts), and
+     * this template renders the stack top to bottom, so in the RUNNER seat
+     * (server card above the stack) the innermost ice lands nearest the
+     * server card — physically correct. In the CORP seat the CSS `order`
+     * flip moves the whole stack to the runner side (above the card), which
+     * would render the INNERMOST ice farthest from the server card — the
+     * exact inverse of the physical stack — unless the array is reversed
+     * here. The reversal is deliberately in the component, not
+     * `flex-direction: column-reverse`: that would also flip the
+     * negative-margin overlap direction of `.ice-slot + .ice-slot`. The
+     * paired position is emitted as `data-card-pos` so the automated agent
+     * can address "the second ice" seat-independently (DOM order flips with
+     * the seat; the engine position does not).
      */
-    const iceSlots = computed<ViewCard[]>(() =>
-      props.corpSeat ? [...props.server.ice].reverse() : props.server.ice
-    );
+    const iceSlots = computed<{ card: ViewCard; pos: number }[]>(() => {
+      const withPos = props.server.ice.map((card, i) => ({ card, pos: i + 1 }));
+      return props.corpSeat ? withPos.reverse() : withPos;
+    });
     /**
      * Only the HQ server card opens the identity popup (the R&D/Archives
      * glyph faces have nothing to zoom). It renders as a real
@@ -116,7 +122,7 @@ export default defineComponent({
     };
   },
   template: `
-    <div class="server" :class="isCentralId(server.id) ? 'central' : 'remote'">
+    <div class="server" :class="isCentralId(server.id) ? 'central' : 'remote'" :data-server="server.id">
       <!-- Central servers (hq, rd, archives) keep their dedicated server
            card (corp back + glyph + name). HQ additionally shows the
            Corp's identity card (open information, rule 10.2.3); the
@@ -129,6 +135,8 @@ export default defineComponent({
           :type="hqClickable ? 'button' : undefined"
           class="server-card"
           :class="{ clickable: hqClickable }"
+          :data-action="hqClickable ? 'zoom' : undefined"
+          :data-card-id="hqClickable && identityCardId ? identityCardId : undefined"
           @click="hqClickable && $emit('zoom-identity', server.id)"
         >
           <img class="corp-back-img" src="assets/corp-back.svg" alt="" />
@@ -185,19 +193,20 @@ export default defineComponent({
       ></div>
       <div class="server-ice-stack">
         <div
-          v-for="card in iceSlots"
-          :key="card.id"
+          v-for="slot in iceSlots"
+          :key="slot.card.id"
           class="ice-slot"
-          :class="{ facedown: card.cardId === 'hidden' }"
+          :class="{ facedown: slot.card.cardId === 'hidden' }"
         >
           <card-tile
-            v-if="card.cardId !== 'hidden'"
-            :card="card"
+            v-if="slot.card.cardId !== 'hidden'"
+            :card="slot.card"
+            :pos="slot.pos"
             ice
             clickable
-            :highlight="isCurrentIce(card)"
-            :badge="isCurrentIce(card) ? 'RUN' : ''"
-            @zoom="$emit('zoom', card.cardId)"
+            :highlight="isCurrentIce(slot.card)"
+            :badge="isCurrentIce(slot.card) ? 'RUN' : ''"
+            @zoom="$emit('zoom', slot.card.cardId)"
           />
           <!-- Unrezzed ice arrives IN POSITION as a redacted entry: render it
                on the facedown-tile path right where it physically sits. Its
@@ -209,15 +218,17 @@ export default defineComponent({
             facedown
             ice
             corp
-            :highlight="isCurrentIce(card)"
-            :badge="isCurrentIce(card) ? 'RUN' : ''"
+            :pos="slot.pos"
+            :highlight="isCurrentIce(slot.card)"
+            :badge="isCurrentIce(slot.card) ? 'RUN' : ''"
           />
         </div>
       </div>
       <button
         v-if="runMove && !runInProgress"
         class="run-btn"
-        :data-testid="'run-' + server.id"
+        data-action="runner.run"
+        :data-server="server.id"
         @click="runMove && $emit('move', runMove)"
       >Run</button>
     </div>

@@ -22,7 +22,8 @@
 
 import { computed, defineComponent, onMounted, onUnmounted, ref } from "vue";
 import type { PropType } from "vue";
-import { cardOf, imageFor, plainCardText } from "./util.ts";
+import type { Move } from "../../types.ts";
+import { cardOf, imageFor, moveActionAttrs, plainCardText } from "./util.ts";
 
 /** Minimal DOM shapes for the focus trap (this repo typechecks without the
  *  DOM lib — the same structural style as the onMounted bridge below). */
@@ -43,11 +44,11 @@ export default defineComponent({
   props: {
     cardId: { type: String as PropType<string | null>, default: null },
     /** Optional buttons shown under the card text (e.g. access decisions). */
-    actions: { type: Array as PropType<{ label: string; move: unknown }[]>, default: () => [] },
+    actions: { type: Array as PropType<{ label: string; move: Move }[]>, default: () => [] },
   },
   emits: ["close", "move"],
   setup(
-    props: { cardId: string | null },
+    props: { cardId: string | null; actions: { label: string; move: Move }[] },
     { emit }: { emit: (event: "close") => void },
   ) {
     const def = computed(() => (props.cardId ? cardOf(props.cardId) : null));
@@ -113,7 +114,7 @@ export default defineComponent({
       next?.focus();
     }
 
-    return { def, img, text, backdropRef, trapTab, onClose: () => emit("close") };
+    return { def, img, text, backdropRef, trapTab, moveActionAttrs, onClose: () => emit("close") };
   },
   template: `
     <transition name="zoom">
@@ -128,7 +129,7 @@ export default defineComponent({
         @keydown.escape="onClose"
         @keydown.tab="trapTab"
         tabindex="0"
-        data-testid="card-zoom"
+        data-modal="zoom"
       >
         <div class="zoom-card">
           <img
@@ -170,10 +171,11 @@ export default defineComponent({
                 v-for="a in actions"
                 :key="a.label"
                 class="move-btn primary"
+                v-bind="moveActionAttrs(a.move)"
                 @click="$emit('move', a.move)"
               >{{ a.label }}</button>
             </div>
-            <button v-else class="zoom-close" @click="onClose" data-testid="zoom-close">✕ Close</button>
+            <button v-else class="zoom-close" data-action="close" @click="onClose">✕ Close</button>
           </div>
         </div>
       </div>

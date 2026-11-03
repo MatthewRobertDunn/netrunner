@@ -23432,6 +23432,20 @@ function cardIdOfInstance(state, id) {
 function moveKey(m) {
   return JSON.stringify(m);
 }
+function moveActionAttrs(move) {
+  const attrs = {
+    "data-action": move.kind
+  };
+  if ("cardId" in move) attrs["data-card-id"] = move.cardId;
+  if ("server" in move) attrs["data-server"] = move.server;
+  if ("targetId" in move) attrs["data-target"] = move.targetId;
+  if ("programId" in move) attrs["data-instance"] = move.programId;
+  if ("iceId" in move) attrs["data-instance"] = move.iceId;
+  if ("subIndex" in move) attrs["data-sub"] = String(move.subIndex + 1);
+  if ("abilityIndex" in move) attrs["data-ability"] = String(move.abilityIndex + 1);
+  if ("optionId" in move) attrs["data-option"] = move.optionId;
+  return attrs;
+}
 function describeMove(state, move) {
   switch (move.kind) {
     case "mulligan.take":
@@ -23565,6 +23579,12 @@ var card_tile_default = defineComponent({
     corp: {
       type: Boolean,
       default: false
+    },
+    // Ice-stack position (innermost = 1), emitted as data-card-pos. DOM
+    // order flips with the corp-seat CSS flip; the engine position does not.
+    pos: {
+      type: Number,
+      default: void 0
     }
   },
   emits: [
@@ -23582,6 +23602,15 @@ var card_tile_default = defineComponent({
     const typeTag = computed2(() => def2.value ? def2.value.type : "");
     const isAgenda = computed2(() => typeTag.value === "agenda");
     const isZoomable = computed2(() => Boolean(props.clickable && props.card && props.card.cardId !== "hidden"));
+    const cardAttrs = computed2(() => {
+      const card = props.card;
+      const known = card && card.cardId !== "hidden";
+      return {
+        "data-card-id": known ? card.cardId : void 0,
+        "data-action": isZoomable.value ? "zoom" : void 0,
+        "data-card-pos": props.pos !== void 0 ? String(props.pos) : void 0
+      };
+    });
     function onClick() {
       const card = props.card;
       if (isZoomable.value && card) emit2("zoom", card.cardId);
@@ -23592,6 +23621,7 @@ var card_tile_default = defineComponent({
       typeTag,
       isAgenda,
       isZoomable,
+      cardAttrs,
       onClick
     };
   },
@@ -23602,6 +23632,7 @@ var card_tile_default = defineComponent({
       class="card-tile"
       :class="{ facedown, ice, highlight, small, 'is-agenda': isAgenda, clickable }"
       :title="def ? def.title + '\\n' + def.strippedText : 'Facedown card'"
+      v-bind="cardAttrs"
       @click="onClick"
     >
       <img v-if="img" class="card-img" :src="img" :alt="def ? def.title : ''" loading="lazy" />
@@ -23720,6 +23751,7 @@ var action_panel_default = defineComponent({
     }
     return {
       label,
+      moveActionAttrs,
       moveKey,
       promptTitle,
       discardCount,
@@ -23727,9 +23759,9 @@ var action_panel_default = defineComponent({
     };
   },
   template: `
-    <div class="action-panel" data-testid="action-panel">
+    <div class="action-panel" data-panel="actions">
       <template v-if="!humanTurn">
-        <div class="banner-wait">
+        <div class="banner-wait" data-state="waiting">
           <template v-if="thinking">{{ aiSideName }} is planning its move\u2026</template>
           <template v-else>Waiting for the {{ aiSideName }}\u2026</template>
         </div>
@@ -23746,24 +23778,26 @@ var action_panel_default = defineComponent({
         <button
           v-if="accessedCardId"
           class="banner-wait banner-access"
-          data-testid="access-notice"
+          data-action="open-access"
           @click="$emit('open-access')"
         >
           Accessing {{ cardTitle(accessedCardId) }} \u2014 decide on the card
         </button>
 
-        <div v-else-if="prompt" class="prompt-box" data-testid="prompt">
+        <div v-else-if="prompt" class="prompt-box" :data-prompt="prompt.kind">
           <div class="prompt-title">{{ promptTitle(prompt) }}</div>
 
           <div v-if="prompt.kind === 'discard'" class="discard-picker">
-            <div class="hint">Choose {{ discardCount }} card(s) to discard:</div>
+            <div class="hint" :data-count="discardCount">Choose {{ discardCount }} card(s) to discard:</div>
             <!-- Each slot is a real <button type="button"> whose single click
                  toggles the pick (Enter/Space work the same). The tile inside
                  is deliberately NOT clickable: a nested button would be
                  invalid HTML with a double tab stop, and one click would both
                  pick and open the zoom modal that blocks the next click. The
                  tile tooltip still names the card; the hand shows the same
-                 cards zoomable. -->
+                 cards zoomable. data-card-id / data-instance are what let the
+                 automated agent pick by card instead of by art alt text; the
+                 picked state is aria-pressed + the .picked class. -->
             <div class="hand-row picker">
               <button
                 v-for="c in hand"
@@ -23772,6 +23806,9 @@ var action_panel_default = defineComponent({
                 class="pick-slot"
                 :class="{ picked: discardSelected.includes(c.id) }"
                 :aria-pressed="String(discardSelected.includes(c.id))"
+                data-action="discard-pick"
+                :data-card-id="c.cardId"
+                :data-instance="c.id"
                 @click="$emit('discard-toggle', c.id)"
               >
                 <card-tile
@@ -23782,7 +23819,7 @@ var action_panel_default = defineComponent({
                 />
               </button>
             </div>
-            <button class="move-btn primary" :disabled="!canDiscard" @click="$emit('discard-submit')" data-testid="discard-submit">
+            <button class="move-btn primary" :disabled="!canDiscard" data-action="discard-submit" @click="$emit('discard-submit')">
               Discard selected
             </button>
           </div>
@@ -23792,19 +23829,19 @@ var action_panel_default = defineComponent({
               v-for="m in legal"
               :key="moveKey(m)"
               class="move-btn"
+              v-bind="moveActionAttrs(m)"
               @click="$emit('move', m)"
-              :data-move="m.kind"
             >{{ label(m) }}</button>
           </div>
         </div>
 
-        <div v-else class="moves" data-testid="action-moves">
+        <div v-else class="moves">
           <button
             v-for="m in generalMoves"
             :key="moveKey(m)"
             class="move-btn"
+            v-bind="moveActionAttrs(m)"
             @click="$emit('move', m)"
-            :data-move="m.kind"
           >{{ label(m) }}</button>
         </div>
       </template>
@@ -23950,26 +23987,35 @@ var card_sheet_default = defineComponent({
     "zoom"
   ],
   setup() {
-    return {};
+    return {
+      moveActionAttrs
+    };
   },
   template: `
     <section
       class="card-sheet"
       :class="[side, { own: isOwn, active }]"
-      :data-testid="isOwn ? 'sheet-own' : 'sheet-opponent'"
       :data-side="side"
+      :data-own="String(isOwn)"
     >
       <!-- No header: which seat a sheet shows is carried by its position in
            the dock (opponent on top, own at the bottom) and its side-colored
-           border, not by a label \u2014 the status dock names the players. -->
+           border, not by a label \u2014 the status dock names the players. The
+           data-side/data-own pair is the annotation contract's scoping
+           attributes: [data-own="true"] is this seat's interface. -->
       <div class="sheet-body">
         <slot name="actions"></slot>
         <section v-for="g in groups" :key="g.key" class="sheet-group" :data-group="g.key">
           <h3 class="sheet-heading">{{ g.title }}</h3>
-          <div v-for="row in g.cards" :key="row.id" class="sheet-card" :data-card-id="row.cardId">
+          <!-- data-card-id names the card, data-instance the copy: with two
+               copies of a card installed, both rows share the card id and
+               differ only by instance (the buttons beneath repeat the
+               instance via the move's programId/targetId). -->
+          <div v-for="row in g.cards" :key="row.id" class="sheet-card" :data-card-id="row.cardId" :data-instance="row.id">
             <button
               type="button"
               class="sheet-card-title"
+              data-action="zoom"
               :title="row.title + ' \u2014 click for the card text'"
               @click="$emit('zoom', row.cardId)"
             >{{ row.title }}</button>
@@ -23990,7 +24036,7 @@ var card_sheet_default = defineComponent({
                 v-for="a in row.actions"
                 :key="a.key"
                 class="move-btn card-action-btn"
-                :data-move="a.move.kind"
+                v-bind="moveActionAttrs(a.move)"
                 @click="$emit('move', a.move)"
               >
                 <span v-if="a.clickCost" class="cost"><img class="sym" src="assets/svg/click.svg" alt="clicks" />{{ a.clickCost }}</span>
@@ -24066,6 +24112,7 @@ var card_zoom_default = defineComponent({
       text,
       backdropRef,
       trapTab,
+      moveActionAttrs,
       onClose: () => emit2("close")
     };
   },
@@ -24082,7 +24129,7 @@ var card_zoom_default = defineComponent({
         @keydown.escape="onClose"
         @keydown.tab="trapTab"
         tabindex="0"
-        data-testid="card-zoom"
+        data-modal="zoom"
       >
         <div class="zoom-card">
           <img
@@ -24124,10 +24171,11 @@ var card_zoom_default = defineComponent({
                 v-for="a in actions"
                 :key="a.label"
                 class="move-btn primary"
+                v-bind="moveActionAttrs(a.move)"
                 @click="$emit('move', a.move)"
               >{{ a.label }}</button>
             </div>
-            <button v-else class="zoom-close" @click="onClose" data-testid="zoom-close">\u2715 Close</button>
+            <button v-else class="zoom-close" data-action="close" @click="onClose">\u2715 Close</button>
           </div>
         </div>
       </div>
@@ -24199,9 +24247,13 @@ var server_column_default = defineComponent({
     function isCurrentIce(card) {
       return props.currentIceId !== null && card.id === props.currentIceId;
     }
-    const iceSlots = computed2(() => props.corpSeat ? [
-      ...props.server.ice
-    ].reverse() : props.server.ice);
+    const iceSlots = computed2(() => {
+      const withPos = props.server.ice.map((card, i) => ({
+        card,
+        pos: i + 1
+      }));
+      return props.corpSeat ? withPos.reverse() : withPos;
+    });
     const hqClickable = computed2(() => props.server.id === "hq" && !!props.identityImg);
     return {
       isCentralId,
@@ -24214,7 +24266,7 @@ var server_column_default = defineComponent({
     };
   },
   template: `
-    <div class="server" :class="isCentralId(server.id) ? 'central' : 'remote'">
+    <div class="server" :class="isCentralId(server.id) ? 'central' : 'remote'" :data-server="server.id">
       <!-- Central servers (hq, rd, archives) keep their dedicated server
            card (corp back + glyph + name). HQ additionally shows the
            Corp's identity card (open information, rule 10.2.3); the
@@ -24227,6 +24279,8 @@ var server_column_default = defineComponent({
           :type="hqClickable ? 'button' : undefined"
           class="server-card"
           :class="{ clickable: hqClickable }"
+          :data-action="hqClickable ? 'zoom' : undefined"
+          :data-card-id="hqClickable && identityCardId ? identityCardId : undefined"
           @click="hqClickable && $emit('zoom-identity', server.id)"
         >
           <img class="corp-back-img" src="assets/corp-back.svg" alt="" />
@@ -24283,19 +24337,20 @@ var server_column_default = defineComponent({
       ></div>
       <div class="server-ice-stack">
         <div
-          v-for="card in iceSlots"
-          :key="card.id"
+          v-for="slot in iceSlots"
+          :key="slot.card.id"
           class="ice-slot"
-          :class="{ facedown: card.cardId === 'hidden' }"
+          :class="{ facedown: slot.card.cardId === 'hidden' }"
         >
           <card-tile
-            v-if="card.cardId !== 'hidden'"
-            :card="card"
+            v-if="slot.card.cardId !== 'hidden'"
+            :card="slot.card"
+            :pos="slot.pos"
             ice
             clickable
-            :highlight="isCurrentIce(card)"
-            :badge="isCurrentIce(card) ? 'RUN' : ''"
-            @zoom="$emit('zoom', card.cardId)"
+            :highlight="isCurrentIce(slot.card)"
+            :badge="isCurrentIce(slot.card) ? 'RUN' : ''"
+            @zoom="$emit('zoom', slot.card.cardId)"
           />
           <!-- Unrezzed ice arrives IN POSITION as a redacted entry: render it
                on the facedown-tile path right where it physically sits. Its
@@ -24307,15 +24362,17 @@ var server_column_default = defineComponent({
             facedown
             ice
             corp
-            :highlight="isCurrentIce(card)"
-            :badge="isCurrentIce(card) ? 'RUN' : ''"
+            :pos="slot.pos"
+            :highlight="isCurrentIce(slot.card)"
+            :badge="isCurrentIce(slot.card) ? 'RUN' : ''"
           />
         </div>
       </div>
       <button
         v-if="runMove && !runInProgress"
         class="run-btn"
-        :data-testid="'run-' + server.id"
+        data-action="runner.run"
+        :data-server="server.id"
         @click="runMove && $emit('move', runMove)"
       >Run</button>
     </div>
@@ -24395,15 +24452,16 @@ var status_block_default = defineComponent({
       discardName,
       cardTitle,
       scoreImgFailed,
-      onScoreImgError
+      onScoreImgError,
+      moveActionAttrs
     };
   },
   template: `
     <section
       class="status-block"
       :class="[side, isOwn ? 'status-own' : 'status-opponent', { active }]"
-      :data-testid="isOwn ? 'status-own' : 'status-opponent'"
       :data-side="side"
+      :data-own="String(isOwn)"
     >
       <div class="status-who">
         <img
@@ -24428,7 +24486,7 @@ var status_block_default = defineComponent({
           class="primary-stat credits"
           :class="{ clickable: !!gainMove }"
           :disabled="isOwn ? !gainMove : undefined"
-          :data-testid="isOwn ? 'gain-credit' : undefined"
+          v-bind="isOwn && gainMove ? moveActionAttrs(gainMove) : undefined"
           :title="isOwn ? 'Gain 1 credit' : undefined"
           @click="gainMove && $emit('move', gainMove)"
         >
@@ -24459,7 +24517,7 @@ var status_block_default = defineComponent({
           class="primary-stat hand"
           :class="{ clickable: !!drawMove }"
           :disabled="isOwn ? !drawMove : undefined"
-          :data-testid="isOwn ? 'draw-card' : undefined"
+          v-bind="isOwn && drawMove ? moveActionAttrs(drawMove) : undefined"
           :title="isOwn ? 'Draw 1 card' : undefined"
           @click="drawMove && $emit('move', drawMove)"
         >
@@ -24471,14 +24529,18 @@ var status_block_default = defineComponent({
         <span v-if="side === 'runner' && stats.tags" class="stat"><img class="sym" src="assets/svg/tag.svg" alt="Tags" />{{ stats.tags }}</span>
         <span v-if="side === 'corp' && stats.tags" class="stat">bad pub {{ stats.tags }}</span>
       </div>
-      <span v-if="stats.score.length" class="score-strip" :data-testid="side + '-score'">
+      <span v-if="stats.score.length" class="score-strip" :data-panel="'score-' + side">
         <!-- Scored agendas are open information (rule 4.4.7b); each mini-card
-             is a button that opens the card zoom, same as the sheet titles. -->
+             is a button that opens the card zoom, same as the sheet titles.
+             data-card-id names the scored agenda; the strip's data-panel
+             marker is the non-interactive region name. -->
         <template v-for="c in stats.score" :key="c.id">
           <button
             v-if="!scoreImgFailed.includes(c.id)"
             type="button"
             class="mini-card mini-card-btn"
+            data-action="zoom"
+            :data-card-id="c.cardId"
             :title="'View ' + cardTitle(c.cardId)"
             @click="$emit('zoom', c.cardId)"
           >
@@ -24493,6 +24555,8 @@ var status_block_default = defineComponent({
             v-else
             type="button"
             class="mini-card mini-card-text"
+            data-action="zoom"
+            :data-card-id="c.cardId"
             :title="'View ' + cardTitle(c.cardId)"
             @click="$emit('zoom', c.cardId)"
           >{{ cardTitle(c.cardId) }}</button>
@@ -24568,13 +24632,13 @@ var win_modal_default = defineComponent({
       @keydown.escape="$emit('dismiss')"
       @keydown.tab="trapTab"
       tabindex="0"
-      data-testid="win-modal"
+      data-modal="win"
     >
       <div class="win-card">
         <div class="win-eyebrow">Game over</div>
         <div class="win-name">{{ winner }}</div>
         <p v-if="winReason" class="win-reason">{{ winReason }}</p>
-        <button class="move-btn primary" @click="$emit('new-game')" data-testid="win-new-game">
+        <button class="move-btn primary" data-action="new-game" @click="$emit('new-game')">
           New game
         </button>
       </div>
@@ -24880,6 +24944,7 @@ var game_default = defineComponent({
       prompt,
       legal,
       generalMoves,
+      moveActionAttrs,
       hand,
       canDiscard,
       events,
@@ -24926,16 +24991,16 @@ var game_default = defineComponent({
            .status-block's flex: 1 1 0 splits the dock evenly between them;
            data-side marks which side each block shows; active marks
            state.turn.player. -->
-      <aside class="status-dock" data-testid="status-dock">
+      <aside class="status-dock" data-dock="status">
         <div class="status-half">
-        <div class="status-title" data-testid="status-title">
+        <div class="status-title" data-panel="turn">
           <div class="turn-badge">
             <span class="turn-num">Turn {{ state.turn.number }}</span>
             <span class="turn-player" :class="state.turn.player">
               {{ state.turn.player === 'corp' ? 'Corp' : 'Runner' }} \xB7 {{ phaseLabel(state.turn.phase) }}
             </span>
           </div>
-          <button class="ghost-btn" @click="$emit('new-game')">New game</button>
+          <button class="ghost-btn" data-action="new-game" @click="$emit('new-game')">New game</button>
         </div>
         <div v-if="state.winner || (!state.winner && isAiTurn && thinking) || lastWarning" class="status-alerts">
           <!-- The Winner chip doubles as the win-modal reopen button: the
@@ -24944,14 +25009,14 @@ var game_default = defineComponent({
           <button
             v-if="state.winner"
             class="chip win chip-btn"
-            data-testid="winner"
+            data-action="show-result"
             title="Show the game-over dialog again"
             @click="winDismissed = false"
           >
             Winner: {{ state.winner }}
             <template v-if="state.winReason"> \u2014 {{ state.winReason }}</template>
           </button>
-          <span v-if="!state.winner && isAiTurn && thinking" class="chip thinking" data-testid="ai-thinking">
+          <span v-if="!state.winner && isAiTurn && thinking" class="chip thinking" data-state="thinking">
             {{ aiSideName }} is thinking\u2026
           </span>
           <span v-if="lastWarning" class="chip warn">{{ lastWarning }}</span>
@@ -24983,7 +25048,7 @@ var game_default = defineComponent({
       <!-- Servers: one ServerColumn per public server row; the corp-seat flip
            (ice on the runner side) is CSS "order" on .server.central and
            .server.remote children, keyed off .servers.corp-seat above. -->
-        <div class="servers" data-testid="servers" :class="{ 'corp-seat': humanSide === 'corp' }">
+        <div class="servers" data-panel="servers" :class="{ 'corp-seat': humanSide === 'corp' }">
           <server-column
             v-for="s in serverRows"
             :key="s.id"
@@ -25002,7 +25067,7 @@ var game_default = defineComponent({
         </div>
 
         <!-- Run / breach banner (run/breach context for the action row). -->
-        <section v-if="run || breach" class="run-banner" data-testid="run-banner">
+        <section v-if="run || breach" class="run-banner" :data-banner="breach ? 'breach' : 'run'">
           <template v-if="breach">
             <span class="run-tag">BREACH</span> {{ serverLabel(breach.server) }} \xB7
             <span v-if="breach.accessing">accessing a card\u2026</span>
@@ -25020,8 +25085,12 @@ var game_default = defineComponent({
 
         <!-- Hand (own grip, direct grid child via .hand-area wrapper). -->
         <section class="hand-area">
-          <div class="hand-row runner-hand" data-testid="human-hand">
-            <div v-for="c in hand" :key="c.id" class="hand-card">
+          <div class="hand-row runner-hand" data-panel="hand">
+            <!-- Each hand card carries its identity (definition id) and copy
+                 (instance id) so the automated agent can target "install
+                 Unity" without scraping art alt text; two copies of a card
+                 differ only by data-instance. -->
+            <div v-for="c in hand" :key="c.id" class="hand-card" :data-card-id="c.cardId" :data-instance="c.id">
               <card-tile
                 :card="c"
                 clickable
@@ -25032,8 +25101,8 @@ var game_default = defineComponent({
                   v-for="m in handActionsFor(c)"
                   :key="moveKey(m)"
                   class="move-btn card-action-btn"
+                  v-bind="moveActionAttrs(m)"
                   @click="play(m)"
-                  :data-move="m.kind"
                 >{{ shortActionLabel(m) }}</button>
               </div>
             </div>
@@ -25041,7 +25110,7 @@ var game_default = defineComponent({
           </div>
         </section>
 
-        <div v-if="warnings.length" class="support-warnings" data-testid="warnings">
+        <div v-if="warnings.length" class="support-warnings" data-panel="warnings">
           <span v-for="(w, i) in warnings" :key="i">\u26A0 {{ w }}</span>
         </div>
       </div><!-- /game-main -->
@@ -25054,7 +25123,7 @@ var game_default = defineComponent({
            moves list) in its Actions area; its card groups add the
            per-card action buttons (abilities, break, pump) below each
            installed card. -->
-        <section class="card-dock" data-testid="card-dock">
+        <section class="card-dock" data-dock="card">
           <card-sheet
             :side="opponentSide"
             :is-own="false"
@@ -25094,14 +25163,15 @@ var game_default = defineComponent({
         </section>
 
       <!-- Log dock (right sidebar). -->
-      <aside class="log-dock" :class="{ collapsed: !logOpen }">
+      <aside class="log-dock" :class="{ collapsed: !logOpen }" data-dock="log">
         <button
           class="log-toggle"
+          data-action="toggle-log"
           :title="logOpen ? 'Collapse log' : 'Expand log'"
           :aria-label="logOpen ? 'Collapse log' : 'Expand log'"
           @click="logOpen = !logOpen"
         >{{ logOpen ? '\u203A' : '\u2039' }}</button>
-        <div v-if="logOpen" class="log-panel" data-testid="log-panel">
+        <div v-if="logOpen" class="log-panel" data-panel="log">
           <h3>Game log</h3>
           <ul>
             <li v-for="e in events" :key="e.key">{{ e.line }}</li>
@@ -25265,7 +25335,7 @@ var app_default = defineComponent({
       </template>
 
       <!-- ================= SETUP SCREEN ================= -->
-      <section v-else class="setup" data-testid="setup">
+      <section v-else class="setup" data-panel="setup">
         <h1>Netrunner \u2014 CyberClick Starters</h1>
         <p class="tagline">
           Human vs. the EvalAI opponent (determinized 1-ply evaluation with
@@ -25275,11 +25345,11 @@ var app_default = defineComponent({
           <div class="setup-block">
             <h2>You play</h2>
             <div class="row">
-              <button class="pick" :class="{ on: humanSide === 'runner' }" @click="humanSide = 'runner'" data-testid="pick-runner" :aria-pressed="String(humanSide === 'runner')">
+              <button class="pick" :class="{ on: humanSide === 'runner' }" @click="humanSide = 'runner'" data-action="pick-side" data-side="runner" :aria-pressed="String(humanSide === 'runner')">
                 <img class="glyph-side identity" :src="sideGlyph.runner" alt="" />
                 Runner <span class="dim">(AI plays Corp)</span>
               </button>
-              <button class="pick" :class="{ on: humanSide === 'corp' }" @click="humanSide = 'corp'" data-testid="pick-corp" :aria-pressed="String(humanSide === 'corp')">
+              <button class="pick" :class="{ on: humanSide === 'corp' }" @click="humanSide = 'corp'" data-action="pick-side" data-side="corp" :aria-pressed="String(humanSide === 'corp')">
                 <img class="glyph-side identity" :src="sideGlyph.corp" alt="" />
                 Corp <span class="dim">(AI plays Runner)</span>
               </button>
@@ -25295,6 +25365,8 @@ var app_default = defineComponent({
                 class="pick"
                 :class="{ on: strength === i }"
                 @click="strength = i"
+                data-action="pick-preset"
+                :data-preset="p.name.toLowerCase()"
                 :aria-pressed="String(strength === i)"
               >{{ p.name }} <span class="dim">({{ p.iterations }} worlds)</span></button>
             </div>
@@ -25307,15 +25379,15 @@ var app_default = defineComponent({
                 class="seed-field"
                 type="number"
                 v-model.number="seed"
-                data-testid="seed"
+                data-action="set-seed"
                 aria-label="Game seed"
               />
-              <button class="ghost-btn" @click="seed = Math.floor(Math.random() * 100000)">Random</button>
+              <button class="ghost-btn" @click="seed = Math.floor(Math.random() * 100000)" data-action="random-seed">Random</button>
             </div>
           </div>
         </div>
 
-        <button class="start-btn" @click="start(humanSide, seed, presets[strength])" data-testid="start-game">
+        <button class="start-btn" @click="start(humanSide, seed, presets[strength])" data-action="start">
           Start game
         </button>
       </section>

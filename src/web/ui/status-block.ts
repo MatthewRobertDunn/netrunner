@@ -15,17 +15,18 @@
  * inert counter), with a deck glyph in place of the word "hand".
  *
  * The DOM contract is pinned by tests/ui/game_screen_test.ts: the
- * `status-opponent` / `status-own` testids, the per-side `data-side`
- * attribute, `<side>-score` on the score strip, the real `<button>` tags for
- * the interactive tiles (`gain-credit`, `draw-card`) and the scored-agenda
- * mini-cards, and the `.status-block` classes the dock's CSS layout splits
- * evenly.
+ * `data-side` / `data-own` scoping pair, the `<side>-score` strip marker, and
+ * the real `<button>` tags for the interactive tiles and the scored-agenda
+ * mini-cards. Buttons carry the data-* annotation contract's `data-action` +
+ * parameter attributes (see docs/ui-gotchas.md): the gain/draw tiles are
+ * `gainMove`/`drawMove` buttons, so they get the same `moveActionAttrs` as any
+ * other move button rather than a hand-maintained `data-move` string.
  */
 
 import { computed, defineComponent, ref } from "vue";
 import type { PropType } from "vue";
 import type { Move, PlayerSide, PublicPlayerStatus } from "../../types.ts";
-import { cardTitle, imageFor } from "./util.ts";
+import { cardTitle, imageFor, moveActionAttrs } from "./util.ts";
 
 /** Glyph for a status block: Corp identity / Runner faction art. */
 function sideGlyph(side: PlayerSide): string {
@@ -99,14 +100,15 @@ export default defineComponent({
       cardTitle,
       scoreImgFailed,
       onScoreImgError,
+      moveActionAttrs,
     };
   },
   template: `
     <section
       class="status-block"
       :class="[side, isOwn ? 'status-own' : 'status-opponent', { active }]"
-      :data-testid="isOwn ? 'status-own' : 'status-opponent'"
       :data-side="side"
+      :data-own="String(isOwn)"
     >
       <div class="status-who">
         <img
@@ -131,7 +133,7 @@ export default defineComponent({
           class="primary-stat credits"
           :class="{ clickable: !!gainMove }"
           :disabled="isOwn ? !gainMove : undefined"
-          :data-testid="isOwn ? 'gain-credit' : undefined"
+          v-bind="isOwn && gainMove ? moveActionAttrs(gainMove) : undefined"
           :title="isOwn ? 'Gain 1 credit' : undefined"
           @click="gainMove && $emit('move', gainMove)"
         >
@@ -162,7 +164,7 @@ export default defineComponent({
           class="primary-stat hand"
           :class="{ clickable: !!drawMove }"
           :disabled="isOwn ? !drawMove : undefined"
-          :data-testid="isOwn ? 'draw-card' : undefined"
+          v-bind="isOwn && drawMove ? moveActionAttrs(drawMove) : undefined"
           :title="isOwn ? 'Draw 1 card' : undefined"
           @click="drawMove && $emit('move', drawMove)"
         >
@@ -174,14 +176,18 @@ export default defineComponent({
         <span v-if="side === 'runner' && stats.tags" class="stat"><img class="sym" src="assets/svg/tag.svg" alt="Tags" />{{ stats.tags }}</span>
         <span v-if="side === 'corp' && stats.tags" class="stat">bad pub {{ stats.tags }}</span>
       </div>
-      <span v-if="stats.score.length" class="score-strip" :data-testid="side + '-score'">
+      <span v-if="stats.score.length" class="score-strip" :data-panel="'score-' + side">
         <!-- Scored agendas are open information (rule 4.4.7b); each mini-card
-             is a button that opens the card zoom, same as the sheet titles. -->
+             is a button that opens the card zoom, same as the sheet titles.
+             data-card-id names the scored agenda; the strip's data-panel
+             marker is the non-interactive region name. -->
         <template v-for="c in stats.score" :key="c.id">
           <button
             v-if="!scoreImgFailed.includes(c.id)"
             type="button"
             class="mini-card mini-card-btn"
+            data-action="zoom"
+            :data-card-id="c.cardId"
             :title="'View ' + cardTitle(c.cardId)"
             @click="$emit('zoom', c.cardId)"
           >
@@ -196,6 +202,8 @@ export default defineComponent({
             v-else
             type="button"
             class="mini-card mini-card-text"
+            data-action="zoom"
+            :data-card-id="c.cardId"
             :title="'View ' + cardTitle(c.cardId)"
             @click="$emit('zoom', c.cardId)"
           >{{ cardTitle(c.cardId) }}</button>

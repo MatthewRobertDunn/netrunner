@@ -13,17 +13,19 @@
  * component to apply.
  *
  * The DOM contract is pinned by tests/ui/game_screen_test.ts: the
- * `action-panel`, `action-moves`, `prompt`, `access-notice`, and
- * `discard-submit` testids, and the `.banner-wait` /
- * `.banner-access` / `.prompt-box` / `.discard-picker` / `.pick-slot` /
- * `.moves` / `.move-btn` classes.
+ * `data-panel="actions"` marker, the prompt box's `data-prompt` kind, and the
+ * `.banner-wait` / `.banner-access` / `.prompt-box` / `.discard-picker` /
+ * `.pick-slot` / `.moves` / `.move-btn` classes. Buttons carry the data-*
+ * annotation contract's `data-action` + parameter attributes (see
+ * docs/ui-gotchas.md): `data-option` on prompt answers is what makes every
+ * prompt answerable by attribute rather than by button text.
  */
 
 import { computed, defineComponent } from "vue";
 import type { PropType } from "vue";
 import type { CardInstance, Move, Prompt } from "../../types.ts";
 import CardTile from "./card-tile.ts";
-import { cardTitle, moveKey, promptTitle } from "./util.ts";
+import { cardTitle, moveActionAttrs, moveKey, promptTitle } from "./util.ts";
 
 export default defineComponent({
   name: "ActionPanel",
@@ -74,12 +76,12 @@ export default defineComponent({
     function label(move: Move): string {
       return props.label(move);
     }
-    return { label, moveKey, promptTitle, discardCount, cardTitle };
+    return { label, moveActionAttrs, moveKey, promptTitle, discardCount, cardTitle };
   },
   template: `
-    <div class="action-panel" data-testid="action-panel">
+    <div class="action-panel" data-panel="actions">
       <template v-if="!humanTurn">
-        <div class="banner-wait">
+        <div class="banner-wait" data-state="waiting">
           <template v-if="thinking">{{ aiSideName }} is planning its move…</template>
           <template v-else>Waiting for the {{ aiSideName }}…</template>
         </div>
@@ -96,24 +98,26 @@ export default defineComponent({
         <button
           v-if="accessedCardId"
           class="banner-wait banner-access"
-          data-testid="access-notice"
+          data-action="open-access"
           @click="$emit('open-access')"
         >
           Accessing {{ cardTitle(accessedCardId) }} — decide on the card
         </button>
 
-        <div v-else-if="prompt" class="prompt-box" data-testid="prompt">
+        <div v-else-if="prompt" class="prompt-box" :data-prompt="prompt.kind">
           <div class="prompt-title">{{ promptTitle(prompt) }}</div>
 
           <div v-if="prompt.kind === 'discard'" class="discard-picker">
-            <div class="hint">Choose {{ discardCount }} card(s) to discard:</div>
+            <div class="hint" :data-count="discardCount">Choose {{ discardCount }} card(s) to discard:</div>
             <!-- Each slot is a real <button type="button"> whose single click
                  toggles the pick (Enter/Space work the same). The tile inside
                  is deliberately NOT clickable: a nested button would be
                  invalid HTML with a double tab stop, and one click would both
                  pick and open the zoom modal that blocks the next click. The
                  tile tooltip still names the card; the hand shows the same
-                 cards zoomable. -->
+                 cards zoomable. data-card-id / data-instance are what let the
+                 automated agent pick by card instead of by art alt text; the
+                 picked state is aria-pressed + the .picked class. -->
             <div class="hand-row picker">
               <button
                 v-for="c in hand"
@@ -122,6 +126,9 @@ export default defineComponent({
                 class="pick-slot"
                 :class="{ picked: discardSelected.includes(c.id) }"
                 :aria-pressed="String(discardSelected.includes(c.id))"
+                data-action="discard-pick"
+                :data-card-id="c.cardId"
+                :data-instance="c.id"
                 @click="$emit('discard-toggle', c.id)"
               >
                 <card-tile
@@ -132,7 +139,7 @@ export default defineComponent({
                 />
               </button>
             </div>
-            <button class="move-btn primary" :disabled="!canDiscard" @click="$emit('discard-submit')" data-testid="discard-submit">
+            <button class="move-btn primary" :disabled="!canDiscard" data-action="discard-submit" @click="$emit('discard-submit')">
               Discard selected
             </button>
           </div>
@@ -142,19 +149,19 @@ export default defineComponent({
               v-for="m in legal"
               :key="moveKey(m)"
               class="move-btn"
+              v-bind="moveActionAttrs(m)"
               @click="$emit('move', m)"
-              :data-move="m.kind"
             >{{ label(m) }}</button>
           </div>
         </div>
 
-        <div v-else class="moves" data-testid="action-moves">
+        <div v-else class="moves">
           <button
             v-for="m in generalMoves"
             :key="moveKey(m)"
             class="move-btn"
+            v-bind="moveActionAttrs(m)"
             @click="$emit('move', m)"
-            :data-move="m.kind"
           >{{ label(m) }}</button>
         </div>
       </template>

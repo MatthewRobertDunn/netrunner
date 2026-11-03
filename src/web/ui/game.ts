@@ -42,6 +42,7 @@ import {
   formatEvent,
   handOf,
   imageFor,
+  moveActionAttrs,
   moveKey,
   phaseLabel,
   promptFor,
@@ -513,6 +514,7 @@ export default defineComponent({
       prompt,
       legal,
       generalMoves,
+      moveActionAttrs,
       hand,
       canDiscard,
       events,
@@ -559,16 +561,16 @@ export default defineComponent({
            .status-block's flex: 1 1 0 splits the dock evenly between them;
            data-side marks which side each block shows; active marks
            state.turn.player. -->
-      <aside class="status-dock" data-testid="status-dock">
+      <aside class="status-dock" data-dock="status">
         <div class="status-half">
-        <div class="status-title" data-testid="status-title">
+        <div class="status-title" data-panel="turn">
           <div class="turn-badge">
             <span class="turn-num">Turn {{ state.turn.number }}</span>
             <span class="turn-player" :class="state.turn.player">
               {{ state.turn.player === 'corp' ? 'Corp' : 'Runner' }} · {{ phaseLabel(state.turn.phase) }}
             </span>
           </div>
-          <button class="ghost-btn" @click="$emit('new-game')">New game</button>
+          <button class="ghost-btn" data-action="new-game" @click="$emit('new-game')">New game</button>
         </div>
         <div v-if="state.winner || (!state.winner && isAiTurn && thinking) || lastWarning" class="status-alerts">
           <!-- The Winner chip doubles as the win-modal reopen button: the
@@ -577,14 +579,14 @@ export default defineComponent({
           <button
             v-if="state.winner"
             class="chip win chip-btn"
-            data-testid="winner"
+            data-action="show-result"
             title="Show the game-over dialog again"
             @click="winDismissed = false"
           >
             Winner: {{ state.winner }}
             <template v-if="state.winReason"> — {{ state.winReason }}</template>
           </button>
-          <span v-if="!state.winner && isAiTurn && thinking" class="chip thinking" data-testid="ai-thinking">
+          <span v-if="!state.winner && isAiTurn && thinking" class="chip thinking" data-state="thinking">
             {{ aiSideName }} is thinking…
           </span>
           <span v-if="lastWarning" class="chip warn">{{ lastWarning }}</span>
@@ -616,7 +618,7 @@ export default defineComponent({
       <!-- Servers: one ServerColumn per public server row; the corp-seat flip
            (ice on the runner side) is CSS "order" on .server.central and
            .server.remote children, keyed off .servers.corp-seat above. -->
-        <div class="servers" data-testid="servers" :class="{ 'corp-seat': humanSide === 'corp' }">
+        <div class="servers" data-panel="servers" :class="{ 'corp-seat': humanSide === 'corp' }">
           <server-column
             v-for="s in serverRows"
             :key="s.id"
@@ -635,7 +637,7 @@ export default defineComponent({
         </div>
 
         <!-- Run / breach banner (run/breach context for the action row). -->
-        <section v-if="run || breach" class="run-banner" data-testid="run-banner">
+        <section v-if="run || breach" class="run-banner" :data-banner="breach ? 'breach' : 'run'">
           <template v-if="breach">
             <span class="run-tag">BREACH</span> {{ serverLabel(breach.server) }} ·
             <span v-if="breach.accessing">accessing a card…</span>
@@ -653,8 +655,12 @@ export default defineComponent({
 
         <!-- Hand (own grip, direct grid child via .hand-area wrapper). -->
         <section class="hand-area">
-          <div class="hand-row runner-hand" data-testid="human-hand">
-            <div v-for="c in hand" :key="c.id" class="hand-card">
+          <div class="hand-row runner-hand" data-panel="hand">
+            <!-- Each hand card carries its identity (definition id) and copy
+                 (instance id) so the automated agent can target "install
+                 Unity" without scraping art alt text; two copies of a card
+                 differ only by data-instance. -->
+            <div v-for="c in hand" :key="c.id" class="hand-card" :data-card-id="c.cardId" :data-instance="c.id">
               <card-tile
                 :card="c"
                 clickable
@@ -665,8 +671,8 @@ export default defineComponent({
                   v-for="m in handActionsFor(c)"
                   :key="moveKey(m)"
                   class="move-btn card-action-btn"
+                  v-bind="moveActionAttrs(m)"
                   @click="play(m)"
-                  :data-move="m.kind"
                 >{{ shortActionLabel(m) }}</button>
               </div>
             </div>
@@ -674,7 +680,7 @@ export default defineComponent({
           </div>
         </section>
 
-        <div v-if="warnings.length" class="support-warnings" data-testid="warnings">
+        <div v-if="warnings.length" class="support-warnings" data-panel="warnings">
           <span v-for="(w, i) in warnings" :key="i">⚠ {{ w }}</span>
         </div>
       </div><!-- /game-main -->
@@ -687,7 +693,7 @@ export default defineComponent({
            moves list) in its Actions area; its card groups add the
            per-card action buttons (abilities, break, pump) below each
            installed card. -->
-        <section class="card-dock" data-testid="card-dock">
+        <section class="card-dock" data-dock="card">
           <card-sheet
             :side="opponentSide"
             :is-own="false"
@@ -727,14 +733,15 @@ export default defineComponent({
         </section>
 
       <!-- Log dock (right sidebar). -->
-      <aside class="log-dock" :class="{ collapsed: !logOpen }">
+      <aside class="log-dock" :class="{ collapsed: !logOpen }" data-dock="log">
         <button
           class="log-toggle"
+          data-action="toggle-log"
           :title="logOpen ? 'Collapse log' : 'Expand log'"
           :aria-label="logOpen ? 'Collapse log' : 'Expand log'"
           @click="logOpen = !logOpen"
         >{{ logOpen ? '›' : '‹' }}</button>
-        <div v-if="logOpen" class="log-panel" data-testid="log-panel">
+        <div v-if="logOpen" class="log-panel" data-panel="log">
           <h3>Game log</h3>
           <ul>
             <li v-for="e in events" :key="e.key">{{ e.line }}</li>

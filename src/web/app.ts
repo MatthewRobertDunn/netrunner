@@ -183,7 +183,7 @@ export default defineComponent({
       </template>
 
       <!-- ================= SETUP SCREEN ================= -->
-      <section v-else class="setup" data-testid="setup">
+      <section v-else class="setup" data-panel="setup">
         <h1>Netrunner — CyberClick Starters</h1>
         <p class="tagline">
           Human vs. the EvalAI opponent (determinized 1-ply evaluation with
@@ -193,11 +193,11 @@ export default defineComponent({
           <div class="setup-block">
             <h2>You play</h2>
             <div class="row">
-              <button class="pick" :class="{ on: humanSide === 'runner' }" @click="humanSide = 'runner'" data-testid="pick-runner" :aria-pressed="String(humanSide === 'runner')">
+              <button class="pick" :class="{ on: humanSide === 'runner' }" @click="humanSide = 'runner'" data-action="pick-side" data-side="runner" :aria-pressed="String(humanSide === 'runner')">
                 <img class="glyph-side identity" :src="sideGlyph.runner" alt="" />
                 Runner <span class="dim">(AI plays Corp)</span>
               </button>
-              <button class="pick" :class="{ on: humanSide === 'corp' }" @click="humanSide = 'corp'" data-testid="pick-corp" :aria-pressed="String(humanSide === 'corp')">
+              <button class="pick" :class="{ on: humanSide === 'corp' }" @click="humanSide = 'corp'" data-action="pick-side" data-side="corp" :aria-pressed="String(humanSide === 'corp')">
                 <img class="glyph-side identity" :src="sideGlyph.corp" alt="" />
                 Corp <span class="dim">(AI plays Runner)</span>
               </button>
@@ -213,6 +213,8 @@ export default defineComponent({
                 class="pick"
                 :class="{ on: strength === i }"
                 @click="strength = i"
+                data-action="pick-preset"
+                :data-preset="p.name.toLowerCase()"
                 :aria-pressed="String(strength === i)"
               >{{ p.name }} <span class="dim">({{ p.iterations }} worlds)</span></button>
             </div>
@@ -225,15 +227,15 @@ export default defineComponent({
                 class="seed-field"
                 type="number"
                 v-model.number="seed"
-                data-testid="seed"
+                data-action="set-seed"
                 aria-label="Game seed"
               />
-              <button class="ghost-btn" @click="seed = Math.floor(Math.random() * 100000)">Random</button>
+              <button class="ghost-btn" @click="seed = Math.floor(Math.random() * 100000)" data-action="random-seed">Random</button>
             </div>
           </div>
         </div>
 
-        <button class="start-btn" @click="start(humanSide, seed, presets[strength])" data-testid="start-game">
+        <button class="start-btn" @click="start(humanSide, seed, presets[strength])" data-action="start">
           Start game
         </button>
       </section>

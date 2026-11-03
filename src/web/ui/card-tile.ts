@@ -45,6 +45,9 @@ export default defineComponent({
     clickable: { type: Boolean, default: false },
     // Facedown tiles show the corp card back instead of the runner's.
     corp: { type: Boolean, default: false },
+    // Ice-stack position (innermost = 1), emitted as data-card-pos. DOM
+    // order flips with the corp-seat CSS flip; the engine position does not.
+    pos: { type: Number, default: undefined },
   },
   emits: ["zoom"],
   setup(
@@ -57,6 +60,7 @@ export default defineComponent({
       small: boolean;
       clickable: boolean;
       corp: boolean;
+      pos: number | undefined;
     },
     { emit }: { emit: (event: "zoom", cardId: string) => void },
   ) {
@@ -74,13 +78,25 @@ export default defineComponent({
     const isZoomable = computed(() =>
       Boolean(props.clickable && props.card && props.card.cardId !== "hidden")
     );
+    /** The annotation contract's attributes: every face-up tile is findable
+     *  by card id, and clickable tiles are actions ("zoom") like any other
+     *  button. Facedown (redacted) tiles carry position only. */
+    const cardAttrs = computed<Record<string, string | undefined>>(() => {
+      const card = props.card;
+      const known = card && card.cardId !== "hidden";
+      return {
+        "data-card-id": known ? card!.cardId : undefined,
+        "data-action": isZoomable.value ? "zoom" : undefined,
+        "data-card-pos": props.pos !== undefined ? String(props.pos) : undefined,
+      };
+    });
 
     function onClick(): void {
       const card = props.card;
       if (isZoomable.value && card) emit("zoom", card.cardId);
     }
 
-    return { def, img, typeTag, isAgenda, isZoomable, onClick };
+    return { def, img, typeTag, isAgenda, isZoomable, cardAttrs, onClick };
   },
   template: `
     <component
@@ -89,6 +105,7 @@ export default defineComponent({
       class="card-tile"
       :class="{ facedown, ice, highlight, small, 'is-agenda': isAgenda, clickable }"
       :title="def ? def.title + '\\n' + def.strippedText : 'Facedown card'"
+      v-bind="cardAttrs"
       @click="onClick"
     >
       <img v-if="img" class="card-img" :src="img" :alt="def ? def.title : ''" loading="lazy" />

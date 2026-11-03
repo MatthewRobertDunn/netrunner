@@ -99,13 +99,13 @@ export default defineComponent({
       @keydown.escape="$emit('dismiss')"
       @keydown.tab="trapTab"
       tabindex="0"
-      data-testid="win-modal"
+      data-modal="win"
     >
       <div class="win-card">
         <div class="win-eyebrow">Game over</div>
         <div class="win-name">{{ winner }}</div>
         <p v-if="winReason" class="win-reason">{{ winReason }}</p>
-        <button class="move-btn primary" @click="$emit('new-game')" data-testid="win-new-game">
+        <button class="move-btn primary" data-action="new-game" @click="$emit('new-game')">
           New game
         </button>
       </div>

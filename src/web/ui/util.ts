@@ -228,6 +228,50 @@ export function moveKey(m: Move): string {
   return JSON.stringify(m);
 }
 
+// ---------------------------------------------------------------------------
+// The data-* annotation contract (see docs/ui-gotchas.md, entry "annotation
+// contract"): every clickable element carries `data-action` (the engine's
+// move kind when the button plays a move, else a UI verb such as "zoom") and
+// one attribute per move parameter. Automated browser agents select with CSS
+// attribute conjunctions — e.g. `[data-action="runner.run"][data-server="hq"]`
+// — so every dimension is its own attribute, never packed into one string.
+// The UI itself never reads these attributes; they are a pure output contract.
+// ---------------------------------------------------------------------------
+
+/** The attribute set `moveActionAttrs` produces for a move button. */
+export interface ActionAttrs {
+  "data-action": string;
+  "data-server"?: string;
+  "data-card-id"?: string;
+  "data-instance"?: string;
+  "data-target"?: string;
+  /** 1-based, matching the visible label ("Break sub 2" → data-sub="2"). */
+  "data-sub"?: string;
+  /** 1-based, matching the visible label ("Ability 2" → data-ability="2"). */
+  "data-ability"?: string;
+  "data-option"?: string;
+}
+
+/**
+ * Action attributes for a button that plays `move`. The verb is the move kind
+ * itself (lossless: `runner.breakSubroutine` vs `runner.bioroidBreak` stay
+ * distinct); each parameter the move carries becomes its own attribute.
+ * Undefined values are dropped by Vue's binding, so buttons carry only what
+ * they need. Subroutine and ability numbers are 1-based to match the labels.
+ */
+export function moveActionAttrs(move: Move): ActionAttrs {
+  const attrs: ActionAttrs = { "data-action": move.kind };
+  if ("cardId" in move) attrs["data-card-id"] = move.cardId;
+  if ("server" in move) attrs["data-server"] = move.server;
+  if ("targetId" in move) attrs["data-target"] = move.targetId;
+  if ("programId" in move) attrs["data-instance"] = move.programId;
+  if ("iceId" in move) attrs["data-instance"] = move.iceId;
+  if ("subIndex" in move) attrs["data-sub"] = String(move.subIndex + 1);
+  if ("abilityIndex" in move) attrs["data-ability"] = String(move.abilityIndex + 1);
+  if ("optionId" in move) attrs["data-option"] = move.optionId;
+  return attrs;
+}
+
 /** Human-readable label for a legal move. */
 export function describeMove(state: GameState, move: Move): string {
   switch (move.kind) {

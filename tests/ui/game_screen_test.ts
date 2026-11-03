@@ -40,19 +40,22 @@ Deno.test("GameScreen renders the board layout", async (t) => {
     const { state, wrapper } = mountGame(42, "corp");
 
     assertEquals(wrapper.text().includes("CORP"), true, "shows the corp status");
-    assert(wrapper.find('[data-testid="status-dock"]').exists(), "status dock present");
+    assert(wrapper.find('[data-dock="status"]').exists(), "status dock present");
     assertEquals(
       wrapper.findAll(".player-strip").length,
       0,
       "no in-flow player strips remain",
     );
     assertEquals(
-      wrapper.findAll('[data-testid="human-hand"] .hand-card').length,
+      wrapper.findAll('[data-panel="hand"] .hand-card').length,
       state.corp.hand.length,
       "renders one hand-card tile per card in the human hand",
     );
     // The action panel offers corp's legal basic moves (install/play/draw/…).
-    assert(wrapper.find('[data-testid="action-moves"]').exists(), "action moves panel rendered");
+    assert(
+      wrapper.find('[data-panel="actions"] > .moves').exists(),
+      "action moves panel rendered",
+    );
   });
 
   await t.step("corp perspective and central columns", () => {
@@ -75,10 +78,10 @@ Deno.test("GameScreen renders the board layout", async (t) => {
     }
 
     // Statuses live in the left dock now, not in the main column.
-    assert(wrapper.find('[data-testid="status-dock"]').exists(), "status dock present");
+    assert(wrapper.find('[data-dock="status"]').exists(), "status dock present");
     assertEquals(wrapper.findAll(".player-strip").length, 0, "old strips removed");
     assert(
-      wrapper.find(".game-main > .hand-area [data-testid='human-hand']").exists(),
+      wrapper.find(".game-main > .hand-area [data-panel='hand']").exists(),
       "hand area present",
     );
 
@@ -95,7 +98,7 @@ Deno.test("GameScreen install actions: one row per tile and a single-row popup",
   await t.step("duplicated Palisades yield one Install → HQ button per tile", () => {
     // Seed 42 opens with the Corp to act and two Palisades already in hand.
     const { wrapper } = mountGame(42, "corp");
-    const hand = wrapper.find('[data-testid="human-hand"]');
+    const hand = wrapper.find('[data-panel="hand"]');
 
     let palisadeTiles = 0;
     let totalHqButtons = 0;
@@ -107,6 +110,11 @@ Deno.test("GameScreen install actions: one row per tile and a single-row popup",
         palisadeTiles += 1;
         totalHqButtons += hq.length;
         assertEquals(hq.length, 1, "exactly one Install → HQ button per Palisade tile");
+        // Annotation contract: the button names its verb and both parameters
+        // (see docs/ui-gotchas.md).
+        assertEquals(hq[0]!.attributes("data-action"), "corp.install");
+        assertEquals(hq[0]!.attributes("data-card-id"), "palisade");
+        assertEquals(hq[0]!.attributes("data-server"), "hq");
       }
     }
     assertEquals(palisadeTiles, 2, "two Palisade tiles in the hand");
@@ -125,19 +133,19 @@ Deno.test("GameScreen install actions: one row per tile and a single-row popup",
     // Popup on a grip card: shows its install actions, exactly one "Install →
     // HQ", and no Close button while actions are present.
     const palisadeTile = wrapper
-      .findAll('[data-testid="human-hand"] .hand-card')
+      .findAll('[data-panel="hand"] .hand-card')
       .find((tile) =>
         tile.findAll(".card-actions button").some((b) => b.text() === "Install → HQ")
       );
     assert(palisadeTile, "found a Palisade hand tile");
     await palisadeTile!.find(".card-tile.clickable").trigger("click");
-    const popup = wrapper.find('[data-testid="card-zoom"]');
+    const popup = wrapper.find('[data-modal="zoom"]');
     assert(popup.exists(), "popup opened on the clicked tile");
     const actions = popup.findAll(".zoom-actions button");
     const hqActions = actions.filter((b) => b.text() === "Install → HQ");
     assertEquals(hqActions.length, 1, "popup shows a single Install → HQ action");
     assertEquals(
-      popup.findAll('[data-testid="zoom-close"]').length,
+      popup.findAll('[data-action="close"]').length,
       0,
       "no Close button while install actions are shown",
     );
@@ -145,7 +153,7 @@ Deno.test("GameScreen install actions: one row per tile and a single-row popup",
     // Dismiss via the backdrop (popup root is the backdrop itself).
     await popup.trigger("click");
     assertEquals(
-      wrapper.find('[data-testid="card-zoom"]').exists(),
+      wrapper.find('[data-modal="zoom"]').exists(),
       false,
       "popup dismissed",
     );
@@ -153,10 +161,10 @@ Deno.test("GameScreen install actions: one row per tile and a single-row popup",
     // Popup on a card with no actions (the HQ identity card): single Close
     // button and no install buttons leaked into it.
     await wrapper.find(".servers.corp-seat .server-card").trigger("click");
-    const identityPopup = wrapper.find('[data-testid="card-zoom"]');
+    const identityPopup = wrapper.find('[data-modal="zoom"]');
     assert(identityPopup.exists(), "identity popup opened");
     assertEquals(
-      identityPopup.findAll('[data-testid="zoom-close"]').length,
+      identityPopup.findAll('[data-action="close"]').length,
       1,
       "exactly one Close button",
     );
@@ -172,11 +180,11 @@ Deno.test("GameScreen status dock side panel", async (t) => {
   await t.step("opponent on top, own on bottom per seat", () => {
     for (const humanSide of ["corp", "runner"] as const) {
       const { wrapper } = mountGame(42, humanSide);
-      const dock = wrapper.find('[data-testid="status-dock"]');
+      const dock = wrapper.find('[data-dock="status"]');
       assert(dock.exists(), `dock present (${humanSide})`);
 
-      const opponent = dock.find('[data-testid="status-opponent"]');
-      const own = dock.find('[data-testid="status-own"]');
+      const opponent = dock.find('.status-block[data-own="false"]');
+      const own = dock.find('.status-block[data-own="true"]');
       assert(opponent.exists() && own.exists(), `both blocks present (${humanSide})`);
 
       const expectedOpp = humanSide === "corp" ? "runner" : "corp";
@@ -190,7 +198,7 @@ Deno.test("GameScreen status dock side panel", async (t) => {
       // DOM order: opponent block precedes the own block (top vs bottom half).
       const html = dock.html();
       assert(
-        html.indexOf('data-testid="status-opponent"') < html.indexOf('data-testid="status-own"'),
+        html.indexOf('data-own="false"') < html.indexOf('data-own="true"'),
         `opponent block above own block (${humanSide})`,
       );
     }
@@ -199,7 +207,7 @@ Deno.test("GameScreen status dock side panel", async (t) => {
   await t.step("both statuses render values, Archives/Heap labels", () => {
     for (const humanSide of ["corp", "runner"] as const) {
       const { wrapper, status } = mountGame(42, humanSide);
-      const dock = wrapper.find('[data-testid="status-dock"]');
+      const dock = wrapper.find('[data-dock="status"]');
 
       for (const side of ["corp", "runner"] as const) {
         const block = dock.find(`[data-side="${side}"]`);
@@ -250,11 +258,11 @@ Deno.test("GameScreen status dock side panel", async (t) => {
       const { state } = dockActionFixture(humanSide);
       assertEquals(state.turn.player, humanSide, `it is ${humanSide}'s turn`);
       const wrapper = mount(GameScreen, { props: { state, humanSide } });
-      const dock = wrapper.find('[data-testid="status-dock"]');
-      const own = dock.find('[data-testid="status-own"]');
+      const dock = wrapper.find('[data-dock="status"]');
+      const own = dock.find('.status-block[data-own="true"]');
 
       // The gain-credit move left the action panel for the credits tile.
-      const moves = wrapper.find('[data-testid="action-moves"]');
+      const moves = wrapper.find('[data-panel="actions"] > .moves');
       if (moves.exists()) {
         assertEquals(
           moves.findAll("button").filter((b) => b.text() === "Gain 1 credit").length,
@@ -263,7 +271,9 @@ Deno.test("GameScreen status dock side panel", async (t) => {
         );
       }
 
-      const gain = own.find('[data-testid="gain-credit"]');
+      // The tile is the move: its annotation is moveActionAttrs' output, so
+      // the agent finds it by the action kind, not by layout.
+      const gain = own.find(`[data-action="${humanSide}.gainCredits"]`);
       assert(gain.exists(), `own credits tile is the gain button (${humanSide})`);
       assertEquals(gain.element.tagName.toLowerCase(), "button", "gain tile is a real button");
 
@@ -286,12 +296,12 @@ Deno.test("GameScreen status dock side panel", async (t) => {
         `the ${humanSide}.draw move is legal (clicks + deck left)`,
       );
       const wrapper = mount(GameScreen, { props: { state, humanSide } });
-      const dock = wrapper.find('[data-testid="status-dock"]');
-      const own = dock.find('[data-testid="status-own"]');
-      const opp = dock.find('[data-testid="status-opponent"]');
+      const dock = wrapper.find('[data-dock="status"]');
+      const own = dock.find('.status-block[data-own="true"]');
+      const opp = dock.find('.status-block[data-own="false"]');
 
       // The draw move left the action panel for the hand tile.
-      const moves = wrapper.find('[data-testid="action-moves"]');
+      const moves = wrapper.find('[data-panel="actions"] > .moves');
       if (moves.exists()) {
         assertEquals(
           moves.findAll("button").filter((b) => b.text() === "Draw 1 card").length,
@@ -300,7 +310,7 @@ Deno.test("GameScreen status dock side panel", async (t) => {
         );
       }
 
-      const draw = own.find('[data-testid="draw-card"]');
+      const draw = own.find(`[data-action="${humanSide}.draw"]`);
       assert(draw.exists(), `own hand tile is the draw button (${humanSide})`);
       assertEquals(draw.element.tagName.toLowerCase(), "button", "hand tile is a real button");
       assert(draw.classes().includes("primary-stat"), "hand tile shares the primary tile look");
@@ -322,7 +332,7 @@ Deno.test("GameScreen status dock side panel", async (t) => {
         "opponent hand stays an inert div",
       );
       assertEquals(
-        oppHand.find('[data-testid="draw-card"]').exists(),
+        oppHand.find("[data-action]").exists(),
         false,
         "opponent hand tile has no draw button",
       );
@@ -346,17 +356,27 @@ Deno.test("GameScreen status dock side panel", async (t) => {
       state.corp.score = [{ ...agenda, zone: "score" }];
       const wrapper = mount(GameScreen, { props: { state, humanSide } });
 
-      const strip = wrapper.find('[data-testid="corp-score"]');
+      const strip = wrapper.find('[data-panel="score-corp"]');
       assert(strip.exists(), `corp score strip renders (${humanSide})`);
       const card = strip.find("button.mini-card");
       assert(card.exists(), "the scored agenda mini-card is a button");
+      assertEquals(
+        card.attributes("data-action"),
+        "zoom",
+        "the mini-card's action is the zoom verb",
+      );
+      assertEquals(
+        card.attributes("data-card-id"),
+        agenda.cardId,
+        "the mini-card names the scored agenda",
+      );
       assert(
         (card.attributes("title") ?? "").startsWith("View "),
         "the mini-card tooltips the zoom",
       );
 
       await card.trigger("click");
-      const zoom = wrapper.find('[data-testid="card-zoom"]');
+      const zoom = wrapper.find('[data-modal="zoom"]');
       assert(zoom.exists(), `the zoom popup opened from the strip (${humanSide})`);
       assert(
         zoom.text().includes(cardDef(agenda.cardId).title),
@@ -369,7 +389,7 @@ Deno.test("GameScreen status dock side panel", async (t) => {
     const { state, humanSide, wrapper } = mountGame(42, "corp");
     const acting = state.turn.player;
     const idle = acting === "corp" ? "runner" : "corp";
-    const dock = wrapper.find('[data-testid="status-dock"]');
+    const dock = wrapper.find('[data-dock="status"]');
     assert(
       dock.find(`[data-side="${acting}"]`).classes().includes("active"),
       `${acting} block highlighted while acting`,
@@ -384,7 +404,7 @@ Deno.test("GameScreen status dock side panel", async (t) => {
     const flipped = structuredClone(state);
     flipped.turn.player = idle;
     const wrapper2 = mount(GameScreen, { props: { state: flipped, humanSide } });
-    const dock2 = wrapper2.find('[data-testid="status-dock"]');
+    const dock2 = wrapper2.find('[data-dock="status"]');
     assert(
       dock2.find(`[data-side="${idle}"]`).classes().includes("active"),
       `highlight follows turn flip to ${idle}`,
@@ -506,12 +526,12 @@ Deno.test("GameScreen access popup: only the human's own access decision pops th
   const opp = mount(GameScreen, { props: { state, humanSide: "corp" } });
   await opp.setProps({ state: withAccess() });
   assertEquals(
-    opp.find('[data-testid="access-notice"]').exists(),
+    opp.find('[data-action="open-access"]').exists(),
     false,
     "no access notice for the opponent's access",
   );
   assertEquals(
-    opp.find('[data-testid="card-zoom"]').exists(),
+    opp.find('[data-modal="zoom"]').exists(),
     false,
     "no auto zoom for the opponent's access",
   );
@@ -520,11 +540,11 @@ Deno.test("GameScreen access popup: only the human's own access decision pops th
   const own = mount(GameScreen, { props: { state, humanSide: "runner" } });
   await own.setProps({ state: withAccess() });
   assert(
-    own.find('[data-testid="access-notice"]').exists(),
+    own.find('[data-action="open-access"]').exists(),
     "access notice for the human's own access",
   );
   assert(
-    own.find('[data-testid="card-zoom"]').exists(),
+    own.find('[data-modal="zoom"]').exists(),
     "auto zoom for the human's own access",
   );
 });
@@ -546,7 +566,7 @@ Deno.test("GameScreen run-sourcing events label their target server", () => {
 
   const wrapper = mount(GameScreen, { props: { state, humanSide: "runner" } });
   const jailbreakTile = wrapper
-    .findAll('[data-testid="human-hand"] .hand-card')
+    .findAll('[data-panel="hand"] .hand-card')
     .find((tile) =>
       tile.findAll(".card-actions button").some((b) => b.text().startsWith("Play →"))
     );
@@ -555,6 +575,14 @@ Deno.test("GameScreen run-sourcing events label their target server", () => {
     jailbreakTile!.findAll(".card-actions button").map((b) => b.text()),
     ["Play → HQ", "Play → R&D"],
     "one distinct label per run target, mirroring the corp.install branch",
+  );
+  // The per-target buttons distinguish themselves by data-server, not by
+  // label text — the agent can run HQ's event without parsing "Play → HQ".
+  assertEquals(
+    jailbreakTile!.findAll('.card-actions button[data-action="runner.playEvent"]')
+      .map((b) => b.attributes("data-server")),
+    ["hq", "rd"],
+    "one data-server per run target",
   );
 });
 
@@ -600,15 +628,19 @@ Deno.test("GameScreen multi-ice stack renders outermost farthest in both seats",
   try {
     const slots = corpView.find(".server.remote").findAll(".server-ice-stack .ice-slot");
     assertEquals(slots.length, 2, "two ice slots render");
-    // CardTile's title carries the printed card name; use it to identify the
-    // instance in each slot (tiles carry no instance id in the DOM).
-    const names = slots.map((slot) =>
-      (slot.find(".card-tile").attributes("title") ?? "").split("\n")[0]
+    // Tiles name their card (data-card-id) and engine position
+    // (data-card-pos, innermost = 1) — the annotation contract's answer to
+    // "which ice is which" that used to require scraping the title text.
+    const tiles = slots.map((slot) => slot.find(".card-tile"));
+    assertEquals(
+      tiles.map((tile) => tile.attributes("data-card-id")),
+      ["palisade", "tithe"],
+      "corp seat: outermost ice renders farthest from the server card",
     );
     assertEquals(
-      names,
-      ["Palisade", "Tithe"],
-      "corp seat: outermost ice renders farthest from the server card",
+      tiles.map((tile) => tile.attributes("data-card-pos")),
+      ["2", "1"],
+      "corp seat: DOM order flips, engine positions do not",
     );
   } finally {
     corpView.unmount();
@@ -650,14 +682,19 @@ Deno.test("GameScreen multi-ice stack renders outermost farthest in both seats",
   try {
     const slots = runnerView.find(".server.remote").findAll(".server-ice-stack .ice-slot");
     assertEquals(slots.length, 2, "two ice slots render");
-    const names = slots.map((slot) =>
-      (slot.find(".card-tile").attributes("title") ?? "").split("\n")[0]
-    );
+    const tiles = slots.map((slot) => slot.find(".card-tile"));
+    const names = tiles.map((tile) => (tile.attributes("title") ?? "").split("\n")[0]);
     assertEquals(
       names,
       ["Facedown card", "Palisade"],
       "runner seat: inner ice facedown in place, rezzed outer ice outermost",
     );
+    // The facedown tile carries position but no identity (redaction); the
+    // rezzed tile names itself and keeps its outer position.
+    assertEquals(tiles[0]!.attributes("data-card-id"), undefined, "facedown ice stays hidden");
+    assertEquals(tiles[0]!.attributes("data-card-pos"), "1", "facedown ice keeps its position");
+    assertEquals(tiles[1]!.attributes("data-card-id"), "palisade", "rezzed ice names itself");
+    assertEquals(tiles[1]!.attributes("data-card-pos"), "2", "rezzed ice keeps its position");
     assertEquals(
       slots[1]!.find(".badge-counter").text(),
       "RUN",
@@ -753,7 +790,7 @@ Deno.test("GameScreen truthful labels, banner wording, and hosted counters", asy
     assert(state.run?.currentIceId, "test setup: the run parks on the approached ice");
 
     const wrapper = mount(GameScreen, { props: { state, humanSide: "runner" } });
-    const banner = wrapper.find('[data-testid="run-banner"]');
+    const banner = wrapper.find('[data-banner="run"]');
     assert(banner.exists(), "run banner renders");
     const text = banner.text();
     assert(text.includes("RUN"), "run tag present");
@@ -778,7 +815,7 @@ Deno.test("GameScreen truthful labels, banner wording, and hosted counters", asy
     assert(state.breach !== null, "test setup: the run breaches HQ");
 
     const wrapper = mount(GameScreen, { props: { state, humanSide: "runner" } });
-    const text = wrapper.find('[data-testid="run-banner"]').text();
+    const text = wrapper.find('[data-banner="breach"]').text();
     assert(text.includes("BREACH HQ"), `server label form, got: ${text}`);
     assertEquals(text.includes("hq"), false, "no raw server id in the banner");
     // The old "limit - used access(es) left" overstated HQ: the real
@@ -799,6 +836,25 @@ Deno.test("GameScreen truthful labels, banner wording, and hosted counters", asy
     const texts = wrapper.findAll(".prompt-box .moves button").map((b) => b.text());
     assert(texts.includes("Decline"), `a Decline button renders, got: ${texts.join(" | ")}`);
     assertEquals(texts.includes("pass"), false, "the raw reserved id never renders");
+    // The prompt box names its kind, and every answer carries its engine
+    // optionId as data-option — the annotation contract's answer to "which
+    // option is which" that used to require matching button text.
+    const box = wrapper.find(".prompt-box");
+    assertEquals(box.attributes("data-prompt"), "rez-window", "prompt kind annotated");
+    const decline = box
+      .findAll("button")
+      .find((b) => b.text() === "Decline");
+    assert(decline, "found the Decline button");
+    assertEquals(
+      decline!.attributes("data-action"),
+      "prompt.answer",
+      "prompt answers are prompt.answer actions",
+    );
+    assertEquals(
+      decline!.attributes("data-option"),
+      "pass",
+      "the reserved decline optionId is data-option",
+    );
   });
 });
 
@@ -832,7 +888,7 @@ Deno.test("GameScreen card dock: sheets, per-card actions, no duplicates", async
     for (const humanSide of ["corp", "runner"] as const) {
       const { state } = createTestFixture(42, humanSide);
       const wrapper = mount(GameScreen, { props: { state, humanSide } });
-      const sheets = wrapper.findAll('[data-testid="card-dock"] > .card-sheet');
+      const sheets = wrapper.findAll('[data-dock="card"] > .card-sheet');
       assertEquals(sheets.length, 2, `two sheets in the dock (${humanSide})`);
       assertEquals(
         sheets[0]!.attributes("data-side"),
@@ -844,19 +900,22 @@ Deno.test("GameScreen card dock: sheets, per-card actions, no duplicates", async
         humanSide,
         `own sheet is second (${humanSide})`,
       );
-      assertEquals(sheets[0]!.attributes("data-testid"), "sheet-opponent", "opponent testid");
-      assertEquals(sheets[1]!.attributes("data-testid"), "sheet-own", "own testid");
+      // data-own is the seat selector: the interface vs the mirror.
+      assertEquals(sheets[0]!.attributes("data-own"), "false", "opponent sheet not own");
+      assertEquals(sheets[1]!.attributes("data-own"), "true", "own sheet is own");
     }
   });
 
   await t.step("the runner's own sheet lists installed cards with per-card actions", () => {
     const state = runnerWithSmartware();
     const wrapper = mount(GameScreen, { props: { state, humanSide: "runner" } });
-    const own = wrapper.find('[data-testid="sheet-own"]');
+    const own = wrapper.find('.card-sheet[data-own="true"]');
     const resourceGroup = own.find('.sheet-group[data-group="resource"]');
     assert(resourceGroup.exists(), "a Resources group renders on the own sheet");
     const row = resourceGroup.find('.sheet-card[data-card-id="smartware_distributor"]');
     assert(row.exists(), "the Smartware Distributor row renders");
+    const instanceId = row.attributes("data-instance");
+    assert(instanceId, "the row names its card copy (data-instance)");
     assertEquals(row.find(".sheet-card-title").text().trim(), "Smartware Distributor");
     const actions = row.findAll(".sheet-card-actions button");
     assertEquals(actions.length, 1, "one ability button under the card");
@@ -864,16 +923,20 @@ Deno.test("GameScreen card dock: sheets, per-card actions, no duplicates", async
       actions[0]!.text().includes("Place 3 credits"),
       `the printed ability title labels the button, got: ${actions[0]!.text()}`,
     );
-    assertEquals(actions[0]!.attributes("data-move"), "runner.ability");
+    assertEquals(actions[0]!.attributes("data-action"), "runner.ability");
+    // The ability button names which card copy and which ability: 1-based,
+    // matching the label.
+    assertEquals(actions[0]!.attributes("data-target"), instanceId);
+    assertEquals(actions[0]!.attributes("data-ability"), "1");
   });
 
   await t.step("per-card actions never duplicate in the Actions list", () => {
     const state = runnerWithSmartware();
     const wrapper = mount(GameScreen, { props: { state, humanSide: "runner" } });
-    const general = wrapper.find('[data-testid="action-moves"]');
+    const general = wrapper.find('[data-panel="actions"] > .moves');
     assert(general.exists(), "the Actions list renders");
     assertEquals(
-      general.findAll('button[data-move="runner.ability"]').length,
+      general.findAll('button[data-action="runner.ability"]').length,
       0,
       "no ability button in the general Actions list",
     );
@@ -896,7 +959,7 @@ Deno.test("GameScreen card dock: sheets, per-card actions, no duplicates", async
     // runner's decisions are not the corp's interface.
     const state = runnerWithSmartware();
     const wrapper = mount(GameScreen, { props: { state, humanSide: "corp" } });
-    const opp = wrapper.find('[data-testid="sheet-opponent"]');
+    const opp = wrapper.find('.card-sheet[data-own="false"]');
     const row = opp.find('.sheet-card[data-card-id="smartware_distributor"]');
     assert(row.exists(), "the opponent runner's installed card is listed");
     assertEquals(
@@ -907,7 +970,7 @@ Deno.test("GameScreen card dock: sheets, per-card actions, no duplicates", async
     assertEquals(row.find(".sheet-card-actions").exists(), false, "no action row at all");
     // The corp's own sheet: actions only, no card groups (corp cards are on
     // the board).
-    const own = wrapper.find('[data-testid="sheet-own"]');
+    const own = wrapper.find('.card-sheet[data-own="true"]');
     assertEquals(
       own.findAll(".sheet-group").length,
       0,
@@ -926,7 +989,7 @@ Deno.test("GameScreen card dock: sheets, per-card actions, no duplicates", async
       '.sheet-card[data-card-id="smartware_distributor"] .sheet-card-title',
     );
     await title.trigger("click");
-    const zoom = wrapper.find('[data-testid="card-zoom"]');
+    const zoom = wrapper.find('[data-modal="zoom"]');
     assert(zoom.exists(), "the zoom popup opened from the sheet");
     assert(zoom.text().includes("Smartware Distributor"), "the popup shows the card");
   });
@@ -945,7 +1008,7 @@ Deno.test("GameScreen win modal", async (t) => {
   await t.step("a won game pops the dialog, not a sidebar banner", () => {
     const state = wonGame("corp", "agenda points");
     const wrapper = mount(GameScreen, { props: { state, humanSide: "corp" } });
-    const modal = wrapper.find('[data-testid="win-modal"]');
+    const modal = wrapper.find('[data-modal="win"]');
     assert(modal.exists(), "the win dialog renders over the board");
     assert(modal.text().includes("corp"), "the dialog names the winner");
     assert(modal.text().includes("agenda points"), "the dialog shows the win reason");
@@ -954,7 +1017,7 @@ Deno.test("GameScreen win modal", async (t) => {
       false,
       "no win banner in the card-dock sidebar",
     );
-    const panel = wrapper.find('[data-testid="action-panel"]');
+    const panel = wrapper.find('[data-panel="actions"]');
     if (panel.exists()) {
       assertEquals(panel.text().includes("Winner:"), false, "the Actions area stays an interface");
     }
@@ -963,7 +1026,7 @@ Deno.test("GameScreen win modal", async (t) => {
   await t.step("the dialog's New game button restarts", async () => {
     const state = wonGame("runner", "flatline");
     const wrapper = mount(GameScreen, { props: { state, humanSide: "corp" } });
-    const button = wrapper.find('[data-testid="win-new-game"]');
+    const button = wrapper.find('[data-modal="win"] [data-action="new-game"]');
     assert(button.exists(), "the dialog carries a New game button");
     await button.trigger("click");
     assert(wrapper.emitted("new-game"), "new-game bubbles to the root");
@@ -972,12 +1035,12 @@ Deno.test("GameScreen win modal", async (t) => {
   await t.step("Esc dismisses to the final board; the Winner chip reopens", async () => {
     const state = wonGame("corp", "agenda points");
     const wrapper = mount(GameScreen, { props: { state, humanSide: "corp" } });
-    await wrapper.find('[data-testid="win-modal"]').trigger("keydown.escape");
-    assertEquals(wrapper.find('[data-testid="win-modal"]').exists(), false, "dismissed");
+    await wrapper.find('[data-modal="win"]').trigger("keydown.escape");
+    assertEquals(wrapper.find('[data-modal="win"]').exists(), false, "dismissed");
     // The final board stays reviewable: the status dock keeps the winner chip.
-    const chip = wrapper.find('[data-testid="winner"]');
+    const chip = wrapper.find('[data-action="show-result"]');
     assert(chip.exists(), "the status dock keeps the Winner chip");
     await chip.trigger("click");
-    assert(wrapper.find('[data-testid="win-modal"]').exists(), "the chip reopens the dialog");
+    assert(wrapper.find('[data-modal="win"]').exists(), "the chip reopens the dialog");
   });
 });
