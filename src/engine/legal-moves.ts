@@ -43,8 +43,8 @@ export function getLegalMoves(state: GameState, playerSide: PlayerSide): Move[] 
   if (state.turn.phase === "mulligans") {
     const prompt = state.prompts.find((pr) => pr.kind === "mulligan");
     if (prompt && prompt.player === playerSide) {
-      moves.push({ kind: "mulligan.take", player: playerSide });
-      moves.push({ kind: "mulligan.decline", player: playerSide });
+      moves.push({ kind: "mulligan.take" });
+      moves.push({ kind: "mulligan.decline" });
     }
     return moves;
   }
@@ -87,8 +87,8 @@ function movesForPrompt(state: GameState, playerSide: PlayerSide, prompt: Prompt
   switch (prompt.kind) {
     case "mulligan":
       return [
-        { kind: "mulligan.take", player: playerSide },
-        { kind: "mulligan.decline", player: playerSide },
+        { kind: "mulligan.take" },
+        { kind: "mulligan.decline" },
       ];
     case "discard":
       return discardMoves(state, playerSide, prompt);
@@ -124,7 +124,6 @@ function movesForPrompt(state: GameState, playerSide: PlayerSide, prompt: Prompt
         }
         moves.push({
           kind: "prompt.answer",
-          player: playerSide,
           promptId: prompt.id,
           optionId: option.id,
         });
@@ -137,14 +136,12 @@ function movesForPrompt(state: GameState, playerSide: PlayerSide, prompt: Prompt
         if ((option.creditCost ?? 0) > state.corp.credits) continue;
         moves.push({
           kind: "prompt.answer",
-          player: "corp",
           promptId: prompt.id,
           optionId: option.id,
         });
       }
       moves.push({
         kind: "prompt.answer",
-        player: "corp",
         promptId: prompt.id,
         optionId: PASS_OPTION_ID,
       });
@@ -152,14 +149,14 @@ function movesForPrompt(state: GameState, playerSide: PlayerSide, prompt: Prompt
     }
     case "access-decision": {
       const found = findCard(state, prompt.cardId);
-      if (!found) return [{ kind: "runner.finishAccess" }];
-      const moves: Move[] = [{ kind: "runner.finishAccess" }];
+      if (!found) return [{ kind: "finishAccess" }];
+      const moves: Move[] = [{ kind: "finishAccess" }];
       const trashCost = cardDef(found.card.cardId).trashCost;
       // Affordability counts the run fund (Overclock): `finishAccess` pays via
       // `spendCredits`, which consumes `run.fundCredits` first — gate on the
       // same calculator the payment uses (availableCredits), not the pool.
       if (trashCost !== null && trashCost > 0 && availableCredits(state, "runner") >= trashCost) {
-        moves.push({ kind: "runner.trashAccessed" });
+        moves.push({ kind: "trashAccessed" });
       }
       return moves;
     }
@@ -174,8 +171,8 @@ function corpActionMoves(state: GameState): Move[] {
   const moves: Move[] = [];
   const corp = state.corp;
   if (corp.clicks <= 0) return moves;
-  moves.push({ kind: "corp.gainCredits" });
-  if (corp.deck.length > 0) moves.push({ kind: "corp.draw" });
+  moves.push({ kind: "gainCredits" });
+  if (corp.deck.length > 0) moves.push({ kind: "draw" });
 
   // Install: hand cards that can be installed in their legal servers.
   // Install/play moves key on the definition id (apply resolves the first
@@ -193,18 +190,18 @@ function corpActionMoves(state: GameState): Move[] {
       for (const server of servers) {
         if (server === "new-remote") {
           // Installing ice in a brand-new remote costs 0 (no ice protecting it).
-          moves.push({ kind: "corp.install", cardId: card.cardId, server });
+          moves.push({ kind: "install", cardId: card.cardId, server });
           continue;
         }
         const cost = serverById(state, server).ice.length;
         if (cost <= state.corp.credits) {
-          moves.push({ kind: "corp.install", cardId: card.cardId, server });
+          moves.push({ kind: "install", cardId: card.cardId, server });
         }
       }
     } else {
       // Asset/upgrade/agenda installs are free (rule 1.16.6c).
       for (const server of servers) {
-        moves.push({ kind: "corp.install", cardId: card.cardId, server });
+        moves.push({ kind: "install", cardId: card.cardId, server });
       }
     }
   }
@@ -217,7 +214,7 @@ function corpActionMoves(state: GameState): Move[] {
     if (def.type !== "operation") continue;
     if (def.cost !== null && def.cost > state.corp.credits) continue;
     operated.add(card.cardId);
-    moves.push({ kind: "corp.playOperation", cardId: card.cardId });
+    moves.push({ kind: "playOperation", cardId: card.cardId });
   }
 
   // Advance and score installed cards.
@@ -229,12 +226,12 @@ function corpActionMoves(state: GameState): Move[] {
     // Rule 5.2.6f: Advancing costs 1 click and 1 credit.
     const isAdvanceable = def.type === "agenda" || behavior(card.cardId)?.advanceable === true;
     if (isAdvanceable && state.corp.credits >= 1) {
-      moves.push({ kind: "corp.advance", targetId: card.id });
+      moves.push({ kind: "advance", targetId: card.id });
     }
     if (def.type === "agenda") {
       const adv = card.advancement ?? 0;
       const requirement = def.advancementRequirement ?? 0;
-      if (adv >= requirement) moves.push({ kind: "corp.score", targetId: card.id });
+      if (adv >= requirement) moves.push({ kind: "score", targetId: card.id });
     }
   }
 
@@ -244,7 +241,7 @@ function corpActionMoves(state: GameState): Move[] {
     if (def.type !== "asset" && def.type !== "upgrade") continue;
     if (card.rezzed === true) continue;
     if (rezCostFor(state, card) <= state.corp.credits) {
-      moves.push({ kind: "corp.rez", targetId: card.id });
+      moves.push({ kind: "rez", targetId: card.id });
     }
   }
 
@@ -296,8 +293,8 @@ function runnerActionMoves(state: GameState): Move[] {
   const moves: Move[] = [];
   const runner = state.runner;
   if (runner.clicks <= 0) return moves;
-  moves.push({ kind: "runner.gainCredits" });
-  if (runner.deck.length > 0) moves.push({ kind: "runner.draw" });
+  moves.push({ kind: "gainCredits" });
+  if (runner.deck.length > 0) moves.push({ kind: "draw" });
 
   // Install programs/hardware/resources from hand (one move per definition id).
   const runnerInstalled = new Set<string>();
@@ -312,7 +309,7 @@ function runnerActionMoves(state: GameState): Move[] {
       continue;
     }
     runnerInstalled.add(card.cardId);
-    moves.push({ kind: "runner.install", cardId: card.cardId });
+    moves.push({ kind: "install", cardId: card.cardId });
   }
 
   // Play events from hand (one move set per definition id).
@@ -336,17 +333,17 @@ function runnerActionMoves(state: GameState): Move[] {
         ? ["hq", "rd"]
         : allServers(state).filter((s) => !cardRestrictsRun(state, s));
       for (const server of servers) {
-        moves.push({ kind: "runner.playEvent", cardId: card.cardId, server });
+        moves.push({ kind: "playEvent", cardId: card.cardId, server });
       }
     } else {
-      moves.push({ kind: "runner.playEvent", cardId: card.cardId });
+      moves.push({ kind: "playEvent", cardId: card.cardId });
     }
   }
 
   // Run any server (central or existing remote).
   for (const server of allServers(state)) {
     if (cardRestrictsRun(state, server)) continue;
-    moves.push({ kind: "runner.run", server });
+    moves.push({ kind: "run", server });
   }
 
   // Paid abilities on installed Runner cards.
@@ -383,14 +380,14 @@ function runMoves(state: GameState, playerSide: PlayerSide): Move[] {
     if (ice && isRezzedIce(ice)) {
       addBreakMoves(state, ice, moves);
     }
-    moves.push({ kind: "runner.resolveSubroutines" });
+    moves.push({ kind: "resolveSubroutines" });
     return moves;
   }
   if (run.phase === "movement") {
     // Rule 6.9.4c / 6.6.3: during the movement phase the Runner may jack out
     // or continue (pass the ice / approach the server).
-    moves.push({ kind: "runner.continueRun" });
-    moves.push({ kind: "runner.jackOut" });
+    moves.push({ kind: "continueRun" });
+    moves.push({ kind: "jackOut" });
     return moves;
   }
   return moves;
@@ -418,7 +415,7 @@ function addBreakMoves(state: GameState, ice: CardInstance, moves: Move[]): void
     state.runner.installed.some((c) => isIcebreaker(c))
   ) {
     for (const subIndex of unbroken) {
-      moves.push({ kind: "runner.bioroidBreak", iceId: ice.id, subIndex });
+      moves.push({ kind: "bioroidBreak", iceId: ice.id, subIndex });
     }
   }
 
@@ -435,7 +432,7 @@ function addBreakMoves(state: GameState, ice: CardInstance, moves: Move[]): void
           const canBreak = breaks.length === 0 || iceSubtypes.some((s) => breaks.includes(s));
           if (canBreak && availableCredits(state, "runner") >= cost) {
             moves.push({
-              kind: "runner.breakSubroutine",
+              kind: "breakSubroutine",
               programId: program.id,
               subIndex,
             });
@@ -446,7 +443,7 @@ function addBreakMoves(state: GameState, ice: CardInstance, moves: Move[]): void
     // Pump.
     const pumpDef = pumpAbilityDef(program.cardId);
     if (pumpDef && availableCredits(state, "runner") >= pumpDef.creditCost) {
-      moves.push({ kind: "runner.pumpIcebreaker", programId: program.id });
+      moves.push({ kind: "pumpIcebreaker", programId: program.id });
     }
   }
 }
@@ -481,10 +478,10 @@ function breachMoves(state: GameState, playerSide: PlayerSide): Move[] {
   if (total === 0) return moveList;
   if (total === 1) return moveList; // auto-selected by settle
   for (const id of specific) {
-    moveList.push({ kind: "runner.accessCard", targetId: id });
+    moveList.push({ kind: "accessCard", targetId: id });
   }
   if (randomCount > 0) {
-    moveList.push({ kind: "runner.accessRandom" });
+    moveList.push({ kind: "accessRandom" });
   }
   return moveList;
 }
@@ -508,12 +505,10 @@ function addAbilityMoves(
       const servers = serversForAbility(state, card, i);
       if (servers.length > 0) {
         for (const server of servers) {
-          moves.push(
-            { kind: `${side}.ability`, targetId: card.id, abilityIndex: i, server } as Move,
-          );
+          moves.push({ kind: "ability", targetId: card.id, abilityIndex: i, server });
         }
       } else {
-        moves.push({ kind: `${side}.ability`, targetId: card.id, abilityIndex: i } as Move);
+        moves.push({ kind: "ability", targetId: card.id, abilityIndex: i });
       }
     }
   }
@@ -536,7 +531,6 @@ function discardMoves(
   const count = Math.min(prompt.count, cards.length);
   return combinations(cards.map((c) => c.id), count).map((combo) => ({
     kind: "discard" as const,
-    player: playerSide,
     cardInstanceIds: combo,
   }));
 }

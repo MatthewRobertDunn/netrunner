@@ -33,6 +33,7 @@ import {
   setCredits,
 } from "./helpers/fixtures.ts";
 import type { GameState, Move, Prompt } from "../src/types.ts";
+import { isCorpInstall } from "../src/types.ts";
 import { assert, assertDefined, assertEquals } from "./helpers/assert.ts";
 
 // ---------------------------------------------------------------------------
@@ -71,7 +72,6 @@ function corpRezzesInWindow(state: GameState, cardId: string): GameState {
   );
   return play(state, "corp", {
     kind: "prompt.answer",
-    player: "corp",
     promptId: prompt.id,
     optionId: option.id,
   });
@@ -90,7 +90,7 @@ function facedownRootRemote(
   let s = newGameWithCorpHand(hand, 3);
   const install = assertDefined(
     engine.getLegalMoves(s, "corp").find(
-      (m) => m.kind === "corp.install" && m.cardId === hand[0] && m.server === "new-remote",
+      (m) => isCorpInstall(m) && m.cardId === hand[0] && m.server === "new-remote",
     ),
     `the corp can install ${hand[0]} in a new remote`,
   );
@@ -119,7 +119,7 @@ Deno.test("run timing: the corp rez window opens at the server approach of an ic
 
     const run = assertDefined(
       engine.getLegalMoves(s, "runner").find(
-        (m) => m.kind === "runner.run" && m.server === "remote-1",
+        (m) => m.kind === "run" && m.server === "remote-1",
       ),
       "the runner can run the ice-less remote",
     );
@@ -128,7 +128,7 @@ Deno.test("run timing: the corp rez window opens at the server approach of an ic
 
     // Jack-out happens at the movement park (6.9.4c) — no window yet.
     assertEquals(rezWindow(s), undefined, "no rez window before the runner declines to jack out");
-    const cont = assertDefined(findMove(s, "runner", "runner.continueRun"));
+    const cont = assertDefined(findMove(s, "runner", "continueRun"));
     s = play(s, "runner", cont);
 
     // The window (6.9.4e) parks the run BEFORE the approach toll (6.9.4g).
@@ -168,11 +168,11 @@ Deno.test("run timing: the corp rez window opens at the server approach of an ic
 
       const run = assertDefined(
         engine.getLegalMoves(s, "runner").find(
-          (m) => m.kind === "runner.run" && m.server === "remote-1",
+          (m) => m.kind === "run" && m.server === "remote-1",
         ),
       );
       s = play(s, "runner", run);
-      const cont = assertDefined(findMove(s, "runner", "runner.continueRun"));
+      const cont = assertDefined(findMove(s, "runner", "continueRun"));
       s = play(s, "runner", cont);
 
       // The Corp rezzes Manegarm AT the window.
@@ -184,7 +184,6 @@ Deno.test("run timing: the corp rez window opens at the server approach of an ic
       );
       s = play(s, "corp", {
         kind: "prompt.answer",
-        player: "corp",
         promptId: window.id,
         optionId: rezOption.id,
       });
@@ -237,9 +236,9 @@ Deno.test("run timing: the corp rez window opens at the server approach of an ic
       let cur = s;
       for (let i = 0; i < 30 && cur.run && !cur.winner; i++) {
         const moves = engine.getLegalMoves(cur, "runner");
-        const m = moves.find((x) => x.kind === "runner.accessCard") ??
-          moves.find((x) => x.kind === "runner.accessRandom") ??
-          moves.find((x) => x.kind === "runner.finishAccess");
+        const m = moves.find((x) => x.kind === "accessCard") ??
+          moves.find((x) => x.kind === "accessRandom") ??
+          moves.find((x) => x.kind === "finishAccess");
         if (!m) break;
         cur = play(cur, "runner", m);
       }
@@ -267,11 +266,11 @@ Deno.test("run timing: the corp rez window opens at the server approach of an ic
 function branInstallPromptState(): GameState {
   let s = facedownRootRemote(
     ["bran_1_0", "palisade"],
-    (cur) => play(cur, "corp", { kind: "corp.gainCredits" }),
+    (cur) => play(cur, "corp", { kind: "gainCredits" }),
   );
   const run = assertDefined(
     engine.getLegalMoves(s, "runner").find(
-      (m) => m.kind === "runner.run" && m.server === "remote-1",
+      (m) => m.kind === "run" && m.server === "remote-1",
     ),
     "the runner can run the Brân remote",
   );
@@ -279,7 +278,7 @@ function branInstallPromptState(): GameState {
   s = corpRezzesInWindow(s, "bran_1_0");
   assertEquals(s.run?.phase, "encounter-ice", "Brân is encountered after the rez");
   const resolve = assertDefined(
-    findMove(s, "runner", "runner.resolveSubroutines"),
+    findMove(s, "runner", "resolveSubroutines"),
     "the break window offers the resolve move",
   );
   s = play(s, "runner", resolve);
@@ -337,7 +336,6 @@ Deno.test("run timing: answering Brân's install choice resolves the next subrou
     );
     const after = play(s, "corp", {
       kind: "prompt.answer",
-      player: "corp",
       promptId: prompt.id,
       optionId: option.id,
     });
@@ -367,7 +365,7 @@ Deno.test("run timing: declining Karuna's jack-out resolves the remaining subrou
   let s = facedownRootRemote(["karuna"]);
   const run = assertDefined(
     engine.getLegalMoves(s, "runner").find(
-      (m) => m.kind === "runner.run" && m.server === "remote-1",
+      (m) => m.kind === "run" && m.server === "remote-1",
     ),
     "the runner can run the Karuna remote",
   );
@@ -375,7 +373,7 @@ Deno.test("run timing: declining Karuna's jack-out resolves the remaining subrou
   s = corpRezzesInWindow(s, "karuna");
   assertEquals(s.run?.phase, "encounter-ice", "Karuna is encountered after the rez");
 
-  const resolve = assertDefined(findMove(s, "runner", "runner.resolveSubroutines"));
+  const resolve = assertDefined(findMove(s, "runner", "resolveSubroutines"));
   s = play(s, "runner", resolve);
 
   // Sub 0: net 2, then the optional jack-out choice (a runner choose-one).
@@ -397,7 +395,6 @@ Deno.test("run timing: declining Karuna's jack-out resolves the remaining subrou
   );
   s = play(s, "runner", {
     kind: "prompt.answer",
-    player: "runner",
     promptId: jackOut.id,
     optionId: pass.id,
   });
@@ -413,7 +410,7 @@ Deno.test("run timing: declining Karuna's jack-out resolves the remaining subrou
   );
   const moves = engine.getLegalMoves(s, "runner");
   assert(
-    !moves.some((m) => m.kind === "runner.breakSubroutine" || m.kind === "runner.pumpIcebreaker"),
+    !moves.some((m) => m.kind === "breakSubroutine" || m.kind === "pumpIcebreaker"),
     "no break moves are offered after the encounter completed",
   );
 });

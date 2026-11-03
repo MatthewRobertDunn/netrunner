@@ -38,6 +38,7 @@ import type {
   PlayerSide,
   PlayerView,
 } from "../src/types.ts";
+import { isCorpInstall } from "../src/types.ts";
 import {
   installInNewRemoteAndEndTurn,
   newGameWithCorpHand,
@@ -99,14 +100,14 @@ function multiset(cards: CardInstance[]): Map<CardId, number> {
 function hiddenInstallsState(): GameState {
   let state = newGameWithCorpHand(["offworld_office", "tithe"], 3);
   const installAgenda = engine.getLegalMoves(state, "corp").find(
-    (m) => m.kind === "corp.install" && m.cardId === "offworld_office" && m.server === "new-remote",
+    (m) => isCorpInstall(m) && m.cardId === "offworld_office" && m.server === "new-remote",
   );
-  assert(installAgenda && installAgenda.kind === "corp.install", "corp can install the agenda");
+  assert(installAgenda && installAgenda.kind === "install", "corp can install the agenda");
   state = play(state, "corp", installAgenda);
   const installIce = engine.getLegalMoves(state, "corp").find(
-    (m) => m.kind === "corp.install" && m.cardId === "tithe" && m.server === "remote-1",
+    (m) => isCorpInstall(m) && m.cardId === "tithe" && m.server === "remote-1",
   );
-  assert(installIce && installIce.kind === "corp.install", "corp can protect the remote");
+  assert(installIce && installIce.kind === "install", "corp can protect the remote");
   return endQuietly(play(state, "corp", installIce));
 }
 
@@ -120,7 +121,7 @@ function endQuietly(state: GameState): GameState {
   let cur = state;
   for (let i = 0; i < 10; i++) {
     if (cur.turn.player !== "corp" || cur.winner) break;
-    const gain = engine.getLegalMoves(cur, "corp").find((m) => m.kind === "corp.gainCredits");
+    const gain = engine.getLegalMoves(cur, "corp").find((m) => m.kind === "gainCredits");
     if (!gain) break;
     cur = play(cur, "corp", gain);
   }
@@ -167,9 +168,9 @@ Deno.test("determinize: the view round-trips through determinization", async (t)
     // rez windows, encounters and breach access candidates.
     let state = installInNewRemoteAndEndTurn("tithe", 3);
     const runMove = engine.getLegalMoves(state, "runner").find(
-      (m) => m.kind === "runner.run" && m.server === "remote-1",
+      (m) => m.kind === "run" && m.server === "remote-1",
     );
-    assert(runMove && runMove.kind === "runner.run", "runner can run the remote");
+    assert(runMove && runMove.kind === "run", "runner can run the remote");
     state = play(state, "runner", runMove);
     // The corp answers its rez window (rez or pass).
     const prompt = state.prompts[0];

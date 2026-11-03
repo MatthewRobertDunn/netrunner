@@ -46,13 +46,18 @@ and the test that pins the fix.
    `row.findAll("button").length === 1` pins this. Files: `src/web/ui/card-sheet.ts`. Tests:
    `tests/ui/game_screen_test.ts`.
 
-5. **Installed-card actions are routed by a shared kind table, not by hand-maintained lists.**
-   `INSTALLED_ACTION_KINDS` in `src/web/ui/card-sheet.ts` (`runner.ability`,
-   `runner.breakSubroutine`, `runner.pumpIcebreaker`) is the single place that decides which moves
-   render under a card; GameScreen's `generalMoves` filters the same set out of the Actions list.
-   Adding a new under-card action kind updates exactly one table — duplicating the filter in two
-   places is how duplicates (the same "Break sub 1" button under the program AND in the Actions
-   list) get introduced. Files: `src/web/ui/card-sheet.ts`, `src/web/ui/game.ts`.
+5. **The no-duplicates rule is derived from the sheet's own rows, not a parallel kind table.**
+   `buildSheetGroups` in `src/web/ui/card-sheet.ts` is the single place that decides which moves
+   render under a card; GameScreen's `generalMoves` excludes exactly the moves those rows hold
+   (`sheetHostedKeys`, built from `ownGroups`), so the two can never drift. The old
+   `INSTALLED_ACTION_KINDS` kind set was deleted when moves stopped carrying their actor: a kind can
+   no longer distinguish `runner.ability` from `corp.ability` (both are now `ability`), and a
+   kind-only set would have silently dropped the Corp's installed-asset paid abilities (e.g. Regolith
+   Mining License's "[click]: take 3 credits") out of the Actions list — the Corp sheet renders no
+   card rows because its cards live on the board, so the Actions list is their ONLY surface. Deriving
+   from the rows keeps them reachable and adapts for free if the Corp sheet ever gains groups.
+   Duplicating the filter by kind is how the same action appears twice (under the program AND in the
+   Actions list). Files: `src/web/ui/card-sheet.ts`, `src/web/ui/game.ts`.
 
 6. **Game over is a modal, not a sidebar banner.** The win announcement lived in the action panel
    when that was a full-width row; once the panel moved into the card dock's own sheet (a narrow
@@ -79,7 +84,7 @@ and the test that pins the fix.
 
 8. **Every clickable carries `data-action` + parameter attributes — never `data-testid`.** The DOM
    contract for browser agents (and any scripted driving of the UI) is purely composite:
-   `[data-action="runner.run"][data-server="hq"]`,
+   `[data-action="run"][data-server="hq"]`,
    `[data-action="prompt.answer"][data-option="pass"]`,
    `[data-action="discard-pick"][data-card-id="unity"]`. The older scheme baked parameters into
    positional testid strings (`run-remote-2`), and that is exactly why coverage rotted: a control
@@ -88,14 +93,20 @@ and the test that pins the fix.
    hand-card buttons, prompt answers, zoom action buttons, and presets were all unreachable by
    attribute. Composite attributes fix the cause: each dimension gets its own named attribute, so a
    new capability is a new attribute, not a new string format. The vocabulary:
-   - Clickables: `data-action` = the engine move kind (`runner.run`, `prompt.answer`,
-     `corp.install`, `runner.ability`, …) when the button plays a move, else a UI verb (`zoom`,
+   - Clickables: `data-action` = the engine move kind (`run`, `prompt.answer`,
+     `install`, `ability`, …) when the button plays a move, else a UI verb (`zoom`,
      `close`, `discard-pick`, `discard-submit`, `open-access`, `show-result`, `new-game`,
      `toggle-log`, `pick-side`, `pick-preset`, `random-seed`, `set-seed`, `start`).
    - Move parameters (own attributes): `data-server`, `data-card-id` (definition id, e.g. `unity`),
      `data-instance` (copy/instance id), `data-target` (target instance), `data-sub` and
      `data-ability` (1-based, matching the visible label), `data-option` (engine optionId; the
      reserved decline is `data-option="pass"`), `data-preset`.
+   - Moves carry no actor: `data-action` is the bare verb (`run`, `install`, `draw`, `ability`) —
+     a move is verb + parameters, never `runner.run`. The seat comes from scope
+     (`[data-own="true"] [data-action="gainCredits"]`) and, for the one shared verb with two shapes,
+     from the payload: `[data-action="install"][data-server="hq"]` is the Corp's install,
+     `[data-action="install"]` without a server is the Runner's. `isCorpInstall` /
+     `isRunnerInstall` in `src/types.ts` are the single guard for that distinction.
    - Scoping: `data-side` (`corp|runner`), `data-own` (`true|false` — `[data-own="true"]` is this
      seat's interface, `false` the mirror), `data-card-pos` (ice position, innermost = 1; DOM order
      flips with the corp-seat CSS flip, positions do not), `data-group` (sheet group).

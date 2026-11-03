@@ -45,7 +45,7 @@ resolves when the run ends, and per rule 6.8.5 conditions related to a run endin
 or only during a rez window opened by an encounter?
 
 **Answer.** **Any time during the Corp's action phase, and during any rez window opened by an
-encounter.** The engine offers `corp.rez` moves for any installed unrezzed asset/upgrade during the
+encounter.** The engine offers `rez` moves for any installed unrezzed asset/upgrade during the
 Corp's action phase (rule 1.12.3), and additionally offers rez options in the `rez-window` prompts
 that appear when the Runner approaches or encounters ice.
 

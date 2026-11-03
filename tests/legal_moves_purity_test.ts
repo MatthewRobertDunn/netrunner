@@ -18,6 +18,7 @@ import {
   play,
 } from "./helpers/fixtures.ts";
 import type { GameState, Move, PlayerSide } from "../src/types.ts";
+import { isCorpInstall } from "../src/types.ts";
 import { decide } from "./helpers/boundary.ts";
 import { assert, assertEquals, deepClone } from "./helpers/assert.ts";
 
@@ -29,9 +30,9 @@ function hqBreachState(seed = 3): GameState {
   let state = newStarterGame(seed);
   state = endCorpTurn(state);
   const run = engine.getLegalMoves(state, "runner").find(
-    (m) => m.kind === "runner.run" && m.server === "hq",
+    (m) => m.kind === "run" && m.server === "hq",
   );
-  assert(run && run.kind === "runner.run", "runner can run HQ");
+  assert(run && run.kind === "run", "runner can run HQ");
   const after = continueRun(play(state, "runner", run));
   assert(after.breach !== null, "the HQ run reaches a breach");
   assert(after.breach!.accessing === undefined, "the access choice is pending");
@@ -46,15 +47,15 @@ function hqBreachState(seed = 3): GameState {
 function rdChoiceState(seed = 3): GameState {
   let state = newGameWithCorpHand(["manegarm_skunkworks"], seed);
   const install = engine.getLegalMoves(state, "corp").find(
-    (m) => m.kind === "corp.install" && m.cardId === "manegarm_skunkworks" && m.server === "rd",
+    (m) => isCorpInstall(m) && m.cardId === "manegarm_skunkworks" && m.server === "rd",
   );
-  assert(install && install.kind === "corp.install", "corp can install the upgrade in R&D");
+  assert(install && install.kind === "install", "corp can install the upgrade in R&D");
   state = play(state, "corp", install);
   state = endCorpTurn(state);
   const run = engine.getLegalMoves(state, "runner").find(
-    (m) => m.kind === "runner.run" && m.server === "rd",
+    (m) => m.kind === "run" && m.server === "rd",
   );
-  assert(run && run.kind === "runner.run", "runner can run R&D");
+  assert(run && run.kind === "run", "runner can run R&D");
   let after = continueRun(play(state, "runner", run));
   // Continuing to the server opens the Corp's (R) rez window (6.9.4e — the
   // facedown upgrade in the root); the Corp passes it so the breach below
@@ -122,7 +123,7 @@ Deno.test("purity: breach states with random candidates stay identical", async (
 
     const legal = engine.getLegalMoves(state, "runner");
     assert(
-      legal.some((m) => m.kind === "runner.accessRandom"),
+      legal.some((m) => m.kind === "accessRandom"),
       "accessRandom is offered whenever random candidates exist",
     );
     // Repeated enumeration yields the same moves (no hidden state advance).
@@ -137,11 +138,11 @@ Deno.test("purity: breach states with random candidates stay identical", async (
 
     const legal = engine.getLegalMoves(state, "runner");
     assert(
-      legal.some((m) => m.kind === "runner.accessCard"),
+      legal.some((m) => m.kind === "accessCard"),
       "the specific (root) candidate is offered",
     );
     assert(
-      legal.some((m) => m.kind === "runner.accessRandom"),
+      legal.some((m) => m.kind === "accessRandom"),
       "the random (top of R&D) candidate is offered",
     );
   });
@@ -196,8 +197,8 @@ Deno.test("purity: getLegalMoves is pure even in random-draw simulations", () =>
 Deno.test("purity: runner.accessRandom applies and advances the PRNG exactly at apply time", () => {
   const state = hqBreachState();
   const legal = engine.getLegalMoves(state, "runner");
-  const accessRandom = legal.find((m) => m.kind === "runner.accessRandom");
-  assert(accessRandom && accessRandom.kind === "runner.accessRandom", "move is offered");
+  const accessRandom = legal.find((m) => m.kind === "accessRandom");
+  assert(accessRandom && accessRandom.kind === "accessRandom", "move is offered");
 
   const rngBefore = state.rngState;
   const result = engine.applyMove(state, "runner", accessRandom);

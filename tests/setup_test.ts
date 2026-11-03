@@ -80,7 +80,7 @@ Deno.test("applyMove never mutates the caller's state object", () => {
   const state = newStarterGame(7);
   const before = JSON.stringify(state);
   const move = assertDefined(
-    engine.getLegalMoves(state, "corp").find((m) => m.kind === "corp.gainCredits"),
+    engine.getLegalMoves(state, "corp").find((m) => m.kind === "gainCredits"),
     "the Corp has a gain-credits move on turn 1",
   );
   const result = engine.applyMove(state, "corp", move);

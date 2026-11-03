@@ -40,22 +40,22 @@ function runAtUrtica(): GameState {
     assertDefined(
       engine.getLegalMoves(s, "corp").find(
         (m) =>
-          m.kind === "corp.install" && (m as { cardId: string }).cardId === "urtica_cipher" &&
+          m.kind === "install" && (m as { cardId: string }).cardId === "urtica_cipher" &&
           (m as { server: string }).server === "new-remote",
       ),
       "the corp can install Urtica Cipher in a new remote",
     ),
   );
-  const advance = engine.getLegalMoves(s, "corp").find((m) => m.kind === "corp.advance");
+  const advance = engine.getLegalMoves(s, "corp").find((m) => m.kind === "advance");
   if (advance) s = play(s, "corp", advance);
   while (s.turn.player === "corp" && !s.winner) {
     const moves = engine.getLegalMoves(s, "corp");
     if (moves.length === 0) break;
-    s = play(s, "corp", moves.find((m) => m.kind === "corp.gainCredits") ?? moves[0]!);
+    s = play(s, "corp", moves.find((m) => m.kind === "gainCredits") ?? moves[0]!);
   }
   const run = assertDefined(
     engine.getLegalMoves(s, "runner").find(
-      (m) => m.kind === "runner.run" && m.server === "remote-1",
+      (m) => m.kind === "run" && m.server === "remote-1",
     ),
     "the runner can run the Urtica remote",
   );
@@ -66,7 +66,7 @@ Deno.test("settle: a game won mid-breach leaves no live run/breach (rule 10.4 cl
   await t.step("auto-access of the lone breach candidate flatlines mid-settle", () => {
     let s = runAtUrtica();
     const continueRun = assertDefined(
-      engine.getLegalMoves(s, "runner").find((m) => m.kind === "runner.continueRun"),
+      engine.getLegalMoves(s, "runner").find((m) => m.kind === "continueRun"),
       "the run parks in the movement phase (rule 6.9.4c)",
     );
     // Continuing reaches the server's approach: the Corp gets the 6.9.4e rez
@@ -101,7 +101,7 @@ Deno.test("settle: a game won mid-breach leaves no live run/breach (rule 10.4 cl
       assertDefined(
         engine.getLegalMoves(s, "corp").find(
           (m) =>
-            m.kind === "corp.install" && (m as { cardId: string }).cardId === "urtica_cipher" &&
+            m.kind === "install" && (m as { cardId: string }).cardId === "urtica_cipher" &&
             (m as { server: string }).server === "new-remote",
         ),
         "the corp can install Urtica Cipher in a new remote",
@@ -113,7 +113,7 @@ Deno.test("settle: a game won mid-breach leaves no live run/breach (rule 10.4 cl
       assertDefined(
         engine.getLegalMoves(s, "corp").find(
           (m) =>
-            m.kind === "corp.install" &&
+            m.kind === "install" &&
             (m as { cardId: string }).cardId === "manegarm_skunkworks" &&
             (m as { server: string }).server === "remote-1",
         ),
@@ -132,7 +132,7 @@ Deno.test("settle: a game won mid-breach leaves no live run/breach (rule 10.4 cl
       "corp",
       assertDefined(
         engine.getLegalMoves(s, "corp").find(
-          (m) => m.kind === "corp.advance" && (m as { targetId: string }).targetId === urtica.id,
+          (m) => m.kind === "advance" && (m as { targetId: string }).targetId === urtica.id,
         ),
         "the corp can advance Urtica Cipher",
       ),
@@ -140,24 +140,24 @@ Deno.test("settle: a game won mid-breach leaves no live run/breach (rule 10.4 cl
     while (s.turn.player === "corp" && !s.winner) {
       const moves = engine.getLegalMoves(s, "corp");
       if (moves.length === 0) break;
-      s = play(s, "corp", moves.find((m) => m.kind === "corp.gainCredits") ?? moves[0]!);
+      s = play(s, "corp", moves.find((m) => m.kind === "gainCredits") ?? moves[0]!);
     }
     const run = assertDefined(
       engine.getLegalMoves(s, "runner").find(
-        (m) => m.kind === "runner.run" && m.server === "remote-1",
+        (m) => m.kind === "run" && m.server === "remote-1",
       ),
       "the runner can run the remote",
     );
     s = play(s, "runner", run);
     const continueRun = assertDefined(
-      engine.getLegalMoves(s, "runner").find((m) => m.kind === "runner.continueRun"),
+      engine.getLegalMoves(s, "runner").find((m) => m.kind === "continueRun"),
       "the run parks in the movement phase (rule 6.9.4c)",
     );
     s = play(s, "runner", continueRun);
     s = declineRezWindow(s);
     const access = assertDefined(
       engine.getLegalMoves(s, "runner").find(
-        (m) => m.kind === "runner.accessCard" && (m as { targetId: string }).targetId === urtica.id,
+        (m) => m.kind === "accessCard" && (m as { targetId: string }).targetId === urtica.id,
       ),
       "the runner can choose which candidate to access",
     );

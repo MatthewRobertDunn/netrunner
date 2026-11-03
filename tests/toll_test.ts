@@ -20,6 +20,7 @@
 import { engine } from "../src/mod.ts";
 import { endCorpTurn, newGameWithCorpHand, play, setCredits } from "./helpers/fixtures.ts";
 import type { GameState } from "../src/types.ts";
+import { isCorpInstall } from "../src/types.ts";
 import { assert, assertDefined, assertEquals } from "./helpers/assert.ts";
 
 /**
@@ -31,13 +32,13 @@ function tollState(seed = 3): GameState {
   let state = newGameWithCorpHand(["nico_campaign", "manegarm_skunkworks"], seed);
 
   const installAsset = engine.getLegalMoves(state, "corp").find((m) =>
-    m.kind === "corp.install" && m.cardId === "nico_campaign" && m.server === "new-remote"
+    isCorpInstall(m) && m.cardId === "nico_campaign" && m.server === "new-remote"
   );
   assertDefined(installAsset, "corp can install nico_campaign in a new remote");
   state = play(state, "corp", installAsset!);
 
   const installUpgrade = engine.getLegalMoves(state, "corp").find((m) =>
-    m.kind === "corp.install" && m.cardId === "manegarm_skunkworks" && m.server === "remote-1"
+    isCorpInstall(m) && m.cardId === "manegarm_skunkworks" && m.server === "remote-1"
   );
   assertDefined(installUpgrade, "corp can install manegarm_skunkworks in remote-1's root");
   state = play(state, "corp", installUpgrade!);
@@ -51,9 +52,9 @@ function tollState(seed = 3): GameState {
   // Ice is rezzed during runs only; assets/upgrades are rezzed in the action
   // phase via corp.rez (legal-moves.ts corpActionMoves).
   const rez = engine.getLegalMoves(state, "corp").find((m) =>
-    m.kind === "corp.rez" && m.targetId === manegarm!.id
+    m.kind === "rez" && m.targetId === manegarm!.id
   );
-  assertDefined(rez, "corp.rez move exists for the installed upgrade");
+  assertDefined(rez, "rez move exists for the installed upgrade");
   state = play(state, "corp", rez!);
   assertEquals(
     state.servers.flatMap((s) => s.root).find((c) => c.cardId === "manegarm_skunkworks")
@@ -65,7 +66,7 @@ function tollState(seed = 3): GameState {
   state = endCorpTurn(state);
 
   const run = engine.getLegalMoves(state, "runner").find((m) =>
-    m.kind === "runner.run" && m.server === "remote-1"
+    m.kind === "run" && m.server === "remote-1"
   );
   assertDefined(run, "runner can run remote-1");
   state = play(state, "runner", run!);
@@ -73,7 +74,7 @@ function tollState(seed = 3): GameState {
   // server. The Corp's rez window (6.9.4e — facedown Nico Campaign in the
   // root) opens before the approach toll; the Corp passes it, and the rezzed
   // Manegarm raises its toll prompt.
-  const cont = engine.getLegalMoves(state, "runner").find((m) => m.kind === "runner.continueRun");
+  const cont = engine.getLegalMoves(state, "runner").find((m) => m.kind === "continueRun");
   assertDefined(cont, "continueRun is offered in the movement phase");
   state = corpPassesServerRezWindow(play(state, "runner", cont!));
 
@@ -149,9 +150,9 @@ function finishRunToEnd(state: GameState): GameState {
     );
     const moves = engine.getLegalMoves(cur, "runner");
     if (moves.length === 0) break;
-    const m = moves.find((mm) => mm.kind === "runner.continueRun") ??
-      moves.find((mm) => mm.kind === "runner.finishAccess") ??
-      moves.find((mm) => mm.kind === "runner.accessCard") ??
+    const m = moves.find((mm) => mm.kind === "continueRun") ??
+      moves.find((mm) => mm.kind === "finishAccess") ??
+      moves.find((mm) => mm.kind === "accessCard") ??
       moves[0]!;
     cur = play(cur, "runner", m);
   }
@@ -190,7 +191,7 @@ Deno.test("toll: answering the toll prompt (credits, clicks, or end) charges cor
     // The run proceeds to the breach instead of ending.
     assert(after.run !== null && after.breach !== null, "the run became successful (breach began)");
     assert(
-      engine.getLegalMoves(after, "runner").some((m) => m.kind === "runner.accessCard"),
+      engine.getLegalMoves(after, "runner").some((m) => m.kind === "accessCard"),
       "the runner is offered access cards",
     );
 
@@ -296,14 +297,14 @@ Deno.test("toll: the prompt appears once per run — a second run re-prompts, a 
 
   // Run 2 on the same server: the toll is per-approach, so it prompts again.
   const run2 = engine.getLegalMoves(state, "runner").find((m) =>
-    m.kind === "runner.run" && m.server === "remote-1"
+    m.kind === "run" && m.server === "remote-1"
   );
   assertDefined(run2, "the runner can run remote-1 again");
   state = play(state, "runner", run2!);
   // The run parks in the movement phase; continuing approaches the server.
   // The Corp passes the 6.9.4e rez window (Nico Campaign still unrezzed), and
   // the rezzed upgrade raises the toll prompt again.
-  const cont = engine.getLegalMoves(state, "runner").find((m) => m.kind === "runner.continueRun");
+  const cont = engine.getLegalMoves(state, "runner").find((m) => m.kind === "continueRun");
   assertDefined(cont, "run 2 parks in the movement phase");
   state = corpPassesServerRezWindow(play(state, "runner", cont!));
   assert(tollPrompt(state) !== undefined, "run 2 approaches the rezzed upgrade: toll prompts");

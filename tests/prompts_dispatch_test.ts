@@ -78,7 +78,6 @@ function answerChooseOne(state: GameState, side: PlayerSide, optionId: string): 
   );
   return play(state, side, {
     kind: "prompt.answer",
-    player: side,
     promptId: prompt.id,
     optionId: option.id,
   });
@@ -96,14 +95,14 @@ function answerChooseOne(state: GameState, side: PlayerSide, optionId: string): 
 function seamlessMultiTargetState(): GameState {
   let s = newGame(["manegarm_skunkworks", "urtica_cipher", "seamless_launch", "hedge_fund"]);
   // Turn 1: install the upgrade (HQ root; upgrades may also create a remote).
-  s = play(s, "corp", { kind: "corp.install", cardId: "manegarm_skunkworks", server: "hq" });
+  s = play(s, "corp", { kind: "install", cardId: "manegarm_skunkworks", server: "hq" });
   s = nextTurnOf(s, "corp"); // corp turn 2
   // Turn 2: install the advanceable asset in a new remote, then end the turn.
-  s = play(s, "corp", { kind: "corp.install", cardId: "urtica_cipher", server: "new-remote" });
+  s = play(s, "corp", { kind: "install", cardId: "urtica_cipher", server: "new-remote" });
   s = nextTurnOf(s, "corp"); // corp turn 3
   // Turn 3: play Seamless Launch (a single target would resolve silently).
   const playOp = engine.getLegalMoves(s, "corp").find((m) =>
-    m.kind === "corp.playOperation" && m.cardId === "seamless_launch"
+    m.kind === "playOperation" && m.cardId === "seamless_launch"
   );
   assertDefined(playOp, "Seamless Launch is playable");
   return play(s, "corp", playOp!);
@@ -178,10 +177,10 @@ Deno.test("seamless launch prompt: every chosen option places 2 counters, never 
 
 Deno.test("seamless launch single target: counters placed without a prompt (no prompt or answered)", () => {
   let s = newGame(["manegarm_skunkworks", "seamless_launch"]);
-  s = play(s, "corp", { kind: "corp.install", cardId: "manegarm_skunkworks", server: "hq" });
+  s = play(s, "corp", { kind: "install", cardId: "manegarm_skunkworks", server: "hq" });
   s = nextTurnOf(s, "corp"); // corp turn 2
   const playOp = engine.getLegalMoves(s, "corp").find((m) =>
-    m.kind === "corp.playOperation" && m.cardId === "seamless_launch"
+    m.kind === "playOperation" && m.cardId === "seamless_launch"
   );
   assertDefined(playOp, "Seamless Launch is playable");
   s = play(s, "corp", playOp!);
@@ -215,15 +214,15 @@ Deno.test("seamless launch single target: counters placed without a prompt (no p
 function branEncounterState(): GameState {
   let s = newGame(["bran_1_0", "palisade", "hedge_fund", "hedge_fund", "government_subsidy"]);
   // Turn 1: install Brân in a new remote, then gain the credits to rez it.
-  s = play(s, "corp", { kind: "corp.install", cardId: "bran_1_0", server: "new-remote" });
-  s = play(s, "corp", { kind: "corp.gainCredits" });
+  s = play(s, "corp", { kind: "install", cardId: "bran_1_0", server: "new-remote" });
+  s = play(s, "corp", { kind: "gainCredits" });
   s = nextTurnOf(s, "runner"); // end corp turn 1; the runner now acts
   // The corp keeps at least one ice card in HQ for the subroutine to install.
   const palisadeInHand = cardsIn(s, "corp", "hand").find((c) => c.cardId === "palisade");
   assertDefined(palisadeInHand, "an ice card is still in HQ");
   // Runner turn: run the remote.
   const run = engine.getLegalMoves(s, "runner").find((m) =>
-    m.kind === "runner.run" && m.server === "remote-1"
+    m.kind === "run" && m.server === "remote-1"
   );
   assertDefined(run, "the runner can run the remote");
   return play(s, "runner", run!);
@@ -237,7 +236,6 @@ function answerRezWindow(state: GameState, cardId: CardId): GameState {
   if (!option) return state;
   return play(state, "corp", {
     kind: "prompt.answer",
-    player: "corp",
     promptId: prompt.id,
     optionId: option.id,
   });
@@ -253,8 +251,8 @@ function branPromptState(): GameState {
   for (let i = 0; i < 20 && s.run && !prompt && !s.winner; i++) {
     const side: PlayerSide = s.prompts[0]?.player ?? "runner";
     const moves = engine.getLegalMoves(s, side);
-    const pick = moves.find((m) => m.kind === "runner.continueRun") ??
-      moves.find((m) => m.kind === "runner.resolveSubroutines") ??
+    const pick = moves.find((m) => m.kind === "continueRun") ??
+      moves.find((m) => m.kind === "resolveSubroutines") ??
       moves.find((m) => m.kind === "prompt.answer") ??
       moves[0];
     if (!pick) break;

@@ -47,7 +47,7 @@ import {
 } from "./state.ts";
 import { getLegalMoves } from "./legal-moves.ts";
 import { beginCorpTurn, enterDiscardPhase, maxHandSize } from "./turns.ts";
-import { PASS_OPTION_ID } from "../types.ts";
+import { isCorpInstall, PASS_OPTION_ID } from "../types.ts";
 import type {
   ApplyMoveOptions,
   ApplyMoveResult,
@@ -111,26 +111,29 @@ function sameMove(a: Move, b: Move): boolean {
 }
 
 function explainIllegal(playerSide: PlayerSide, move: Move): string {
+  const seat = playerSide === "corp" ? "Corp" : "Runner";
   switch (move.kind) {
     case "mulligan.take":
     case "mulligan.decline":
       return `It is not ${playerSide}'s mulligan decision`;
     case "discard":
       return "It is not time to discard those cards";
-    case "corp.gainCredits":
-    case "corp.draw":
-    case "corp.install":
-    case "corp.advance":
-    case "corp.score":
-    case "corp.rez":
+    // Shared verbs: the seat the move was offered for names the phase.
+    case "gainCredits":
+    case "draw":
+    case "install":
+    case "ability":
+      return `Not legal in the current ${seat} action phase state`;
+    case "playOperation":
+    case "advance":
+    case "score":
+    case "rez":
       return "Not legal in the current Corp action phase state";
-    case "runner.gainCredits":
-    case "runner.draw":
-    case "runner.install":
-    case "runner.run":
+    case "playEvent":
+    case "run":
       return "Not legal in the current Runner action phase state";
-    case "runner.continueRun":
-    case "runner.jackOut":
+    case "continueRun":
+    case "jackOut":
       return "The run is not waiting in its movement phase right now";
     default:
       return `Move '${move.kind}' is not legal right now`;
@@ -182,66 +185,28 @@ function applyResolvedMove(state: GameState, playerSide: PlayerSide, move: Move)
       break;
     }
 
-    // Corp actions --------------------------------------------------------
-    case "corp.gainCredits": {
-      spendClicks(state, "corp", 1);
-      gainCredits(state, "corp", 1);
+    // Shared basic actions ------------------------------------------------
+    // One case per verb; where the two seats' rules differ, branch on the
+    // authority (`playerSide`) rather than on a second move shape.
+    case "gainCredits": {
+      spendClicks(state, playerSide, 1);
+      gainCredits(state, playerSide, 1);
       break;
     }
-    case "corp.draw": {
-      spendClicks(state, "corp", 1);
-      // Unreachable defense-in-depth: enumeration never offers a basic draw
-      // from an empty R&D — the mandatory-draw loss (rule 1.7.2c) is handled
-      // in beginCorpTurn. setGameOver still flips the phase to game-over if a
-      // fabricated move ever lands here.
-      if (state.corp.deck.length === 0) {
-        setGameOver(state, "runner", "Corp drew from an empty R&D");
-        return;
+    case "draw": {
+      spendClicks(state, playerSide, 1);
+      if (playerSide === "corp") {
+        // Unreachable defense-in-depth: enumeration never offers a basic draw
+        // from an empty R&D — the mandatory-draw loss (rule 1.7.2c) is handled
+        // in beginCorpTurn. setGameOver still flips the phase to game-over if a
+        // fabricated move ever lands here.
+        if (state.corp.deck.length === 0) {
+          setGameOver(state, "runner", "Corp drew from an empty R&D");
+          return;
+        }
+        drawCards(state, "corp", 1);
+        break;
       }
-      drawCards(state, "corp", 1);
-      break;
-    }
-    case "corp.install": {
-      installCorpCard(state, move.cardId, move.server);
-      break;
-    }
-    case "corp.playOperation": {
-      playCorpOperation(state, move.cardId);
-      break;
-    }
-    case "corp.advance": {
-      const found = findCard(state, move.targetId);
-      if (!found) break;
-      // Rule 5.2.6f: "[click], 1[credit]: Advance 1 installed card."
-      spendClicks(state, "corp", 1);
-      spendCredits(state, "corp", 1);
-      addAdvancementCounter(state, found.card);
-      break;
-    }
-    case "corp.score": {
-      scoreAgenda(state, move.targetId);
-      break;
-    }
-    case "corp.rez": {
-      const found = findCard(state, move.targetId);
-      // rezCard fires the on-rez triggers (load credits) itself.
-      if (found) rezCard(state, found.card);
-      break;
-    }
-    case "corp.ability": {
-      const found = findCard(state, move.targetId);
-      if (found) applyPaidAbility(state, "corp", found.card, move.abilityIndex);
-      break;
-    }
-
-    // Runner actions ------------------------------------------------------
-    case "runner.gainCredits": {
-      spendClicks(state, "runner", 1);
-      gainCredits(state, "runner", 1);
-      break;
-    }
-    case "runner.draw": {
-      spendClicks(state, "runner", 1);
       const runner = state.runner;
       // Verbal Plasticity: "The first time each turn you take the basic action
       // to draw 1 card, instead draw 2 cards." Consulted from the trigger.
@@ -260,15 +225,58 @@ function applyResolvedMove(state: GameState, playerSide: PlayerSide, move: Move)
       drawCards(state, "runner", count);
       break;
     }
-    case "runner.install": {
-      installRunnerCard(state, move.cardId);
+    case "ability": {
+      const found = findCard(state, move.targetId);
+      // The `server` choice only matters for run-server abilities (a Runner
+      // ability, Red Team); passing it for the Corp is inert, so one handler
+      // serves both seats.
+      if (found) applyPaidAbility(state, playerSide, found.card, move.abilityIndex, move.server);
       break;
     }
-    case "runner.playEvent": {
+
+    // Install: the one verb both seats share with a DIFFERENT shape. The two
+    // forms are told apart structurally — the Corp install names the server it
+    // goes into, the Runner install does not — via the shared guard.
+    case "install": {
+      if (isCorpInstall(move)) {
+        installCorpCard(state, move.cardId, move.server);
+      } else {
+        installRunnerCard(state, move.cardId);
+      }
+      break;
+    }
+
+    // Corp-only actions ---------------------------------------------------
+    case "playOperation": {
+      playCorpOperation(state, move.cardId);
+      break;
+    }
+    case "advance": {
+      const found = findCard(state, move.targetId);
+      if (!found) break;
+      // Rule 5.2.6f: "[click], 1[credit]: Advance 1 installed card."
+      spendClicks(state, "corp", 1);
+      spendCredits(state, "corp", 1);
+      addAdvancementCounter(state, found.card);
+      break;
+    }
+    case "score": {
+      scoreAgenda(state, move.targetId);
+      break;
+    }
+    case "rez": {
+      const found = findCard(state, move.targetId);
+      // rezCard fires the on-rez triggers (load credits) itself.
+      if (found) rezCard(state, found.card);
+      break;
+    }
+
+    // Runner-only actions -------------------------------------------------
+    case "playEvent": {
       playRunnerEvent(state, move.cardId, move.server);
       break;
     }
-    case "runner.run": {
+    case "run": {
       spendClicks(state, "runner", 1);
       initiateRun(state, move.server);
       if (isCentral(move.server)) {
@@ -276,13 +284,8 @@ function applyResolvedMove(state: GameState, playerSide: PlayerSide, move: Move)
       }
       break;
     }
-    case "runner.ability": {
-      const found = findCard(state, move.targetId);
-      if (found) applyPaidAbility(state, "runner", found.card, move.abilityIndex, move.server);
-      break;
-    }
 
-    case "runner.continueRun": {
+    case "continueRun": {
       // Decline to jack out: continue the movement phase (rule 6.9.4d-g).
       // The Corp's (R) rez options ride along so that, when the movement step
       // arrives at the attacked server (rule 6.9.4e, before the approach toll
@@ -294,26 +297,26 @@ function applyResolvedMove(state: GameState, playerSide: PlayerSide, move: Move)
       continueMovement(state, corpRezOptions(state));
       break;
     }
-    case "runner.jackOut": {
+    case "jackOut": {
       if (state.run) {
         state.log.push({ type: "jack-out" });
         endRun(state);
       }
       break;
     }
-    case "runner.breakSubroutine": {
+    case "breakSubroutine": {
       breakSubroutine(state, move.programId, move.subIndex);
       break;
     }
-    case "runner.pumpIcebreaker": {
+    case "pumpIcebreaker": {
       pumpIcebreaker(state, move.programId);
       break;
     }
-    case "runner.resolveSubroutines": {
+    case "resolveSubroutines": {
       resolveEncounter(state);
       break;
     }
-    case "runner.bioroidBreak": {
+    case "bioroidBreak": {
       // Brân 1.0's `bioroid` break: spend a click to break one subroutine of
       // the encountered ice (any installed icebreaker qualifies, no strength
       // match — recorded interpretation in docs/rules-questions.md §7).
@@ -322,11 +325,11 @@ function applyResolvedMove(state: GameState, playerSide: PlayerSide, move: Move)
     }
 
     // Access --------------------------------------------------------------
-    case "runner.accessCard": {
+    case "accessCard": {
       doAccessChoice(state, move.targetId);
       break;
     }
-    case "runner.accessRandom": {
+    case "accessRandom": {
       // The random selection happens here, at apply time — move enumeration
       // (`getLegalMoves`) is pure and only reports that random candidates
       // exist. `chooseRandomAccess` advances the state PRNG exactly once per
@@ -335,11 +338,11 @@ function applyResolvedMove(state: GameState, playerSide: PlayerSide, move: Move)
       if (chosen) doAccessChoice(state, chosen);
       break;
     }
-    case "runner.trashAccessed": {
+    case "trashAccessed": {
       finishAccess(state, true);
       break;
     }
-    case "runner.finishAccess": {
+    case "finishAccess": {
       finishAccess(state, false);
       break;
     }

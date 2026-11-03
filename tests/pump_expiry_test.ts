@@ -15,6 +15,7 @@
 
 import { engine } from "../src/mod.ts";
 import type { GameState, Move } from "../src/types.ts";
+import { isCorpInstall } from "../src/types.ts";
 import {
   endCorpTurn,
   orderedCorpDeck,
@@ -49,19 +50,19 @@ function startGame(corpOrdered: string[], runnerOrdered: string[], seed = 1): Ga
 function corpInstallIceOnHqAndEndTurn(state: GameState): GameState {
   const iceId = state.corp.hand[0]!.cardId;
   const install = engine.getLegalMoves(state, "corp").find(
-    (m) => m.kind === "corp.install" && m.cardId === iceId && m.server === "hq",
+    (m) => isCorpInstall(m) && m.cardId === iceId && m.server === "hq",
   );
   assertDefined(install, `corp can install ${iceId} on HQ`);
   return endCorpTurn(play(state, "corp", install!), 15);
 }
 
 function sureGamble(state: GameState): GameState {
-  return play(state, "runner", { kind: "runner.playEvent", cardId: "sure_gamble" });
+  return play(state, "runner", { kind: "playEvent", cardId: "sure_gamble" });
 }
 
 function installProgram(state: GameState, cardId: string): GameState {
   const move = engine.getLegalMoves(state, "runner").find(
-    (m) => m.kind === "runner.install" && m.cardId === cardId,
+    (m) => m.kind === "install" && m.cardId === cardId,
   );
   assertDefined(move, `runner can install ${cardId}`);
   return play(state, "runner", move!);
@@ -69,7 +70,7 @@ function installProgram(state: GameState, cardId: string): GameState {
 
 function runHq(state: GameState): GameState {
   const move = engine.getLegalMoves(state, "runner").find(
-    (m) => m.kind === "runner.run" && m.server === "hq",
+    (m) => m.kind === "run" && m.server === "hq",
   );
   assertDefined(move, "runner can run HQ");
   return play(state, "runner", move!);
@@ -83,7 +84,6 @@ function corpRezApproachedIce(state: GameState): GameState {
   assertDefined(option, "rez window has a rez option");
   return play(state, "corp", {
     kind: "prompt.answer",
-    player: "corp",
     promptId: prompt.id,
     optionId: option!.id,
   });
@@ -95,13 +95,13 @@ function drainRun(state: GameState): GameState {
   for (let i = 0; i < 20 && cur.run !== null && !cur.winner; i++) {
     const moves = engine.getLegalMoves(cur, "runner");
     // Prefer progressing the run; jack out only as a last resort.
-    const move = moves.find((m) => m.kind === "runner.continueRun") ??
+    const move = moves.find((m) => m.kind === "continueRun") ??
       moves.find((m) =>
-        m.kind === "runner.accessRandom" || m.kind === "runner.accessCard" ||
-        m.kind === "runner.finishAccess"
+        m.kind === "accessRandom" || m.kind === "accessCard" ||
+        m.kind === "finishAccess"
       ) ??
-      moves.find((m) => m.kind === "runner.resolveSubroutines") ??
-      moves.find((m) => m.kind === "runner.jackOut");
+      moves.find((m) => m.kind === "resolveSubroutines") ??
+      moves.find((m) => m.kind === "jackOut");
     if (!move) break;
     cur = play(cur, "runner", move);
   }
@@ -117,7 +117,7 @@ function installed(state: GameState, cardId: string) {
 
 function pumpMove(state: GameState, programId: string): Move {
   const move = engine.getLegalMoves(state, "runner").find(
-    (m) => m.kind === "runner.pumpIcebreaker" && m.programId === programId,
+    (m) => m.kind === "pumpIcebreaker" && m.programId === programId,
   );
   assertDefined(move, `pump move offered for ${programId}`);
   return move!;
@@ -125,8 +125,7 @@ function pumpMove(state: GameState, programId: string): Move {
 
 function breakMove(state: GameState, programId: string, subIndex: number): Move {
   const move = engine.getLegalMoves(state, "runner").find(
-    (m) =>
-      m.kind === "runner.breakSubroutine" && m.programId === programId && m.subIndex === subIndex,
+    (m) => m.kind === "breakSubroutine" && m.programId === programId && m.subIndex === subIndex,
   );
   assertDefined(move, `break move offered for sub ${subIndex}`);
   return move!;
@@ -204,7 +203,7 @@ Deno.test("pump: strength boost expires at encounter end and when the run ends m
     // Resolve the unbroken subroutine: Palisade ends the run mid-encounter, so
     // the encounter never "completes" — finishRun must clear the boost.
     const resolve = engine.getLegalMoves(state, "runner").find((m) =>
-      m.kind === "runner.resolveSubroutines"
+      m.kind === "resolveSubroutines"
     );
     assertDefined(resolve, "resolveSubroutines offered");
     state = play(state, "runner", resolve!);
@@ -239,12 +238,12 @@ Deno.test("pump: Unity's +X is a real pump (rule 3.9.5b), expired by the sweep",
   state = sureGamble(state);
   state = installProgram(state, "unity");
   state = installProgram(state, "cleaver");
-  state = play(state, "runner", { kind: "runner.gainCredits" });
+  state = play(state, "runner", { kind: "gainCredits" });
   state = endCorpTurn(state, 15);
   // Runner turn 2: gain a credit, sure_gamble (+9 net), install Carmen (3rd
   // icebreaker), run HQ. (Sure Gamble costs 5 and gains 9 here; without the
   // extra credit neither it nor Carmen's 5-credit install is affordable.)
-  state = play(state, "runner", { kind: "runner.gainCredits" });
+  state = play(state, "runner", { kind: "gainCredits" });
   state = sureGamble(state);
   state = installProgram(state, "carmen");
   state = runHq(state);
@@ -256,7 +255,7 @@ Deno.test("pump: Unity's +X is a real pump (rule 3.9.5b), expired by the sweep",
   // the "+X = installed icebreakers" boost is bought with credits, never free.
   assert(
     !engine.getLegalMoves(state, "runner").some(
-      (m) => m.kind === "runner.breakSubroutine" && m.programId === unity.id,
+      (m) => m.kind === "breakSubroutine" && m.programId === unity.id,
     ),
     "Unity at printed strength 1 cannot interface with Diviner (strength 3)",
   );
@@ -294,7 +293,7 @@ Deno.test("pump: Unity's +X is a real pump (rule 3.9.5b), expired by the sweep",
   assert(state.run?.phase === "encounter-ice", "second encounter begins");
   assert(
     !engine.getLegalMoves(state, "runner").some(
-      (m) => m.kind === "runner.breakSubroutine" && m.programId === unity.id,
+      (m) => m.kind === "breakSubroutine" && m.programId === unity.id,
     ),
     "the sweep restored Unity to printed strength 1 (no free interface)",
   );

@@ -39,14 +39,14 @@ Deno.test("smoke: the opening Corp turn of the starter decks", async (t) => {
     const state = startGame();
     const moves = engine.getLegalMoves(state, "corp");
     const kinds = new Set(moves.map((m) => m.kind));
-    assert(kinds.has("corp.gainCredits"));
-    assert(kinds.has("corp.draw"));
-    assert(kinds.has("corp.install"));
+    assert(kinds.has("gainCredits"));
+    assert(kinds.has("draw"));
+    assert(kinds.has("install"));
   });
 
   await t.step("corp takes a click and gains a credit", () => {
     const state = startGame();
-    const result = engine.applyMove(state, "corp", { kind: "corp.gainCredits" });
+    const result = engine.applyMove(state, "corp", { kind: "gainCredits" });
     assert(result.kind !== "illegal-move");
     assertEquals(result.state.corp.credits, 6);
     assertEquals(result.state.corp.clicks, 2);
@@ -55,7 +55,7 @@ Deno.test("smoke: the opening Corp turn of the starter decks", async (t) => {
   await t.step("illegal moves never mutate state", () => {
     const state = startGame();
     const before = JSON.stringify(state);
-    const result = engine.applyMove(state, "corp", { kind: "runner.run", server: "hq" });
+    const result = engine.applyMove(state, "corp", { kind: "run", server: "hq" });
     assertEquals(result.kind, "illegal-move");
     assertEquals(JSON.stringify(state), before);
   });

@@ -69,6 +69,14 @@ deno task publish
   `src/ai/context.ts` is the future ISMCTS tree key — don't weaken either.
 - **`applyMove` never mutates the caller's state** (it copies, or mutates only under `mutate: true`
   which AI playouts own). Read results from `result.state`.
+- **A move is a pure verb + parameters — it never carries the actor.** `Move` (`src/types.ts`) is
+  `SharedMove | CorpMove | RunnerMove`; kinds are bare verbs (`run`, `install`, `draw`), never
+  `runner.run`. The acting side comes from the `playerSide` argument to `getLegalMoves` /
+  `applyMove` (moves used to duplicate it in the kind AND a dead `player` field, so `data-action`
+  and every selector inherited the redundancy). Two seats share `gainCredits`/`draw`/`ability`/
+  `install`; handlers branch on `playerSide` for the first three, and `install` is the one verb with
+  two shapes (the Corp form carries `server`) — narrow it with `isCorpInstall` / `isRunnerInstall`,
+  never a re-derived `kind === "install" && "server" in move`. Never re-prefix a kind with the seat.
 - **The settle loop is the only phase driver; prompts are the only decision points.** If a phase
   should pause for a player, `settle` must be able to park there — a legal move that `settle` never
   waits for is unreachable (see the jack-out entry in `docs/rules-gotchas.md`).

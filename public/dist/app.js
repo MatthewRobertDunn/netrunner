@@ -16911,6 +16911,7 @@ __export(mod_exports, {
   EvalAI: () => EvalAI,
   PASS_OPTION_ID: () => PASS_OPTION_ID,
   RandomAI: () => RandomAI,
+  actorOf: () => actorOf,
   applyMove: () => applyMove,
   availableCredits: () => availableCredits,
   breakAbilityDef: () => breakAbilityDef,
@@ -16925,6 +16926,8 @@ __export(mod_exports, {
   getPlayerView: () => getPlayerView,
   getPublicGameStatus: () => getPublicGameStatus,
   getPublicGameStatusFor: () => getPublicGameStatusFor,
+  isCorpInstall: () => isCorpInstall,
+  isRunnerInstall: () => isRunnerInstall,
   makeAIDecisionContext: () => makeAIDecisionContext,
   makeRng: () => makeRng,
   paidAbilitiesOf: () => paidAbilitiesOf,
@@ -19758,6 +19761,12 @@ function finishRun(state) {
 
 // src/types.ts
 var PASS_OPTION_ID = "pass";
+function isCorpInstall(move) {
+  return move.kind === "install" && "server" in move;
+}
+function isRunnerInstall(move) {
+  return move.kind === "install" && !("server" in move);
+}
 
 // src/engine/effects.ts
 function queuePrompt(state, prompt) {
@@ -20783,12 +20792,10 @@ function getLegalMoves(state, playerSide) {
     const prompt2 = state.prompts.find((pr) => pr.kind === "mulligan");
     if (prompt2 && prompt2.player === playerSide) {
       moves.push({
-        kind: "mulligan.take",
-        player: playerSide
+        kind: "mulligan.take"
       });
       moves.push({
-        kind: "mulligan.decline",
-        player: playerSide
+        kind: "mulligan.decline"
       });
     }
     return moves;
@@ -20818,12 +20825,10 @@ function movesForPrompt(state, playerSide, prompt) {
     case "mulligan":
       return [
         {
-          kind: "mulligan.take",
-          player: playerSide
+          kind: "mulligan.take"
         },
         {
-          kind: "mulligan.decline",
-          player: playerSide
+          kind: "mulligan.decline"
         }
       ];
     case "discard":
@@ -20853,7 +20858,6 @@ function movesForPrompt(state, playerSide, prompt) {
         }
         moves.push({
           kind: "prompt.answer",
-          player: playerSide,
           promptId: prompt.id,
           optionId: option.id
         });
@@ -20866,14 +20870,12 @@ function movesForPrompt(state, playerSide, prompt) {
         if ((option.creditCost ?? 0) > state.corp.credits) continue;
         moves.push({
           kind: "prompt.answer",
-          player: "corp",
           promptId: prompt.id,
           optionId: option.id
         });
       }
       moves.push({
         kind: "prompt.answer",
-        player: "corp",
         promptId: prompt.id,
         optionId: PASS_OPTION_ID
       });
@@ -20883,18 +20885,18 @@ function movesForPrompt(state, playerSide, prompt) {
       const found = findCard(state, prompt.cardId);
       if (!found) return [
         {
-          kind: "runner.finishAccess"
+          kind: "finishAccess"
         }
       ];
       const moves = [
         {
-          kind: "runner.finishAccess"
+          kind: "finishAccess"
         }
       ];
       const trashCost = cardDef(found.card.cardId).trashCost;
       if (trashCost !== null && trashCost > 0 && availableCredits(state, "runner") >= trashCost) {
         moves.push({
-          kind: "runner.trashAccessed"
+          kind: "trashAccessed"
         });
       }
       return moves;
@@ -20906,10 +20908,10 @@ function corpActionMoves(state) {
   const corp = state.corp;
   if (corp.clicks <= 0) return moves;
   moves.push({
-    kind: "corp.gainCredits"
+    kind: "gainCredits"
   });
   if (corp.deck.length > 0) moves.push({
-    kind: "corp.draw"
+    kind: "draw"
   });
   const installed = /* @__PURE__ */ new Set();
   for (const card of corp.hand) {
@@ -20922,7 +20924,7 @@ function corpActionMoves(state) {
       for (const server of servers) {
         if (server === "new-remote") {
           moves.push({
-            kind: "corp.install",
+            kind: "install",
             cardId: card.cardId,
             server
           });
@@ -20931,7 +20933,7 @@ function corpActionMoves(state) {
         const cost = serverById(state, server).ice.length;
         if (cost <= state.corp.credits) {
           moves.push({
-            kind: "corp.install",
+            kind: "install",
             cardId: card.cardId,
             server
           });
@@ -20940,7 +20942,7 @@ function corpActionMoves(state) {
     } else {
       for (const server of servers) {
         moves.push({
-          kind: "corp.install",
+          kind: "install",
           cardId: card.cardId,
           server
         });
@@ -20955,7 +20957,7 @@ function corpActionMoves(state) {
     if (def2.cost !== null && def2.cost > state.corp.credits) continue;
     operated.add(card.cardId);
     moves.push({
-      kind: "corp.playOperation",
+      kind: "playOperation",
       cardId: card.cardId
     });
   }
@@ -20964,7 +20966,7 @@ function corpActionMoves(state) {
     const isAdvanceable = def2.type === "agenda" || behavior(card.cardId)?.advanceable === true;
     if (isAdvanceable && state.corp.credits >= 1) {
       moves.push({
-        kind: "corp.advance",
+        kind: "advance",
         targetId: card.id
       });
     }
@@ -20972,7 +20974,7 @@ function corpActionMoves(state) {
       const adv = card.advancement ?? 0;
       const requirement = def2.advancementRequirement ?? 0;
       if (adv >= requirement) moves.push({
-        kind: "corp.score",
+        kind: "score",
         targetId: card.id
       });
     }
@@ -20983,7 +20985,7 @@ function corpActionMoves(state) {
     if (card.rezzed === true) continue;
     if (rezCostFor(state, card) <= state.corp.credits) {
       moves.push({
-        kind: "corp.rez",
+        kind: "rez",
         targetId: card.id
       });
     }
@@ -21021,10 +21023,10 @@ function runnerActionMoves(state) {
   const runner = state.runner;
   if (runner.clicks <= 0) return moves;
   moves.push({
-    kind: "runner.gainCredits"
+    kind: "gainCredits"
   });
   if (runner.deck.length > 0) moves.push({
-    kind: "runner.draw"
+    kind: "draw"
   });
   const runnerInstalled = /* @__PURE__ */ new Set();
   for (const card of runner.hand) {
@@ -21038,7 +21040,7 @@ function runnerActionMoves(state) {
     }
     runnerInstalled.add(card.cardId);
     moves.push({
-      kind: "runner.install",
+      kind: "install",
       cardId: card.cardId
     });
   }
@@ -21058,14 +21060,14 @@ function runnerActionMoves(state) {
       ] : allServers(state).filter((s) => !cardRestrictsRun(state, s));
       for (const server of servers) {
         moves.push({
-          kind: "runner.playEvent",
+          kind: "playEvent",
           cardId: card.cardId,
           server
         });
       }
     } else {
       moves.push({
-        kind: "runner.playEvent",
+        kind: "playEvent",
         cardId: card.cardId
       });
     }
@@ -21073,7 +21075,7 @@ function runnerActionMoves(state) {
   for (const server of allServers(state)) {
     if (cardRestrictsRun(state, server)) continue;
     moves.push({
-      kind: "runner.run",
+      kind: "run",
       server
     });
   }
@@ -21100,16 +21102,16 @@ function runMoves(state, playerSide) {
       addBreakMoves(state, ice, moves);
     }
     moves.push({
-      kind: "runner.resolveSubroutines"
+      kind: "resolveSubroutines"
     });
     return moves;
   }
   if (run.phase === "movement") {
     moves.push({
-      kind: "runner.continueRun"
+      kind: "continueRun"
     });
     moves.push({
-      kind: "runner.jackOut"
+      kind: "jackOut"
     });
     return moves;
   }
@@ -21126,7 +21128,7 @@ function addBreakMoves(state, ice, moves) {
   if (breakAbilityDef(ice.cardId)?.bioroid === true && state.runner.clicks >= 1 && state.runner.installed.some((c) => isIcebreaker(c))) {
     for (const subIndex of unbroken) {
       moves.push({
-        kind: "runner.bioroidBreak",
+        kind: "bioroidBreak",
         iceId: ice.id,
         subIndex
       });
@@ -21145,7 +21147,7 @@ function addBreakMoves(state, ice, moves) {
           const canBreak = breaks.length === 0 || iceSubtypes.some((s) => breaks.includes(s));
           if (canBreak && availableCredits(state, "runner") >= cost) {
             moves.push({
-              kind: "runner.breakSubroutine",
+              kind: "breakSubroutine",
               programId: program.id,
               subIndex
             });
@@ -21156,7 +21158,7 @@ function addBreakMoves(state, ice, moves) {
     const pumpDef = pumpAbilityDef(program.cardId);
     if (pumpDef && availableCredits(state, "runner") >= pumpDef.creditCost) {
       moves.push({
-        kind: "runner.pumpIcebreaker",
+        kind: "pumpIcebreaker",
         programId: program.id
       });
     }
@@ -21184,13 +21186,13 @@ function breachMoves(state, playerSide) {
   if (total === 1) return moveList;
   for (const id of specific) {
     moveList.push({
-      kind: "runner.accessCard",
+      kind: "accessCard",
       targetId: id
     });
   }
   if (randomCount > 0) {
     moveList.push({
-      kind: "runner.accessRandom"
+      kind: "accessRandom"
     });
   }
   return moveList;
@@ -21206,7 +21208,7 @@ function addAbilityMoves(state, side, cards2, moves) {
       if (servers.length > 0) {
         for (const server of servers) {
           moves.push({
-            kind: `${side}.ability`,
+            kind: "ability",
             targetId: card.id,
             abilityIndex: i,
             server
@@ -21214,7 +21216,7 @@ function addAbilityMoves(state, side, cards2, moves) {
         }
       } else {
         moves.push({
-          kind: `${side}.ability`,
+          kind: "ability",
           targetId: card.id,
           abilityIndex: i
         });
@@ -21227,7 +21229,6 @@ function discardMoves(state, playerSide, prompt) {
   const count = Math.min(prompt.count, cards2.length);
   return combinations(cards2.map((c) => c.id), count).map((combo) => ({
     kind: "discard",
-    player: playerSide,
     cardInstanceIds: combo
   }));
 }
@@ -21304,26 +21305,29 @@ function sameMove(a, b) {
   return true;
 }
 function explainIllegal(playerSide, move) {
+  const seat = playerSide === "corp" ? "Corp" : "Runner";
   switch (move.kind) {
     case "mulligan.take":
     case "mulligan.decline":
       return `It is not ${playerSide}'s mulligan decision`;
     case "discard":
       return "It is not time to discard those cards";
-    case "corp.gainCredits":
-    case "corp.draw":
-    case "corp.install":
-    case "corp.advance":
-    case "corp.score":
-    case "corp.rez":
+    // Shared verbs: the seat the move was offered for names the phase.
+    case "gainCredits":
+    case "draw":
+    case "install":
+    case "ability":
+      return `Not legal in the current ${seat} action phase state`;
+    case "playOperation":
+    case "advance":
+    case "score":
+    case "rez":
       return "Not legal in the current Corp action phase state";
-    case "runner.gainCredits":
-    case "runner.draw":
-    case "runner.install":
-    case "runner.run":
+    case "playEvent":
+    case "run":
       return "Not legal in the current Runner action phase state";
-    case "runner.continueRun":
-    case "runner.jackOut":
+    case "continueRun":
+    case "jackOut":
       return "The run is not waiting in its movement phase right now";
     default:
       return `Move '${move.kind}' is not legal right now`;
@@ -21372,59 +21376,24 @@ function applyResolvedMove(state, playerSide, move) {
       enterDiscardPhase(state);
       break;
     }
-    // Corp actions --------------------------------------------------------
-    case "corp.gainCredits": {
-      spendClicks(state, "corp", 1);
-      gainCredits(state, "corp", 1);
+    // Shared basic actions ------------------------------------------------
+    // One case per verb; where the two seats' rules differ, branch on the
+    // authority (`playerSide`) rather than on a second move shape.
+    case "gainCredits": {
+      spendClicks(state, playerSide, 1);
+      gainCredits(state, playerSide, 1);
       break;
     }
-    case "corp.draw": {
-      spendClicks(state, "corp", 1);
-      if (state.corp.deck.length === 0) {
-        setGameOver(state, "runner", "Corp drew from an empty R&D");
-        return;
+    case "draw": {
+      spendClicks(state, playerSide, 1);
+      if (playerSide === "corp") {
+        if (state.corp.deck.length === 0) {
+          setGameOver(state, "runner", "Corp drew from an empty R&D");
+          return;
+        }
+        drawCards(state, "corp", 1);
+        break;
       }
-      drawCards(state, "corp", 1);
-      break;
-    }
-    case "corp.install": {
-      installCorpCard(state, move.cardId, move.server);
-      break;
-    }
-    case "corp.playOperation": {
-      playCorpOperation(state, move.cardId);
-      break;
-    }
-    case "corp.advance": {
-      const found = findCard(state, move.targetId);
-      if (!found) break;
-      spendClicks(state, "corp", 1);
-      spendCredits(state, "corp", 1);
-      addAdvancementCounter(state, found.card);
-      break;
-    }
-    case "corp.score": {
-      scoreAgenda(state, move.targetId);
-      break;
-    }
-    case "corp.rez": {
-      const found = findCard(state, move.targetId);
-      if (found) rezCard(state, found.card);
-      break;
-    }
-    case "corp.ability": {
-      const found = findCard(state, move.targetId);
-      if (found) applyPaidAbility(state, "corp", found.card, move.abilityIndex);
-      break;
-    }
-    // Runner actions ------------------------------------------------------
-    case "runner.gainCredits": {
-      spendClicks(state, "runner", 1);
-      gainCredits(state, "runner", 1);
-      break;
-    }
-    case "runner.draw": {
-      spendClicks(state, "runner", 1);
       const runner = state.runner;
       const verbal = runner.installed.some((c) => triggersOf(c.cardId).some((t) => t.kind === "first-basic-draw-double"));
       if (runner.deck.length === 0) {
@@ -21436,15 +21405,50 @@ function applyResolvedMove(state, playerSide, move) {
       drawCards(state, "runner", count);
       break;
     }
-    case "runner.install": {
-      installRunnerCard(state, move.cardId);
+    case "ability": {
+      const found = findCard(state, move.targetId);
+      if (found) applyPaidAbility(state, playerSide, found.card, move.abilityIndex, move.server);
       break;
     }
-    case "runner.playEvent": {
+    // Install: the one verb both seats share with a DIFFERENT shape. The two
+    // forms are told apart structurally — the Corp install names the server it
+    // goes into, the Runner install does not — via the shared guard.
+    case "install": {
+      if (isCorpInstall(move)) {
+        installCorpCard(state, move.cardId, move.server);
+      } else {
+        installRunnerCard(state, move.cardId);
+      }
+      break;
+    }
+    // Corp-only actions ---------------------------------------------------
+    case "playOperation": {
+      playCorpOperation(state, move.cardId);
+      break;
+    }
+    case "advance": {
+      const found = findCard(state, move.targetId);
+      if (!found) break;
+      spendClicks(state, "corp", 1);
+      spendCredits(state, "corp", 1);
+      addAdvancementCounter(state, found.card);
+      break;
+    }
+    case "score": {
+      scoreAgenda(state, move.targetId);
+      break;
+    }
+    case "rez": {
+      const found = findCard(state, move.targetId);
+      if (found) rezCard(state, found.card);
+      break;
+    }
+    // Runner-only actions -------------------------------------------------
+    case "playEvent": {
       playRunnerEvent(state, move.cardId, move.server);
       break;
     }
-    case "runner.run": {
+    case "run": {
       spendClicks(state, "runner", 1);
       initiateRun(state, move.server);
       if (isCentral(move.server)) {
@@ -21452,16 +21456,11 @@ function applyResolvedMove(state, playerSide, move) {
       }
       break;
     }
-    case "runner.ability": {
-      const found = findCard(state, move.targetId);
-      if (found) applyPaidAbility(state, "runner", found.card, move.abilityIndex, move.server);
-      break;
-    }
-    case "runner.continueRun": {
+    case "continueRun": {
       continueMovement(state, corpRezOptions(state));
       break;
     }
-    case "runner.jackOut": {
+    case "jackOut": {
       if (state.run) {
         state.log.push({
           type: "jack-out"
@@ -21470,37 +21469,37 @@ function applyResolvedMove(state, playerSide, move) {
       }
       break;
     }
-    case "runner.breakSubroutine": {
+    case "breakSubroutine": {
       breakSubroutine(state, move.programId, move.subIndex);
       break;
     }
-    case "runner.pumpIcebreaker": {
+    case "pumpIcebreaker": {
       pumpIcebreaker(state, move.programId);
       break;
     }
-    case "runner.resolveSubroutines": {
+    case "resolveSubroutines": {
       resolveEncounter(state);
       break;
     }
-    case "runner.bioroidBreak": {
+    case "bioroidBreak": {
       breakSubroutine(state, move.iceId, move.subIndex);
       break;
     }
     // Access --------------------------------------------------------------
-    case "runner.accessCard": {
+    case "accessCard": {
       doAccessChoice(state, move.targetId);
       break;
     }
-    case "runner.accessRandom": {
+    case "accessRandom": {
       const chosen = chooseRandomAccess(state);
       if (chosen) doAccessChoice(state, chosen);
       break;
     }
-    case "runner.trashAccessed": {
+    case "trashAccessed": {
       finishAccess(state, true);
       break;
     }
-    case "runner.finishAccess": {
+    case "finishAccess": {
       finishAccess(state, false);
       break;
     }
@@ -23195,7 +23194,7 @@ var EvalAI = class {
     this.seedSalt = opts.seedSalt ?? 0;
   }
   chooseMove(view, legal, ctx) {
-    const moves = legal.some((m) => m.kind === "runner.continueRun") ? legal.filter((m) => m.kind !== "runner.jackOut") : legal;
+    const moves = legal.some((m) => m.kind === "continueRun") ? legal.filter((m) => m.kind !== "jackOut") : legal;
     if (moves.length === 1) return moves[0];
     const baseSeed = hashSeed(ctx.seed, this.seedSalt);
     const sums = new Float64Array(moves.length);
@@ -23454,61 +23453,55 @@ function describeMove(state, move) {
       return "Keep starting hand";
     case "discard":
       return `Discard ${move.cardInstanceIds.length} card(s)`;
-    case "corp.gainCredits":
-    case "runner.gainCredits":
+    case "gainCredits":
       return "Gain 1 credit";
-    case "corp.draw":
-    case "runner.draw":
+    case "draw":
       return "Draw 1 card";
-    case "corp.install":
-      return `Install ${cardTitle(move.cardId)} \u2014 ${serverLabel(move.server)}`;
-    case "corp.playOperation":
+    // The two install shapes differ: the Corp one names the server it goes
+    // into, the Runner one is a program/hardware with no server.
+    case "install":
+      return isCorpInstall(move) ? `Install ${cardTitle(move.cardId)} \u2014 ${serverLabel(move.server)}` : `Install ${cardTitle(move.cardId)}`;
+    case "playOperation":
       return `Play ${cardTitle(move.cardId)}`;
-    case "corp.advance": {
+    case "advance": {
       const card = findCardIn(state, move.targetId);
       const adv = card ? card.advancement : 0;
       return `Advance ${cardTitle(card?.cardId ?? "")} (${adv}\u2192${(adv ?? 0) + 1})`;
     }
-    case "corp.score":
+    case "score":
       return `Score ${cardTitle(findCardIn(state, move.targetId)?.cardId ?? "")}`;
-    case "corp.rez":
+    case "rez":
       return `Rez ${cardTitle(findCardIn(state, move.targetId)?.cardId ?? "")}`;
-    case "corp.ability": {
+    case "ability": {
       const title = cardTitle(findCardIn(state, move.targetId)?.cardId ?? "");
       return `Ability ${move.abilityIndex + 1} \u2014 ${title}`;
     }
-    case "runner.install":
-      return `Install ${cardTitle(move.cardId)}`;
-    case "runner.playEvent":
+    case "playEvent":
       return `Play ${cardTitle(move.cardId)}`;
-    case "runner.run":
+    case "run":
       return `Run ${serverLabel(move.server)}`;
-    case "runner.ability": {
-      const title = cardTitle(findCardIn(state, move.targetId)?.cardId ?? "");
-      return `Ability ${move.abilityIndex + 1} \u2014 ${title}`;
-    }
-    case "runner.continueRun":
+    case "continueRun":
       return "Continue the run";
-    case "runner.jackOut":
+    case "jackOut":
       return "Jack out";
-    case "runner.breakSubroutine":
+    case "breakSubroutine":
       return `Break subroutine ${move.subIndex + 1} with ${cardTitle(findCardIn(state, move.programId)?.cardId ?? "")}`;
-    case "runner.pumpIcebreaker":
+    case "pumpIcebreaker":
       return `Pump strength \u2014 ${cardTitle(findCardIn(state, move.programId)?.cardId ?? "")}`;
-    case "runner.bioroidBreak":
+    case "bioroidBreak":
       return `Break subroutine ${move.subIndex + 1} (spend a click)`;
-    case "runner.resolveSubroutines":
+    case "resolveSubroutines":
       return "Let subroutines resolve";
-    case "runner.accessCard": {
+    case "accessCard": {
       const card = findCardIn(state, move.targetId);
       const named = card && cardVisibleTo(state, move.targetId, "runner");
       return `Access ${named ? cardTitle(card.cardId) : "a card"}`;
     }
-    case "runner.accessRandom":
+    case "accessRandom":
       return "Access a random card";
-    case "runner.trashAccessed":
+    case "trashAccessed":
       return "Trash";
-    case "runner.finishAccess":
+    case "finishAccess":
       return "Finish access";
     case "prompt.answer": {
       const prompt = state.prompts.find((p2) => p2.id === move.promptId);
@@ -23877,7 +23870,7 @@ function sheetTokens(card) {
 }
 function installedAction(card, move, icebreakers) {
   switch (move.kind) {
-    case "runner.ability": {
+    case "ability": {
       const def2 = paidAbilitiesOf(card.cardId)[move.abilityIndex];
       const base = def2?.title ?? `Ability ${move.abilityIndex + 1}`;
       return {
@@ -23888,7 +23881,7 @@ function installedAction(card, move, icebreakers) {
         creditCost: def2?.creditCost
       };
     }
-    case "runner.breakSubroutine": {
+    case "breakSubroutine": {
       return {
         key: moveKey(move),
         label: `Break sub ${move.subIndex + 1}`,
@@ -23896,7 +23889,7 @@ function installedAction(card, move, icebreakers) {
         creditCost: breakAbilityDef(card.cardId)?.creditCost
       };
     }
-    case "runner.pumpIcebreaker": {
+    case "pumpIcebreaker": {
       const pump = pumpAbilityDef(card.cardId);
       const label = !pump ? "Pump strength" : pump.dynamicAmount ? `+${icebreakers} strength` : `+${pump.amount} strength`;
       return {
@@ -23917,21 +23910,16 @@ function installedAction(card, move, icebreakers) {
 function actionsForCard(card, legal) {
   return legal.filter((m) => {
     switch (m.kind) {
-      case "runner.ability":
+      case "ability":
         return m.targetId === card.id;
-      case "runner.breakSubroutine":
-      case "runner.pumpIcebreaker":
+      case "breakSubroutine":
+      case "pumpIcebreaker":
         return m.programId === card.id;
       default:
         return false;
     }
   });
 }
-var INSTALLED_ACTION_KINDS = /* @__PURE__ */ new Set([
-  "runner.ability",
-  "runner.breakSubroutine",
-  "runner.pumpIcebreaker"
-]);
 function buildSheetGroups(opts) {
   if (opts.side !== "runner") return [];
   const groups = [];
@@ -24371,7 +24359,7 @@ var server_column_default = defineComponent({
       <button
         v-if="runMove && !runInProgress"
         class="run-btn"
-        data-action="runner.run"
+        data-action="run"
         :data-server="server.id"
         @click="runMove && $emit('move', runMove)"
       >Run</button>
@@ -24767,14 +24755,14 @@ var game_default = defineComponent({
           actions.push({
             label: `Trash (${trashCost} [credit])`,
             move: {
-              kind: "runner.trashAccessed"
+              kind: "trashAccessed"
             }
           });
         }
         actions.push({
           label: "Finish access",
           move: {
-            kind: "runner.finishAccess"
+            kind: "finishAccess"
           }
         });
         break;
@@ -24804,19 +24792,16 @@ var game_default = defineComponent({
     }));
     const MOVE_KIND_GROUPS = {
       card: /* @__PURE__ */ new Set([
-        "runner.install",
-        "runner.playEvent",
-        "corp.install",
-        "corp.playOperation"
+        "install",
+        "playEvent",
+        "playOperation"
       ]),
       tile: /* @__PURE__ */ new Set([
-        "corp.gainCredits",
-        "runner.gainCredits",
-        "corp.draw",
-        "runner.draw"
+        "gainCredits",
+        "draw"
       ]),
       run: /* @__PURE__ */ new Set([
-        "runner.run"
+        "run"
       ])
     };
     function isCardMove(m) {
@@ -24827,11 +24812,11 @@ var game_default = defineComponent({
     }
     const gainCreditsMove = computed2(() => {
       if (!isHumanTurn.value || prompt.value || accessedCard.value) return null;
-      return legal.value.find((m) => m.kind === "corp.gainCredits" || m.kind === "runner.gainCredits") ?? null;
+      return legal.value.find((m) => m.kind === "gainCredits") ?? null;
     });
     const drawMove = computed2(() => {
       if (!isHumanTurn.value || prompt.value || accessedCard.value) return null;
-      return legal.value.find((m) => m.kind === "corp.draw" || m.kind === "runner.draw") ?? null;
+      return legal.value.find((m) => m.kind === "draw") ?? null;
     });
     watch2(() => props.state, () => {
       discardSelected.value = [];
@@ -24886,9 +24871,18 @@ var game_default = defineComponent({
       if (accessedCard.value) zoom(accessedCard.value.cardId);
     }
     function runMove(server) {
-      return legal.value.find((m) => m.kind === "runner.run" && m.server === server);
+      return legal.value.find((m) => m.kind === "run" && m.server === server);
     }
-    const generalMoves = computed2(() => legal.value.filter((m) => !isCardMove(m) && !MOVE_KIND_GROUPS.run.has(m.kind) && !hostedOnTile(m) && !INSTALLED_ACTION_KINDS.has(m.kind)));
+    const sheetHostedKeys = computed2(() => {
+      const keys = /* @__PURE__ */ new Set();
+      for (const group of ownGroups.value) {
+        for (const row of group.cards) {
+          for (const action of row.actions) keys.add(action.key);
+        }
+      }
+      return keys;
+    });
+    const generalMoves = computed2(() => legal.value.filter((m) => !isCardMove(m) && !MOVE_KIND_GROUPS.run.has(m.kind) && !hostedOnTile(m) && !sheetHostedKeys.value.has(moveKey(m))));
     function cardMoves(cardId) {
       if (!isHumanTurn.value || prompt.value) return [];
       return legal.value.filter((m) => MOVE_KIND_GROUPS.card.has(m.kind) && "cardId" in m && m.cardId === cardId);
@@ -24911,13 +24905,13 @@ var game_default = defineComponent({
     });
     function shortActionLabel(m) {
       switch (m.kind) {
-        case "runner.install":
-          return "Install";
-        case "corp.install":
-          return `Install \u2192 ${serverLabel(m.server)}`;
-        case "runner.playEvent":
+        // The two install shapes: the Corp label names the target server, the
+        // Runner label does not.
+        case "install":
+          return isCorpInstall(m) ? `Install \u2192 ${serverLabel(m.server)}` : "Install";
+        case "playEvent":
           return m.server ? `Play \u2192 ${serverLabel(m.server)}` : "Play";
-        case "corp.playOperation":
+        case "playOperation":
           return "Play";
         default:
           return describeMove(props.state, m);

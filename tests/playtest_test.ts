@@ -51,7 +51,7 @@ Deno.test("playtest: Corp installs and advances an agenda", () => {
   const moves = engine.getLegalMoves(state, "corp");
   // Precondition: the Corp's opening hand always holds installable cards.
   const install = assertDefined(
-    moves.find((m) => m.kind === "corp.install"),
+    moves.find((m) => m.kind === "install"),
     "the Corp's opening hand has an installable card",
   );
   const afterInstall = play(state, "corp", install);
@@ -61,7 +61,7 @@ Deno.test("playtest: Corp installs and advances an agenda", () => {
     installed.length > 0,
     "the installed card is on the board",
   );
-  const adv = engine.getLegalMoves(afterInstall, "corp").find((m) => m.kind === "corp.advance");
+  const adv = engine.getLegalMoves(afterInstall, "corp").find((m) => m.kind === "advance");
   if (adv) {
     const afterAdvance = play(afterInstall, "corp", adv);
     show("after advance", afterAdvance);
@@ -93,8 +93,8 @@ Deno.test("playtest: Runner runs HQ and accesses a card", () => {
   // Runner's turn: play a run.
   current = turn(current, "runner");
   show("after runner turn", current);
-  const runMove = engine.getLegalMoves(current, "runner").find((m) => m.kind === "runner.run");
-  if (runMove && runMove.kind === "runner.run") {
+  const runMove = engine.getLegalMoves(current, "runner").find((m) => m.kind === "run");
+  if (runMove && runMove.kind === "run") {
     const afterRun = play(current, "runner", runMove);
     show("after run start", afterRun);
     assertDefined(afterRun.run, "the run move started a run");
@@ -119,17 +119,17 @@ Deno.test("playtest: Corp scores an agenda — and a game-winning score ends the
     const side = actingSide(state);
     const moves = engine.getLegalMoves(state, side);
     if (moves.length === 0) break;
-    const score = side === "corp" ? moves.find((m) => m.kind === "corp.score") : undefined;
+    const score = side === "corp" ? moves.find((m) => m.kind === "score") : undefined;
     if (score) {
       state = play(state, side, score);
       scored = state;
       show("after score", state);
       break;
     }
-    const advance = side === "corp" ? moves.find((m) => m.kind === "corp.advance") : undefined;
+    const advance = side === "corp" ? moves.find((m) => m.kind === "advance") : undefined;
     const install = side === "corp"
       ? moves.find(
-        (m) => m.kind === "corp.install" && (m as { cardId: string }).cardId === "offworld_office",
+        (m) => m.kind === "install" && (m as { cardId: string }).cardId === "offworld_office",
       )
       : undefined;
     state = play(state, side, score ?? advance ?? install ?? moves[0]!);
@@ -161,18 +161,18 @@ Deno.test("playtest: Urtica Cipher deals net damage when accessed — and can fl
       assertDefined(
         engine.getLegalMoves(s, "corp").find(
           (m) =>
-            m.kind === "corp.install" && (m as { cardId: string }).cardId === "urtica_cipher" &&
+            m.kind === "install" && (m as { cardId: string }).cardId === "urtica_cipher" &&
             (m as { server: string }).server === "new-remote",
         ),
         "the corp can install Urtica Cipher in a new remote",
       ),
     );
-    const advance = engine.getLegalMoves(s, "corp").find((m) => m.kind === "corp.advance");
+    const advance = engine.getLegalMoves(s, "corp").find((m) => m.kind === "advance");
     if (advance) s = play(s, "corp", advance);
     s = turn(s, "corp");
     const run = assertDefined(
       engine.getLegalMoves(s, "runner").find(
-        (m) => m.kind === "runner.run" && m.server === "remote-1",
+        (m) => m.kind === "run" && m.server === "remote-1",
       ),
       "the runner can run the Urtica remote",
     );
@@ -184,7 +184,7 @@ Deno.test("playtest: Urtica Cipher deals net damage when accessed — and can fl
     let s = runToMovement();
     const handBefore = s.runner.hand.length;
     const continueRun = assertDefined(
-      engine.getLegalMoves(s, "runner").find((m) => m.kind === "runner.continueRun"),
+      engine.getLegalMoves(s, "runner").find((m) => m.kind === "continueRun"),
       "the run parks in the movement phase (rule 6.9.4c)",
     );
     // Continuing reaches the server; the Corp's (R) rez window (6.9.4e — the
@@ -220,7 +220,7 @@ Deno.test("playtest: Urtica Cipher deals net damage when accessed — and can fl
     // damage empties the grip and ends the game.
     let s = runToMovement(["sure_gamble", "unity"]);
     const continueRun = assertDefined(
-      engine.getLegalMoves(s, "runner").find((m) => m.kind === "runner.continueRun"),
+      engine.getLegalMoves(s, "runner").find((m) => m.kind === "continueRun"),
       "the run parks in the movement phase (rule 6.9.4c)",
     );
     s = play(s, "runner", continueRun);
@@ -253,7 +253,7 @@ Deno.test("playtest: a player forced to draw from an empty deck loses (rule 1.7.
     const side = actingSide(current);
     const moves = engine.getLegalMoves(current, side);
     if (moves.length === 0) break;
-    const draw = moves.find((m) => m.kind === `${side}.draw`);
+    const draw = moves.find((m) => m.kind === "draw");
     current = play(current, side, draw ?? moves[0]!);
   }
   assertEquals(current.winner, "runner", "the corp decking ends the game in the runner's favour");

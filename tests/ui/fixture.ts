@@ -7,7 +7,7 @@
  * into the public-status DTO (viewer-aware for installed cards).
  */
 
-import { engine, starterDeckConfigs } from "../../src/mod.ts";
+import { actorOf, engine, starterDeckConfigs } from "../../src/mod.ts";
 import type { GameState, Move, PlayerSide, Prompt } from "../../src/types.ts";
 import { play } from "../helpers/fixtures.ts";
 import { deepClone } from "../helpers/assert.ts";
@@ -33,10 +33,11 @@ export function createTestFixture(
   moves: Move[] = [],
 ): { state: GameState; humanSide: PlayerSide } {
   let state = fresh(seed);
+  // The actor is never encoded in a move — it is the player who may act right
+  // now (the pending prompt's owner, else the turn player). Let the engine
+  // state supply it rather than guessing from the move's kind.
   for (const m of moves) {
-    const actor = (m as { player?: PlayerSide }).player ??
-      (m.kind.startsWith("corp") ? "corp" : "runner");
-    state = play(state, actor, m);
+    state = play(state, actorOf(state), m);
   }
   return { state, humanSide };
 }

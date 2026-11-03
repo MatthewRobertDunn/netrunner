@@ -11,6 +11,7 @@
 import { cardDef, engine, starterDeckConfigs } from "../src/mod.ts";
 import { endCorpTurn, newGameWithCorpHand, newStarterGame, play } from "./helpers/fixtures.ts";
 import type { GameState, Move } from "../src/types.ts";
+import { isCorpInstall } from "../src/types.ts";
 import { assert, assertDefined, assertEquals, deepClone } from "./helpers/assert.ts";
 
 function moveKinds(state: GameState, side: "corp" | "runner"): string[] {
@@ -27,7 +28,7 @@ function corpTurnWithIceOnRemote(hand: string[], iceCount: number, seed = 3): Ga
   for (let i = 0; i < iceCount; i++) {
     const server = i === 0 ? "new-remote" : "remote-1";
     const install = engine.getLegalMoves(cur, "corp").find(
-      (m) => m.kind === "corp.install" && m.cardId === hand[0]! && m.server === server,
+      (m) => isCorpInstall(m) && m.cardId === hand[0]! && m.server === server,
     );
     assertDefined(install, `corp can install ice ${i + 1} on ${server}`);
     cur = play(cur, "corp", install!);
@@ -37,7 +38,7 @@ function corpTurnWithIceOnRemote(hand: string[], iceCount: number, seed = 3): Ga
 
 function runServer(state: GameState, server: string): GameState {
   const run = engine.getLegalMoves(state, "runner").find(
-    (m) => m.kind === "runner.run" && m.server === server,
+    (m) => m.kind === "run" && m.server === server,
   );
   assertDefined(run, `runner can run ${server}`);
   return play(state, "runner", run!);
@@ -67,9 +68,9 @@ function driveBreach(state: GameState): GameState {
   for (let i = 0; i < 30; i++) {
     if (!cur.breach || cur.winner) break;
     const moves = engine.getLegalMoves(cur, "runner");
-    const m = moves.find((x) => x.kind === "runner.accessRandom") ??
-      moves.find((x) => x.kind === "runner.accessCard") ??
-      moves.find((x) => x.kind === "runner.finishAccess");
+    const m = moves.find((x) => x.kind === "accessRandom") ??
+      moves.find((x) => x.kind === "accessCard") ??
+      moves.find((x) => x.kind === "finishAccess");
     if (!m) break;
     cur = play(cur, "runner", m);
   }
@@ -108,12 +109,12 @@ Deno.test("movement: the movement phase parks the run for jack-out or continue (
       // The movement phase is now a decision point for the Runner.
       assertEquals(cur.run?.phase, "movement", "the run parks in the movement phase");
       const kinds = moveKinds(cur, "runner");
-      assert(kinds.includes("runner.jackOut"), "jack-out is offered in the movement phase");
-      assert(kinds.includes("runner.continueRun"), "continue is offered in the movement phase");
+      assert(kinds.includes("jackOut"), "jack-out is offered in the movement phase");
+      assert(kinds.includes("continueRun"), "continue is offered in the movement phase");
 
       const clicksBefore = cur.runner.clicks;
       const creditsBefore = cur.runner.credits;
-      const jackOut = findMove(cur, "runner", "runner.jackOut");
+      const jackOut = findMove(cur, "runner", "jackOut");
       assertDefined(jackOut, "jack-out move exists");
       cur = play(cur, "runner", jackOut!);
 
@@ -141,7 +142,7 @@ Deno.test("movement: the movement phase parks the run for jack-out or continue (
     assertEquals(cur.run?.phase, "movement", "the run parks at the server");
     assert(!cur.log.some((e) => e.type === "run-successful"), "not yet successful while parked");
 
-    cur = play(cur, "runner", findMove(cur, "runner", "runner.continueRun")!);
+    cur = play(cur, "runner", findMove(cur, "runner", "continueRun")!);
 
     assert(cur.log.some((e) => e.type === "run-successful"), "run-successful event fires");
     assert(cur.log.some((e) => e.type === "breach"), "a breach follows");
@@ -155,16 +156,16 @@ Deno.test("movement: the movement phase parks the run for jack-out or continue (
     let cur = corpTurnWithIceOnRemote(["tithe"], 1);
     cur = runServer(cur, "remote-1");
     cur = corpRezzesInWindow(cur); // ice rezzed -> encounter
-    cur = play(cur, "runner", findMove(cur, "runner", "runner.resolveSubroutines")!);
+    cur = play(cur, "runner", findMove(cur, "runner", "resolveSubroutines")!);
 
     assertEquals(cur.run?.phase, "movement", "the run parks in the movement phase");
     assertEquals(cur.run?.position, 0, "at the innermost (only) ice");
     assert(
-      moveKinds(cur, "runner").includes("runner.jackOut"),
+      moveKinds(cur, "runner").includes("jackOut"),
       "jack-out offered after the encounter",
     );
 
-    cur = play(cur, "runner", findMove(cur, "runner", "runner.continueRun")!);
+    cur = play(cur, "runner", findMove(cur, "runner", "continueRun")!);
 
     assert(cur.log.some((e) => e.type === "run-successful"), "run-successful event fires");
     assert(cur.log.some((e) => e.type === "breach"), "a breach follows");
@@ -183,16 +184,16 @@ Deno.test("movement: continueRun passes the ice and approaches the next position
   let cur = corpTurnWithIceOnRemote(["tithe", "tithe"], 2);
   cur = runServer(cur, "remote-1");
   cur = corpRezzesInWindow(cur); // outer ice rezzed -> encounter
-  const resolve = findMove(cur, "runner", "runner.resolveSubroutines");
+  const resolve = findMove(cur, "runner", "resolveSubroutines");
   assertDefined(resolve, "the Runner can resolve the encounter");
   cur = play(cur, "runner", resolve!);
 
   // Encounter done: the run parks in the movement phase at the outer ice.
   assertEquals(cur.run?.phase, "movement", "the run parks after the encounter");
   assertEquals(cur.run?.position, 1, "still at the outer ice position");
-  assert(moveKinds(cur, "runner").includes("runner.continueRun"), "continue is offered");
+  assert(moveKinds(cur, "runner").includes("continueRun"), "continue is offered");
 
-  const cont = findMove(cur, "runner", "runner.continueRun");
+  const cont = findMove(cur, "runner", "continueRun");
   assertDefined(cont, "continueRun move exists");
   cur = play(cur, "runner", cont!);
 
@@ -212,7 +213,7 @@ Deno.test("movement: continueRun passes the ice and approaches the next position
   cur = corpPassesRezWindow(cur);
   assertEquals(cur.run?.phase, "movement", "the run parks again at the server position");
   assertEquals(cur.run?.position, null, "no ice left inward");
-  cur = play(cur, "runner", findMove(cur, "runner", "runner.continueRun")!);
+  cur = play(cur, "runner", findMove(cur, "runner", "continueRun")!);
   assert(cur.log.some((e) => e.type === "run-successful"), "the run is declared successful");
   assertEquals(cur.runner.successfulRunThisTurn, true, "successfulRunThisTurn is set");
 });
@@ -243,21 +244,21 @@ Deno.test("movement: Carmen installs for cost-2 after a successful run this turn
   const carmenCost = cardDef("carmen").cost ?? 0;
 
   const before = engine.getLegalMoves(cur, "runner").filter(
-    (m) => m.kind === "runner.install" && m.cardId === "carmen",
+    (m) => m.kind === "install" && m.cardId === "carmen",
   );
   assertEquals(before.length, 0, "Carmen is not installable at 4 credits before a successful run");
 
   // Run HQ (no ice), continue through the movement phase, finish the breach.
   cur = runServer(cur, "hq");
   assertEquals(cur.run?.phase, "movement", "the HQ run parks in the movement phase");
-  cur = play(cur, "runner", findMove(cur, "runner", "runner.continueRun")!);
+  cur = play(cur, "runner", findMove(cur, "runner", "continueRun")!);
   assert(cur.log.some((e) => e.type === "run-successful"), "the HQ run is successful");
   assertEquals(cur.runner.successfulRunThisTurn, true, "successfulRunThisTurn is set");
   cur = driveBreach(cur);
   assert(cur.run === null, "the run is over");
 
   const install = engine.getLegalMoves(cur, "runner").find(
-    (m) => m.kind === "runner.install" && m.cardId === "carmen",
+    (m) => m.kind === "install" && m.cardId === "carmen",
   );
   assertDefined(install, "Carmen is installable after a successful run this turn");
   const after = play(cur, "runner", install!);
@@ -277,19 +278,18 @@ Deno.test("movement: the Manegarm toll prompt fires when continuing to the serve
   let cur = newGameWithCorpHand(["manegarm_skunkworks", "tithe"], 3);
   // Ice first (creates the remote), then the upgrade into it.
   const ice = engine.getLegalMoves(cur, "corp").find(
-    (m) => m.kind === "corp.install" && m.cardId === "tithe" && m.server === "new-remote",
+    (m) => isCorpInstall(m) && m.cardId === "tithe" && m.server === "new-remote",
   );
   assertDefined(ice, "corp can install the ice in a new remote");
   cur = play(cur, "corp", ice!);
   const upgrade = engine.getLegalMoves(cur, "corp").find(
-    (m) =>
-      m.kind === "corp.install" && m.cardId === "manegarm_skunkworks" && m.server === "remote-1",
+    (m) => isCorpInstall(m) && m.cardId === "manegarm_skunkworks" && m.server === "remote-1",
   );
   assertDefined(upgrade, "corp can install the upgrade in the remote");
   cur = play(cur, "corp", upgrade!);
   const root = cur.servers.find((s) => s.id === "remote-1")!.root[0]!;
   const rez = engine.getLegalMoves(cur, "corp").find(
-    (m) => m.kind === "corp.rez" && m.targetId === root.id,
+    (m) => m.kind === "rez" && m.targetId === root.id,
   );
   assertDefined(rez, "corp can rez the upgrade in its action phase");
   cur = play(cur, "corp", rez!);
@@ -300,7 +300,7 @@ Deno.test("movement: the Manegarm toll prompt fires when continuing to the serve
   assertEquals(cur.run?.phase, "movement", "the run parks at the server");
   assert(!cur.prompts.some((p) => p.kind === "choose-one"), "no toll prompt while parked");
 
-  cur = play(cur, "runner", findMove(cur, "runner", "runner.continueRun")!);
+  cur = play(cur, "runner", findMove(cur, "runner", "continueRun")!);
   const toll = cur.prompts.find((p) => p.kind === "choose-one");
   assertDefined(toll, "the Manegarm toll prompt fires on continue (approach server)");
   if (toll?.kind === "choose-one") {

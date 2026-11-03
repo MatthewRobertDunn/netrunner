@@ -22,6 +22,7 @@ import type {
   Move,
   PlayerSide,
 } from "../../src/types.ts";
+import { isCorpInstall } from "../../src/types.ts";
 import { deepClone } from "./assert.ts";
 
 export function starterDeckPair(): { corp: DeckConfig; runner: DeckConfig } {
@@ -155,7 +156,7 @@ export function endCorpTurn(state: GameState, maxIters = 10): GameState {
     if (cur.turn.player !== "corp" || cur.winner) break;
     const legal = engine.getLegalMoves(cur, "corp");
     if (legal.length === 0) break;
-    const gain = legal.find((m) => m.kind === "corp.gainCredits") ?? legal[0]!;
+    const gain = legal.find((m) => m.kind === "gainCredits") ?? legal[0]!;
     cur = play(cur, "corp", gain);
   }
   return cur;
@@ -165,9 +166,9 @@ export function endCorpTurn(state: GameState, maxIters = 10): GameState {
 export function installInNewRemoteAndEndTurn(cardId: string, seed = 3): GameState {
   const state = newGameWithCorpHand([cardId], seed);
   const install = engine.getLegalMoves(state, "corp").find(
-    (m) => m.kind === "corp.install" && m.cardId === cardId && m.server === "new-remote",
+    (m) => isCorpInstall(m) && m.cardId === cardId && m.server === "new-remote",
   );
-  if (!install || install.kind !== "corp.install") {
+  if (!install || install.kind !== "install") {
     throw new Error(`corp cannot install ${cardId} in a new remote`);
   }
   return endCorpTurn(play(state, "corp", install));
@@ -180,9 +181,9 @@ export function installInNewRemoteAndEndTurn(cardId: string, seed = 3): GameStat
 export function rezWindowState(seed = 3): GameState {
   const state = installInNewRemoteAndEndTurn("tithe", seed);
   const run = engine.getLegalMoves(state, "runner").find(
-    (m) => m.kind === "runner.run" && m.server === "remote-1",
+    (m) => m.kind === "run" && m.server === "remote-1",
   );
-  if (!run || run.kind !== "runner.run") throw new Error("runner cannot run the remote");
+  if (!run || run.kind !== "run") throw new Error("runner cannot run the remote");
   const after = play(state, "runner", run);
   const prompt = after.prompts[0];
   if (!prompt || prompt.kind !== "rez-window") {
@@ -211,7 +212,7 @@ export function play(state: GameState, side: PlayerSide, move: Move): GameState 
  * out or continues). No-op when no such move is legal.
  */
 export function continueRun(state: GameState): GameState {
-  const m = engine.getLegalMoves(state, "runner").find((x) => x.kind === "runner.continueRun");
+  const m = engine.getLegalMoves(state, "runner").find((x) => x.kind === "continueRun");
   return m ? play(state, "runner", m) : state;
 }
 

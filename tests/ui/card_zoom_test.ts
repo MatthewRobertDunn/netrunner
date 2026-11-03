@@ -7,7 +7,7 @@ import { mount } from "@vue/test-utils";
 import { assert, assertEquals } from "../helpers/assert.ts";
 import CardZoom from "../../src/web/ui/card-zoom.ts";
 
-const finishMove = { kind: "runner.finishAccess" } as const;
+const finishMove = { kind: "finishAccess" } as const;
 
 Deno.test("CardZoom: actions, move emission, and the Close fallback", async (t) => {
   await t.step("renders the card title and its action buttons", () => {
@@ -15,7 +15,7 @@ Deno.test("CardZoom: actions, move emission, and the Close fallback", async (t) 
       props: {
         cardId: "palisade",
         actions: [
-          { label: "Trash (3 [credit])", move: { kind: "runner.trashAccessed" } },
+          { label: "Trash (3 [credit])", move: { kind: "trashAccessed" } },
           { label: "Finish access", move: finishMove },
         ],
       },
@@ -27,8 +27,8 @@ Deno.test("CardZoom: actions, move emission, and the Close fallback", async (t) 
     assertEquals(buttons[1]!.text(), "Finish access");
     // Annotation contract: zoom action buttons carry the move's attributes
     // (data-action + parameters), same as every other move button.
-    assertEquals(buttons[0]!.attributes("data-action"), "runner.trashAccessed");
-    assertEquals(buttons[1]!.attributes("data-action"), "runner.finishAccess");
+    assertEquals(buttons[0]!.attributes("data-action"), "trashAccessed");
+    assertEquals(buttons[1]!.attributes("data-action"), "finishAccess");
     // With actions shown there is no Close button.
     assertEquals(
       wrapper.findAll('[data-action="close"]').length,
@@ -92,8 +92,8 @@ Deno.test("CardZoom: the focus trap keeps Tab inside the dialog", () => {
     props: {
       cardId: "palisade",
       actions: [
-        { label: "Trash (3 [credit])", move: { kind: "runner.trashAccessed" } },
-        { label: "Finish access", move: { kind: "runner.finishAccess" } },
+        { label: "Trash (3 [credit])", move: { kind: "trashAccessed" } },
+        { label: "Finish access", move: { kind: "finishAccess" } },
       ],
     },
     attachTo: "body",

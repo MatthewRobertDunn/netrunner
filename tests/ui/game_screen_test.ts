@@ -11,11 +11,13 @@ import { assert, assertDefined, assertEquals, deepClone } from "../helpers/asser
 import { accessDecisionFixture, createTestFixture, publicStatusFor } from "./fixture.ts";
 import { cardDef, engine } from "../../src/mod.ts";
 import type { GameState, Move, PlayerSide } from "../../src/types.ts";
+import { isCorpInstall } from "../../src/types.ts";
 import GameScreen from "../../src/web/ui/game.ts";
 import {
   continueRun,
   corpDeckStartingWith,
   endCorpTurn,
+  findInstalled,
   installInNewRemoteAndEndTurn,
   newGameWithCorpHand,
   play,
@@ -112,7 +114,7 @@ Deno.test("GameScreen install actions: one row per tile and a single-row popup",
         assertEquals(hq.length, 1, "exactly one Install → HQ button per Palisade tile");
         // Annotation contract: the button names its verb and both parameters
         // (see docs/ui-gotchas.md).
-        assertEquals(hq[0]!.attributes("data-action"), "corp.install");
+        assertEquals(hq[0]!.attributes("data-action"), "install");
         assertEquals(hq[0]!.attributes("data-card-id"), "palisade");
         assertEquals(hq[0]!.attributes("data-server"), "hq");
       }
@@ -273,7 +275,7 @@ Deno.test("GameScreen status dock side panel", async (t) => {
 
       // The tile is the move: its annotation is moveActionAttrs' output, so
       // the agent finds it by the action kind, not by layout.
-      const gain = own.find(`[data-action="${humanSide}.gainCredits"]`);
+      const gain = own.find(`[data-action="gainCredits"]`);
       assert(gain.exists(), `own credits tile is the gain button (${humanSide})`);
       assertEquals(gain.element.tagName.toLowerCase(), "button", "gain tile is a real button");
 
@@ -283,7 +285,7 @@ Deno.test("GameScreen status dock side panel", async (t) => {
       const emitted = wrapper.emitted("move") as unknown[][] | undefined;
       assert(emitted && emitted.length === 1, `click emits one move (${humanSide})`);
       const move = emitted[0]![0] as { kind: string };
-      assertEquals(move.kind, `${humanSide}.gainCredits`, "emits the gain-credit move");
+      assertEquals(move.kind, "gainCredits", "emits the gain-credit move");
     }
   });
 
@@ -292,7 +294,7 @@ Deno.test("GameScreen status dock side panel", async (t) => {
       const { state } = dockActionFixture(humanSide);
       assertEquals(state.turn.player, humanSide, `it is ${humanSide}'s turn`);
       assert(
-        engine.getLegalMoves(state, humanSide).some((m) => m.kind === `${humanSide}.draw`),
+        engine.getLegalMoves(state, humanSide).some((m) => m.kind === "draw"),
         `the ${humanSide}.draw move is legal (clicks + deck left)`,
       );
       const wrapper = mount(GameScreen, { props: { state, humanSide } });
@@ -310,7 +312,7 @@ Deno.test("GameScreen status dock side panel", async (t) => {
         );
       }
 
-      const draw = own.find(`[data-action="${humanSide}.draw"]`);
+      const draw = own.find(`[data-action="draw"]`);
       assert(draw.exists(), `own hand tile is the draw button (${humanSide})`);
       assertEquals(draw.element.tagName.toLowerCase(), "button", "hand tile is a real button");
       assert(draw.classes().includes("primary-stat"), "hand tile shares the primary tile look");
@@ -341,7 +343,7 @@ Deno.test("GameScreen status dock side panel", async (t) => {
       const emitted = wrapper.emitted("move") as unknown[][] | undefined;
       assert(emitted && emitted.length === 1, `click emits one move (${humanSide})`);
       const move = emitted[0]![0] as { kind: string };
-      assertEquals(move.kind, `${humanSide}.draw`, "emits the draw move");
+      assertEquals(move.kind, "draw", "emits the draw move");
     }
   });
 
@@ -421,15 +423,15 @@ Deno.test("GameScreen status dock side panel", async (t) => {
 function dockActionFixture(humanSide: PlayerSide) {
   if (humanSide === "corp") return createTestFixture(42, "corp");
   const gains: Move[] = [
-    { kind: "corp.gainCredits" },
-    { kind: "corp.gainCredits" },
-    { kind: "corp.gainCredits" },
+    { kind: "gainCredits" },
+    { kind: "gainCredits" },
+    { kind: "gainCredits" },
   ];
   const spent = createTestFixture(42, "corp", gains);
   const drop = spent.state.corp.hand[0]!.id;
   return createTestFixture(42, "corp", [
     ...gains,
-    { kind: "discard", player: "corp", cardInstanceIds: [drop] },
+    { kind: "discard", cardInstanceIds: [drop] },
   ]);
 }
 
@@ -450,8 +452,8 @@ Deno.test("GameScreen remotes: ice sits on the runner side in both seats", () =>
   // Corp installs Palisade then Send a Message in a new remote: remote-1
   // ends up with ice plus a root card.
   const { state } = createTestFixture(42, "corp", [
-    { kind: "corp.install", cardId: "palisade", server: "new-remote" },
-    { kind: "corp.install", cardId: "send_a_message", server: "remote-1" },
+    { kind: "install", cardId: "palisade", server: "new-remote" },
+    { kind: "install", cardId: "send_a_message", server: "remote-1" },
   ]);
 
   for (const humanSide of ["corp", "runner"] as const) {
@@ -579,7 +581,7 @@ Deno.test("GameScreen run-sourcing events label their target server", () => {
   // The per-target buttons distinguish themselves by data-server, not by
   // label text — the agent can run HQ's event without parsing "Play → HQ".
   assertEquals(
-    jailbreakTile!.findAll('.card-actions button[data-action="runner.playEvent"]')
+    jailbreakTile!.findAll('.card-actions button[data-action="playEvent"]')
       .map((b) => b.attributes("data-server")),
     ["hq", "rd"],
     "one data-server per run target",
@@ -609,7 +611,7 @@ Deno.test("GameScreen multi-ice stack renders outermost farthest in both seats",
   for (const [cardId, server] of installs) {
     const install = assertDefined(
       engine.getLegalMoves(state, "corp").find(
-        (m) => m.kind === "corp.install" && m.cardId === cardId && m.server === server,
+        (m) => isCorpInstall(m) && m.cardId === cardId && m.server === server,
       ),
     );
     state = play(state, "corp", install);
@@ -653,7 +655,7 @@ Deno.test("GameScreen multi-ice stack renders outermost farthest in both seats",
   state = endCorpTurn(state);
   const run = assertDefined(
     engine.getLegalMoves(state, "runner").find(
-      (m) => m.kind === "runner.run" && m.server === "remote-1",
+      (m) => m.kind === "run" && m.server === "remote-1",
     ),
   );
   state = play(state, "runner", run);
@@ -713,7 +715,7 @@ Deno.test("GameScreen approached facedown ice carries the RUN badge", () => {
   const state0 = installInNewRemoteAndEndTurn("tithe", 42);
   const run = assertDefined(
     engine.getLegalMoves(state0, "runner").find(
-      (m) => m.kind === "runner.run" && m.server === "remote-1",
+      (m) => m.kind === "run" && m.server === "remote-1",
     ),
   );
   const state = play(state0, "runner", run);
@@ -750,8 +752,7 @@ Deno.test("GameScreen truthful labels, banner wording, and hosted counters", asy
     let state = newGameWithCorpHand(["nico_campaign", "manegarm_skunkworks"], 3);
     const install = assertDefined(
       engine.getLegalMoves(state, "corp").find(
-        (m) =>
-          m.kind === "corp.install" && m.cardId === "nico_campaign" && m.server === "new-remote",
+        (m) => isCorpInstall(m) && m.cardId === "nico_campaign" && m.server === "new-remote",
       ),
     );
     state = play(state, "corp", install);
@@ -762,7 +763,7 @@ Deno.test("GameScreen truthful labels, banner wording, and hosted counters", asy
     );
     const rez = assertDefined(
       engine.getLegalMoves(state, "corp").find(
-        (m) => m.kind === "corp.rez" && m.targetId === nico.id,
+        (m) => m.kind === "rez" && m.targetId === nico.id,
       ),
     );
     state = play(state, "corp", rez);
@@ -783,7 +784,7 @@ Deno.test("GameScreen truthful labels, banner wording, and hosted counters", asy
     const state0 = installInNewRemoteAndEndTurn("tithe", 42);
     const run = assertDefined(
       engine.getLegalMoves(state0, "runner").find(
-        (m) => m.kind === "runner.run" && m.server === "remote-1",
+        (m) => m.kind === "run" && m.server === "remote-1",
       ),
     );
     const state = play(state0, "runner", run);
@@ -806,7 +807,7 @@ Deno.test("GameScreen truthful labels, banner wording, and hosted counters", asy
     let state = endCorpTurn(base);
     const run = assertDefined(
       engine.getLegalMoves(state, "runner").find(
-        (m) => m.kind === "runner.run" && m.server === "hq",
+        (m) => m.kind === "run" && m.server === "hq",
       ),
     );
     state = play(state, "runner", run);
@@ -874,9 +875,9 @@ Deno.test("GameScreen card dock: sheets, per-card actions, no duplicates", async
     });
     state = endCorpTurn(state);
     const install = engine.getLegalMoves(state, "runner").find(
-      (m) => m.kind === "runner.install" && m.cardId === "smartware_distributor",
+      (m) => m.kind === "install" && m.cardId === "smartware_distributor",
     );
-    if (!install || install.kind !== "runner.install") {
+    if (!install || install.kind !== "install") {
       throw new Error("the runner cannot install smartware_distributor on turn 1");
     }
     state = play(state, "runner", install);
@@ -923,7 +924,7 @@ Deno.test("GameScreen card dock: sheets, per-card actions, no duplicates", async
       actions[0]!.text().includes("Place 3 credits"),
       `the printed ability title labels the button, got: ${actions[0]!.text()}`,
     );
-    assertEquals(actions[0]!.attributes("data-action"), "runner.ability");
+    assertEquals(actions[0]!.attributes("data-action"), "ability");
     // The ability button names which card copy and which ability: 1-based,
     // matching the label.
     assertEquals(actions[0]!.attributes("data-target"), instanceId);
@@ -936,16 +937,58 @@ Deno.test("GameScreen card dock: sheets, per-card actions, no duplicates", async
     const general = wrapper.find('[data-panel="actions"] > .moves');
     assert(general.exists(), "the Actions list renders");
     assertEquals(
-      general.findAll('button[data-action="runner.ability"]').length,
+      general.findAll('button[data-action="ability"]').length,
       0,
       "no ability button in the general Actions list",
     );
   });
 
+  await t.step("a corp installed asset's paid ability stays in the Actions list", () => {
+    // The Corp sheet renders NO card rows (its cards live on the board), so an
+    // installed asset's paid ability — Regolith Mining License's "[click]: take
+    // 3 credits" — has the Actions list as its ONLY surface. The no-duplicates
+    // exclusion is derived from the own sheet's rows, so it must leave this
+    // move in the list rather than swallow it by kind (a kind-only table cannot
+    // tell a corp `ability` from a runner `ability` now that moves carry no
+    // actor).
+    let state = newGameWithCorpHand(["regolith_mining_license"], 3);
+    const install = assertDefined(
+      engine.getLegalMoves(state, "corp").find((m) =>
+        isCorpInstall(m) && m.cardId === "regolith_mining_license" && m.server === "new-remote"
+      ),
+    );
+    state = play(state, "corp", install);
+    const reg = assertDefined(
+      findInstalled(state, "regolith_mining_license"),
+      "regolith installed",
+    );
+    const rez = assertDefined(
+      engine.getLegalMoves(state, "corp").find((m) => m.kind === "rez" && m.targetId === reg.id),
+    );
+    state = play(state, "corp", rez);
+
+    const wrapper = mount(GameScreen, { props: { state, humanSide: "corp" } });
+    assertEquals(
+      wrapper.findAll('.card-sheet[data-own="true"] .sheet-card').length,
+      0,
+      "the corp's own sheet has no card rows",
+    );
+    const general = wrapper.find('[data-panel="actions"] > .moves');
+    assert(general.exists(), "the corp's Actions list renders");
+    const ability = general.findAll('button[data-action="ability"]');
+    assertEquals(ability.length, 1, "the asset's paid ability is offered in the Actions list");
+    assertEquals(
+      ability[0]!.attributes("data-target"),
+      reg.id,
+      "the ability names the asset instance",
+    );
+    assertEquals(ability[0]!.attributes("data-ability"), "1", "1-based ability index");
+  });
+
   await t.step("playing the ability loads a hosted-credit token on the card", () => {
     const state = runnerWithSmartware();
-    const ability = engine.getLegalMoves(state, "runner").find((m) => m.kind === "runner.ability");
-    if (!ability || ability.kind !== "runner.ability") throw new Error("no ability move offered");
+    const ability = engine.getLegalMoves(state, "runner").find((m) => m.kind === "ability");
+    if (!ability || ability.kind !== "ability") throw new Error("no ability move offered");
     const loaded = play(state, "runner", ability);
     const wrapper = mount(GameScreen, { props: { state: loaded, humanSide: "runner" } });
     const row = wrapper.find('.sheet-card[data-card-id="smartware_distributor"]');

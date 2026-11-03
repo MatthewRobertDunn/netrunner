@@ -81,7 +81,7 @@ function assertParksSurfaced(state: GameState, seed: number, step: number): void
   if (state.run && state.run.phase === "movement" && state.prompts.length === 0) {
     const runnerMoves = legalFor(state, "runner");
     assert(
-      hasMove(runnerMoves, "runner.continueRun") && hasMove(runnerMoves, "runner.jackOut"),
+      hasMove(runnerMoves, "continueRun") && hasMove(runnerMoves, "jackOut"),
       `${label}: the run is parked in the movement phase but the runner is not offered ` +
         `both continueRun and jackOut (rules 6.9.4c, 6.6.3): ${JSON.stringify(runnerMoves)}`,
     );
@@ -126,9 +126,7 @@ function assertParksSurfaced(state: GameState, seed: number, step: number): void
     }
     if (candidates.length >= 2) {
       assert(
-        legalFor(state, "runner").some((m) =>
-          m.kind === "runner.accessCard" || m.kind === "runner.accessRandom"
-        ),
+        legalFor(state, "runner").some((m) => m.kind === "accessCard" || m.kind === "accessRandom"),
         `seed ${seed} step ${step}: the breach has ${candidates.length} candidates but no ` +
           `access move is offered`,
       );

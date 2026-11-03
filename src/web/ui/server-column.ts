@@ -227,7 +227,7 @@ export default defineComponent({
       <button
         v-if="runMove && !runInProgress"
         class="run-btn"
-        data-action="runner.run"
+        data-action="run"
         :data-server="server.id"
         @click="runMove && $emit('move', runMove)"
       >Run</button>

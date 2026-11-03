@@ -46,7 +46,7 @@ Deno.test("mulligan: each mulligan reshuffles the prompted player's own hand (ru
     const corpHandBefore = JSON.stringify(s0.corp.hand);
     const runnerHandBefore = JSON.stringify(s0.runner.hand);
 
-    const s1 = play(s0, "corp", { kind: "mulligan.take", player: "corp" });
+    const s1 = play(s0, "corp", { kind: "mulligan.take" });
 
     // The Corp's own hand was reshuffled from its own deck: instance ids differ
     // from the dealt hand (and the cards stay the Corp's own corp-N instances).
@@ -72,11 +72,11 @@ Deno.test("mulligan: each mulligan reshuffles the prompted player's own hand (ru
 
   await t.step("the Runner's mulligan is symmetric", () => {
     let s = mulliganGame();
-    s = play(s, "corp", { kind: "mulligan.take", player: "corp" });
+    s = play(s, "corp", { kind: "mulligan.take" });
     const corpHandAfterCorpMulligan = s.corp.hand.map((c) => JSON.stringify(c));
     const runnerHandBefore = JSON.stringify(s.runner.hand);
 
-    s = play(s, "runner", { kind: "mulligan.take", player: "runner" });
+    s = play(s, "runner", { kind: "mulligan.take" });
 
     assert(
       JSON.stringify(s.runner.hand) !== runnerHandBefore,
@@ -104,7 +104,7 @@ Deno.test("mulligan: each mulligan reshuffles the prompted player's own hand (ru
     const corpHandBefore = JSON.stringify(s0.corp.hand);
     const runnerHandBefore = JSON.stringify(s0.runner.hand);
 
-    let s = play(s0, "corp", { kind: "mulligan.decline", player: "corp" });
+    let s = play(s0, "corp", { kind: "mulligan.decline" });
     assertEquals(
       JSON.stringify(s.corp.hand),
       corpHandBefore,
@@ -115,7 +115,7 @@ Deno.test("mulligan: each mulligan reshuffles the prompted player's own hand (ru
       ["runner"],
     );
 
-    s = play(s, "runner", { kind: "mulligan.decline", player: "runner" });
+    s = play(s, "runner", { kind: "mulligan.decline" });
     assertEquals(
       JSON.stringify(s.runner.hand),
       runnerHandBefore,
@@ -130,8 +130,8 @@ Deno.test("mulligan: each mulligan reshuffles the prompted player's own hand (ru
     const corpDealtHand = s0.corp.hand.map((c) => JSON.stringify(c));
     const runnerHandBefore = JSON.stringify(s0.runner.hand);
 
-    let s = play(s0, "corp", { kind: "mulligan.decline", player: "corp" });
-    s = play(s, "runner", { kind: "mulligan.take", player: "runner" });
+    let s = play(s0, "corp", { kind: "mulligan.decline" });
+    s = play(s, "runner", { kind: "mulligan.take" });
 
     // The runner's take was the LAST decision: the corp's first turn opened
     // with its mandatory draw appended to the kept (declined) hand.

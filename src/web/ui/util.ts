@@ -10,7 +10,7 @@
 
 import type { CardDef } from "../../cards/catalogue.ts";
 import { cardVisibleTo, tryCardDef } from "../../mod.ts";
-import { PASS_OPTION_ID } from "../../types.ts";
+import { isCorpInstall, PASS_OPTION_ID } from "../../types.ts";
 import type {
   CardId,
   CardInstance,
@@ -233,7 +233,7 @@ export function moveKey(m: Move): string {
 // contract"): every clickable element carries `data-action` (the engine's
 // move kind when the button plays a move, else a UI verb such as "zoom") and
 // one attribute per move parameter. Automated browser agents select with CSS
-// attribute conjunctions — e.g. `[data-action="runner.run"][data-server="hq"]`
+// attribute conjunctions — e.g. `[data-action="run"][data-server="hq"]`
 // — so every dimension is its own attribute, never packed into one string.
 // The UI itself never reads these attributes; they are a pure output contract.
 // ---------------------------------------------------------------------------
@@ -281,54 +281,50 @@ export function describeMove(state: GameState, move: Move): string {
       return "Keep starting hand";
     case "discard":
       return `Discard ${move.cardInstanceIds.length} card(s)`;
-    case "corp.gainCredits":
-    case "runner.gainCredits":
+    case "gainCredits":
       return "Gain 1 credit";
-    case "corp.draw":
-    case "runner.draw":
+    case "draw":
       return "Draw 1 card";
-    case "corp.install":
-      return `Install ${cardTitle(move.cardId)} — ${serverLabel(move.server)}`;
-    case "corp.playOperation":
+    // The two install shapes differ: the Corp one names the server it goes
+    // into, the Runner one is a program/hardware with no server.
+    case "install":
+      return isCorpInstall(move)
+        ? `Install ${cardTitle(move.cardId)} — ${serverLabel(move.server)}`
+        : `Install ${cardTitle(move.cardId)}`;
+    case "playOperation":
       return `Play ${cardTitle(move.cardId)}`;
-    case "corp.advance": {
+    case "advance": {
       const card = findCardIn(state, move.targetId);
       const adv = card ? card.advancement : 0;
       return `Advance ${cardTitle(card?.cardId ?? "")} (${adv}→${(adv ?? 0) + 1})`;
     }
-    case "corp.score":
+    case "score":
       return `Score ${cardTitle(findCardIn(state, move.targetId)?.cardId ?? "")}`;
-    case "corp.rez":
+    case "rez":
       return `Rez ${cardTitle(findCardIn(state, move.targetId)?.cardId ?? "")}`;
-    case "corp.ability": {
+    case "ability": {
       const title = cardTitle(findCardIn(state, move.targetId)?.cardId ?? "");
       return `Ability ${move.abilityIndex + 1} — ${title}`;
     }
-    case "runner.install":
-      return `Install ${cardTitle(move.cardId)}`;
-    case "runner.playEvent":
+    case "playEvent":
       return `Play ${cardTitle(move.cardId)}`;
-    case "runner.run":
+    case "run":
       return `Run ${serverLabel(move.server)}`;
-    case "runner.ability": {
-      const title = cardTitle(findCardIn(state, move.targetId)?.cardId ?? "");
-      return `Ability ${move.abilityIndex + 1} — ${title}`;
-    }
-    case "runner.continueRun":
+    case "continueRun":
       return "Continue the run";
-    case "runner.jackOut":
+    case "jackOut":
       return "Jack out";
-    case "runner.breakSubroutine":
+    case "breakSubroutine":
       return `Break subroutine ${move.subIndex + 1} with ${
         cardTitle(findCardIn(state, move.programId)?.cardId ?? "")
       }`;
-    case "runner.pumpIcebreaker":
+    case "pumpIcebreaker":
       return `Pump strength — ${cardTitle(findCardIn(state, move.programId)?.cardId ?? "")}`;
-    case "runner.bioroidBreak":
+    case "bioroidBreak":
       return `Break subroutine ${move.subIndex + 1} (spend a click)`;
-    case "runner.resolveSubroutines":
+    case "resolveSubroutines":
       return "Let subroutines resolve";
-    case "runner.accessCard": {
+    case "accessCard": {
       // Name the card only when its identity is open to the Runner (rezzed or
       // currently being accessed, rules 1.21.1a, 7.2.1); a facedown candidate
       // (unrezzed install, facedown Archives card) stays anonymous.
@@ -336,11 +332,11 @@ export function describeMove(state: GameState, move: Move): string {
       const named = card && cardVisibleTo(state, move.targetId, "runner");
       return `Access ${named ? cardTitle(card!.cardId) : "a card"}`;
     }
-    case "runner.accessRandom":
+    case "accessRandom":
       return "Access a random card";
-    case "runner.trashAccessed":
+    case "trashAccessed":
       return "Trash";
-    case "runner.finishAccess":
+    case "finishAccess":
       return "Finish access";
     case "prompt.answer": {
       const prompt = state.prompts.find((p) => p.id === move.promptId);

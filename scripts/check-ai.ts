@@ -110,14 +110,13 @@ function describeMove(move: Move): string {
       })`;
     case "prompt.answer":
       return `prompt:${m.optionId ?? "?"}`;
-    case "corp.install":
-    case "runner.install":
+    case "install":
       return `${move.kind} ${m.cardId}→${m.server ?? "rig"}`;
-    case "corp.advance":
+    case "advance":
       return `advance ${m.targetId}`;
-    case "runner.pumpIcebreaker":
+    case "pumpIcebreaker":
       return `pump ${m.programId}`;
-    case "runner.run":
+    case "run":
       return `run ${m.server}`;
     default:
       return move.kind;

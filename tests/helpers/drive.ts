@@ -68,9 +68,9 @@ export function resolveRun(state: GameState, maxIters = 80): GameState {
   for (let i = 0; i < maxIters; i++) {
     if (!cur.run || cur.winner) return cur;
     const moves = engine.getLegalMoves(cur, "runner");
-    const m = moves.find((x) => x.kind === "runner.continueRun") ??
-      moves.find((x) => x.kind === "runner.finishAccess") ??
-      moves.find((x) => x.kind === "runner.accessCard" || x.kind === "runner.accessRandom") ??
+    const m = moves.find((x) => x.kind === "continueRun") ??
+      moves.find((x) => x.kind === "finishAccess") ??
+      moves.find((x) => x.kind === "accessCard" || x.kind === "accessRandom") ??
       moves.find((x) => x.kind === "prompt.answer");
     if (m) {
       cur = play(cur, "runner", m);

@@ -48,7 +48,7 @@ Deno.test("determinism: move application is reproducible and pure", async (t) =>
   await t.step("illegal moves never mutate the original state", () => {
     const state = newStarterGame(5);
     const before = JSON.stringify(state);
-    const result = engine.applyMove(state, "corp", { kind: "runner.run", server: "hq" });
+    const result = engine.applyMove(state, "corp", { kind: "run", server: "hq" });
     assert(result.kind === "illegal-move");
     assertEquals(JSON.stringify(state), before);
   });

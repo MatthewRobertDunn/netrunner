@@ -291,22 +291,21 @@ export function checkMoveCost(
   const bad = (want: string): InvariantFailure =>
     fail(tag, `${move.kind} charged credits ${dc}, clicks ${dcl}; expected ${want}`);
   switch (move.kind) {
-    case "corp.gainCredits":
+    case "gainCredits":
       if (dc !== 1 || dcl !== -1) return bad("credits +1, clicks -1");
       break;
-    case "corp.draw":
-    case "runner.draw":
+    case "draw":
       if (dcl !== -1) return bad("clicks -1");
       break;
-    case "corp.advance":
+    case "advance":
       // Rule 5.2.6f: "[click], 1[credit]: Advance 1 installed card."
       if (dc !== -1 || dcl !== -1) return bad("credits -1, clicks -1");
       break;
-    case "runner.bioroidBreak":
+    case "bioroidBreak":
       // Brân's bioroid break: exactly one click (rules-questions.md §7).
       if (dcl !== -1) return bad("clicks -1");
       break;
-    case "runner.jackOut":
+    case "jackOut":
       if (dc !== 0 || dcl !== 0) return bad("no cost");
       break;
     default:

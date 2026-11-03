@@ -14,6 +14,7 @@
 
 import { engine } from "../src/mod.ts";
 import type { GameState, ServerId, ViewCard } from "../src/types.ts";
+import { isCorpInstall } from "../src/types.ts";
 import {
   endCorpTurn,
   newGameWithCorpHand,
@@ -142,7 +143,7 @@ Deno.test("public status: unrezzed Corp card ids are hidden except from the Corp
     const state = newStarterGame(1);
     const install = assertDefined(
       engine.getLegalMoves(state, "corp").find(
-        (m) => m.kind === "corp.install" && m.server === "new-remote",
+        (m) => isCorpInstall(m) && m.server === "new-remote",
       ),
     );
     const after = play(state, "corp", install);
@@ -157,7 +158,7 @@ Deno.test("public status: unrezzed Corp card ids are hidden except from the Corp
     const state = newStarterGame(1);
     const install = assertDefined(
       engine.getLegalMoves(state, "corp").find(
-        (m) => m.kind === "corp.install" && m.server === "new-remote",
+        (m) => isCorpInstall(m) && m.server === "new-remote",
       ),
     );
     const after = play(state, "corp", install);
@@ -186,7 +187,7 @@ Deno.test("public status: unrezzed ice stays in position as hidden entries", asy
     for (const [cardId, server] of installs) {
       const install = assertDefined(
         engine.getLegalMoves(state, "corp").find(
-          (m) => m.kind === "corp.install" && m.cardId === cardId && m.server === server,
+          (m) => isCorpInstall(m) && m.cardId === cardId && m.server === server,
         ),
       );
       state = play(state, "corp", install);
@@ -229,7 +230,7 @@ Deno.test("public status: unrezzed ice stays in position as hidden entries", asy
     state = endCorpTurn(state);
     const run = assertDefined(
       engine.getLegalMoves(state, "runner").find(
-        (m) => m.kind === "runner.run" && m.server === "remote-1",
+        (m) => m.kind === "run" && m.server === "remote-1",
       ),
     );
     state = play(state, "runner", run);
@@ -265,7 +266,7 @@ Deno.test("public status: unrezzed ice stays in position as hidden entries", asy
 Deno.test("public status: credits update after a Corp basic action", () => {
   const state = newStarterGame(1);
   const gain = assertDefined(
-    engine.getLegalMoves(state, "corp").find((m) => m.kind === "corp.gainCredits"),
+    engine.getLegalMoves(state, "corp").find((m) => m.kind === "gainCredits"),
   );
   const after = play(state, "corp", gain);
   const shared = engine.getPublicGameStatus(after);
@@ -278,7 +279,7 @@ Deno.test("public status: installed Runner cards are always public", () => {
   assertEquals(state.turn.player, "corp", "test assumes the Corp's turn");
   const install = assertDefined(
     engine.getLegalMoves(state, "corp").find(
-      (m) => m.kind === "corp.install" && m.server === "new-remote",
+      (m) => isCorpInstall(m) && m.server === "new-remote",
     ),
   );
   state = play(state, "corp", install);
@@ -296,7 +297,7 @@ Deno.test("public status: installed Runner cards are always public", () => {
   state = endCorpTurn(state);
   assertEquals(state.turn.player, "runner", "the runner's turn begins");
   const runnerInstall = assertDefined(
-    engine.getLegalMoves(state, "runner").find((m) => m.kind === "runner.install"),
+    engine.getLegalMoves(state, "runner").find((m) => m.kind === "install"),
     "the runner has an install move (the starter deck's first card is installable)",
   );
   state = play(state, "runner", runnerInstall);
@@ -340,13 +341,13 @@ Deno.test("public status: run.currentIce respects the viewer", async (t) => {
     let state = newGameWithCorpHand(["tithe"], 3);
     const install = assertDefined(
       engine.getLegalMoves(state, "corp").find(
-        (m) => m.kind === "corp.install" && m.cardId === "tithe" && m.server === "new-remote",
+        (m) => isCorpInstall(m) && m.cardId === "tithe" && m.server === "new-remote",
       ),
     );
     state = endCorpTurn(play(state, "corp", install));
     const run = assertDefined(
       engine.getLegalMoves(state, "runner").find(
-        (m) => m.kind === "runner.run" && m.server === "remote-1",
+        (m) => m.kind === "run" && m.server === "remote-1",
       ),
     );
     state = play(state, "runner", run);
@@ -372,13 +373,13 @@ Deno.test("public status: run.currentIce respects the viewer", async (t) => {
     let state = newGameWithCorpHand(["tithe"], 3);
     const install = assertDefined(
       engine.getLegalMoves(state, "corp").find(
-        (m) => m.kind === "corp.install" && m.cardId === "tithe" && m.server === "new-remote",
+        (m) => isCorpInstall(m) && m.cardId === "tithe" && m.server === "new-remote",
       ),
     );
     state = endCorpTurn(play(state, "corp", install));
     const run = assertDefined(
       engine.getLegalMoves(state, "runner").find(
-        (m) => m.kind === "runner.run" && m.server === "remote-1",
+        (m) => m.kind === "run" && m.server === "remote-1",
       ),
     );
     state = play(state, "runner", run);

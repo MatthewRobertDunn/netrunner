@@ -24,6 +24,7 @@ import {
   runnerDeckStartingWith,
 } from "./helpers/fixtures.ts";
 import type { GameEvent, GameState, Move, PlayerSide } from "../src/types.ts";
+import { isCorpInstall } from "../src/types.ts";
 import { assert, assertDefined, assertEquals } from "./helpers/assert.ts";
 
 // ---------------------------------------------------------------------------
@@ -65,7 +66,7 @@ function endRunnerTurn(state: GameState): GameState {
     if (cur.turn.player !== "runner" || cur.winner) break;
     const legal = engine.getLegalMoves(cur, "runner");
     if (legal.length === 0) break;
-    const gain = legal.find((m) => m.kind === "runner.gainCredits") ?? legal[0]!;
+    const gain = legal.find((m) => m.kind === "gainCredits") ?? legal[0]!;
     cur = play(cur, "runner", gain);
   }
   return cur;
@@ -79,7 +80,7 @@ function installAndRez(state: GameState, cardId: string): GameState {
     moveWhere(
       state,
       "corp",
-      (m) => m.kind === "corp.install" && m.cardId === cardId && m.server === "new-remote",
+      (m) => isCorpInstall(m) && m.cardId === cardId && m.server === "new-remote",
       `install ${cardId}`,
     ),
   );
@@ -87,7 +88,7 @@ function installAndRez(state: GameState, cardId: string): GameState {
   s = play(
     s,
     "corp",
-    moveWhere(s, "corp", (m) => m.kind === "corp.rez" && m.targetId === card.id, `rez ${cardId}`),
+    moveWhere(s, "corp", (m) => m.kind === "rez" && m.targetId === card.id, `rez ${cardId}`),
   );
   return s;
 }
@@ -118,7 +119,7 @@ Deno.test("triggers: rez/install load-credits and Mayfly run-end trash", async (
       moveWhere(
         state,
         "corp",
-        (m) => m.kind === "corp.install" && m.cardId === "tithe" && m.server === "new-remote",
+        (m) => isCorpInstall(m) && m.cardId === "tithe" && m.server === "new-remote",
         "install tithe",
       ),
     );
@@ -128,7 +129,7 @@ Deno.test("triggers: rez/install load-credits and Mayfly run-end trash", async (
       moveWhere(
         state,
         "corp",
-        (m) => m.kind === "corp.install" && m.cardId === "nico_campaign" && m.server === "remote-1",
+        (m) => isCorpInstall(m) && m.cardId === "nico_campaign" && m.server === "remote-1",
         "install nico in remote-1",
       ),
     );
@@ -139,7 +140,7 @@ Deno.test("triggers: rez/install load-credits and Mayfly run-end trash", async (
       moveWhere(
         state,
         "runner",
-        (m) => m.kind === "runner.run" && m.server === "remote-1",
+        (m) => m.kind === "run" && m.server === "remote-1",
         "run remote-1",
       ),
     );
@@ -218,7 +219,7 @@ Deno.test("triggers: rez/install load-credits and Mayfly run-end trash", async (
         moveWhere(
           s,
           "corp",
-          (m) => m.kind === "corp.ability" && m.targetId === reg.id && m.abilityIndex === 0,
+          (m) => m.kind === "ability" && m.targetId === reg.id && m.abilityIndex === 0,
           "take 3 from regolith",
         );
       // Turn 1: install (1 click) + 2 takes. Turn 2: 3 takes -> 15 - 15 = 0 -> trashed.
@@ -252,7 +253,7 @@ Deno.test("triggers: rez/install load-credits and Mayfly run-end trash", async (
         moveWhere(
           state,
           "runner",
-          (m) => m.kind === "runner.install" && m.cardId === "telework_contract",
+          (m) => m.kind === "install" && m.cardId === "telework_contract",
           "install telework",
         ),
       );
@@ -282,7 +283,7 @@ Deno.test("triggers: rez/install load-credits and Mayfly run-end trash", async (
       moveWhere(
         state,
         "runner",
-        (m) => m.kind === "runner.install" && m.cardId === "mayfly",
+        (m) => m.kind === "install" && m.cardId === "mayfly",
         "install mayfly",
       ),
     );
@@ -296,21 +297,21 @@ Deno.test("triggers: rez/install load-credits and Mayfly run-end trash", async (
       moveWhere(
         state,
         "runner",
-        (m) => m.kind === "runner.run" && m.server === "archives",
+        (m) => m.kind === "run" && m.server === "archives",
         "run archives",
       ),
     );
     // The run parks in the movement phase (rule 6.9.4c); continuing reaches the
     // server. The breach auto-accesses the single Archives card; finish the
     // access to end the run.
-    const cont = engine.getLegalMoves(state, "runner").find((m) => m.kind === "runner.continueRun");
+    const cont = engine.getLegalMoves(state, "runner").find((m) => m.kind === "continueRun");
     assertDefined(cont, "continueRun is offered in the movement phase");
     state = play(state, "runner", cont!);
     if (state.run !== null) {
       state = play(
         state,
         "runner",
-        moveWhere(state, "runner", (m) => m.kind === "runner.finishAccess", "finish access"),
+        moveWhere(state, "runner", (m) => m.kind === "finishAccess", "finish access"),
       );
     }
 
@@ -335,7 +336,7 @@ Deno.test("triggers: rez/install load-credits and Mayfly run-end trash", async (
         moveWhere(
           state,
           "corp",
-          (m) => m.kind === "corp.install" && m.cardId === "bran_1_0" && m.server === "hq",
+          (m) => isCorpInstall(m) && m.cardId === "bran_1_0" && m.server === "hq",
           "install bran on hq",
         ),
       );
@@ -345,7 +346,7 @@ Deno.test("triggers: rez/install load-credits and Mayfly run-end trash", async (
         moveWhere(
           state,
           "corp",
-          (m) => m.kind === "corp.install" && m.cardId === "karuna" && m.server === "hq",
+          (m) => isCorpInstall(m) && m.cardId === "karuna" && m.server === "hq",
           "install karuna on hq (outermost)",
         ),
       );
@@ -356,7 +357,7 @@ Deno.test("triggers: rez/install load-credits and Mayfly run-end trash", async (
         moveWhere(
           state,
           "runner",
-          (m) => m.kind === "runner.install" && m.cardId === "mayfly",
+          (m) => m.kind === "install" && m.cardId === "mayfly",
           "install mayfly",
         ),
       );
@@ -364,7 +365,7 @@ Deno.test("triggers: rez/install load-credits and Mayfly run-end trash", async (
       state = play(
         state,
         "runner",
-        moveWhere(state, "runner", (m) => m.kind === "runner.run" && m.server === "hq", "run hq"),
+        moveWhere(state, "runner", (m) => m.kind === "run" && m.server === "hq", "run hq"),
       );
 
       // Corp rez window: rez the approached (outermost) ice, Karuna.
@@ -397,7 +398,7 @@ Deno.test("triggers: rez/install load-credits and Mayfly run-end trash", async (
         moveWhere(
           state,
           "runner",
-          (m) => m.kind === "runner.resolveSubroutines",
+          (m) => m.kind === "resolveSubroutines",
           "resolve subroutines",
         ),
       );

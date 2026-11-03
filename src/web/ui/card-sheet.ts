@@ -88,7 +88,7 @@ function sheetTokens(card: CardInstance): SheetToken[] {
  *  the live count of installed icebreakers for dynamic pump labels (Unity). */
 function installedAction(card: CardInstance, move: Move, icebreakers: number): SheetAction {
   switch (move.kind) {
-    case "runner.ability": {
+    case "ability": {
       // One paid-ability move per printed ability (and per server for
       // abilities that choose one — Red Team's central run), so the index
       // picks the definition whose printed title becomes the label.
@@ -102,7 +102,7 @@ function installedAction(card: CardInstance, move: Move, icebreakers: number): S
         creditCost: def?.creditCost,
       };
     }
-    case "runner.breakSubroutine": {
+    case "breakSubroutine": {
       // Breaking is priced by the PROGRAM's break ability (one credit per
       // break on the starter breakers).
       return {
@@ -112,7 +112,7 @@ function installedAction(card: CardInstance, move: Move, icebreakers: number): S
         creditCost: breakAbilityDef(card.cardId)?.creditCost,
       };
     }
-    case "runner.pumpIcebreaker": {
+    case "pumpIcebreaker": {
       const pump = pumpAbilityDef(card.cardId);
       // A dynamic pump shows the X the engine would apply right now (Unity:
       // X = installed icebreakers including this one, evaluated at
@@ -138,25 +138,16 @@ function installedAction(card: CardInstance, move: Move, icebreakers: number): S
 function actionsForCard(card: CardInstance, legal: Move[]): Move[] {
   return legal.filter((m) => {
     switch (m.kind) {
-      case "runner.ability":
+      case "ability":
         return m.targetId === card.id;
-      case "runner.breakSubroutine":
-      case "runner.pumpIcebreaker":
+      case "breakSubroutine":
+      case "pumpIcebreaker":
         return m.programId === card.id;
       default:
         return false;
     }
   });
 }
-
-/** Move kinds that render under an installed card instead of the Actions
- *  list — the no-duplicates rule. GameScreen filters these out of its
- *  general moves with the same table. */
-export const INSTALLED_ACTION_KINDS: ReadonlySet<string> = new Set([
-  "runner.ability",
-  "runner.breakSubroutine",
-  "runner.pumpIcebreaker",
-]);
 
 /**
  * Build one player's sheet groups from the trusted state. The corp side has
@@ -168,6 +159,11 @@ export const INSTALLED_ACTION_KINDS: ReadonlySet<string> = new Set([
  * `legal` is the human seat's legal moves ([] whenever it is not their
  * turn); `blocked` silences per-card actions while a prompt or access
  * decision owns the interaction — the ActionPanel takes over then.
+ *
+ * These groups are also the single source of truth for "which moves render
+ * under a card": GameScreen derives the no-duplicates exclusion from the own
+ * sheet's rows (see `sheetHostedKeys`), so there is no parallel kind table to
+ * keep in sync.
  */
 export function buildSheetGroups(opts: {
   state: GameState;

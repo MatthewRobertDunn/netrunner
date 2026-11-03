@@ -7,15 +7,20 @@ description: Drive the Netrunner web UI (this repo's `public/serve.ts` app) with
 
 Every control in this UI is findable by **composite `data-*` attributes** — never by
 position, art alt text, or button label. Build selectors as CSS conjunctions
-(`[data-action="runner.run"][data-server="hq"]`); don't parse visible text.
+(`[data-action="run"][data-server="hq"]`); don't parse visible text.
 
 ## Rules of the scheme
 
 - `data-action` is the verb: the **engine move kind** when the button plays a move
-  (`runner.run`, `prompt.answer`, `corp.install`, `runner.ability`, …), otherwise a
+  (`run`, `prompt.answer`, `install`, `ability`, …), otherwise a
   UI verb (`zoom`, `close`, `discard-pick`, `discard-submit`, `open-access`,
   `show-result`, `new-game`, `toggle-log`, `pick-side`, `pick-preset`,
   `random-seed`, `set-seed`, `start`).
+- **A move kind carries no actor.** `install`, `draw`, `gainCredits`, `ability` are the
+  same verb on both seats — a move is verb + parameters, never `runner.run`. The seat
+  comes from scope (`[data-own="true"]`) and, for the shared `install` verb, from the
+  payload: `[data-action="install"][data-server="hq"]` is the Corp's install,
+  `[data-action="install"]` with no `data-server` is the Runner's.
 - Each parameter lives in its own attribute (below). Two copies of a card differ
   only by `data-instance` (e.g. `runner-2005` vs `runner-2007`); `data-card-id`
   names the card definition (`unity`).
@@ -69,7 +74,7 @@ wait for `[data-dock="status"]` to exist.
 - Whose interface: `[data-own="true"]` is the human seat; `[data-own="false"]`
   mirrors the opponent (never has action buttons).
 - Clicks/credits: `[data-own="true"] .primary-stat.clicks .primary-val`,
-  `[data-own="true"] [data-action="<side>.gainCredits"] .primary-val`.
+  `[data-own="true"] [data-action="gainCredits"] .primary-val`.
 - Waiting on the AI: `[data-state="thinking"]` (status dock) or
   `[data-state="waiting"]` (action panel). Poll until they disappear.
 - Winner: `[data-modal="win"]` auto-opens; after dismissal,
@@ -79,34 +84,34 @@ wait for `[data-dock="status"]` to exist.
 
 ```css
 /* Basic actions (tiles double as buttons): */
-[data-own="true"] [data-action="runner.gainCredits"]
-[data-own="true"] [data-action="runner.draw"]
+[data-own="true"] [data-action="gainCredits"]
+[data-own="true"] [data-action="draw"]
 
 /* Runs: one button per server, always names the server: */
-[data-action="runner.run"][data-server="hq"]
+[data-action="run"][data-server="hq"]
 
 /* Hand cards: tiles + per-card action buttons */
 [data-panel="hand"] .hand-card[data-card-id="unity"]                    /* the copy */
 [data-panel="hand"] .hand-card[data-instance="runner-12"]               /* exact copy */
-[data-panel="hand"] .hand-card[data-card-id="unity"] [data-action="runner.install"]
-[data-panel="hand"] .hand-card[data-card-id="jailbreak"] [data-action="runner.playEvent"][data-server="hq"]
+[data-panel="hand"] .hand-card[data-card-id="unity"] [data-action="install"]
+[data-panel="hand"] .hand-card[data-card-id="jailbreak"] [data-action="playEvent"][data-server="hq"]
 
 /* Mid-run (in [data-banner="run"]): */
-[data-action="runner.continueRun"]
-[data-action="runner.jackOut"]
+[data-action="continueRun"]
+[data-action="jackOut"]
 
 /* Icebreaker interactions (buttons under the installed program on the sheet): */
-.card-sheet[data-own="true"] .sheet-card[data-instance="runner-12"] [data-action="runner.pumpIcebreaker"]
-.card-sheet[data-own="true"] .sheet-card[data-instance="runner-12"] [data-action="runner.breakSubroutine"][data-sub="2"]
-.card-sheet[data-own="true"] .sheet-card[data-instance="runner-12"] [data-action="runner.bioroidBreak"][data-sub="1"]
+.card-sheet[data-own="true"] .sheet-card[data-instance="runner-12"] [data-action="pumpIcebreaker"]
+.card-sheet[data-own="true"] .sheet-card[data-instance="runner-12"] [data-action="breakSubroutine"][data-sub="2"]
+.card-sheet[data-own="true"] .sheet-card[data-instance="runner-12"] [data-action="bioroidBreak"][data-sub="1"]
 
 /* Breach (in [data-banner="breach"]): */
-[data-action="runner.accessRandom"]              /* random access */
+[data-action="accessRandom"]              /* random access */
 [data-action="open-access"]                      /* reopens the access zoom if closed */
 
 /* Access decision lives INSIDE the zoom modal — the only place these appear: */
-[data-modal="zoom"] [data-action="runner.trashAccessed"]
-[data-modal="zoom"] [data-action="runner.finishAccess"]
+[data-modal="zoom"] [data-action="trashAccessed"]
+[data-modal="zoom"] [data-action="finishAccess"]
 ```
 
 Turn end: spend clicks with any legal moves; the turn auto-ends at 0 clicks
@@ -115,16 +120,19 @@ Turn end: spend clicks with any legal moves; the turn auto-ends at 0 clicks
 ## Corp loop
 
 ```css
-[data-own="true"] [data-action="corp.gainCredits"]
-[data-own="true"] [data-action="corp.draw"]
-[data-panel="hand"] .hand-card[data-card-id="palisade"] [data-action="corp.install"][data-server="hq"]  /* or rd/archives/remote-N/new-remote */
-[data-panel="hand"] .hand-card[data-card-id="hedge_fund"] [data-action="corp.playOperation"]
+[data-own="true"] [data-action="gainCredits"]
+[data-own="true"] [data-action="draw"]
+[data-panel="hand"] .hand-card[data-card-id="palisade"] [data-action="install"][data-server="hq"]  /* or rd/archives/remote-N/new-remote */
+[data-panel="hand"] .hand-card[data-card-id="hedge_fund"] [data-action="playOperation"]
 [data-server="hq"] .server-root-row .card-tile[data-card-id="nico_campaign"]  /* installed asset (click → zoom) */
-/* Advance/Score/Rez: buttons under the card row on the corp's own sheet, or
-   via the card's zoom actions; all carry data-target=<instance id>: */
-[data-action="corp.advance"][data-target="corp-33"]
-[data-action="corp.score"][data-target="corp-33"]
-[data-action="corp.rez"][data-target="corp-33"]
+
+/* Advance / Score / Rez / installed-asset abilities: the Corp sheet renders NO
+   card rows (its cards are on the board), so these live in the Actions list,
+   each naming its target instance: */
+[data-panel="actions"] > .moves [data-action="advance"][data-target="corp-33"]
+[data-panel="actions"] > .moves [data-action="score"][data-target="corp-33"]
+[data-panel="actions"] > .moves [data-action="rez"][data-target="corp-33"]
+[data-panel="actions"] > .moves [data-action="ability"][data-target="corp-33"][data-ability="1"]
 ```
 
 Corp cards live on the board (not as sheet rows) — locate installed cards by
@@ -168,6 +176,12 @@ blocks the next click).
 - **The AI opponent plays fast.** Between your turns, poll
   `[data-state]`/`[data-banner]` rather than assuming the board is static, and
   re-read the log (`[data-panel="log"]`) to reconstruct what happened.
+- **The Corp's own sheet renders no card rows** (its cards live on the board), so
+  every non-basic Corp move — `advance`, `score`, `rez`, and an installed asset's paid
+  `ability` — appears in the Actions list (`[data-panel="actions"] > .moves`), each
+  naming its target. The Runner's installed-card actions instead render under the
+  card's row on the sheet. There is no table of "kind → surface" to consult: the
+  exclusion is derived from what the own sheet actually drew.
 - **`data-testid` selectors must not be reintroduced** — they failed exactly
   because positional strings couldn't carry extra parameters (see
   `docs/ui-gotchas.md` entry 8 for the history).
@@ -175,12 +189,12 @@ blocks the next click).
 ## Smoke test sequence (works on seed 42, runner side)
 
 1. `[data-action="pick-side"][data-side="runner"]` → `[data-action="start"]`.
-2. `[data-own="true"] [data-action="runner.gainCredits"]` twice → credits 5→7, clicks 4→2.
-3. `[data-panel="hand"] .hand-card[data-card-id="unity"] [data-action="runner.install"]`
+2. `[data-own="true"] [data-action="gainCredits"]` twice → credits 5→7, clicks 4→2.
+3. `[data-panel="hand"] .hand-card[data-card-id="unity"] [data-action="install"]`
    → clicks 2→1 (a third click was spent here).
-4. `[data-action="runner.run"][data-server="hq"]` → `[data-banner="run"]` appears.
-5. `[data-action="runner.continueRun"]` (or jack out) → banner flips to
+4. `[data-action="run"][data-server="hq"]` → `[data-banner="run"]` appears.
+5. `[data-action="continueRun"]` (or jack out) → banner flips to
    `breach` on unprotected HQ.
-6. `[data-action="runner.accessRandom"]` → `[data-modal="zoom"]` opens with
-   `[data-action="runner.finishAccess"]` (and trash if affordable).
+6. `[data-action="accessRandom"]` → `[data-modal="zoom"]` opens with
+   `[data-action="finishAccess"]` (and trash if affordable).
 7. Click finish → run ends, clicks exhaust, turn auto-ends.

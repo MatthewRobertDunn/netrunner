@@ -22,6 +22,7 @@ import { engine, starterDeckConfigs } from "../src/mod.ts";
 import { play, setCredits } from "./helpers/fixtures.ts";
 import { assert, assertDefined, assertEquals } from "./helpers/assert.ts";
 import type { DeckConfig, GameState, Move, PlayerSide } from "../src/types.ts";
+import { isCorpInstall } from "../src/types.ts";
 
 const CORP_IDENTITY = "the_syndicate_profit_over_principle";
 const RUNNER_IDENTITY = "the_catalyst_convention_breaker";
@@ -71,7 +72,7 @@ function burnCorpTurn(state: GameState): GameState {
   let cur = state;
   for (let i = 0; i < 12 && !cur.winner; i++) {
     if (cur.turn.player !== "corp") return cur;
-    const gain = engine.getLegalMoves(cur, "corp").find((m) => m.kind === "corp.gainCredits");
+    const gain = engine.getLegalMoves(cur, "corp").find((m) => m.kind === "gainCredits");
     if (gain) {
       cur = play(cur, "corp", gain);
       continue;
@@ -113,7 +114,7 @@ function whitespaceEncounter(seed: number): GameState {
     findMove(
       s,
       "corp",
-      (m) => m.kind === "corp.install" && m.cardId === "whitespace" && m.server === "new-remote",
+      (m) => isCorpInstall(m) && m.cardId === "whitespace" && m.server === "new-remote",
       "corp installs whitespace on a new remote",
     ),
   );
@@ -125,7 +126,7 @@ function whitespaceEncounter(seed: number): GameState {
     findMove(
       s,
       "runner",
-      (m) => m.kind === "runner.install" && m.cardId === "unity",
+      (m) => m.kind === "install" && m.cardId === "unity",
       "runner installs unity",
     ),
   );
@@ -135,7 +136,7 @@ function whitespaceEncounter(seed: number): GameState {
     findMove(
       s,
       "runner",
-      (m) => m.kind === "runner.run" && m.server === "remote-1",
+      (m) => m.kind === "run" && m.server === "remote-1",
       "runner runs remote-1",
     ),
   );
@@ -151,7 +152,7 @@ Deno.test("Whitespace: second subroutine loses nothing — 10 credits lose 3, 7 
   s = play(
     s,
     "runner",
-    findMove(s, "runner", (m) => m.kind === "runner.resolveSubroutines", "resolve subroutines"),
+    findMove(s, "runner", (m) => m.kind === "resolveSubroutines", "resolve subroutines"),
   );
   // Sub 1: "The Runner loses 3[credit]" (10 → 7). Sub 2: "If the Runner has
   // 6[credit] or less, end the run" — NO loss; 7 > 6 → the run survives.
@@ -171,7 +172,7 @@ Deno.test("Whitespace: 9 credits lose 3 → 6 ≤ 6 → the ETR fires on the sin
   s = play(
     s,
     "runner",
-    findMove(s, "runner", (m) => m.kind === "runner.resolveSubroutines", "resolve subroutines"),
+    findMove(s, "runner", (m) => m.kind === "resolveSubroutines", "resolve subroutines"),
   );
   assertEquals(s.runner.credits, 6, "single loss: 9 → 6 (no phantom second loss)");
   const losses = s.log.slice(logMark).filter((e) => e.type === "lose-credits");
@@ -193,7 +194,7 @@ Deno.test("Brân 1.0: install directly inward keeps the encounter on Brân; new 
     findMove(
       s,
       "corp",
-      (m) => m.kind === "corp.install" && m.cardId === "bran_1_0" && m.server === "new-remote",
+      (m) => isCorpInstall(m) && m.cardId === "bran_1_0" && m.server === "new-remote",
       "corp installs Brân on a new remote",
     ),
   );
@@ -205,7 +206,7 @@ Deno.test("Brân 1.0: install directly inward keeps the encounter on Brân; new 
     findMove(
       s,
       "runner",
-      (m) => m.kind === "runner.install" && m.cardId === "unity",
+      (m) => m.kind === "install" && m.cardId === "unity",
       "runner installs unity",
     ),
   );
@@ -215,7 +216,7 @@ Deno.test("Brân 1.0: install directly inward keeps the encounter on Brân; new 
     findMove(
       s,
       "runner",
-      (m) => m.kind === "runner.run" && m.server === "remote-1",
+      (m) => m.kind === "run" && m.server === "remote-1",
       "runner runs remote-1",
     ),
   );
@@ -238,7 +239,7 @@ Deno.test("Brân 1.0: install directly inward keeps the encounter on Brân; new 
       findMove(
         s,
         "runner",
-        (m) => m.kind === "runner.bioroidBreak" && m.subIndex === sub,
+        (m) => m.kind === "bioroidBreak" && m.subIndex === sub,
         `break Brân sub ${sub} in the single 6.9.3b window`,
       ),
     );
@@ -250,7 +251,7 @@ Deno.test("Brân 1.0: install directly inward keeps the encounter on Brân; new 
   s = play(
     s,
     "runner",
-    findMove(s, "runner", (m) => m.kind === "runner.resolveSubroutines", "resolve subroutines"),
+    findMove(s, "runner", (m) => m.kind === "resolveSubroutines", "resolve subroutines"),
   );
   const prompt = s.prompts[0];
   assert(
@@ -298,7 +299,7 @@ Deno.test("Brân 1.0: install directly inward keeps the encounter on Brân; new 
   s = play(
     s,
     "runner",
-    findMove(s, "runner", (m) => m.kind === "runner.continueRun", "continue the run"),
+    findMove(s, "runner", (m) => m.kind === "continueRun", "continue the run"),
   );
   const titheId = server().ice[0]!.id;
   assertEquals(s.run!.phase, "approach-ice", "the inward-installed ice is approached next");

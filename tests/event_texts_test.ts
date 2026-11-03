@@ -40,6 +40,7 @@ import type {
   PlayerSide,
   ServerId,
 } from "../src/types.ts";
+import { isCorpInstall } from "../src/types.ts";
 import {
   countEvents,
   findInstalled,
@@ -79,10 +80,10 @@ function bankCorpCredits(state: GameState, target: number): GameState {
     if (cur.prompts.length > 0) {
       const drop = cur.corp.hand[0]?.id;
       if (!drop) return cur;
-      cur = play(cur, "corp", { kind: "discard", player: "corp", cardInstanceIds: [drop] });
+      cur = play(cur, "corp", { kind: "discard", cardInstanceIds: [drop] });
       continue;
     }
-    const gain = engine.getLegalMoves(cur, "corp").find((m) => m.kind === "corp.gainCredits");
+    const gain = engine.getLegalMoves(cur, "corp").find((m) => m.kind === "gainCredits");
     if (!gain) return cur;
     cur = play(cur, "corp", gain);
   }
@@ -93,7 +94,7 @@ function bankCorpCredits(state: GameState, target: number): GameState {
 function spendRunnerClicks(state: GameState, toSpend: number): GameState {
   let cur = state;
   for (let i = 0; i < toSpend; i++) {
-    cur = play(cur, "runner", { kind: "runner.gainCredits" });
+    cur = play(cur, "runner", { kind: "gainCredits" });
   }
   return cur;
 }
@@ -101,7 +102,7 @@ function spendRunnerClicks(state: GameState, toSpend: number): GameState {
 /** Find a specific `runner.playEvent` move for `cardId` (optionally on `server`). */
 function eventMove(state: GameState, cardId: CardId, server?: ServerId): Move | undefined {
   return engine.getLegalMoves(state, "runner").find((m) =>
-    m.kind === "runner.playEvent" && m.cardId === cardId &&
+    m.kind === "playEvent" && m.cardId === cardId &&
     (server === undefined || (m as { server?: ServerId }).server === server)
   );
 }
@@ -109,7 +110,7 @@ function eventMove(state: GameState, cardId: CardId, server?: ServerId): Move | 
 /** Every server offered for a card's `runner.playEvent` move. */
 function eventServers(state: GameState, cardId: CardId): (ServerId | undefined)[] {
   return engine.getLegalMoves(state, "runner")
-    .filter((m) => m.kind === "runner.playEvent" && m.cardId === cardId)
+    .filter((m) => m.kind === "playEvent" && m.cardId === cardId)
     .map((m) => (m as { server?: ServerId }).server);
 }
 
@@ -146,13 +147,13 @@ function corpInstallIceThenEndTurn(
 } {
   const s = newGame([iceId], runnerFirst);
   const install = engine.getLegalMoves(s, "corp").find((m) =>
-    m.kind === "corp.install" && m.cardId === iceId && m.server === server
+    isCorpInstall(m) && m.cardId === iceId && m.server === server
   );
   assertDefined(install, `corp can install ${iceId} on ${server}`);
   let cur = play(s, "corp", install!);
   const ice = assertDefined(findInstalled(cur, iceId), `${iceId} is installed`);
   while (cur.turn.player === "corp" && !cur.winner) {
-    cur = play(cur, "corp", { kind: "corp.gainCredits" });
+    cur = play(cur, "corp", { kind: "gainCredits" });
   }
   assertEquals(cur.turn.player, "runner", "the runner's turn begins");
   return { state: cur, ice };
@@ -295,7 +296,7 @@ Deno.test("event texts: hedge fund gains the printed 9 credits", () => {
   const creditsBefore = s.corp.credits;
   const move = assertDefined(
     engine.getLegalMoves(s, "corp").find((m) =>
-      m.kind === "corp.playOperation" && m.cardId === "hedge_fund"
+      m.kind === "playOperation" && m.cardId === "hedge_fund"
     ),
     "hedge fund is playable",
   );
@@ -319,7 +320,7 @@ Deno.test("event texts: government subsidy gains the printed 15 credits", () => 
   const creditsBefore = s.corp.credits;
   const move = assertDefined(
     engine.getLegalMoves(s, "corp").find((m) =>
-      m.kind === "corp.playOperation" && m.cardId === "government_subsidy"
+      m.kind === "playOperation" && m.cardId === "government_subsidy"
     ),
     "government subsidy is playable",
   );
@@ -388,7 +389,6 @@ Deno.test("event texts: tread lightly's +3 rez cost shows and charges on the run
   const before = after.corp.credits;
   const rezzed = play(after, "corp", {
     kind: "prompt.answer",
-    player: "corp",
     promptId: after.prompts[0]!.id,
     optionId: option.id,
   });
@@ -451,12 +451,12 @@ Deno.test("event texts: overclock's hosted credits pay the Manegarm toll during 
   let s = newGame(["nico_campaign", "manegarm_skunkworks"], ["overclock"]);
 
   const installAsset = engine.getLegalMoves(s, "corp").find((m) =>
-    m.kind === "corp.install" && m.cardId === "nico_campaign" && m.server === "new-remote"
+    isCorpInstall(m) && m.cardId === "nico_campaign" && m.server === "new-remote"
   );
   assertDefined(installAsset, "the corp can install Nico Campaign in a new remote");
   s = play(s, "corp", installAsset!);
   const installUpgrade = engine.getLegalMoves(s, "corp").find((m) =>
-    m.kind === "corp.install" && m.cardId === "manegarm_skunkworks" && m.server === "remote-1"
+    isCorpInstall(m) && m.cardId === "manegarm_skunkworks" && m.server === "remote-1"
   );
   assertDefined(installUpgrade, "the corp can install the upgrade in remote-1");
   s = play(s, "corp", installUpgrade!);
@@ -465,12 +465,12 @@ Deno.test("event texts: overclock's hosted credits pay the Manegarm toll during 
     "the upgrade is installed",
   );
   const rez = engine.getLegalMoves(s, "corp").find((m) =>
-    m.kind === "corp.rez" && m.targetId === manegarm.id
+    m.kind === "rez" && m.targetId === manegarm.id
   );
-  assertDefined(rez, "corp.rez is offered for the installed upgrade");
+  assertDefined(rez, "rez is offered for the installed upgrade");
   s = play(s, "corp", rez!);
   while (s.turn.player === "corp" && !s.winner) {
-    s = play(s, "corp", { kind: "corp.gainCredits" });
+    s = play(s, "corp", { kind: "gainCredits" });
   }
   s = burnUntil(s, "runner");
   assert(
@@ -492,7 +492,7 @@ Deno.test("event texts: overclock's hosted credits pay the Manegarm toll during 
   // Approach the server: the movement phase parks for the jack-out choice,
   // and continuing opens the Corp's 6.9.4e rez window (facedown Nico in the
   // root) before the approach toll — the Corp passes it, then the toll comes.
-  const cont = engine.getLegalMoves(after, "runner").find((m) => m.kind === "runner.continueRun");
+  const cont = engine.getLegalMoves(after, "runner").find((m) => m.kind === "continueRun");
   assertDefined(cont, "the run parks in the movement phase");
   let cur = play(after, "runner", cont!);
   const windowPrompt = cur.prompts[0];
@@ -535,19 +535,19 @@ Deno.test("event texts: overclock's hosted fund pays an access trash the pool ca
   // still alive after the trash; unrezzed, it raises no approach toll.
   let s = newGame(["nico_campaign", "manegarm_skunkworks"], ["overclock"]);
   const installAsset = engine.getLegalMoves(s, "corp").find(
-    (m) => m.kind === "corp.install" && m.cardId === "nico_campaign" && m.server === "new-remote",
+    (m) => isCorpInstall(m) && m.cardId === "nico_campaign" && m.server === "new-remote",
   );
   assertDefined(installAsset, "the corp can install Nico Campaign in a new remote");
   s = play(s, "corp", installAsset!);
   const installUpgrade = engine.getLegalMoves(s, "corp").find(
     (m) =>
-      m.kind === "corp.install" && m.cardId === "manegarm_skunkworks" &&
+      isCorpInstall(m) && m.cardId === "manegarm_skunkworks" &&
       m.server === "remote-1",
   );
   assertDefined(installUpgrade, "the corp can add the unrezzed upgrade to remote-1");
   s = play(s, "corp", installUpgrade!);
   while (s.turn.player === "corp" && !s.winner) {
-    s = play(s, "corp", { kind: "corp.gainCredits" });
+    s = play(s, "corp", { kind: "gainCredits" });
   }
   s = burnUntil(s, "runner");
   const nico = assertDefined(
@@ -565,7 +565,7 @@ Deno.test("event texts: overclock's hosted fund pays an access trash the pool ca
   // No rezzed ice, no toll: continue into the breach and pick the asset.
   // Continuing opens the Corp's 6.9.4e rez window (two facedown root cards);
   // the Corp passes it so both stay facedown for the breach.
-  cur = play(cur, "runner", { kind: "runner.continueRun" });
+  cur = play(cur, "runner", { kind: "continueRun" });
   const windowPrompt = cur.prompts[0];
   if (windowPrompt?.kind === "rez-window") {
     const pass = engine.getLegalMoves(cur, "corp").find(
@@ -575,13 +575,13 @@ Deno.test("event texts: overclock's hosted fund pays an access trash the pool ca
     cur = play(cur, "corp", pass!);
   }
   const access = engine.getLegalMoves(cur, "runner").find(
-    (m) => m.kind === "runner.accessCard" && m.targetId === nico.id,
+    (m) => m.kind === "accessCard" && m.targetId === nico.id,
   );
   assertDefined(access, "the asset is offered for access");
   cur = play(cur, "runner", access!);
 
   // THE FIX: trashAccessed must be offered on fund credits alone (pool is 0).
-  const trash = engine.getLegalMoves(cur, "runner").find((m) => m.kind === "runner.trashAccessed");
+  const trash = engine.getLegalMoves(cur, "runner").find((m) => m.kind === "trashAccessed");
   assertDefined(trash, "the trash is offered — affordability counts the run fund");
   cur = play(cur, "runner", trash!);
 
@@ -610,11 +610,9 @@ Deno.test("event texts: overclock's hosted fund pays an access trash the pool ca
   for (let i = 0; i < 20 && (cur.run || cur.breach) && !cur.winner; i++) {
     const moves = engine.getLegalMoves(cur, "runner");
     const next = moves.find((m) =>
-      m.kind === "runner.finishAccess" || m.kind === "runner.accessCard" ||
-      m.kind === "runner.accessRandom"
-    ) ?? moves.find((m) =>
-      m.kind === "runner.continueRun"
-    );
+      m.kind === "finishAccess" || m.kind === "accessCard" ||
+      m.kind === "accessRandom"
+    ) ?? moves.find((m) => m.kind === "continueRun");
     if (!next) break;
     cur = play(cur, "runner", next!);
   }
@@ -630,12 +628,11 @@ Deno.test("event texts: overclock's hosted fund is bound to that run, not to a l
   assertEquals(s.run?.fundCredits, 5, "the event's run carries the 5 hosted credits");
 
   // Play the event's run out to the end (no ice on HQ: approach, breach, access).
-  s = play(s, "runner", { kind: "runner.continueRun" });
+  s = play(s, "runner", { kind: "continueRun" });
   for (let i = 0; i < 20 && (s.run || s.breach) && !s.winner; i++) {
     const moves = engine.getLegalMoves(s, "runner");
-    const next = moves.find((m) =>
-      m.kind === "runner.accessRandom" || m.kind === "runner.accessCard"
-    ) ?? moves.find((m) => m.kind === "runner.finishAccess");
+    const next = moves.find((m) => m.kind === "accessRandom" || m.kind === "accessCard") ??
+      moves.find((m) => m.kind === "finishAccess");
     assertDefined(next, "the breach offers an access or finish-access move");
     s = play(s, "runner", next!);
   }
@@ -656,7 +653,7 @@ Deno.test("event texts: overclock's hosted fund is bound to that run, not to a l
     undefined,
     "the hosted credits never survive to a later turn's run",
   );
-  s = play(s, "runner", { kind: "runner.run", server: "archives" });
+  s = play(s, "runner", { kind: "run", server: "archives" });
   assertEquals(
     s.run?.fundCredits,
     undefined,

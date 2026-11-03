@@ -58,12 +58,12 @@ Deno.test("install dedup: a duplicate hand card adds no install/play move (defin
     );
     const state = fresh(found!.seed);
     const before = engine.getLegalMoves(state, "corp").filter((m) =>
-      m.kind === "corp.install" && m.cardId === found!.cardId
+      m.kind === "install" && m.cardId === found!.cardId
     );
     assert(before.length > 0, "the ice is installable before duplication");
     dupHandCard(state, "corp", (id) => id === found!.cardId);
     const after = engine.getLegalMoves(state, "corp").filter((m) =>
-      m.kind === "corp.install" && m.cardId === found!.cardId
+      m.kind === "install" && m.cardId === found!.cardId
     );
     assertEquals(after.length, before.length, "a second copy adds no install moves");
     assertEquals(
@@ -83,16 +83,16 @@ Deno.test("install dedup: a duplicate hand card adds no install/play move (defin
       if (!op) continue;
       if (
         engine.getLegalMoves(state, "corp").every((m) =>
-          !(m.kind === "corp.playOperation" && m.cardId === op.cardId)
+          !(m.kind === "playOperation" && m.cardId === op.cardId)
         )
       ) continue;
       found = true;
       const before = engine.getLegalMoves(state, "corp").filter((m) =>
-        m.kind === "corp.playOperation" && m.cardId === op.cardId
+        m.kind === "playOperation" && m.cardId === op.cardId
       );
       dupHandCard(state, "corp", (id) => id === op.cardId);
       const after = engine.getLegalMoves(state, "corp").filter((m) =>
-        m.kind === "corp.playOperation" && m.cardId === op.cardId
+        m.kind === "playOperation" && m.cardId === op.cardId
       );
       assertEquals(after.length, before.length, "a second copy adds no play moves");
       assertEquals(after.length, 1, "exactly one play move for the operation");
@@ -122,14 +122,14 @@ Deno.test("install dedup: a duplicate hand card adds no install/play move (defin
       );
       if (!res) continue;
       const before = engine.getLegalMoves(s, "runner").filter((m) =>
-        (m.kind === "runner.install" || m.kind === "runner.playEvent") &&
+        (m.kind === "install" || m.kind === "playEvent") &&
         m.cardId === res.cardId
       );
       if (before.length === 0) continue;
       found = true;
       dupHandCard(s, "runner", (id) => id === res.cardId);
       const after = engine.getLegalMoves(s, "runner").filter((m) =>
-        (m.kind === "runner.install" || m.kind === "runner.playEvent") &&
+        (m.kind === "install" || m.kind === "playEvent") &&
         m.cardId === res.cardId
       );
       assertEquals(after.length, before.length, "a second copy adds no moves");

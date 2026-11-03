@@ -21,6 +21,7 @@
 
 import { engine } from "../src/mod.ts";
 import type { CardId, GameState } from "../src/types.ts";
+import { isCorpInstall } from "../src/types.ts";
 import { continueRun, findInstalled, play, runnerDeckStartingWith } from "./helpers/fixtures.ts";
 import { burnUntil, corpDeckWithHand, nextTurnOf, resolveRun } from "./helpers/drive.ts";
 import { assert, assertDefined, assertEquals } from "./helpers/assert.ts";
@@ -45,7 +46,7 @@ function newGame(corpHand: CardId[], runnerFirst: CardId[] = []): GameState {
 
 function advanceTargetIds(state: GameState): string[] {
   return engine.getLegalMoves(state, "corp")
-    .filter((m) => m.kind === "corp.advance")
+    .filter((m) => m.kind === "advance")
     .map((m) => (m as { targetId: string }).targetId);
 }
 
@@ -58,8 +59,8 @@ Deno.test("corp actions: advance, install, breach, and event regressions", async
     "advance: ice cannot be advanced; Urtica Cipher and agendas can (rule 1.18.3)",
     () => {
       let s = newGame(["urtica_cipher", "palisade", "offworld_office"]);
-      s = play(s, "corp", { kind: "corp.install", cardId: "urtica_cipher", server: "new-remote" });
-      s = play(s, "corp", { kind: "corp.install", cardId: "palisade", server: "hq" });
+      s = play(s, "corp", { kind: "install", cardId: "urtica_cipher", server: "new-remote" });
+      s = play(s, "corp", { kind: "install", cardId: "palisade", server: "hq" });
 
       const urtica = assertDefined(findInstalled(s, "urtica_cipher"), "Urtica Cipher is installed");
       const palisade = assertDefined(findInstalled(s, "palisade"), "ice is installed");
@@ -71,10 +72,10 @@ Deno.test("corp actions: advance, install, breach, and event regressions", async
       assert(!targets.includes(palisade.id), "ice is never advanceable");
 
       // Spend the last click advancing Urtica; next turn the agenda must also be advanceable.
-      s = play(s, "corp", { kind: "corp.advance", targetId: urtica.id });
+      s = play(s, "corp", { kind: "advance", targetId: urtica.id });
       s = nextTurnOf(s, "corp");
       s = play(s, "corp", {
-        kind: "corp.install",
+        kind: "install",
         cardId: "offworld_office",
         server: "new-remote",
       });
@@ -94,11 +95,11 @@ Deno.test("corp actions: advance, install, breach, and event regressions", async
     "advance: costs 1 click and 1 credit, and is not offered at 0 credits (rule 5.2.6f)",
     () => {
       let s = newGame(["urtica_cipher"]);
-      s = play(s, "corp", { kind: "corp.install", cardId: "urtica_cipher", server: "new-remote" });
+      s = play(s, "corp", { kind: "install", cardId: "urtica_cipher", server: "new-remote" });
       const urtica = assertDefined(findInstalled(s, "urtica_cipher"), "Urtica Cipher is installed");
 
       const creditsBefore = s.corp.credits;
-      s = play(s, "corp", { kind: "corp.advance", targetId: urtica.id });
+      s = play(s, "corp", { kind: "advance", targetId: urtica.id });
       assertEquals(s.corp.credits, creditsBefore - 1, "advancing spent exactly 1 credit");
       assertEquals(
         findInstalled(s, "urtica_cipher")!.advancement ?? 0,
@@ -107,10 +108,10 @@ Deno.test("corp actions: advance, install, breach, and event regressions", async
       );
 
       // Drain the corp to 0 credits by advancing across two more turns.
-      s = play(s, "corp", { kind: "corp.advance", targetId: urtica.id }); // turn 1, last click
+      s = play(s, "corp", { kind: "advance", targetId: urtica.id }); // turn 1, last click
       s = nextTurnOf(s, "corp"); // corp turn 2
       for (let i = 0; i < 3; i++) {
-        s = play(s, "corp", { kind: "corp.advance", targetId: urtica.id });
+        s = play(s, "corp", { kind: "advance", targetId: urtica.id });
       }
       assertEquals(s.corp.credits, 0, "the corp is at 0 credits");
       s = nextTurnOf(s, "corp"); // corp turn 3: 3 clicks, 0 credits, action phase
@@ -118,10 +119,10 @@ Deno.test("corp actions: advance, install, breach, and event regressions", async
       assertEquals(
         advanceTargetIds(s).length,
         0,
-        "corp.advance is not offered when the corp has 0 credits",
+        "advance is not offered when the corp has 0 credits",
       );
-      const rejected = engine.applyMove(s, "corp", { kind: "corp.advance", targetId: urtica.id });
-      assert(rejected.kind === "illegal-move", "corp.advance is rejected at 0 credits");
+      const rejected = engine.applyMove(s, "corp", { kind: "advance", targetId: urtica.id });
+      assert(rejected.kind === "illegal-move", "advance is rejected at 0 credits");
     },
   );
 
@@ -134,7 +135,7 @@ Deno.test("corp actions: advance, install, breach, and event regressions", async
     () => {
       const s = newGame(["manegarm_skunkworks"]);
       const install = engine.getLegalMoves(s, "corp").find((m) =>
-        m.kind === "corp.install" && m.cardId === "manegarm_skunkworks" && m.server === "new-remote"
+        isCorpInstall(m) && m.cardId === "manegarm_skunkworks" && m.server === "new-remote"
       );
       assertDefined(install, "an upgrade is offered for a new remote server");
       const after = play(s, "corp", install!);
@@ -156,10 +157,10 @@ Deno.test("corp actions: advance, install, breach, and event regressions", async
     () => {
       let s = newGame([], ["docklands_pass"]);
       s = burnUntil(s, "runner");
-      s = play(s, "runner", { kind: "runner.install", cardId: "docklands_pass" });
+      s = play(s, "runner", { kind: "install", cardId: "docklands_pass" });
 
       // Breach a non-HQ server first (Archives): must not consume the bonus.
-      s = play(s, "runner", { kind: "runner.run", server: "archives" });
+      s = play(s, "runner", { kind: "run", server: "archives" });
       assertEquals(
         s.runner.hqBreachesThisTurn,
         0,
@@ -168,7 +169,7 @@ Deno.test("corp actions: advance, install, breach, and event regressions", async
       s = resolveRun(s);
 
       // Now breach HQ: Docklands Pass grants +1 access on the first HQ breach.
-      s = play(s, "runner", { kind: "runner.run", server: "hq" });
+      s = play(s, "runner", { kind: "run", server: "hq" });
       s = continueMovement(s); // the run parks in movement (6.9.4c) before the breach
       assert(s.breach !== null && s.breach.server === "hq", "the HQ breach began");
       assertEquals(
@@ -179,7 +180,7 @@ Deno.test("corp actions: advance, install, breach, and event regressions", async
       s = resolveRun(s);
 
       // A second HQ breach the same turn gets no bonus (once per turn).
-      s = play(s, "runner", { kind: "runner.run", server: "hq" });
+      s = play(s, "runner", { kind: "run", server: "hq" });
       s = continueMovement(s);
       assert(s.breach !== null && s.breach.server === "hq", "the second HQ breach began");
       assertEquals(s.breach!.randomAccessLimit, 1, "second HQ breach of the turn: access 1 only");
@@ -194,10 +195,10 @@ Deno.test("corp actions: advance, install, breach, and event regressions", async
     let s = newGame(["manegarm_skunkworks", "seamless_launch"]);
     // Turn 1: install the upgrade only (it must not count as "installed this turn"
     // for Seamless Launch on a later turn).
-    s = play(s, "corp", { kind: "corp.install", cardId: "manegarm_skunkworks", server: "hq" });
+    s = play(s, "corp", { kind: "install", cardId: "manegarm_skunkworks", server: "hq" });
     s = nextTurnOf(s, "corp"); // corp turn 2 (the upgrade was not installed this turn)
     const playOp = engine.getLegalMoves(s, "corp").find((m) =>
-      m.kind === "corp.playOperation" && m.cardId === "seamless_launch"
+      m.kind === "playOperation" && m.cardId === "seamless_launch"
     );
     assertDefined(playOp, "Seamless Launch is playable");
     s = play(s, "corp", playOp!);
@@ -221,7 +222,7 @@ Deno.test("corp actions: advance, install, breach, and event regressions", async
     () => {
       const overclockMove = (state: GameState) =>
         engine.getLegalMoves(state, "runner").find((m) =>
-          m.kind === "runner.playEvent" && m.cardId === "overclock" && m.server === "hq"
+          m.kind === "playEvent" && m.cardId === "overclock" && m.server === "hq"
         );
 
       // The premises of this test changed with the printed text: "Place 5[credit]
@@ -254,11 +255,9 @@ Deno.test("corp actions: advance, install, breach, and event regressions", async
       // Finish the event's run, then take the runner's turn and the corp's turn.
       for (let i = 0; i < 20 && (s.run || s.breach) && !s.winner; i++) {
         const moves = engine.getLegalMoves(s, "runner");
-        const next = moves.find((m) =>
-          m.kind === "runner.accessRandom" || m.kind === "runner.accessCard"
-        ) ??
-          moves.find((m) => m.kind === "runner.finishAccess") ??
-          moves.find((m) => m.kind === "runner.continueRun");
+        const next = moves.find((m) => m.kind === "accessRandom" || m.kind === "accessCard") ??
+          moves.find((m) => m.kind === "finishAccess") ??
+          moves.find((m) => m.kind === "continueRun");
         assertDefined(next, "the breach/run offers a decision");
         s = play(s, "runner", next!);
       }
@@ -285,7 +284,7 @@ Deno.test("corp actions: advance, install, breach, and event regressions", async
         undefined,
         "the Overclock host is cleared by the next runner turn (nothing to spend)",
       );
-      t = play(t, "runner", { kind: "runner.run", server: "archives" });
+      t = play(t, "runner", { kind: "run", server: "archives" });
       assert(
         t.run?.fundCredits === undefined,
         "a run on a later turn has no Overclock fund ('during that run')",

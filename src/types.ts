@@ -607,43 +607,80 @@ export interface GameAI {
 // Moves
 // ---------------------------------------------------------------------------
 
-/** A typed decision a player can make. Apply it with `applyMove`. */
-export type Move =
+/**
+ * The corp's install: it names the server the card goes into.
+ *
+ * The actor is NOT part of a move. `getLegalMoves` and `applyMove` both take
+ * the acting `PlayerSide` explicitly, so a move is a pure verb + parameters —
+ * the same shape as a chess move (`Nf3`), never `white.Nf3`. The two install
+ * shapes are therefore told apart structurally (the corp one carries a
+ * `server`), which is what `isCorpInstall` / `isRunnerInstall` encapsulate.
+ */
+export type CorpInstall = { kind: "install"; cardId: CardId; server: ServerId | "new-remote" };
+
+/** The runner's install: a program or piece of hardware, no server. */
+export type RunnerInstall = { kind: "install"; cardId: CardId };
+
+/**
+ * Moves either player can make. When a verb's logic differs by actor the
+ * handler branches on the `playerSide` argument, not on a second move shape.
+ */
+export type SharedMove =
   // Setup
-  | { kind: "mulligan.take"; player: PlayerSide }
-  | { kind: "mulligan.decline"; player: PlayerSide }
+  | { kind: "mulligan.take" }
+  | { kind: "mulligan.decline" }
   // Discard phase
-  | { kind: "discard"; player: PlayerSide; cardInstanceIds: CardInstanceId[] }
-  // Corp basic actions
-  | { kind: "corp.gainCredits" }
-  | { kind: "corp.draw" }
-  | { kind: "corp.install"; cardId: CardId; server: ServerId | "new-remote" }
-  | { kind: "corp.playOperation"; cardId: CardId; targetId?: CardInstanceId }
-  | { kind: "corp.advance"; targetId: CardInstanceId }
-  | { kind: "corp.score"; targetId: CardInstanceId }
-  | { kind: "corp.rez"; targetId: CardInstanceId }
-  | { kind: "corp.ability"; targetId: CardInstanceId; abilityIndex: number; server?: ServerId }
-  // Runner basic actions
-  | { kind: "runner.gainCredits" }
-  | { kind: "runner.draw" }
-  | { kind: "runner.install"; cardId: CardId }
-  | { kind: "runner.playEvent"; cardId: CardId; server?: ServerId }
-  | { kind: "runner.run"; server: ServerId }
-  | { kind: "runner.ability"; targetId: CardInstanceId; abilityIndex: number; server?: ServerId }
-  // Run interaction
-  | { kind: "runner.continueRun" }
-  | { kind: "runner.jackOut" }
-  | { kind: "runner.breakSubroutine"; programId: CardInstanceId; subIndex: number }
-  | { kind: "runner.pumpIcebreaker"; programId: CardInstanceId }
-  | { kind: "runner.bioroidBreak"; iceId: CardInstanceId; subIndex: number }
-  | { kind: "runner.resolveSubroutines" }
-  // Access decisions
-  | { kind: "runner.accessCard"; targetId: CardInstanceId }
-  | { kind: "runner.accessRandom" }
-  | { kind: "runner.trashAccessed" }
-  | { kind: "runner.finishAccess" }
+  | { kind: "discard"; cardInstanceIds: CardInstanceId[] }
+  // Shared basic actions (identical shape for both seats)
+  | { kind: "gainCredits" }
+  | { kind: "draw" }
+  | { kind: "ability"; targetId: CardInstanceId; abilityIndex: number; server?: ServerId }
   // Answers to pending prompts (generic; the option carries the effect)
-  | { kind: "prompt.answer"; player: PlayerSide; promptId: number; optionId: string };
+  | { kind: "prompt.answer"; promptId: number; optionId: string };
+
+/** Corp-only move shapes (only the corp ever generates these). */
+export type CorpMove =
+  | CorpInstall
+  | { kind: "playOperation"; cardId: CardId; targetId?: CardInstanceId }
+  | { kind: "advance"; targetId: CardInstanceId }
+  | { kind: "score"; targetId: CardInstanceId }
+  | { kind: "rez"; targetId: CardInstanceId };
+
+/** Runner-only move shapes (only the runner ever generates these). */
+export type RunnerMove =
+  | RunnerInstall
+  | { kind: "playEvent"; cardId: CardId; server?: ServerId }
+  | { kind: "run"; server: ServerId }
+  | { kind: "continueRun" }
+  | { kind: "jackOut" }
+  | { kind: "breakSubroutine"; programId: CardInstanceId; subIndex: number }
+  | { kind: "pumpIcebreaker"; programId: CardInstanceId }
+  | { kind: "bioroidBreak"; iceId: CardInstanceId; subIndex: number }
+  | { kind: "resolveSubroutines" }
+  | { kind: "accessCard"; targetId: CardInstanceId }
+  | { kind: "accessRandom" }
+  | { kind: "trashAccessed" }
+  | { kind: "finishAccess" };
+
+/**
+ * A typed decision a player can make. Apply it with `applyMove(state, player, move)`.
+ *
+ * The three groups are discriminated by shape: `install` is the only verb both
+ * seats share with a different payload, and its two forms differ structurally
+ * (corp carries `server`). Narrow it with `isCorpInstall` / `isRunnerInstall`
+ * rather than re-deriving the check at each site.
+ */
+export type Move = SharedMove | CorpMove | RunnerMove;
+
+/** True for the corp's install (has a `server`); false for the runner's. */
+export function isCorpInstall(move: Move): move is CorpInstall {
+  return move.kind === "install" && "server" in move;
+}
+
+/** True for the runner's install (no `server`); the complement of `isCorpInstall`. */
+export function isRunnerInstall(move: Move): move is RunnerInstall {
+  return move.kind === "install" && !("server" in move);
+}
 
 // ---------------------------------------------------------------------------
 // Apply result

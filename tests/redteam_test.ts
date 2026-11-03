@@ -45,7 +45,7 @@ function installedRedTeam(state: GameState) {
 /** The legal `runner.ability` move that uses Red Team to run `server`. */
 function redTeamRunMove(state: GameState, server: string): Move | undefined {
   return engine.getLegalMoves(state, "runner").find((m) =>
-    m.kind === "runner.ability" && m.targetId === installedRedTeam(state).id &&
+    m.kind === "ability" && m.targetId === installedRedTeam(state).id &&
     m.abilityIndex === 0 && m.server === server
   );
 }
@@ -53,7 +53,7 @@ function redTeamRunMove(state: GameState, server: string): Move | undefined {
 /** Which `runner.run` targets are currently offered. */
 function runTargets(state: GameState): string[] {
   return engine.getLegalMoves(state, "runner")
-    .filter((m) => m.kind === "runner.run")
+    .filter((m) => m.kind === "run")
     .map((m) => (m as { server: string }).server);
 }
 
@@ -61,7 +61,7 @@ function runTargets(state: GameState): string[] {
 function runnerTurnWithRedTeam(): GameState {
   let s = newGame(["red_team"]);
   s = burnUntil(s, "runner");
-  s = play(s, "runner", { kind: "runner.install", cardId: "red_team" });
+  s = play(s, "runner", { kind: "install", cardId: "red_team" });
   installedRedTeam(s); // asserts the install worked
   return s;
 }
@@ -100,11 +100,11 @@ Deno.test("red team: the same-central-twice restriction (ability run + basic run
     () => {
       let s = newGame(["red_team"]);
       s = burnUntil(s, "runner");
-      s = play(s, "runner", { kind: "runner.install", cardId: "red_team" });
+      s = play(s, "runner", { kind: "install", cardId: "red_team" });
       const red = installedRedTeam(s);
 
       // A basic run on Archives first: the restriction applies to that central only.
-      s = play(s, "runner", { kind: "runner.run", server: "archives" });
+      s = play(s, "runner", { kind: "run", server: "archives" });
       assertEquals(s.runner.ranServersThisTurn, ["archives"], "archives is recorded");
       s = resolveRun(s);
       assert(!runTargets(s).includes("archives"), "archives cannot be run again this turn");
@@ -112,14 +112,14 @@ Deno.test("red team: the same-central-twice restriction (ability run + basic run
 
       // The Red Team ability itself only offers centrals not yet run.
       const offered = engine.getLegalMoves(s, "runner")
-        .filter((m) => m.kind === "runner.ability" && m.targetId === red.id && m.abilityIndex === 0)
+        .filter((m) => m.kind === "ability" && m.targetId === red.id && m.abilityIndex === 0)
         .map((m) => (m as { server?: string }).server);
       assertEquals(offered.sort(), ["hq", "rd"], "the ability excludes the already-run central");
 
       // Using it on HQ keeps HQ restricted and leaves R&D alone.
       const use = assertDefined(
         engine.getLegalMoves(s, "runner").find((m) =>
-          m.kind === "runner.ability" && m.targetId === red.id && m.abilityIndex === 0 &&
+          m.kind === "ability" && m.targetId === red.id && m.abilityIndex === 0 &&
           m.server === "hq"
         ),
         "the ability can run HQ",
@@ -139,7 +139,7 @@ Deno.test("red team: the same-central-twice restriction (ability run + basic run
 Deno.test("red team: the ability is not once per turn (printed text has no once-per-turn)", () => {
   let s = newGame(["red_team"]);
   s = burnUntil(s, "runner");
-  s = play(s, "runner", { kind: "runner.install", cardId: "red_team" });
+  s = play(s, "runner", { kind: "install", cardId: "red_team" });
 
   // 4 clicks on the turn: 1 to install, 3 left — three ability uses plus the
   // run resolutions still fit inside the turn.
@@ -203,7 +203,7 @@ Deno.test("red team: a successful ability run takes 3 credits from the resource"
 Deno.test("red team: Red Team is trashed when the resource is empty", () => {
   let s = newGame(["red_team"]);
   s = burnUntil(s, "runner");
-  s = play(s, "runner", { kind: "runner.install", cardId: "red_team" });
+  s = play(s, "runner", { kind: "install", cardId: "red_team" });
 
   // Drain the resource: use the ability four times, resolving each run.
   for (let i = 0; i < 4; i++) {

@@ -26,7 +26,7 @@
 import { computed, defineComponent, ref, watch } from "vue";
 import type { PropType } from "vue";
 import ActionPanel from "./action-panel.ts";
-import CardSheet, { buildSheetGroups, INSTALLED_ACTION_KINDS } from "./card-sheet.ts";
+import CardSheet, { buildSheetGroups } from "./card-sheet.ts";
 import CardTile from "./card-tile.ts";
 import CardZoom from "./card-zoom.ts";
 import ServerColumn from "./server-column.ts";
@@ -34,6 +34,7 @@ import StatusBlock from "./status-block.ts";
 import WinModal from "./win-modal.ts";
 import { availableCredits, cardDef, engine } from "../../mod.ts";
 import type { CardInstance, GameState, Move, PlayerSide, PublicGameStatus } from "../../types.ts";
+import { isCorpInstall } from "../../types.ts";
 import {
   actorOf,
   cardTitle,
@@ -216,10 +217,10 @@ export default defineComponent({
         ) {
           actions.push({
             label: `Trash (${trashCost} [credit])`,
-            move: { kind: "runner.trashAccessed" },
+            move: { kind: "trashAccessed" },
           });
         }
-        actions.push({ label: "Finish access", move: { kind: "runner.finishAccess" } });
+        actions.push({ label: "Finish access", move: { kind: "finishAccess" } });
         break;
       }
       return actions;
@@ -282,18 +283,15 @@ export default defineComponent({
      * one group. */
     const MOVE_KIND_GROUPS = {
       card: new Set<string>([
-        "runner.install",
-        "runner.playEvent",
-        "corp.install",
-        "corp.playOperation",
+        "install",
+        "playEvent",
+        "playOperation",
       ]),
       tile: new Set<string>([
-        "corp.gainCredits",
-        "runner.gainCredits",
-        "corp.draw",
-        "runner.draw",
+        "gainCredits",
+        "draw",
       ]),
-      run: new Set<string>(["runner.run"]),
+      run: new Set<string>(["run"]),
     } as const;
 
     /** Whether the move renders on a hand-card tile, not the action panel. */
@@ -310,17 +308,14 @@ export default defineComponent({
      *  on the own credits tile in the side panel instead of the action panel. */
     const gainCreditsMove = computed<Move | null>(() => {
       if (!isHumanTurn.value || prompt.value || accessedCard.value) return null;
-      return legal.value.find((m: Move) =>
-        m.kind === "corp.gainCredits" || m.kind === "runner.gainCredits"
-      ) ?? null;
+      return legal.value.find((m: Move) => m.kind === "gainCredits") ?? null;
     });
 
     /** The "draw 1 card" basic action, when the human can take it. It lives
      *  on the own hand stat in the side panel instead of the action panel. */
     const drawMove = computed<Move | null>(() => {
       if (!isHumanTurn.value || prompt.value || accessedCard.value) return null;
-      return legal.value.find((m: Move) => m.kind === "corp.draw" || m.kind === "runner.draw") ??
-        null;
+      return legal.value.find((m: Move) => m.kind === "draw") ?? null;
     });
 
     watch(
@@ -410,24 +405,43 @@ export default defineComponent({
     /** Legal run move against one server, if the human Runner has one. */
     function runMove(server: string): Move | undefined {
       return legal.value.find(
-        (m: Move) => m.kind === "runner.run" && (m as { server: string }).server === server,
+        (m: Move) => m.kind === "run" && (m as { server: string }).server === server,
       );
     }
+
+    /**
+     * Moves already rendered under a card row on the own sheet. The general
+     * Actions list must not repeat them, so it filters exactly this set — the
+     * moves the sheet actually drew — rather than a parallel kind table. That
+     * keeps one source of truth for "renders under a card" and, crucially,
+     * leaves the Corp's own sheet (which has no card rows — its cards live on
+     * the board) with every action, so an installed asset's paid ability stays
+     * reachable in the Actions list.
+     */
+    const sheetHostedKeys = computed(() => {
+      const keys = new Set<string>();
+      for (const group of ownGroups.value) {
+        for (const row of group.cards) {
+          for (const action of row.actions) keys.add(action.key);
+        }
+      }
+      return keys;
+    });
 
     /** Generic moves for the action panel (jack out, …). Runs are
      *  deliberately excluded: every server already has its own Run button
      *  under it, so listing them here too only duplicates the row. The
      *  gain-credit and draw moves live on the own credits/hand tiles in
-     *  the side panel, so they are excluded here too. Installed-card actions
-     *  (abilities, break, pump) live under their card in the card sheet, so
-     *  they are excluded here as well — the no-duplicates rule. */
+     *  the side panel, so they are excluded here too. Moves already rendered
+     *  under a card on the own sheet (`sheetHostedKeys`) are excluded as
+     *  well — the no-duplicates rule. */
     const generalMoves = computed<Move[]>(
       () =>
         legal.value.filter((m: Move) =>
           !isCardMove(m) &&
           !MOVE_KIND_GROUPS.run.has(m.kind) &&
           !hostedOnTile(m) &&
-          !INSTALLED_ACTION_KINDS.has(m.kind)
+          !sheetHostedKeys.value.has(moveKey(m))
         ),
     );
 
@@ -470,17 +484,17 @@ export default defineComponent({
     /** Short button label for an under-card action (the card is above it). */
     function shortActionLabel(m: Move): string {
       switch (m.kind) {
-        case "runner.install":
-          return "Install";
-        case "corp.install":
-          return `Install → ${serverLabel(m.server)}`;
-        case "runner.playEvent":
+        // The two install shapes: the Corp label names the target server, the
+        // Runner label does not.
+        case "install":
+          return isCorpInstall(m) ? `Install → ${serverLabel(m.server)}` : "Install";
+        case "playEvent":
           // Run-sourcing events (Jailbreak, Overclock, Tread Lightly) emit one
           // move PER target server (legal-moves.ts), so the label must name
           // the run target — bare "Play" would render 2-5 identical buttons
           // and the human would pick the run target blind.
           return m.server ? `Play → ${serverLabel(m.server)}` : "Play";
-        case "corp.playOperation":
+        case "playOperation":
           return "Play";
         default:
           return describeMove(props.state, m);

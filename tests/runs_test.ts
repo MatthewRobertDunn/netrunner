@@ -23,6 +23,7 @@
 
 import { cardDef, engine } from "../src/mod.ts";
 import type { GameState, Move } from "../src/types.ts";
+import { isCorpInstall } from "../src/types.ts";
 import { newStarterGame, play } from "./helpers/fixtures.ts";
 import { assert, assertDefined, assertEquals } from "./helpers/assert.ts";
 
@@ -53,7 +54,7 @@ function endCorpTurn(state: GameState): GameState {
   while (!cur.winner && cur.turn.player === "corp") {
     const moves = engine.getLegalMoves(cur, "corp");
     if (moves.length === 0) break;
-    const gain = moves.find((m) => m.kind === "corp.gainCredits") ?? moves[0]!;
+    const gain = moves.find((m) => m.kind === "gainCredits") ?? moves[0]!;
     cur = play(cur, "corp", gain);
     const discard = engine.getLegalMoves(cur, "corp").find((m) => m.kind === "discard");
     if (discard) cur = play(cur, "corp", discard);
@@ -70,7 +71,7 @@ Deno.test("run: the corp builds a remote (agenda behind ice) that the runner can
   const state = newStarterGame(1);
   const installAgenda = corpMove(
     state,
-    (m) => m.kind === "corp.install" && m.cardId === "offworld_office" && m.server === "new-remote",
+    (m) => isCorpInstall(m) && m.cardId === "offworld_office" && m.server === "new-remote",
     "seed 1: the corp opens with offworld_office to install in a new remote",
   );
   const afterAgenda = play(state, "corp", installAgenda);
@@ -83,7 +84,7 @@ Deno.test("run: the corp builds a remote (agenda behind ice) that the runner can
   // Ice protects the new server (rule 4.6.6d), outermost position (8.5.2d).
   const installIce = corpMove(
     afterAgenda,
-    (m) => m.kind === "corp.install" && m.cardId === "whitespace" && m.server === "remote-1",
+    (m) => isCorpInstall(m) && m.cardId === "whitespace" && m.server === "remote-1",
     "the corp can install whitespace protecting remote-1",
   );
   const afterIce = play(afterAgenda, "corp", installIce);
@@ -98,8 +99,7 @@ Deno.test("run: the approach rez window parks for the corp and rezzing charges t
     "corp",
     corpMove(
       state,
-      (m) =>
-        m.kind === "corp.install" && m.cardId === "offworld_office" && m.server === "new-remote",
+      (m) => isCorpInstall(m) && m.cardId === "offworld_office" && m.server === "new-remote",
       "corp can install the agenda",
     ),
   );
@@ -108,7 +108,7 @@ Deno.test("run: the approach rez window parks for the corp and rezzing charges t
     "corp",
     corpMove(
       state,
-      (m) => m.kind === "corp.install" && m.cardId === "whitespace" && m.server === "remote-1",
+      (m) => isCorpInstall(m) && m.cardId === "whitespace" && m.server === "remote-1",
       "corp can install the ice",
     ),
   );
@@ -118,7 +118,7 @@ Deno.test("run: the approach rez window parks for the corp and rezzing charges t
   // Unity is the decoder: strength 1 breaks code gates (whitespace prints 0).
   const installUnity = runnerMove(
     state,
-    (m) => m.kind === "runner.install" && m.cardId === "unity",
+    (m) => m.kind === "install" && m.cardId === "unity",
     "the runner opens with Unity to install",
   );
   state = play(state, "runner", installUnity);
@@ -126,7 +126,7 @@ Deno.test("run: the approach rez window parks for the corp and rezzing charges t
   // The run reaches the approach rez window (rule 6.9.2b): the corp parks.
   const runMove = runnerMove(
     state,
-    (m) => m.kind === "runner.run" && m.server === "remote-1",
+    (m) => m.kind === "run" && m.server === "remote-1",
     "the runner can run remote-1",
   );
   let running = play(state, "runner", runMove);
@@ -157,7 +157,7 @@ Deno.test("run: the approach rez window parks for the corp and rezzing charges t
   for (let sub = 0; sub < unbrokenTotal; sub++) {
     const breakMove = runnerMove(
       running,
-      (m) => m.kind === "runner.breakSubroutine" && m.subIndex === sub,
+      (m) => m.kind === "breakSubroutine" && m.subIndex === sub,
       `the runner can break whitespace's subroutine ${sub} with Unity`,
     );
     running = play(running, "runner", breakMove);
@@ -176,15 +176,15 @@ Deno.test("run: the approach rez window parks for the corp and rezzing charges t
   // The movement phase parks for the jack-out decision (rules 6.9.4c, 6.6.3).
   const movementMoves = engine.getLegalMoves(running, "runner");
   assert(
-    movementMoves.some((m) => m.kind === "runner.continueRun") &&
-      movementMoves.some((m) => m.kind === "runner.jackOut"),
+    movementMoves.some((m) => m.kind === "continueRun") &&
+      movementMoves.some((m) => m.kind === "jackOut"),
     "the movement phase offers both continueRun and jackOut",
   );
 
   // Continuing declares success at the Success Phase (rule 6.7.2) and breaches.
   const continueMove = runnerMove(
     running,
-    (m) => m.kind === "runner.continueRun",
+    (m) => m.kind === "continueRun",
     "the runner can continue the run",
   );
   running = play(running, "runner", continueMove);
@@ -211,7 +211,7 @@ Deno.test("run: the approach rez window parks for the corp and rezzing charges t
   // An agenda has no trash cost (rule 7.1.5a) — the only resolution steals it.
   const finishMove = runnerMove(
     running,
-    (m) => m.kind === "runner.finishAccess",
+    (m) => m.kind === "finishAccess",
     "the runner can finish the access",
   );
   const scoreBefore = running.runner.score.length;

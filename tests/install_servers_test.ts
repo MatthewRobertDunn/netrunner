@@ -10,6 +10,7 @@
 
 import { cardDef, engine, starterDeckConfigs } from "../src/mod.ts";
 import type { GameState } from "../src/types.ts";
+import { isCorpInstall } from "../src/types.ts";
 import { play } from "./helpers/fixtures.ts";
 import { assert, assertDefined } from "./helpers/assert.ts";
 
@@ -53,21 +54,21 @@ Deno.test("install: an asset may be installed in a remote whose root holds only 
 
   // Install the asset in a brand-new remote (assets create remotes).
   const assetInstall = engine.getLegalMoves(state, "corp").find((m) =>
-    m.kind === "corp.install" && m.cardId === assetId && m.server === "new-remote"
+    isCorpInstall(m) && m.cardId === assetId && m.server === "new-remote"
   );
   assertDefined(assetInstall, "the asset can be installed in a new remote");
   state = play(state, "corp", assetInstall!);
 
   // Now the upgrade must be installable in the same remote root.
   const upgradeMoves = engine.getLegalMoves(state, "corp").filter((m) =>
-    m.kind === "corp.install" && m.cardId === upgradeId && m.server === "remote-1"
+    isCorpInstall(m) && m.cardId === upgradeId && m.server === "remote-1"
   );
   assert(upgradeMoves.length > 0, "an upgrade can be installed next to the asset");
   state = play(state, "corp", upgradeMoves[0]!);
 
   // And a second asset/agenda must not be installable in the same root.
   const secondAsset = engine.getLegalMoves(state, "corp").filter((m) =>
-    m.kind === "corp.install" && m.server === "remote-1" &&
+    isCorpInstall(m) && m.server === "remote-1" &&
     (cardDef(m.cardId).type === "asset" || cardDef(m.cardId).type === "agenda")
   );
   assert(secondAsset.length === 0, "a second asset/agenda is rejected");
@@ -85,7 +86,7 @@ Deno.test("install: central roots accept upgrades but not assets or agendas", as
     const state = fresh(seed);
     for (const server of ["hq", "rd", "archives"] as const) {
       const moves = engine.getLegalMoves(state, "corp").filter((m) =>
-        m.kind === "corp.install" && m.server === server && m.cardId === upgradeId &&
+        isCorpInstall(m) && m.server === server && m.cardId === upgradeId &&
         cardDef(m.cardId).type === "upgrade"
       );
       assert(moves.length > 0, `an upgrade can be installed in ${server}`);
@@ -96,7 +97,7 @@ Deno.test("install: central roots accept upgrades but not assets or agendas", as
     const state = fresh(1);
     for (const server of ["hq", "rd", "archives"] as const) {
       const moves = engine.getLegalMoves(state, "corp").filter((m) =>
-        m.kind === "corp.install" && m.server === server &&
+        isCorpInstall(m) && m.server === server &&
         (cardDef(m.cardId).type === "asset" || cardDef(m.cardId).type === "agenda")
       );
       assert(moves.length === 0, `no asset/agenda may be installed in ${server}`);

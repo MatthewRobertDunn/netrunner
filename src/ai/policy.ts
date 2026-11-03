@@ -73,8 +73,8 @@ export class EvalAI implements GameAI {
     // phase that offers `runner.continueRun` should just continue — keeping
     // `runner.jackOut` in the mix would make the fun AI randomly abandon runs
     // it already priced as good.
-    const moves = legal.some((m) => m.kind === "runner.continueRun")
-      ? legal.filter((m) => m.kind !== "runner.jackOut")
+    const moves = legal.some((m) => m.kind === "continueRun")
+      ? legal.filter((m) => m.kind !== "jackOut")
       : legal;
     if (moves.length === 1) return moves[0]!;
     const baseSeed = hashSeed(ctx.seed, this.seedSalt);

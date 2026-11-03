@@ -11,6 +11,7 @@
 
 import { cardDef, engine, starterDeckConfigs } from "../src/mod.ts";
 import type { CardId, DeckConfig, GameState, Move, ServerId } from "../src/types.ts";
+import { isCorpInstall } from "../src/types.ts";
 import {
   corpDeckStartingWith,
   endCorpTurn,
@@ -44,14 +45,14 @@ function rezWindowForIce(
 ): GameState {
   let state = startGameWith(corpDeckStartingWith([iceId]), starterDeckConfigs().runner, seed);
   const install = engine.getLegalMoves(state, "corp").find((m) =>
-    m.kind === "corp.install" && m.cardId === iceId && m.server === installServer
+    isCorpInstall(m) && m.cardId === iceId && m.server === installServer
   );
   assertDefined(install, `corp can install ${iceId} protecting ${installServer}`);
   state = play(state, "corp", install!);
   state = endCorpTurn(state);
   assertEquals(state.turn.player, "runner");
   const run = engine.getLegalMoves(state, "runner").find((m) =>
-    m.kind === "runner.run" && m.server === runServer
+    m.kind === "run" && m.server === runServer
   );
   assertDefined(run, `runner can run ${runServer}`);
   state = play(state, "runner", run!);
@@ -86,7 +87,6 @@ function answerRezWindow(state: GameState, optionId: string): GameState {
   assert(prompt && prompt.kind === "rez-window", "expected a pending corp rez window");
   return play(state, "corp", {
     kind: "prompt.answer",
-    player: "corp",
     promptId: prompt.id,
     optionId,
   } as Move);
@@ -143,7 +143,7 @@ Deno.test("rez costs: rez-window displays and charges the printed cost (rules 1.
     );
     // Corp installs Palisade protecting HQ, then ends its turn.
     const install = engine.getLegalMoves(state, "corp").find((m) =>
-      m.kind === "corp.install" && m.cardId === iceId && m.server === "hq"
+      isCorpInstall(m) && m.cardId === iceId && m.server === "hq"
     );
     assertDefined(install, "corp can install Palisade protecting HQ");
     state = play(state, "corp", install!);
@@ -151,7 +151,7 @@ Deno.test("rez costs: rez-window displays and charges the printed cost (rules 1.
 
     // Runner plays Tread Lightly (its enumerated run targets HQ).
     const tread = engine.getLegalMoves(state, "runner").find((m) =>
-      m.kind === "runner.playEvent" && m.cardId === "tread_lightly"
+      m.kind === "playEvent" && m.cardId === "tread_lightly"
     );
     assertDefined(tread, "runner can play Tread Lightly");
     state = play(state, "runner", tread!);

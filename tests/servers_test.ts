@@ -10,6 +10,7 @@
 import { cardDef, engine, starterDeckConfigs } from "../src/mod.ts";
 import { continueRun, play } from "./helpers/fixtures.ts";
 import type { GameState, Move } from "../src/types.ts";
+import { isCorpInstall } from "../src/types.ts";
 import { assert, assertDefined, assertEquals } from "./helpers/assert.ts";
 
 function serverIds(state: GameState): string[] {
@@ -39,9 +40,9 @@ Deno.test("servers: remote lifecycle and public status", async (t) => {
 
     // Corp installs an asset in a brand-new remote.
     const install = engine.getLegalMoves(state, "corp").find((m) =>
-      m.kind === "corp.install" && m.server === "new-remote" &&
+      isCorpInstall(m) && m.server === "new-remote" &&
       (cardDef(m.cardId).type === "asset" || cardDef(m.cardId).type === "agenda")
-    ) as Extract<Move, { kind: "corp.install" }> | undefined;
+    ) as Extract<Move, { kind: "install" }> | undefined;
     assertDefined(install, "Corp has an asset or agenda to install");
     state = play(state, "corp", install!);
     assert(serverIds(state).includes("remote-1"), "the new remote exists after installing");
@@ -51,7 +52,7 @@ Deno.test("servers: remote lifecycle and public status", async (t) => {
 
     // Runner runs the remote; with no ice it breaches the root card.
     const run = engine.getLegalMoves(state, "runner").find((m) =>
-      m.kind === "runner.run" && m.server === "remote-1"
+      m.kind === "run" && m.server === "remote-1"
     );
     assertDefined(run, "the Runner can run the new remote");
     state = continueRun(play(state, "runner", run!));
@@ -71,26 +72,20 @@ Deno.test("servers: remote lifecycle and public status", async (t) => {
 
     // Access the card (with a single candidate the engine auto-accesses it),
     // then trash it.
-    const canAccess = engine.getLegalMoves(state, "runner").some((m) =>
-      m.kind === "runner.accessCard"
-    );
+    const canAccess = engine.getLegalMoves(state, "runner").some((m) => m.kind === "accessCard");
     if (canAccess) {
-      const access = engine.getLegalMoves(state, "runner").find((m) =>
-        m.kind === "runner.accessCard"
-      )!;
+      const access = engine.getLegalMoves(state, "runner").find((m) => m.kind === "accessCard")!;
       state = play(state, "runner", access);
     }
 
-    const trash = engine.getLegalMoves(state, "runner").find((m) =>
-      m.kind === "runner.trashAccessed"
-    );
+    const trash = engine.getLegalMoves(state, "runner").find((m) => m.kind === "trashAccessed");
     assertDefined(trash, "the Runner can pay the trash cost");
     state = play(state, "runner", trash!);
 
     // The remote has nothing left in its root and no ice: it ceases to exist.
     assert(!serverIds(state).includes("remote-1"), "the empty remote ceases to exist");
     const runStillOffered = engine.getLegalMoves(state, "runner").some((m) =>
-      m.kind === "runner.run" && m.server === "remote-1"
+      m.kind === "run" && m.server === "remote-1"
     );
     assert(!runStillOffered, "no run is offered against a server that no longer exists");
   });
@@ -110,7 +105,7 @@ Deno.test("servers: remote lifecycle and public status", async (t) => {
     const install = assertDefined(
       engine.getLegalMoves(state, "corp").find(
         (m) =>
-          m.kind === "corp.install" && m.server === "new-remote" &&
+          isCorpInstall(m) && m.server === "new-remote" &&
           (cardDef(m.cardId).type === "asset" || cardDef(m.cardId).type === "agenda"),
       ),
       "the Corp has an asset or agenda to install in a new remote",

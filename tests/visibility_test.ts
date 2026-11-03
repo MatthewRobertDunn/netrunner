@@ -24,6 +24,7 @@ import {
   runnerDeckStartingWith,
 } from "./helpers/fixtures.ts";
 import type { GameEvent, GameState, Move } from "../src/types.ts";
+import { isCorpInstall } from "../src/types.ts";
 import { describeMove } from "../src/web/ui/util.ts";
 import { assert, assertDefined, assertEquals, deepClone } from "./helpers/assert.ts";
 
@@ -41,9 +42,9 @@ function installedIce(state: GameState, serverId: string) {
 function installInNewRemote(seed: number): GameState {
   const state = newStarterGame(seed);
   const install = engine.getLegalMoves(state, "corp").find(
-    (m) => m.kind === "corp.install" && m.server === "new-remote",
+    (m) => isCorpInstall(m) && m.server === "new-remote",
   );
-  assert(install && install.kind === "corp.install", "corp can install in a new remote");
+  assert(install && install.kind === "install", "corp can install in a new remote");
   return play(state, "corp", install);
 }
 
@@ -75,30 +76,30 @@ function rezzedIceEncounterState(seed = 3): GameState {
 function accessChoiceState(seed = 3): GameState {
   let state = newGameWithCorpHand(["nico_campaign", "manegarm_skunkworks"], seed);
   const installNico = engine.getLegalMoves(state, "corp").find(
-    (m) => m.kind === "corp.install" && m.cardId === "nico_campaign" && m.server === "new-remote",
+    (m) => isCorpInstall(m) && m.cardId === "nico_campaign" && m.server === "new-remote",
   );
-  assert(installNico && installNico.kind === "corp.install", "corp can install nico");
+  assert(installNico && installNico.kind === "install", "corp can install nico");
   state = play(state, "corp", installNico);
   const installManegarm = engine.getLegalMoves(state, "corp").find(
     (m) =>
-      m.kind === "corp.install" && m.cardId === "manegarm_skunkworks" &&
+      isCorpInstall(m) && m.cardId === "manegarm_skunkworks" &&
       m.server === "remote-1",
   );
-  assert(installManegarm && installManegarm.kind === "corp.install", "corp can add the upgrade");
+  assert(installManegarm && installManegarm.kind === "install", "corp can add the upgrade");
   state = play(state, "corp", installManegarm);
   const nico = assertDefined(
     state.servers.find((s) => s.id === "remote-1")?.root.find((c) => c.cardId === "nico_campaign"),
   );
   const rez = engine.getLegalMoves(state, "corp").find(
-    (m) => m.kind === "corp.rez" && m.targetId === nico.id,
+    (m) => m.kind === "rez" && m.targetId === nico.id,
   );
-  assert(rez && rez.kind === "corp.rez", "corp can rez nico");
+  assert(rez && rez.kind === "rez", "corp can rez nico");
   state = play(state, "corp", rez);
   state = endCorpTurn(state);
   const run = engine.getLegalMoves(state, "runner").find(
-    (m) => m.kind === "runner.run" && m.server === "remote-1",
+    (m) => m.kind === "run" && m.server === "remote-1",
   );
-  assert(run && run.kind === "runner.run", "runner can run the remote");
+  assert(run && run.kind === "run", "runner can run the remote");
   let after = continueRun(play(state, "runner", run));
   // Continuing to the server opens the Corp's (R) rez window (6.9.4e — the
   // unrezzed upgrade in the root); the Corp passes it so the breach keeps
@@ -334,9 +335,9 @@ Deno.test("visibility: access decisions and labels stay anonymous for facedown c
       ),
     );
     const access = engine.getLegalMoves(state, "runner").find(
-      (m) => m.kind === "runner.accessCard" && m.targetId === manegarm.id,
+      (m) => m.kind === "accessCard" && m.targetId === manegarm.id,
     );
-    assert(access && access.kind === "runner.accessCard", "the upgrade is offered for access");
+    assert(access && access.kind === "accessCard", "the upgrade is offered for access");
     const after = play(state, "runner", access);
 
     const runnerView = engine.getPlayerView(after, "runner");
@@ -359,12 +360,12 @@ Deno.test("visibility: access decisions and labels stay anonymous for facedown c
 
     const legal = engine.getLegalMoves(state, "runner");
     const rezzedMove = legal.find(
-      (m): m is Extract<Move, { kind: "runner.accessCard" }> =>
-        m.kind === "runner.accessCard" && m.targetId === rezzed.id,
+      (m): m is Extract<Move, { kind: "accessCard" }> =>
+        m.kind === "accessCard" && m.targetId === rezzed.id,
     );
     const hiddenMove = legal.find(
-      (m): m is Extract<Move, { kind: "runner.accessCard" }> =>
-        m.kind === "runner.accessCard" && m.targetId === unrezzed.id,
+      (m): m is Extract<Move, { kind: "accessCard" }> =>
+        m.kind === "accessCard" && m.targetId === unrezzed.id,
     );
     assert(rezzedMove !== undefined && hiddenMove !== undefined, "both candidates are offered");
 
@@ -426,9 +427,9 @@ Deno.test("visibility: announced Runner actions are open to the Corp (rules 10.2
     // offered on a fresh runner turn without any fixture tweak.
     const state = endCorpTurn(newStarterGame(1, { runner: runnerDeckStartingWith(["carmen"]) }));
     const install = engine.getLegalMoves(state, "runner").find(
-      (m) => m.kind === "runner.install" && m.cardId === "carmen",
+      (m) => m.kind === "install" && m.cardId === "carmen",
     );
-    assert(install && install.kind === "runner.install", "the runner can install carmen");
+    assert(install && install.kind === "install", "the runner can install carmen");
     const after = play(state, "runner", install);
 
     for (const viewer of ["corp", "runner"] as const) {
@@ -450,9 +451,9 @@ Deno.test("visibility: announced Runner actions are open to the Corp (rules 10.2
     // it lands in the Runner's heap, which is open information (rule 4.4.7b).
     const state = endCorpTurn(newStarterGame(1, { runner: runnerDeckStartingWith(["jailbreak"]) }));
     const eventMove = engine.getLegalMoves(state, "runner").find(
-      (m) => m.kind === "runner.playEvent" && m.cardId === "jailbreak",
+      (m) => m.kind === "playEvent" && m.cardId === "jailbreak",
     );
-    assert(eventMove && eventMove.kind === "runner.playEvent", "the runner can play jailbreak");
+    assert(eventMove && eventMove.kind === "playEvent", "the runner can play jailbreak");
     const after = play(state, "runner", eventMove);
     const inHeap = assertDefined(
       after.runner.discard.find((c) => c.cardId === "jailbreak"),
@@ -504,14 +505,14 @@ function twoAccessBreachState(seed = 3): GameState {
     runner: runnerDeckStartingWith(["jailbreak"]),
   });
   const install = engine.getLegalMoves(state, "corp").find(
-    (m) => m.kind === "corp.install" && m.cardId === "manegarm_skunkworks",
+    (m) => m.kind === "install" && m.cardId === "manegarm_skunkworks",
   );
-  assert(install && install.kind === "corp.install", "the corp can install manegarm");
+  assert(install && install.kind === "install", "the corp can install manegarm");
   const after = endCorpTurn(play(state, "corp", install));
   const jailbreak = engine.getLegalMoves(after, "runner").find(
-    (m) => m.kind === "runner.playEvent" && m.cardId === "jailbreak",
+    (m) => m.kind === "playEvent" && m.cardId === "jailbreak",
   );
-  assert(jailbreak && jailbreak.kind === "runner.playEvent", "the runner can play jailbreak");
+  assert(jailbreak && jailbreak.kind === "playEvent", "the runner can play jailbreak");
   return declineRezWindow(continueRun(play(after, "runner", jailbreak)));
 }
 
@@ -521,15 +522,11 @@ function twoAccessBreachState(seed = 3): GameState {
  * the returned state may still have a breach open with a pending access.
  */
 function accessRandomToCompletion(state: GameState): GameState {
-  const access = engine.getLegalMoves(state, "runner").find((m) =>
-    m.kind === "runner.accessRandom"
-  );
-  assert(access && access.kind === "runner.accessRandom", "a random access is offered");
+  const access = engine.getLegalMoves(state, "runner").find((m) => m.kind === "accessRandom");
+  assert(access && access.kind === "accessRandom", "a random access is offered");
   const afterAccess = play(state, "runner", access);
-  const finish = engine.getLegalMoves(afterAccess, "runner").find((m) =>
-    m.kind === "runner.finishAccess"
-  );
-  assert(finish && finish.kind === "runner.finishAccess", "the runner can finish the access");
+  const finish = engine.getLegalMoves(afterAccess, "runner").find((m) => m.kind === "finishAccess");
+  assert(finish && finish.kind === "finishAccess", "the runner can finish the access");
   return play(afterAccess, "runner", finish);
 }
 
@@ -571,10 +568,8 @@ Deno.test("visibility: accessed cards stay visible for the remainder of the brea
     const state = twoAccessBreachState();
     const after = accessRandomToCompletion(accessRandomToCompletion(state));
     // Finish the auto-selected root card: the breach is now complete.
-    const finish = engine.getLegalMoves(after, "runner").find((m) =>
-      m.kind === "runner.finishAccess"
-    );
-    assert(finish && finish.kind === "runner.finishAccess", "the final access is finishable");
+    const finish = engine.getLegalMoves(after, "runner").find((m) => m.kind === "finishAccess");
+    assert(finish && finish.kind === "finishAccess", "the final access is finishable");
     const ended = play(after, "runner", finish);
     assert(ended.breach === null, "the breach is complete");
 

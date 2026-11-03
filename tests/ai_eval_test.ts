@@ -24,6 +24,7 @@ import { playGame } from "../src/ai/play.ts";
 import { evaluate } from "../src/ai/eval.ts";
 import { softmaxIndex } from "../src/ai/policy.ts";
 import type { AIDecisionContext, GameState, PlayerSide, PlayerView } from "../src/types.ts";
+import { isCorpInstall } from "../src/types.ts";
 import {
   CORP_FILLER,
   endCorpTurn,
@@ -213,7 +214,7 @@ Deno.test("EvalAI varies its pick across similar positions", () => {
 function gameWinningAgendaState(agendaId: string): GameState {
   const state = newGameWithCorpHand([agendaId]);
   const install = engine.getLegalMoves(state, "corp").find(
-    (m) => m.kind === "corp.install" && m.cardId === agendaId && m.server === "new-remote",
+    (m) => isCorpInstall(m) && m.cardId === agendaId && m.server === "new-remote",
   );
   assertDefined(install, `the corp cannot install ${agendaId} in a new remote`);
   let s = play(state, "corp", install!);
@@ -232,7 +233,7 @@ Deno.test("EvalAI takes a game-winning line", async (t) => {
     const state = gameWinningAgendaState("offworld_office");
     const legal = engine.getLegalMoves(state, "corp");
     const score = assertDefined(
-      legal.find((m) => m.kind === "corp.score"),
+      legal.find((m) => m.kind === "score"),
       "the ready agenda cannot be scored",
     );
     for (let seed = 1; seed <= 10; seed++) {
@@ -258,8 +259,7 @@ Deno.test("EvalAI takes a game-winning line", async (t) => {
       seed: 3,
     });
     const install = engine.getLegalMoves(state, "corp").find(
-      (m) =>
-        m.kind === "corp.install" && m.cardId === "offworld_office" && m.server === "new-remote",
+      (m) => isCorpInstall(m) && m.cardId === "offworld_office" && m.server === "new-remote",
     );
     assertDefined(install, "the corp cannot install offworld_office in a new remote");
     state = play(state, "corp", install!);
@@ -268,13 +268,13 @@ Deno.test("EvalAI takes a game-winning line", async (t) => {
     state = setAgendaPoints(emptied, "runner", 5);
 
     const legal = engine.getLegalMoves(state, "runner");
-    const runs = legal.filter((m) => m.kind === "runner.run");
+    const runs = legal.filter((m) => m.kind === "run");
     assert(runs.length > 0, "the runner has no run move");
-    const gain = legal.find((m) => m.kind === "runner.gainCredits");
+    const gain = legal.find((m) => m.kind === "gainCredits");
     for (let seed = 1; seed <= 10; seed++) {
       const pick = decide(new EvalAI(), state, "runner", legal, seed * 131);
       assert(
-        pick.kind === "runner.run",
+        pick.kind === "run",
         `seed ${seed}: the runner chose ${pick.kind} instead of running`,
       );
     }
