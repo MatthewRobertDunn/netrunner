@@ -21199,6 +21199,7 @@ function breachMoves(state, playerSide) {
 }
 function addAbilityMoves(state, side, cards2, moves) {
   for (const card of cards2) {
+    if (side === "corp" && card.rezzed !== true) continue;
     const abilityCount = behaviors.get(card.cardId)?.paidAbilities?.length ?? 0;
     if (supportStatus(card.cardId) === "unsupported") continue;
     for (let i = 0; i < abilityCount; i++) {

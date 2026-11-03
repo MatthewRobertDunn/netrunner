@@ -497,6 +497,12 @@ function addAbilityMoves(
   moves: Move[],
 ): void {
   for (const card of cards) {
+    // Rule 1.8.6: an ability is active only while its source card is active.
+    // Corp assets, ice, and upgrades become active when they are rezzed (rule
+    // 1.8.4), and installed agendas are inactive until scored — so an unrezzed
+    // Corp card offers no paid abilities. Runner cards are installed faceup and
+    // are always active, so they are offered regardless of `rezzed`.
+    if (side === "corp" && card.rezzed !== true) continue;
     const abilityCount = behaviors.get(card.cardId)?.paidAbilities?.length ?? 0;
     if (supportStatus(card.cardId) === "unsupported") continue;
     for (let i = 0; i < abilityCount; i++) {

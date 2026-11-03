@@ -64,10 +64,11 @@ Deno.test("corp actions: advance, install, breach, and event regressions", async
 
       const urtica = assertDefined(findInstalled(s, "urtica_cipher"), "Urtica Cipher is installed");
       const palisade = assertDefined(findInstalled(s, "palisade"), "ice is installed");
+      assert(urtica.rezzed !== true, "test setup: Urtica Cipher is installed unrezzed");
       const targets = advanceTargetIds(s);
       assert(
         targets.includes(urtica.id),
-        "Urtica Cipher ('You can advance this asset.') is advanceable",
+        "an UNREZZED 'You can advance this asset' card is advanceable (rule 1599: 'even while it is unrezzed')",
       );
       assert(!targets.includes(palisade.id), "ice is never advanceable");
 
@@ -80,10 +81,73 @@ Deno.test("corp actions: advance, install, breach, and event regressions", async
         server: "new-remote",
       });
       const agenda = assertDefined(findInstalled(s, "offworld_office"), "the agenda is installed");
+      assert(agenda.rezzed !== true, "test setup: the agenda is installed unrezzed");
       const targets2 = advanceTargetIds(s);
-      assert(targets2.includes(agenda.id), "agendas can always be advanced");
+      assert(
+        targets2.includes(agenda.id),
+        "an UNREZZED agenda is always advanceable (rule 1.18.3)",
+      );
       assert(targets2.includes(urtica.id), "Urtica Cipher remains advanceable");
       assert(!targets2.includes(palisade.id), "ice is still not advanceable");
+    },
+  );
+
+  await t.step(
+    "abilities: an unrezzed Corp card offers no paid ability (rule 1.8.6)",
+    () => {
+      // Rule 1.8.6: "Most abilities are active if and only if the card they
+      // appear on is active." Corp assets/ice/upgrades become active only when
+      // rezzed (rule 1.8.4), so an unrezzed Corp card must offer NO ability
+      // move — the mirror of the advance rule above (which is explicitly
+      // allowed unrezzed). Regolith Mining License's paid ability is
+      // "[click]: take 3 credits".
+      const abilityTargetIds = (state: GameState): string[] =>
+        engine.getLegalMoves(state, "corp")
+          .filter((m) => m.kind === "ability")
+          .map((m) => (m as { targetId: string }).targetId);
+
+      let s = newGame(["regolith_mining_license"]);
+      s = play(s, "corp", {
+        kind: "install",
+        cardId: "regolith_mining_license",
+        server: "new-remote",
+      });
+      const unrezzed = assertDefined(findInstalled(s, "regolith_mining_license"), "installed");
+      assert(unrezzed.rezzed !== true, "test setup: the asset is installed unrezzed");
+      assert(
+        !abilityTargetIds(s).includes(unrezzed.id),
+        "an unrezzed asset must not offer its paid ability (inactive, rule 1.8.6)",
+      );
+
+      // Positive control: rezzing activates the card, so the ability appears.
+      s = play(s, "corp", { kind: "rez", targetId: unrezzed.id });
+      const rezzed = assertDefined(findInstalled(s, "regolith_mining_license"), "still installed");
+      assertEquals(rezzed.rezzed, true, "test setup: the asset is now active (rezzed)");
+      assert(
+        abilityTargetIds(s).includes(unrezzed.id),
+        "a rezzed asset's paid ability IS offered",
+      );
+    },
+  );
+
+  await t.step(
+    "abilities: an installed Runner card offers its ability without rezzing",
+    () => {
+      // Runner cards are installed faceup and are always active, so the Corp
+      // gate above must not touch them.
+      let s = newGame([], ["smartware_distributor"]);
+      s = nextTurnOf(s, "runner");
+      assertEquals(s.turn.player, "runner", "test setup: the runner holds the turn");
+      s = play(s, "runner", { kind: "install", cardId: "smartware_distributor" });
+      const sw = assertDefined(
+        s.runner.installed.find((c) => c.cardId === "smartware_distributor"),
+        "the resource is installed",
+      );
+      assert(sw.rezzed !== true, "test setup: Runner cards are never 'rezzed'");
+      assert(
+        engine.getLegalMoves(s, "runner").some((m) => m.kind === "ability" && m.targetId === sw.id),
+        "an installed Runner card offers its paid ability while still 'unrezzed'",
+      );
     },
   );
 

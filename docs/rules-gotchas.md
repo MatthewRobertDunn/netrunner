@@ -101,3 +101,15 @@ assertions. They live in the test files as the authoritative regression record:
   index (the ice array runs innermost-first) but not the Runner's position — rule 6.2.6 says the
   position is an element of the position sequence, not an index, so re-point `run.position` at the
   engaged ice's new index or the encounter reads the wrong card — `tests/subroutines_test.ts`
+- An inactive card offers no paid ability, but an unrezzed card CAN be advanced. `addAbilityMoves`
+  iterated `corpInstalled(state)` (every server root and ice) with no active check, so
+  `getLegalMoves` offered the paid ability of an UNREZZED Corp asset/upgrade — inactive per rule
+  1.8.6 ("abilities are active if and only if the card they appear on is active"; §9.1.8's
+  exceptions are conditional/zone abilities, not installed paid abilities), so the AI burned clicks
+  on unusable abilities (Corp EvalAI 83%→92% over the fixed seeds) — now gated on
+  `card.rezzed === true` for the Corp only (Runner cards are installed faceup and always active).
+  The mirror trap: do NOT gate ADVANCE on rezzed — rule 1599 says a card that "can be advanced" may
+  be advanced "even while it is unrezzed", and agendas are always advanceable (scored from the
+  face-down state) — `tests/corp_actions_test.ts` ("abilities: an unrezzed Corp card offers no paid
+  ability (rule 1.8.6)", "advance: ice cannot be advanced; Urtica Cipher and agendas can (rule
+  1.18.3)")
