@@ -167,6 +167,25 @@ wait for `[data-dock="status"]` to exist.
 [data-modal="archives-breach"] [data-action="finishAccess"]                        /* only while a tile is data-state="accessing" */
 ```
 
+**A `breakSubroutine` button only exists while its breaker can actually break**
+(legal-moves gates on ALL of): the breaker's effective strength ≥ the ice's
+current strength, the breaker's subtype list covers the ice's subtype, and the
+Runner can pay the break cost. So a missing break button usually means PUMP
+FIRST — read the ice's `data-card-effective-strength`, pump `pumpIcebreaker`
+until the breaker's strength (its tile counter) reaches it, then break. Don't
+chase strength the other way round. `bioroidBreak` (Brân 1.0) is the exception:
+it costs a click and has NO strength requirement, so it appears without
+pumping. A breaker's pump lasts only for the current encounter — it resets next
+ice, so re-pump each encounter before breaking.
+
+**After `resolveSubroutines`, a `choose-one` prompt can appear asking whether
+the Runner wants to jack out.** Karunā's subroutine does this: the options are
+`[data-action="prompt.answer"][data-option="jack-out"]` ("Jack out" — ends the
+run) and `[data-action="prompt.answer"][data-option="pass"]` ("Resolve remaining
+subroutines"). Note the option LABEL is not the option ID: `pass` is the id and
+"Resolve remaining subroutines" is the label — always answer by `data-option`,
+never by reading button text.
+
 ### The Archives breach dialog (rule 7.3.4: access EVERY card)
 
 When a run on Archives succeeds, `[data-modal="archives-breach"]` opens (human
@@ -199,6 +218,10 @@ use those, not the name.
 
 Turn end: spend clicks with any legal moves; the turn auto-ends at 0 clicks
 (there is no End Turn button). If hand > hand-size, the discard prompt appears.
+**At 0 clicks the `draw` and `gainCredits` buttons disappear entirely** — there
+is no "End Turn" affordance, so a missing basic-action button at the end of a
+turn is the normal handoff, not a missing control. Poll `[data-banner]` /
+`[data-state]` and wait for the AI to finish before reading the board again.
 
 ## Corp loop
 

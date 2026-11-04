@@ -113,3 +113,24 @@ assertions. They live in the test files as the authoritative regression record:
   face-down state) — `tests/corp_actions_test.ts` ("abilities: an unrezzed Corp card offers no paid
   ability (rule 1.8.6)", "advance: ice cannot be advanced; Urtica Cipher and agendas can (rule
   1.18.3)")
+
+4. **Runner cannot trash a card already in Archives (rule 7.1.5b).** The access-decision
+   generator offered `trashAccessed` on any accessed card whose trash cost was payable —
+   including a card already sitting in the Corp's discard pile. That is not a trash: it is a
+   re-trash, and it charged credits the Runner never agreed to spend. 7.1.5a (no payable
+   trash cost → no basic trash ability) was already gated; 7.1.5b was not. The guard is one
+   condition on the existing gate, `found.card.zone !== "discard"` — installed cards live in
+   `play-area`, so the legitimate case is untouched. Pinned by `tests/archives_trash_test.ts`
+   (drives a trashable asset through the Corp's mandatory discard into Archives, runs Archives,
+   and asserts no trash move is offered; then repeats with the asset installed in a remote to
+   prove the zone guard does not swallow the real case). Verified the test fails without the
+   fix and passes with it.
+
+5. **Karunā's subroutine offers a jack-out, and its option LABEL is not its option ID.**
+   `net-damage-then-optional-jack-out` (Karunā) queues a `choose-one` after the damage: the
+   options are `data-option="jack-out"` ("Jack out" — ends the run) and `data-option="pass"`
+   ("Resolve remaining subroutines"). A name-based read of the prompt box can confuse the two:
+   the id `pass` renders as the sentence "Resolve remaining subroutines", so answering by
+   button text instead of `data-option` picks the wrong option. Always answer prompts by
+   `[data-action="prompt.answer"][data-option="<id>"]`. Note this is Karunā's subroutine, not
+   Palisade's End-the-Run — the ETR resolves silently and ends the run without a prompt.
