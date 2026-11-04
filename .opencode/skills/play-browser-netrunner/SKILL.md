@@ -11,13 +11,14 @@ position, art alt text, or button label. Build selectors as CSS conjunctions
 
 ## Rules of the scheme
 
-The rules cited below (e.g. rule 7.3.4, 7.1.6, 7.1.5b) come from the
-**Netrunner Comprehensive Rules v26.03**, whose authoritative text is
-`docs/rules-v26.03.txt` in this repo (~7,312 lines; see `docs/sources.md`).
-When a rule number seems to contradict what the board does, grep the file and
-read the lettered items under that section — recorded interpretations and
+**Read the rules to understand the game.** This skill teaches you *how to drive
+the UI*, not how Netrunner works — before your first move, read the rules so
+you know what each button should do. The authoritative text is
+`docs/rules-v26.03.txt` in this repo (~7,312 lines); grep it for a rule number
+whenever the skill cites one, e.g. `grep -n "^7.3.4\." docs/rules-v26.03.txt`
+and read the lettered items under that section. Recorded interpretations and
 known trip-hazards live in `docs/rules-gotchas.md` and
-`docs/rules-questions.md`, never in the rules text itself.
+`docs/rules-questions.md` — never edit the rules text itself.
 
 - `data-action` is the verb: the **engine move kind** when the button plays a move
   (`run`, `prompt.answer`, `install`, `ability`, …), otherwise a
