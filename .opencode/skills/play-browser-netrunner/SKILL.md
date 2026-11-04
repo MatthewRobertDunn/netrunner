@@ -51,7 +51,18 @@ position, art alt text, or button label. Build selectors as CSS conjunctions
 | `data-option` | engine optionId on prompt answers | `rez-corp-12`, `pass` |
 | `data-preset` | AI strength preset | `casual`, `normal`, `strong` |
 | `data-card-pos` | ice position, **innermost = 1** | `2` |
-| `data-advancement` | advancement counters on the card — **open information (rule 10.2.3)**, so it rides even a face-down tile whose identity is hidden | `2` |
+| `data-card-effective-strength` | printed strength + the live pump — the number a run is decided on; **absent on a face-down tile** (strength would reveal the card) | `5` |
+| `data-hosted-advancement` | advancement counters on the card — **open information (rule 10.2.3)**, so it rides even a face-down tile whose identity is hidden | `2` |
+| `data-hosted-credits` | credit counters hosted on the card — likewise open, likewise present face-down | `9` |
+| `data-player-credits` | a player's credit pool | `5` |
+| `data-player-clicks` | clicks left this turn | `3` |
+| `data-player-hand` | cards in hand | `6` |
+| `data-player-hand-size` | hand limit | `5` |
+| `data-player-deck` | cards left in R&D / stack | `27` |
+| `data-player-discard` | cards in Archives / heap | `0` |
+| `data-player-agenda-points` | scored agenda points | `0` |
+| `data-player-tags` (Runner) / `data-player-bad-publicity` (Corp) | tags / bad publicity — different things, different names | `2` |
+| `data-agenda-target` | points needed to win (status dock, game-wide) | `7` |
 | `data-side` | `corp` \| `runner` | |
 | `data-own` | `true` = this seat's interface, `false` = mirror | |
 | `data-dock` | region: `status`, `card`, `log` | |
@@ -80,16 +91,21 @@ wait for `[data-dock="status"]` to exist.
   `[data-dock="status"] .turn-player` (e.g. `Runner · acting`).
 - Whose interface: `[data-own="true"]` is the human seat; `[data-own="false"]`
   mirrors the opponent (never has action buttons).
-- Clicks/credits: `[data-own="true"] .primary-stat.clicks .primary-val`,
-  `[data-own="true"] [data-action="gainCredits"] .primary-val`.
+- Both players' status, straight off the block — no scraping of visible text:
+  `[data-side="corp"][data-player-credits]`, `.data-player-clicks`,
+  `-hand`, `-hand-size`, `-deck`, `-discard`, `-agenda-points`, plus `-tags`
+  (Runner) / `-bad-publicity` (Corp). The win target is `[data-agenda-target]`.
+  Add `[data-own="true"]` to get the human's own numbers.
 - Waiting on the AI: `[data-state="thinking"]` (status dock) or
   `[data-state="waiting"]` (action panel). Poll until they disappear.
 - Winner: `[data-modal="win"]` auto-opens; after dismissal,
   `[data-action="show-result"]` reopens it.
-- What's advanced: `[data-advancement="<n>"]` on a tile — the most-read number on the board.
-  Combine it with `[data-card-id]` on a face-up card, or with the server scope
-  (`[data-server="…"]`) / `[data-card-pos]` on a face-down one: the counter is open information
-  (rule 10.2.3) even where the card's identity is hidden.
+- On a card tile: `data-card-effective-strength` (printed + live pump — absent
+  face-down), and `data-hosted-*` counters. `[data-hosted-advancement="<n>"]` is
+  the most-read number on the board: combine it with `[data-card-id]` on a
+  face-up card, or with the server scope (`[data-server="…"]`) / `[data-card-pos]`
+  on a face-down one — the counter is open information (rule 10.2.3) even where
+  the card's identity is hidden.
 
 ## Runner loop
 

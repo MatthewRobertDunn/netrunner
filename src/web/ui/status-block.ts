@@ -15,7 +15,10 @@
  * inert counter), with a deck glyph in place of the word "hand".
  *
  * The DOM contract is pinned by tests/ui/game_screen_test.ts: the
- * `data-side` / `data-own` scoping pair, the `<side>-score` strip marker, and
+ * `data-side` / `data-own` scoping pair, the per-player status numbers as
+ * `data-player-*` (credits, clicks, hand, hand-size, deck, discard, agenda
+ * points, tags for the Runner / bad publicity for the Corp — kept distinct
+ * because they are different things), the `<side>-score` strip marker, and
  * the real `<button>` tags for the interactive tiles and the scored-agenda
  * mini-cards. Buttons carry the data-* annotation contract's `data-action` +
  * parameter attributes (see docs/ui-gotchas.md): the gain/draw tiles are
@@ -109,6 +112,15 @@ export default defineComponent({
       :class="[side, isOwn ? 'status-own' : 'status-opponent', { active }]"
       :data-side="side"
       :data-own="String(isOwn)"
+      :data-player-credits="stats.credits"
+      :data-player-clicks="stats.clicks"
+      :data-player-hand="stats.handCount"
+      :data-player-hand-size="stats.handSize"
+      :data-player-deck="stats.deckCount"
+      :data-player-discard="stats.discardCount"
+      :data-player-agenda-points="stats.agendaPoints"
+      :data-player-tags="side === 'runner' ? stats.tags : undefined"
+      :data-player-bad-publicity="side === 'corp' ? stats.tags : undefined"
     >
       <div class="status-who">
         <img

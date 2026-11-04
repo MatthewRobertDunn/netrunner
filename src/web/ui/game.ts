@@ -575,7 +575,7 @@ export default defineComponent({
            .status-block's flex: 1 1 0 splits the dock evenly between them;
            data-side marks which side each block shows; active marks
            state.turn.player. -->
-      <aside class="status-dock" data-dock="status">
+      <aside class="status-dock" data-dock="status" :data-agenda-target="status.agendaPointTarget">
         <div class="status-half">
         <div class="status-title" data-panel="turn">
           <div class="turn-badge">

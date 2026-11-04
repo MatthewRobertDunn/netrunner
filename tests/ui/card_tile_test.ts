@@ -70,6 +70,11 @@ Deno.test("CardTile: hosted-credit and strength counters", async (t) => {
     const counter = wrapper.find(".credit-counter");
     assert(counter.exists(), "renders the hosted-credits counter");
     assertEquals(counter.text(), "9", "shows the loaded credit total");
+    assertEquals(
+      wrapper.attributes("data-hosted-credits"),
+      "9",
+      "hosted counters are readable as data-hosted-credit (not data-card-credits, the card's cost)",
+    );
   });
 
   await t.step("no hosted-credit counter without hosted credits", () => {
@@ -91,6 +96,11 @@ Deno.test("CardTile: hosted-credit and strength counters", async (t) => {
     assert(
       (counter.attributes("title") ?? "").includes("+1"),
       "tooltip explains the boost",
+    );
+    assertEquals(
+      wrapper.attributes("data-card-effective-strength"),
+      "4",
+      "data-card-effective-strength is printed + boost (not the printed 3)",
     );
   });
 

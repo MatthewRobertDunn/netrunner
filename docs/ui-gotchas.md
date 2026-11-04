@@ -97,10 +97,27 @@ and the test that pins the fix.
      `install`, `ability`, …) when the button plays a move, else a UI verb (`zoom`,
      `close`, `discard-pick`, `discard-submit`, `open-access`, `show-result`, `new-game`,
      `toggle-log`, `pick-side`, `pick-preset`, `random-seed`, `set-seed`, `start`).
-   - Move parameters (own attributes): `data-server`, `data-card-id` (definition id, e.g. `unity`),
-     `data-instance` (copy/instance id), `data-target` (target instance), `data-sub` and
+   - Move parameters (own attributes): `data-server`, `data-instance` (copy/instance id),
+     `data-target` (target instance), `data-sub` and
      `data-ability` (1-based, matching the visible label), `data-option` (engine optionId; the
-     reserved decline is `data-option="pass"`), `data-preset`.
+     reserved decline is `data-option="pass"`), `data-preset`, `data-card-id` (the definition id
+     the move is about, e.g. `unity`).
+   - INFORMATION families, prefixed so a name can never mean two things:
+     - `data-card-*` — properties of the card itself: `data-card-id`, `data-card-pos` (ice
+       position, innermost = 1), `data-card-effective-strength` (printed + the live pump, rule
+       3.9.5b — the number a Runner computes an encounter with). Only the EFFECTIVE strength is
+       emitted; an innate `data-card-strength` has room under the prefix but no consumer yet
+       (YAGNI). Effective strength is hidden with the card id (strength fingerprints the card,
+       10.2.2/4.6.3), so it is absent on a face-down tile.
+     - `data-hosted-*` — counters HOSTED on a card: `data-hosted-advancement`,
+       `data-hosted-credits`. Open information (rule 10.2.3), so they ride the tile even when its
+       identity is redacted. The prefix is what keeps `data-hosted-credits` (counters ON the card)
+       distinct from a future `data-card-credits` (the card's printed cost).
+     - `data-player-*` — a player's global status, on the `data-side` block: `data-player-credits`,
+       `data-player-clicks`, `data-player-hand`, `data-player-hand-size`, `data-player-deck`,
+       `data-player-discard`, `data-player-agenda-points`, and `data-player-tags` (Runner) /
+       `data-player-bad-publicity` (Corp) — kept as separate names because tags and bad publicity
+       are different things. The game-wide `data-agenda-target` sits on the status dock.
    - Moves carry no actor: `data-action` is the bare verb (`run`, `install`, `draw`, `ability`) —
      a move is verb + parameters, never `runner.run`. The seat comes from scope
      (`[data-own="true"] [data-action="gainCredits"]`) and, for the one shared verb with two shapes,
@@ -108,14 +125,11 @@ and the test that pins the fix.
      `[data-action="install"]` without a server is the Runner's. `isCorpInstall` /
      `isRunnerInstall` in `src/types.ts` are the single guard for that distinction.
    - Scoping: `data-side` (`corp|runner`), `data-own` (`true|false` — `[data-own="true"]` is this
-     seat's interface, `false` the mirror), `data-card-pos` (ice position, innermost = 1; DOM order
-     flips with the corp-seat CSS flip, positions do not), `data-group` (sheet group).
+     seat's interface, `false` the mirror), `data-group` (sheet group).
    - Non-interactive markers: `data-dock` (`status|card|log`), `data-panel`
      (`setup|turn|servers|
      hand|warnings|actions|log|score-<side>`), `data-modal` (`zoom|win`),
-     `data-banner` (`run|breach`), `data-state` (`thinking|waiting`), `data-prompt` (prompt kind),
-     `data-advancement` (advancement counters on a tile — open information, rule 10.2.3, present
-     even on face-down tiles whose `data-card-id` is withheld).
+     `data-banner` (`run|breach`), `data-state` (`thinking|waiting`), `data-prompt` (prompt kind).
      The rules that keep it clean: there are no `data-testid` attributes in `src/web/` at all; and
      the UI never READS any of these attributes (no `querySelector`/`dataset` in `src/`, no CSS
      styled off `data-*`) — they are write-only test hooks, so renaming one can never change

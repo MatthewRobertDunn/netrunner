@@ -78,20 +78,33 @@ export default defineComponent({
     const isZoomable = computed(() =>
       Boolean(props.clickable && props.card && props.card.cardId !== "hidden")
     );
-    /** The annotation contract's attributes: every face-up tile is findable
-     *  by card id, and clickable tiles are actions ("zoom") like any other
-     *  button. Facedown (redacted) tiles carry position only — except
-     *  advancement counters, which are open information (rule 10.2.3) and the
-     *  one number a Runner most needs on a face-down card, so they ride the
-     *  tile even when the card's identity is redacted. */
+    /** The annotation contract's attributes (docs/ui-gotchas.md, entry 8).
+     *  Three families, so a name can never mean two things:
+     *
+     *  - `data-card-*`  — properties of the card: its id, its ice position,
+     *    and its EFFECTIVE strength (printed + the live pump, rule 3.9.5b).
+     *    `data-card-strength` (innate) is deliberately not emitted yet — if a
+     *    need for it surfaces, it fits the same prefix (YAGNI).
+     *  - `data-hosted-*` — counters HOSTED on the card (advancement,
+     *    credits). Open information (rule 10.2.3), so they ride the tile even
+     *    when its identity is redacted.
+     *  - `data-action`   — the verb, on a clickable tile.
+     *
+     *  Effective strength is hidden with the card id (strength fingerprints
+     *  the card, rules 10.2.2/4.6.3), so it is absent on a face-down tile. */
     const cardAttrs = computed<Record<string, string | undefined>>(() => {
       const card = props.card;
       const known = card && card.cardId !== "hidden";
+      const effectiveStrength = card && card.strength !== undefined
+        ? String(card.strength + (card.strengthBoost ?? 0))
+        : undefined;
       return {
         "data-card-id": known ? card!.cardId : undefined,
-        "data-action": isZoomable.value ? "zoom" : undefined,
         "data-card-pos": props.pos !== undefined ? String(props.pos) : undefined,
-        "data-advancement": card?.advancement ? String(card.advancement) : undefined,
+        "data-card-effective-strength": effectiveStrength,
+        "data-hosted-advancement": card?.advancement ? String(card.advancement) : undefined,
+        "data-hosted-credits": card?.hostedCredits ? String(card.hostedCredits) : undefined,
+        "data-action": isZoomable.value ? "zoom" : undefined,
       };
     });
 

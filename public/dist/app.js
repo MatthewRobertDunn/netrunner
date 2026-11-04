@@ -23599,11 +23599,14 @@ var card_tile_default = defineComponent({
     const cardAttrs = computed2(() => {
       const card = props.card;
       const known = card && card.cardId !== "hidden";
+      const effectiveStrength = card && card.strength !== void 0 ? String(card.strength + (card.strengthBoost ?? 0)) : void 0;
       return {
         "data-card-id": known ? card.cardId : void 0,
-        "data-action": isZoomable.value ? "zoom" : void 0,
         "data-card-pos": props.pos !== void 0 ? String(props.pos) : void 0,
-        "data-advancement": card?.advancement ? String(card.advancement) : void 0
+        "data-card-effective-strength": effectiveStrength,
+        "data-hosted-advancement": card?.advancement ? String(card.advancement) : void 0,
+        "data-hosted-credits": card?.hostedCredits ? String(card.hostedCredits) : void 0,
+        "data-action": isZoomable.value ? "zoom" : void 0
       };
     });
     function onClick() {
@@ -24455,6 +24458,15 @@ var status_block_default = defineComponent({
       :class="[side, isOwn ? 'status-own' : 'status-opponent', { active }]"
       :data-side="side"
       :data-own="String(isOwn)"
+      :data-player-credits="stats.credits"
+      :data-player-clicks="stats.clicks"
+      :data-player-hand="stats.handCount"
+      :data-player-hand-size="stats.handSize"
+      :data-player-deck="stats.deckCount"
+      :data-player-discard="stats.discardCount"
+      :data-player-agenda-points="stats.agendaPoints"
+      :data-player-tags="side === 'runner' ? stats.tags : undefined"
+      :data-player-bad-publicity="side === 'corp' ? stats.tags : undefined"
     >
       <div class="status-who">
         <img
@@ -24990,7 +25002,7 @@ var game_default = defineComponent({
            .status-block's flex: 1 1 0 splits the dock evenly between them;
            data-side marks which side each block shows; active marks
            state.turn.player. -->
-      <aside class="status-dock" data-dock="status">
+      <aside class="status-dock" data-dock="status" :data-agenda-target="status.agendaPointTarget">
         <div class="status-half">
         <div class="status-title" data-panel="turn">
           <div class="turn-badge">

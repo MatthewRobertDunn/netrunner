@@ -224,6 +224,33 @@ Deno.test("GameScreen status dock side panel", async (t) => {
         assert(text.includes(String(expected.handCount)), `${side} hand count`);
         assert(text.includes(String(expected.deckCount)), `${side} deck count`);
         assert(text.includes(String(expected.discardCount)), `${side} discard count`);
+        // Global status is machine-readable off the block, so an agent never
+        // scrapes visible text for the numbers it plans with.
+        for (
+          const [attr, value] of [
+            ["data-player-credits", expected.credits],
+            ["data-player-clicks", expected.clicks],
+            ["data-player-hand", expected.handCount],
+            ["data-player-hand-size", expected.handSize],
+            ["data-player-deck", expected.deckCount],
+            ["data-player-discard", expected.discardCount],
+            ["data-player-agenda-points", expected.agendaPoints],
+          ] as const
+        ) {
+          assertEquals(block.attributes(attr), String(value), `${side} ${attr}`);
+        }
+        // Tags and bad publicity share the engine field but are different
+        // things, so each seat only gets its own name.
+        assertEquals(
+          block.attributes(side === "runner" ? "data-player-tags" : "data-player-bad-publicity"),
+          String(expected.tags),
+          `${side} tags/bad-publicity name is seat-correct`,
+        );
+        assertEquals(
+          block.attributes(side === "runner" ? "data-player-bad-publicity" : "data-player-tags"),
+          undefined,
+          `${side} never carries the other seat's marker`,
+        );
         // Credits + agenda points are the prominent tiles (the hand tile
         // shares their look but lives in the secondary grid).
         assertEquals(
@@ -249,6 +276,12 @@ Deno.test("GameScreen status dock side panel", async (t) => {
       // Correct zone names: Corp Archives, Runner Heap (never "heap" for corp).
       const corpBlock = dock.find('[data-side="corp"]');
       const runnerBlock = dock.find('[data-side="runner"]');
+      // The win target is game-wide, so it sits once on the dock, not per block.
+      assertEquals(
+        dock.attributes("data-agenda-target"),
+        String(status.agendaPointTarget),
+        "the dock carries the game-wide agenda target",
+      );
       assert(corpBlock.text().includes("Archives"), "corp discard labeled Archives");
       assert(!corpBlock.text().toLowerCase().includes("heap"), "corp block never says heap");
       assert(runnerBlock.text().includes("Heap"), "runner discard labeled Heap");
@@ -1042,7 +1075,7 @@ Deno.test("GameScreen advancement counters are readable from the DOM (rule 10.2.
   // Advancement counters are open information (rule 10.2.3): the Runner must
   // be able to read them on a face-down card, and an agent must be able to
   // read them from the DOM rather than from pixels. The counter therefore
-  // rides the tile as `data-advancement` alongside the card's other
+  // rides the tile as `data-hosted-advancement` alongside the card's other
   // annotations, and renders as a large token+number badge.
   function installAndAdvance(cardId: string, times = 1): GameState {
     let state = newGameWithCorpHand([cardId], 3);
@@ -1068,9 +1101,9 @@ Deno.test("GameScreen advancement counters are readable from the DOM (rule 10.2.
     const state = installAndAdvance("offworld_office", 2);
     const wrapper = mount(GameScreen, { props: { state, humanSide: "corp" } });
     const tile = wrapper.find(
-      '[data-panel="servers"] [data-card-id="offworld_office"][data-advancement="2"]',
+      '[data-panel="servers"] [data-card-id="offworld_office"][data-hosted-advancement="2"]',
     );
-    assert(tile.exists(), "the advanced tile carries data-advancement");
+    assert(tile.exists(), "the advanced tile carries data-hosted-advancement");
     assert(tile.find(".adv-counter .adv-token").exists(), "the advancement token renders");
     assertEquals(
       tile.find(".adv-counter .adv-num").text().trim(),
@@ -1082,7 +1115,7 @@ Deno.test("GameScreen advancement counters are readable from the DOM (rule 10.2.
   await t.step("the runner viewer reads the same counter on a face-down agenda", () => {
     const state = installAndAdvance("offworld_office", 2);
     const wrapper = mount(GameScreen, { props: { state, humanSide: "runner" } });
-    const tile = wrapper.find('[data-panel="servers"] [data-advancement="2"]');
+    const tile = wrapper.find('[data-panel="servers"] [data-hosted-advancement="2"]');
     assert(tile.exists(), "the counter is readable through the face-down card");
     assertEquals(
       tile.attributes("data-card-id"),
@@ -1090,9 +1123,41 @@ Deno.test("GameScreen advancement counters are readable from the DOM (rule 10.2.
       "the agenda's identity stays hidden (rule 4.6.3) while its counter is open (rule 10.2.3)",
     );
     assertEquals(
+      tile.attributes("data-card-effective-strength"),
+      undefined,
+      "strength is withheld with the identity (it fingerprints the card, rule 10.2.2)",
+    );
+    assertEquals(
       tile.find(".adv-counter .adv-num").text().trim(),
       "2",
       "the counter still reads the advancement total",
+    );
+  });
+
+  await t.step("card properties and hosted counters carry their own families", () => {
+    // `data-card-*` is the card's own property, `data-hosted-*` a counter ON
+    // it — the split that keeps `data-hosted-credits` (counters) from ever
+    // colliding with a card's printed cost.
+    let state = newGameWithCorpHand(["nico_campaign"], 3);
+    const install = assertDefined(
+      engine.getLegalMoves(state, "corp").find((m) =>
+        isCorpInstall(m) && m.cardId === "nico_campaign" && m.server === "new-remote"
+      ),
+    );
+    state = play(state, "corp", install);
+    const nico = assertDefined(findInstalled(state, "nico_campaign"), "nico installed");
+    const rez = assertDefined(
+      engine.getLegalMoves(state, "corp").find((m) => m.kind === "rez" && m.targetId === nico.id),
+    );
+    state = play(state, "corp", rez);
+
+    const wrapper = mount(GameScreen, { props: { state, humanSide: "corp" } });
+    const tile = wrapper.find(`[data-card-id="nico_campaign"]`);
+    assert(tile.exists(), "the asset tile renders");
+    assertEquals(
+      tile.attributes("data-hosted-credits"),
+      "9",
+      "the rez loaded 9 hosted credit counters, readable as data-hosted-credits",
     );
   });
 });
