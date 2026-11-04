@@ -11,6 +11,14 @@ position, art alt text, or button label. Build selectors as CSS conjunctions
 
 ## Rules of the scheme
 
+The rules cited below (e.g. rule 7.3.4, 7.1.6, 7.1.5b) come from the
+**Netrunner Comprehensive Rules v26.03**, whose authoritative text is
+`docs/rules-v26.03.txt` in this repo (~7,312 lines; see `docs/sources.md`).
+When a rule number seems to contradict what the board does, grep the file and
+read the lettered items under that section — recorded interpretations and
+known trip-hazards live in `docs/rules-gotchas.md` and
+`docs/rules-questions.md`, never in the rules text itself.
+
 - `data-action` is the verb: the **engine move kind** when the button plays a move
   (`run`, `prompt.answer`, `install`, `ability`, …), otherwise a
   UI verb (`zoom`, `close`, `discard-pick`, `discard-submit`, `open-access`,
