@@ -826,6 +826,13 @@ Deno.test("GameScreen truthful labels, banner wording, and hosted counters", asy
     const wrapper = mount(GameScreen, { props: { state, humanSide: "runner" } });
     const banner = wrapper.find('[data-banner="run"]');
     assert(banner.exists(), "run banner renders");
+    // The banner carries the raw server id as an attribute (the visible text
+    // uses the board label instead): agents scope the run from data-server.
+    assertEquals(
+      banner.attributes("data-server"),
+      "remote-1",
+      "banner carries the run's server id",
+    );
     const text = banner.text();
     assert(text.includes("RUN"), "run tag present");
     assert(text.includes("on remote 1"), `board label form, got: ${text}`);
@@ -849,7 +856,13 @@ Deno.test("GameScreen truthful labels, banner wording, and hosted counters", asy
     assert(state.breach !== null, "test setup: the run breaches HQ");
 
     const wrapper = mount(GameScreen, { props: { state, humanSide: "runner" } });
-    const text = wrapper.find('[data-banner="breach"]').text();
+    const banner = wrapper.find('[data-banner="breach"]');
+    assertEquals(
+      banner.attributes("data-server"),
+      "hq",
+      "breach banner carries the breached server id",
+    );
+    const text = banner.text();
     assert(text.includes("BREACH HQ"), `server label form, got: ${text}`);
     assertEquals(text.includes("hq"), false, "no raw server id in the banner");
     // The old "limit - used access(es) left" overstated HQ: the real
@@ -1179,6 +1192,15 @@ Deno.test("GameScreen win modal", async (t) => {
     assert(modal.exists(), "the win dialog renders over the board");
     assert(modal.text().includes("corp"), "the dialog names the winner");
     assert(modal.text().includes("agenda points"), "the dialog shows the win reason");
+    // The final score rides the dialog too (data-win-score), so an agent reads
+    // the result off the modal instead of the status blocks.
+    const score = modal.find("[data-win-score]");
+    assert(score.exists(), "the dialog shows the final score");
+    assertEquals(
+      score.attributes("data-win-score"),
+      `Runner ${state.runner.agendaPoints}/${state.agendaPointTarget} · Corp ${state.corp.agendaPoints}/${state.agendaPointTarget}`,
+      "score line carries both seats' agenda points over the target",
+    );
     assertEquals(
       wrapper.find(".banner-win").exists(),
       false,

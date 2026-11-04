@@ -275,6 +275,12 @@ export default defineComponent({
       winDismissed.value = false;
     });
     const winModalOpen = computed(() => Boolean(props.state.winner) && !winDismissed.value);
+    /** Final score line for the win dialog, e.g. "Runner 6/7 · Corp 0/7". */
+    const winScore = computed(() =>
+      props.state.winner
+        ? `Runner ${props.state.runner.agendaPoints}/${props.state.agendaPointTarget} · Corp ${props.state.corp.agendaPoints}/${props.state.agendaPointTarget}`
+        : null
+    );
 
     /**
      * The human's interaction is blocked while a prompt or access decision
@@ -594,6 +600,7 @@ export default defineComponent({
       drawMove,
       winDismissed,
       winModalOpen,
+      winScore,
       hqIdentity,
       hqIdentityImg,
       name,
@@ -702,7 +709,12 @@ export default defineComponent({
         </div>
 
         <!-- Run / breach banner (run/breach context for the action row). -->
-        <section v-if="run || breach" class="run-banner" :data-banner="breach ? 'breach' : 'run'">
+        <section
+          v-if="run || breach"
+          class="run-banner"
+          :data-banner="breach ? 'breach' : 'run'"
+          :data-server="(run ?? breach)?.server ?? ''"
+        >
           <template v-if="breach">
             <span class="run-tag">BREACH</span> {{ serverLabel(breach.server) }} ·
             <span v-if="breach.accessing">accessing a card…</span>
@@ -846,6 +858,7 @@ export default defineComponent({
         v-if="winModalOpen"
         :winner="state.winner"
         :win-reason="state.winReason"
+        :score="winScore"
         @new-game="$emit('new-game')"
         @dismiss="winDismissed = true"
       />

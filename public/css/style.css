@@ -1447,6 +1447,11 @@ button.card-tile {
   color: var(--dim);
   font-size: 13px;
 }
+.win-score {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+}
 .win-card .move-btn {
   margin-top: 10px;
   padding: 8px 22px;

@@ -24811,6 +24811,13 @@ var win_modal_default = defineComponent({
     winReason: {
       type: String,
       default: null
+    },
+    /** Final score line, e.g. "Runner 6/7 · Corp 0/7" — mirrored as
+     *  data-win-score so an automation agent reads the result off the dialog
+     *  instead of the status blocks (both remain canonical mid-game). */
+    score: {
+      type: String,
+      default: null
     }
   },
   emits: [
@@ -24870,6 +24877,7 @@ var win_modal_default = defineComponent({
         <div class="win-eyebrow">Game over</div>
         <div class="win-name">{{ winner }}</div>
         <p v-if="winReason" class="win-reason">{{ winReason }}</p>
+        <p v-if="score" class="win-score" :data-win-score="score">{{ score }}</p>
         <button class="move-btn primary" data-action="new-game" @click="$emit('new-game')">
           New game
         </button>
@@ -25028,6 +25036,7 @@ var game_default = defineComponent({
       winDismissed.value = false;
     });
     const winModalOpen = computed2(() => Boolean(props.state.winner) && !winDismissed.value);
+    const winScore = computed2(() => props.state.winner ? `Runner ${props.state.runner.agendaPoints}/${props.state.agendaPointTarget} \xB7 Corp ${props.state.corp.agendaPoints}/${props.state.agendaPointTarget}` : null);
     const blocked = computed2(() => Boolean(props.state.winner || prompt.value || accessedCard.value));
     const ownGroups = computed2(() => buildSheetGroups({
       state: props.state,
@@ -25212,6 +25221,7 @@ var game_default = defineComponent({
       drawMove,
       winDismissed,
       winModalOpen,
+      winScore,
       hqIdentity,
       hqIdentityImg,
       name,
@@ -25320,7 +25330,12 @@ var game_default = defineComponent({
         </div>
 
         <!-- Run / breach banner (run/breach context for the action row). -->
-        <section v-if="run || breach" class="run-banner" :data-banner="breach ? 'breach' : 'run'">
+        <section
+          v-if="run || breach"
+          class="run-banner"
+          :data-banner="breach ? 'breach' : 'run'"
+          :data-server="(run ?? breach)?.server ?? ''"
+        >
           <template v-if="breach">
             <span class="run-tag">BREACH</span> {{ serverLabel(breach.server) }} \xB7
             <span v-if="breach.accessing">accessing a card\u2026</span>
@@ -25464,6 +25479,7 @@ var game_default = defineComponent({
         v-if="winModalOpen"
         :winner="state.winner"
         :win-reason="state.winReason"
+        :score="winScore"
         @new-game="$emit('new-game')"
         @dismiss="winDismissed = true"
       />

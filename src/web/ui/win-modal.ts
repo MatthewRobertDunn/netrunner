@@ -45,6 +45,10 @@ export default defineComponent({
     winner: { type: String as PropType<string | null>, required: true },
     /** Why the game ended (rendered under the winner). */
     winReason: { type: String as PropType<string | null>, default: null },
+    /** Final score line, e.g. "Runner 6/7 · Corp 0/7" — mirrored as
+     *  data-win-score so an automation agent reads the result off the dialog
+     *  instead of the status blocks (both remain canonical mid-game). */
+    score: { type: String as PropType<string | null>, default: null },
   },
   emits: ["new-game", "dismiss"],
   setup() {
@@ -105,6 +109,7 @@ export default defineComponent({
         <div class="win-eyebrow">Game over</div>
         <div class="win-name">{{ winner }}</div>
         <p v-if="winReason" class="win-reason">{{ winReason }}</p>
+        <p v-if="score" class="win-score" :data-win-score="score">{{ score }}</p>
         <button class="move-btn primary" data-action="new-game" @click="$emit('new-game')">
           New game
         </button>
