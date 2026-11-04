@@ -239,6 +239,12 @@ Corp cards live on the board (not as sheet rows) — locate installed cards by
 `[data-server="…"] .server-ice-stack .card-tile[data-card-id="…"]` (unrezzed ice is redacted: no
 `data-card-id`, only `data-card-pos`).
 
+**The Actions list (`[data-panel="actions"] > .moves`) is empty whenever only basic actions
+remain.** `gainCredits` and `draw` live on their own tiles in the side panel (not the list), and the
+no-duplicates rule excludes any move already rendered under a card — so a mid-turn with just "gain a
+credit" or "draw a card" shows an empty `.moves`. Don't read that as the turn having ended: the
+tiles are the reliable signal that clicks remain.
+
 ## Prompts (the decision points)
 
 The prompt box is `[data-prompt="<kind>"]` inside `[data-panel="actions"]`. Every answer is
