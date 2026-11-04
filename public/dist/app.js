@@ -20894,7 +20894,7 @@ function movesForPrompt(state, playerSide, prompt) {
         }
       ];
       const trashCost = cardDef(found.card.cardId).trashCost;
-      if (trashCost !== null && trashCost > 0 && availableCredits(state, "runner") >= trashCost) {
+      if (found.card.zone !== "discard" && trashCost !== null && trashCost > 0 && availableCredits(state, "runner") >= trashCost) {
         moves.push({
           kind: "trashAccessed"
         });

@@ -152,10 +152,20 @@ function movesForPrompt(state: GameState, playerSide: PlayerSide, prompt: Prompt
       if (!found) return [{ kind: "finishAccess" }];
       const moves: Move[] = [{ kind: "finishAccess" }];
       const trashCost = cardDef(found.card.cardId).trashCost;
+      // Rule 7.1.5a: the basic trash ability is only available when the card has
+      // a payable trash cost. Rule 7.1.5b: the Runner cannot trash or pay the
+      // trash cost of a card in the Corp's discard pile (Archives), with the
+      // basic trash ability or any other mid-access ability. A card already in
+      // the discard zone is in Archives — it was accessed, not installed — so
+      // it never gets a trash button, however payable its cost is.
       // Affordability counts the run fund (Overclock): `finishAccess` pays via
       // `spendCredits`, which consumes `run.fundCredits` first — gate on the
       // same calculator the payment uses (availableCredits), not the pool.
-      if (trashCost !== null && trashCost > 0 && availableCredits(state, "runner") >= trashCost) {
+      if (
+        found.card.zone !== "discard" &&
+        trashCost !== null && trashCost > 0 &&
+        availableCredits(state, "runner") >= trashCost
+      ) {
         moves.push({ kind: "trashAccessed" });
       }
       return moves;
