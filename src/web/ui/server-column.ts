@@ -180,11 +180,10 @@ export default defineComponent({
           <card-tile
             v-if="c.cardId !== 'hidden'"
             :card="c"
-            small
             clickable
             @zoom="$emit('zoom', c.cardId)"
           />
-          <card-tile v-else facedown small corp />
+          <card-tile v-else :card="c" facedown corp />
         </template>
       </div>
       <div
@@ -215,6 +214,7 @@ export default defineComponent({
                open information, rule 4.6.2; identity stays hidden, 4.6.3). -->
           <card-tile
             v-else
+            :card="slot.card"
             facedown
             ice
             corp

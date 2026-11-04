@@ -80,7 +80,10 @@ export default defineComponent({
     );
     /** The annotation contract's attributes: every face-up tile is findable
      *  by card id, and clickable tiles are actions ("zoom") like any other
-     *  button. Facedown (redacted) tiles carry position only. */
+     *  button. Facedown (redacted) tiles carry position only — except
+     *  advancement counters, which are open information (rule 10.2.3) and the
+     *  one number a Runner most needs on a face-down card, so they ride the
+     *  tile even when the card's identity is redacted. */
     const cardAttrs = computed<Record<string, string | undefined>>(() => {
       const card = props.card;
       const known = card && card.cardId !== "hidden";
@@ -88,6 +91,7 @@ export default defineComponent({
         "data-card-id": known ? card!.cardId : undefined,
         "data-action": isZoomable.value ? "zoom" : undefined,
         "data-card-pos": props.pos !== undefined ? String(props.pos) : undefined,
+        "data-advancement": card?.advancement ? String(card.advancement) : undefined,
       };
     });
 
@@ -121,7 +125,10 @@ export default defineComponent({
           <div class="card-back-pattern"></div>
         </template>
       </div>
-      <div v-if="card && card.advancement" class="counter adv-counter">{{ card.advancement }}</div>
+      <div v-if="card && card.advancement" class="counter adv-counter">
+        <img class="adv-token" src="assets/svg/advancement.svg" alt="" />
+        <span class="adv-num">{{ card.advancement }}</span>
+      </div>
       <!-- Hosted credits (Nico Campaign et al): open information (rule 10.2),
            mirrored after the advancement counter. -->
       <div v-if="card && card.hostedCredits" class="counter credit-counter">{{ card.hostedCredits }}</div>

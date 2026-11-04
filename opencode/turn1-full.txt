@@ -1,0 +1,119 @@
+- generic [ref=e30]:
+  - complementary [ref=e31]:
+    - generic [ref=e32]:
+      - generic [ref=e33]:
+        - generic [ref=e34]:
+          - generic [ref=e35]: Turn 1
+          - generic [ref=e36]: Runner · acting
+        - button "New game" [ref=e37] [cursor=pointer]
+      - generic [ref=e38]:
+        - generic [ref=e39]:
+          - generic [ref=e40]: CORP
+          - generic [ref=e41]: opponent
+        - generic [ref=e42]:
+          - generic [ref=e43]:
+            - img "Credits" [ref=e44]
+            - generic [ref=e45]: "5"
+          - generic [ref=e46]:
+            - img "Agenda points" [ref=e47]
+            - generic [ref=e48]: 0/7
+        - generic [ref=e49]:
+          - generic [ref=e50]:
+            - img "Clicks" [ref=e51]
+            - generic [ref=e52]: "0"
+          - generic [ref=e53]:
+            - img "Hand" [ref=e54]
+            - generic [ref=e55]: 3/5
+          - generic [ref=e56]: deck 28
+          - generic [ref=e57]: Archives 0
+      - generic [ref=e58]:
+        - generic [ref=e59]:
+          - generic [ref=e60]: RUNNER (you)
+          - generic [ref=e61]: acting
+        - generic [ref=e62]:
+          - button "Credits 5" [ref=e63] [cursor=pointer]:
+            - img "Credits" [ref=e64]
+            - generic [ref=e65]: "5"
+          - generic [ref=e66]:
+            - img "Agenda points" [ref=e67]
+            - generic [ref=e68]: 0/7
+        - generic [ref=e69]:
+          - generic [ref=e70]:
+            - img "Clicks" [ref=e71]
+            - generic [ref=e72]: "4"
+          - button "Hand 5/5" [ref=e73] [cursor=pointer]:
+            - img "Hand" [ref=e74]
+            - generic [ref=e75]: 5/5
+          - generic [ref=e76]: deck 25
+          - generic [ref=e77]: Heap 0
+  - generic [ref=e78]:
+    - generic [ref=e79]:
+      - generic [ref=e80]:
+        - 'button "The Syndicate: Profit over Principle The Syndicate: Profit over Principle" [ref=e81] [cursor=pointer]':
+          - generic [ref=e82]:
+            - 'img "The Syndicate: Profit over Principle" [ref=e83]'
+            - generic [ref=e84]: "The Syndicate: Profit over Principle"
+        - generic "Facedown card" [ref=e87]
+        - button "Run" [ref=e89] [cursor=pointer]
+      - generic [ref=e90]:
+        - generic [ref=e92]:
+          - img "R&D" [ref=e93]
+          - generic [ref=e94]: R&D
+        - generic "Facedown card" [ref=e97]
+        - button "Run" [ref=e99] [cursor=pointer]
+      - generic [ref=e100]:
+        - generic [ref=e102]:
+          - img "Archives" [ref=e103]
+          - generic [ref=e104]: Archives
+        - button "Run" [ref=e105] [cursor=pointer]
+      - generic [ref=e106]:
+        - generic [ref=e107]: remote 1
+        - generic "Facedown card" [ref=e109]
+        - button "Run" [ref=e111] [cursor=pointer]
+    - generic [ref=e113]:
+      - generic [ref=e114]:
+        - button [ref=e115] [cursor=pointer]:
+          - img "Unity" [ref=e116]
+        - button "Install" [ref=e118] [cursor=pointer]
+      - generic [ref=e119]:
+        - button [ref=e120] [cursor=pointer]:
+          - img "Telework Contract" [ref=e121]
+        - button "Install" [ref=e123] [cursor=pointer]
+      - generic [ref=e124]:
+        - button [ref=e125] [cursor=pointer]:
+          - img "Smartware Distributor" [ref=e126]
+        - button "Install" [ref=e128] [cursor=pointer]
+      - generic [ref=e129]:
+        - button [ref=e130] [cursor=pointer]:
+          - img "Mayfly" [ref=e131]
+        - button "Install" [ref=e133] [cursor=pointer]
+      - generic [ref=e134]:
+        - button [ref=e135] [cursor=pointer]:
+          - img "VRcation" [ref=e136]
+        - button "Play" [ref=e138] [cursor=pointer]
+  - generic [ref=e139]:
+    - generic [ref=e140]: Corp cards are on the board.
+    - generic [ref=e144]:
+      - heading "Actions" [level=3] [ref=e146]
+      - generic [ref=e147]: No cards installed.
+  - complementary [ref=e148]:
+    - button "Collapse log" [ref=e149] [cursor=pointer]: ›
+    - generic [ref=e150]:
+      - heading "Game log" [level=3] [ref=e151]
+      - list [ref=e152]:
+        - listitem [ref=e153]: "— Turn 1: Runner —"
+        - listitem [ref=e154]: Corp ends turn 1
+        - listitem [ref=e155]: Corp installs a card in R&D
+        - listitem [ref=e156]: Corp spends 0 [credit]
+        - listitem [ref=e157]: Corp spends 1 [click]
+        - listitem [ref=e158]: Corp installs a card in HQ
+        - listitem [ref=e159]: Corp spends 0 [credit]
+        - listitem [ref=e160]: Corp spends 1 [click]
+        - listitem [ref=e161]: Corp installs a card in remote 1
+        - listitem [ref=e162]: Corp spends 1 [click]
+        - listitem [ref=e163]: Corp draws 1
+        - listitem [ref=e164]: Corp mandatory draw
+        - listitem [ref=e165]: "— Turn 1: Corp —"
+        - listitem [ref=e166]: Game started
+        - listitem [ref=e167]: Runner draws 5
+        - listitem [ref=e168]: Corp draws 5

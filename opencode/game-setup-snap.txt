@@ -1,0 +1,31 @@
+- generic [ref=e4]:
+  - heading "Netrunner — CyberClick Starters" [level=1] [ref=e5]
+  - paragraph [ref=e6]: Human vs. the EvalAI opponent (determinized 1-ply evaluation with softmax move selection). Pick a side and a seed.
+  - generic [ref=e7]:
+    - generic [ref=e8]:
+      - heading "You play" [level=2] [ref=e9]
+      - generic [ref=e10]:
+        - button "Runner (AI plays Corp)" [pressed] [ref=e11] [cursor=pointer]:
+          - text: Runner
+          - generic [ref=e12]: (AI plays Corp)
+        - button "Corp (AI plays Runner)" [ref=e13] [cursor=pointer]:
+          - text: Corp
+          - generic [ref=e14]: (AI plays Runner)
+    - generic [ref=e15]:
+      - heading "AI strength" [level=2] [ref=e16]
+      - generic [ref=e17]:
+        - button "Casual (12 worlds)" [ref=e18] [cursor=pointer]:
+          - text: Casual
+          - generic [ref=e19]: (12 worlds)
+        - button "Normal (24 worlds)" [pressed] [ref=e20] [cursor=pointer]:
+          - text: Normal
+          - generic [ref=e21]: (24 worlds)
+        - button "Strong (48 worlds)" [ref=e22] [cursor=pointer]:
+          - text: Strong
+          - generic [ref=e23]: (48 worlds)
+    - generic [ref=e24]:
+      - heading "Seed" [level=2] [ref=e25]
+      - generic [ref=e26]:
+        - spinbutton "Game seed" [ref=e27]: "42"
+        - button "Random" [ref=e28] [cursor=pointer]
+  - button "Start game" [ref=e29] [cursor=pointer]

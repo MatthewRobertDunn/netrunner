@@ -132,8 +132,7 @@ Deno.test("corp actions: advance, install, breach, and event regressions", async
 
   await t.step(
     "abilities: an installed Runner card offers its ability without rezzing",
-    () => {
-      // Runner cards are installed faceup and are always active, so the Corp
+    () => { // Runner cards are installed faceup and are always active, so the Corp
       // gate above must not touch them.
       let s = newGame([], ["smartware_distributor"]);
       s = nextTurnOf(s, "runner");

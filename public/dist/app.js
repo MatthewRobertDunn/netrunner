@@ -23602,7 +23602,8 @@ var card_tile_default = defineComponent({
       return {
         "data-card-id": known ? card.cardId : void 0,
         "data-action": isZoomable.value ? "zoom" : void 0,
-        "data-card-pos": props.pos !== void 0 ? String(props.pos) : void 0
+        "data-card-pos": props.pos !== void 0 ? String(props.pos) : void 0,
+        "data-advancement": card?.advancement ? String(card.advancement) : void 0
       };
     });
     function onClick() {
@@ -23642,7 +23643,10 @@ var card_tile_default = defineComponent({
           <div class="card-back-pattern"></div>
         </template>
       </div>
-      <div v-if="card && card.advancement" class="counter adv-counter">{{ card.advancement }}</div>
+      <div v-if="card && card.advancement" class="counter adv-counter">
+        <img class="adv-token" src="assets/svg/advancement.svg" alt="" />
+        <span class="adv-num">{{ card.advancement }}</span>
+      </div>
       <!-- Hosted credits (Nico Campaign et al): open information (rule 10.2),
            mirrored after the advancement counter. -->
       <div v-if="card && card.hostedCredits" class="counter credit-counter">{{ card.hostedCredits }}</div>
@@ -24313,11 +24317,10 @@ var server_column_default = defineComponent({
           <card-tile
             v-if="c.cardId !== 'hidden'"
             :card="c"
-            small
             clickable
             @zoom="$emit('zoom', c.cardId)"
           />
-          <card-tile v-else facedown small corp />
+          <card-tile v-else :card="c" facedown corp />
         </template>
       </div>
       <div
@@ -24348,6 +24351,7 @@ var server_column_default = defineComponent({
                open information, rule 4.6.2; identity stays hidden, 4.6.3). -->
           <card-tile
             v-else
+            :card="slot.card"
             facedown
             ice
             corp

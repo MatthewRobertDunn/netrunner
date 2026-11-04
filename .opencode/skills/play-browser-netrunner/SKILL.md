@@ -27,6 +27,12 @@ position, art alt text, or button label. Build selectors as CSS conjunctions
 - `data-sub` and `data-ability` are **1-based** to match visible labels.
 - There are zero `data-testid` attributes in the DOM, and the UI never reads any
   `data-*` attribute.
+- **Scoping attributes are not unique selectors.** `data-server` marks both a server's column
+  container and (when a run is legal) its Run button — `[data-server="hq"]` alone matches TWO
+  elements. `data-card-id` is the same kind of thing (hand cards, board tiles, sheet rows, scored
+  mini-cards all carry it). Always pair a scoping attribute with `data-action`
+  (`[data-action="run"][data-server="hq"]`) or use it to scope a descendant
+  (`[data-server="hq"] .server-root-row .card-tile`).
 - The contract is pinned by `tests/ui/game_screen_test.ts` and
   `tests/ui/card_zoom_test.ts`, and documented in `docs/ui-gotchas.md` (entry 8).
   If a selector below stops matching, fix the source, not the skill.
@@ -36,7 +42,7 @@ position, art alt text, or button label. Build selectors as CSS conjunctions
 | Attribute | Meaning | Example |
 |---|---|---|
 | `data-action` | verb (move kind or UI verb) | `prompt.answer` |
-| `data-server` | server id | `hq`, `rd`, `archives`, `remote-1`, `new-remote` |
+| `data-server` | server id — **not unique**: marks both the server's column container and, when a run is legal, its Run button | `hq`, `rd`, `archives`, `remote-1`, `new-remote` |
 | `data-card-id` | card definition id | `unity`, `palisade` |
 | `data-instance` | copy/instance id | `runner-12` |
 | `data-target` | target instance id | `corp-33` |
@@ -45,6 +51,7 @@ position, art alt text, or button label. Build selectors as CSS conjunctions
 | `data-option` | engine optionId on prompt answers | `rez-corp-12`, `pass` |
 | `data-preset` | AI strength preset | `casual`, `normal`, `strong` |
 | `data-card-pos` | ice position, **innermost = 1** | `2` |
+| `data-advancement` | advancement counters on the card — **open information (rule 10.2.3)**, so it rides even a face-down tile whose identity is hidden | `2` |
 | `data-side` | `corp` \| `runner` | |
 | `data-own` | `true` = this seat's interface, `false` = mirror | |
 | `data-dock` | region: `status`, `card`, `log` | |
@@ -79,6 +86,10 @@ wait for `[data-dock="status"]` to exist.
   `[data-state="waiting"]` (action panel). Poll until they disappear.
 - Winner: `[data-modal="win"]` auto-opens; after dismissal,
   `[data-action="show-result"]` reopens it.
+- What's advanced: `[data-advancement="<n>"]` on a tile — the most-read number on the board.
+  Combine it with `[data-card-id]` on a face-up card, or with the server scope
+  (`[data-server="…"]`) / `[data-card-pos]` on a face-down one: the counter is open information
+  (rule 10.2.3) even where the card's identity is hidden.
 
 ## Runner loop
 
@@ -165,6 +176,10 @@ blocks the next click).
 
 ## Known UI quirks
 
+- **`[data-server="…"]` is not unique.** It sits on the server's column container *and* on its Run
+  button, so it matches two elements whenever a run is legal (and one when it doesn't — the button
+  disappears mid-run). Select the button as `[data-action="run"][data-server="…"]`, or use
+  `data-server` purely as a scope for descendants (`[data-server="hq"] .server-root-row .card-tile`).
 - **The zoom popup intercepts clicks.** Clicking any card tile opens
   `[data-modal="zoom"]`; close it with `Escape` or
   `[data-modal="zoom"] [data-action="close"]` before touching anything behind it.

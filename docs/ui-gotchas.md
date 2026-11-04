@@ -113,7 +113,9 @@ and the test that pins the fix.
    - Non-interactive markers: `data-dock` (`status|card|log`), `data-panel`
      (`setup|turn|servers|
      hand|warnings|actions|log|score-<side>`), `data-modal` (`zoom|win`),
-     `data-banner` (`run|breach`), `data-state` (`thinking|waiting`), `data-prompt` (prompt kind).
+     `data-banner` (`run|breach`), `data-state` (`thinking|waiting`), `data-prompt` (prompt kind),
+     `data-advancement` (advancement counters on a tile — open information, rule 10.2.3, present
+     even on face-down tiles whose `data-card-id` is withheld).
      The rules that keep it clean: there are no `data-testid` attributes in `src/web/` at all; and
      the UI never READS any of these attributes (no `querySelector`/`dataset` in `src/`, no CSS
      styled off `data-*`) — they are write-only test hooks, so renaming one can never change

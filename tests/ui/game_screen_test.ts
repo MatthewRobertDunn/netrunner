@@ -1038,6 +1038,65 @@ Deno.test("GameScreen card dock: sheets, per-card actions, no duplicates", async
   });
 });
 
+Deno.test("GameScreen advancement counters are readable from the DOM (rule 10.2.3)", async (t) => {
+  // Advancement counters are open information (rule 10.2.3): the Runner must
+  // be able to read them on a face-down card, and an agent must be able to
+  // read them from the DOM rather than from pixels. The counter therefore
+  // rides the tile as `data-advancement` alongside the card's other
+  // annotations, and renders as a large token+number badge.
+  function installAndAdvance(cardId: string, times = 1): GameState {
+    let state = newGameWithCorpHand([cardId], 3);
+    const install = assertDefined(
+      engine.getLegalMoves(state, "corp").find((m) =>
+        isCorpInstall(m) && m.cardId === cardId && m.server === "new-remote"
+      ),
+    );
+    state = play(state, "corp", install);
+    const target = assertDefined(findInstalled(state, cardId), `${cardId} installed`);
+    for (let i = 0; i < times; i++) {
+      const advance = assertDefined(
+        engine.getLegalMoves(state, "corp").find((m) =>
+          m.kind === "advance" && m.targetId === target.id
+        ),
+      );
+      state = play(state, "corp", advance);
+    }
+    return state;
+  }
+
+  await t.step("the corp viewer reads the counter on a face-up agenda", () => {
+    const state = installAndAdvance("offworld_office", 2);
+    const wrapper = mount(GameScreen, { props: { state, humanSide: "corp" } });
+    const tile = wrapper.find(
+      '[data-panel="servers"] [data-card-id="offworld_office"][data-advancement="2"]',
+    );
+    assert(tile.exists(), "the advanced tile carries data-advancement");
+    assert(tile.find(".adv-counter .adv-token").exists(), "the advancement token renders");
+    assertEquals(
+      tile.find(".adv-counter .adv-num").text().trim(),
+      "2",
+      "the counter shows the advancement total",
+    );
+  });
+
+  await t.step("the runner viewer reads the same counter on a face-down agenda", () => {
+    const state = installAndAdvance("offworld_office", 2);
+    const wrapper = mount(GameScreen, { props: { state, humanSide: "runner" } });
+    const tile = wrapper.find('[data-panel="servers"] [data-advancement="2"]');
+    assert(tile.exists(), "the counter is readable through the face-down card");
+    assertEquals(
+      tile.attributes("data-card-id"),
+      undefined,
+      "the agenda's identity stays hidden (rule 4.6.3) while its counter is open (rule 10.2.3)",
+    );
+    assertEquals(
+      tile.find(".adv-counter .adv-num").text().trim(),
+      "2",
+      "the counter still reads the advancement total",
+    );
+  });
+});
+
 Deno.test("GameScreen win modal", async (t) => {
   /** A finished game: the fixture state with the winner stamped on. */
   function wonGame(winner: "corp" | "runner" | "draw", reason: string) {
