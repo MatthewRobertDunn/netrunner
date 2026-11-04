@@ -23961,6 +23961,7 @@ var archives_breach_dialog_default = defineComponent({
               data-action="accessCard"
               :data-target="entry.card.id"
               :disabled="!!accessing"
+              :aria-label="'Access ' + entry.title + ' (' + entry.card.id + ')'"
               @click="$emit('access', entry.card.id)"
             >
               <card-tile :card="entry.card" />
@@ -24014,6 +24015,7 @@ function archivesBreachEntries(state) {
   candidates.sort((a, b) => Number(cardDef(b.cardId).type === "agenda") - Number(cardDef(a.cardId).type === "agenda"));
   const entries = candidates.map((card) => ({
     card,
+    title: cardDef(card.cardId).title,
     state: "remaining",
     agendaPoints: 0
   }));
@@ -24023,6 +24025,7 @@ function archivesBreachEntries(state) {
     const stolen = state.runner.score.some((c) => c.id === id);
     entries.push({
       card,
+      title: cardDef(card.cardId).title,
       state: breach.accessing === id ? "accessing" : stolen ? "stolen" : "accessed",
       agendaPoints: stolen ? cardDef(card.cardId).agendaPoints ?? 0 : 0
     });

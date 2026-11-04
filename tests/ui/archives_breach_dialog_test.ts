@@ -163,6 +163,10 @@ Deno.test("Archives breach dialog: the DOM contract", async (t) => {
       "remaining tiles are accessCard buttons",
     );
     assertEquals(first.attributes("data-target"), ids.agenda);
+    // The accessible name carries the action, the title AND the instance id —
+    // a name-based snapshot (which does not show data-* attributes) can still
+    // target one specific copy.
+    assertEquals(first.attributes("aria-label"), `Access Send a Message (${ids.agenda})`);
     assert(
       wrapper.find('[data-modal="archives-breach"] [data-card-id="send_a_message"]').exists(),
       "the agenda tile shows its real card id (faceup, rule 7.3.2)",

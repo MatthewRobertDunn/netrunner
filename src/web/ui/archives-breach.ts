@@ -30,6 +30,9 @@ export type ArchivesBreachCardState =
 export interface ArchivesBreachEntry {
   /** The card at its CURRENT location (stolen agendas live in the score area). */
   card: CardInstance;
+  /** Printed title, for accessible labels (the data-* attributes are the
+   *  agent contract; this is what a name-based snapshot announces). */
+  title: string;
   state: ArchivesBreachCardState;
   /** Agenda points for a stolen agenda (0 otherwise). */
   agendaPoints: number;
@@ -66,6 +69,7 @@ export function archivesBreachEntries(state: GameState): ArchivesBreachEntry[] {
 
   const entries: ArchivesBreachEntry[] = candidates.map((card) => ({
     card,
+    title: cardDef(card.cardId).title,
     state: "remaining" as const,
     agendaPoints: 0,
   }));
@@ -75,6 +79,7 @@ export function archivesBreachEntries(state: GameState): ArchivesBreachEntry[] {
     const stolen = state.runner.score.some((c) => c.id === id);
     entries.push({
       card,
+      title: cardDef(card.cardId).title,
       state: breach.accessing === id ? "accessing" : stolen ? "stolen" : "accessed",
       agendaPoints: stolen ? (cardDef(card.cardId).agendaPoints ?? 0) : 0,
     });

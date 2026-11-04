@@ -90,6 +90,23 @@ wait for `[data-dock="status"]` to exist.
 
 ## Reading game state (no engine access needed)
 
+- **Accessibility snapshots show ROLES and NAMES, not `data-*` attributes.** A
+  snapshot of the Archives dialog renders `dialog "Accessing Archives"` /
+  `button "Finish access"` / `generic "Hedge Fund Gain 9 credits."` — the
+  attributes are on those elements but the snapshot tree omits them. Never
+  conclude a control "has no data-* attributes" from a snapshot: the scheme is
+  on the DOM. Two ways to read/act on it:
+  - **Act by selector**: the click/find tools accept a unique CSS selector, so
+    click straight from this skill's catalog (e.g.
+    `[data-modal="archives-breach"] [data-action="access-remaining"]`) — no
+    snapshot ref needed.
+  - **Read by evaluate**: `document.querySelector(sel)?.getAttribute("data-x")`,
+    or dump a whole attribute map, e.g.
+    `[...document.querySelectorAll('[data-modal="archives-breach"] [data-state]')].map(e => ({state: e.getAttribute('data-state'), id: e.getAttribute('data-instance')}))`.
+  Only fall back to button NAMES when an element genuinely has no selector —
+  and then prefer the names this app guarantees: breach tiles are
+  `"Access <Card Title> (<instance-id>)"` (unique even for duplicate cards),
+  plus `"Access remaining"` / `"Finish access"`.
 - Turn/phase: `[data-dock="status"] .turn-num` (text `Turn 3`) and
   `[data-dock="status"] .turn-player` (e.g. `Runner · acting`).
 - Whose interface: `[data-own="true"]` is the human seat; `[data-own="false"]`
@@ -170,6 +187,15 @@ condition). Access semantics:
   `access-remaining`, which also answers it).
 - Progress: `[data-breach-accessed]` ("Accessed X of N"),
   `[data-breach-remaining]`. The dialog closes itself at X = N.
+
+A one-card Archives (e.g. the Corp's first-turn mandatory discard on seed 42)
+goes straight to that last case: the dialog opens with a single
+`data-state="accessing"` tile and only `Finish access` / `Access remaining`
+worth clicking — there is no `remaining` tile at all. That is correct, not a
+missing scheme. Note also that the tile's snapshot name comes from its card
+title tooltip (`"Hedge Fund Gain 9 credits."`); its `data-card-id` (the
+definition id `hedge_fund`) is on the tile, and `data-instance` on the slot —
+use those, not the name.
 
 Turn end: spend clicks with any legal moves; the turn auto-ends at 0 clicks
 (there is no End Turn button). If hand > hand-size, the discard prompt appears.

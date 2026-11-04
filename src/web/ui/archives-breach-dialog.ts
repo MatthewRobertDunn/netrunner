@@ -164,6 +164,7 @@ export default defineComponent({
               data-action="accessCard"
               :data-target="entry.card.id"
               :disabled="!!accessing"
+              :aria-label="'Access ' + entry.title + ' (' + entry.card.id + ')'"
               @click="$emit('access', entry.card.id)"
             >
               <card-tile :card="entry.card" />
