@@ -67,9 +67,12 @@ position, art alt text, or button label. Build selectors as CSS conjunctions
 | `data-own` | `true` = this seat's interface, `false` = mirror | |
 | `data-dock` | region: `status`, `card`, `log` | |
 | `data-panel` | region: `setup`, `turn`, `servers`, `hand`, `warnings`, `actions`, `log`, `score-<side>` | |
-| `data-modal` | dialog: `zoom` (card popup + access decisions), `win` | |
+| `data-modal` | dialog: `zoom` (card popup + access decisions), `win`, `archives-breach` | |
 | `data-banner` | run context: `run` \| `breach` | |
-| `data-state` | `thinking` / `waiting` (AI acting) | |
+| `data-state` | `thinking` / `waiting` (AI acting); inside `[data-modal="archives-breach"]` per-tile: `remaining` \| `accessing` \| `accessed` \| `stolen` | |
+| `data-breach-accessed` | archives dialog status: "Accessed X of N" | |
+| `data-breach-remaining` | archives dialog status: N cards left to access | |
+| `data-breach-stolen-points` | present only when agendas were stolen this breach: "+N agenda points" | |
 | `data-prompt` | prompt kind on the prompt box | `mulligan`, `discard`, `rez-window`, `choose-one`, `access-decision` |
 
 ## Setup loop
@@ -139,7 +142,34 @@ wait for `[data-dock="status"]` to exist.
 /* Access decision lives INSIDE the zoom modal — the only place these appear: */
 [data-modal="zoom"] [data-action="trashAccessed"]
 [data-modal="zoom"] [data-action="finishAccess"]
+
+/* ARCHIVES breaches are different: a modal owns the whole breach, the zoom
+   and the action panel stand down, and these are the ONLY controls: */
+[data-modal="archives-breach"] [data-action="accessCard"][data-target="corp-33"]  /* click a remaining tile */
+[data-modal="archives-breach"] [data-action="access-remaining"]                    /* sweep the rest, agenda-first */
+[data-modal="archives-breach"] [data-action="finishAccess"]                        /* only while a tile is data-state="accessing" */
 ```
+
+### The Archives breach dialog (rule 7.3.4: access EVERY card)
+
+When a run on Archives succeeds, `[data-modal="archives-breach"]` opens (human
+Runner only). It is **not dismissible** — no Esc, no backdrop click, no close
+button; it unmounts by itself when every card is accessed. Cards render in one
+horizontally scrolling row, agendas leftmost (stealing them is the win
+condition). Access semantics:
+
+- `[data-state="remaining"]` tiles are the clickable ones
+  (`[data-action="accessCard"]`). Click them one at a time, or press
+  `[data-action="access-remaining"]` once to sweep the pile left-to-right.
+- After a click the tile flips to `data-state="accessed"` (or `stolen` for an
+  agenda — badged "Stolen +N"; read `data-breach-stolen-points`). Agendas are
+  stolen automatically (rule 7.1.6); nothing in Archives is trashable
+  (rule 7.1.5b) — there are deliberately no Trash buttons here.
+- If a tile shows `data-state="accessing"`, the engine auto-chose it and its
+  forced finish decision is pending: click `[data-action="finishAccess"]` (or
+  `access-remaining`, which also answers it).
+- Progress: `[data-breach-accessed]` ("Accessed X of N"),
+  `[data-breach-remaining]`. The dialog closes itself at X = N.
 
 Turn end: spend clicks with any legal moves; the turn auto-ends at 0 clicks
 (there is no End Turn button). If hand > hand-size, the discard prompt appears.
@@ -200,8 +230,18 @@ blocks the next click).
   `[data-modal="zoom"]`; close it with `Escape` or
   `[data-modal="zoom"] [data-action="close"]` before touching anything behind it.
   The hand-card action row also hides while that card's zoom is open.
+- **A pending rez-window blocks mid-run moves.** Approaching ice (or the server)
+  can park the run on the CORP's rez-window prompt (`[data-prompt="rez-window"]`,
+  rule 6.9.4e). While it is pending, `[data-action="continueRun"]` may be absent
+  or illegal — the AI Corp answers it within ~100ms. If a mid-run button you
+  expect is missing, poll: check `[data-prompt]` / `[data-state="thinking"]`
+  and re-read `[data-banner="run"]` before concluding the move is illegal.
 - **Two copies of a card** share `data-card-id` — always disambiguate by
-  `data-instance` when it matters which copy.
+  `data-instance` when it matters which copy. This applies to ACTION BUTTONS
+  too, not just tiles: with two icebreakers installed, every
+  `breakSubroutine`/`pumpIcebreaker` button exists once per program, each
+  carrying its own `data-instance` (the program's instance id) — pair
+  `[data-action]` with `[data-instance]` to hit the breaker you mean.
 - **DOM order of ice flips with the seat** (corp seat renders the stack
   reversed). Never use `nth` on ice slots; use `data-card-pos` (innermost = 1).
 - **The AI opponent plays fast.** Between your turns, poll
@@ -213,6 +253,14 @@ blocks the next click).
   naming its target. The Runner's installed-card actions instead render under the
   card's row on the sheet. There is no table of "kind → surface" to consult: the
   exclusion is derived from what the own sheet actually drew.
+- **The DOM is the contract — never reach past it.** The page holds the full
+  engine state client-side (`window.__netrunner` exists for debugging, and Vue
+  internals are inspectable), but an automation agent must not use them to read
+  hidden information or to drive moves: the data-* annotations above are the
+  sanctioned interface, and what they expose is exactly what the seat may know.
+  Reading `window.__netrunner`'s raw state would leak the opponent's hand and
+  deck order — treat it as off-limits the way a human peeking at the Corp's
+  hand would be.
 - **`data-testid` selectors must not be reintroduced** — they failed exactly
   because positional strings couldn't carry extra parameters (see
   `docs/ui-gotchas.md` entry 8 for the history).

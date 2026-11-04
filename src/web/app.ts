@@ -21,6 +21,7 @@ import {
 } from "../mod.ts";
 import type { GameAI, GameState, Move, PlayerSide } from "../types.ts";
 import GameScreen from "./ui/game.ts";
+import { advanceArchives } from "./ui/archives-breach.ts";
 import { actorOf, imageFor } from "./ui/util.ts";
 
 interface StrengthPreset {
@@ -156,6 +157,23 @@ export default defineComponent({
       apply(humanSide.value, move);
     }
 
+    /**
+     * Archives breach driver — see `advanceArchives` in ui/archives-breach.ts
+     * for the gesture semantics (one click per card, "Access remaining"
+     * sweeps agenda-first, the auto-chosen final card is surfaced, never
+     * silently answered). The reactive shell is injected here so the loop
+     * stays testable against the bare engine.
+     */
+    function onArchivesAdvance(
+      intent: { type: "card"; instanceId: string } | { type: "remaining" },
+    ) {
+      advanceArchives(intent, {
+        getState: () => state.value,
+        apply,
+        humanSide: humanSide.value,
+      });
+    }
+
     return {
       state,
       humanSide,
@@ -167,6 +185,7 @@ export default defineComponent({
       sideGlyph: SIDE_GLYPH,
       start,
       onMove,
+      onArchivesAdvance,
     };
   },
   template: `
@@ -178,6 +197,7 @@ export default defineComponent({
           :thinking="thinking"
           :last-warning="lastWarning"
           @move="onMove"
+          @archives-advance="onArchivesAdvance"
           @new-game="state = null"
         />
       </template>

@@ -4,7 +4,11 @@
  * Installs happy-dom on `globalThis` so Vue's runtime and
  * `@vue/test-utils` can mount components without a real browser or network.
  *
- * Import this module first in every UI test file.
+ * Import this module first in every UI test file, as a BARE import
+ * (`import "./setup.ts"`). A named import whose binding is never referenced
+ * (`import { installRealCss } from "./setup.ts"` with no call) is elided by
+ * the transpiler, so the bridge never installs and mounts fail with
+ * `document is not defined`.
  */
 
 import { Window } from "happy-dom";

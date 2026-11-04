@@ -138,3 +138,52 @@ and the test that pins the fix.
      genuinely non-move controls hand-write their attributes. Files: `src/web/ui/util.ts` (the
      helper), every `src/web/ui/*.ts` render site. Tests: `tests/ui/game_screen_test.ts`,
      `tests/ui/card_zoom_test.ts` (assert the attributes directly).
+
+9. **`tests/ui/setup.ts` must be imported BARE — a named import with an unreferenced binding is
+   elided, silently removing the happy-dom bridge.** `setup.ts` installs `globalThis.document` et
+   al. as module-body side effects (and exports `installRealCss()` for CSS injection). TypeScript
+   import elision drops an import specifier that is never referenced — and when no specifiers
+   remain, the whole statement goes, side effects included. A new UI test file that copies
+   `import { installRealCss } from "./setup.ts"` without CALLING the helper therefore compiles,
+   lints, and fmts clean, then fails every `mount()` with `ReferenceError: document is not
+   defined` — while sibling test files keep passing, so it looks like a per-file haunting rather
+   than a missing module. The diagnostic signature: a module-top `typeof globalThis.document` is
+   `"undefined"` only in the failing file, and Deno's transpile cache
+   (`~/.cache/deno/gen/file/.../<file>.js`) shows the setup import absent. Rule: import it bare
+   (`import "./setup.ts";` — the form `card_tile_test.ts`/`card_zoom_test.ts` already use); the
+   named import is only legitimate in files that actually call `installRealCss()` (game_screen_test.ts
+   does, twice). `docs/ui-gotchas.md` entry 10's dialog test is the regression that found this.
+   Files: `tests/ui/setup.ts` (header warning), `tests/ui/archives_breach_dialog_test.ts` (bare
+   import). Pin: none possible in `deno test` — the trap is invisible to fmt/lint/check — so the
+   setup.ts header comment and this entry are the guard.
+
+10. **The Archives breach dialog is the human Runner's single surface for the breach; the zoom and
+   the action panel stand down while it is open.** A successful Archives run must access EVERY card
+   in the discard pile (rules 7.3.2-7.3.4, 7.4.1d) — nothing is declinable — so the modal is not
+   dismissible (no Esc, no backdrop click, no close button); it mounts while
+   `state.breach.server === "archives"` for the human Runner and unmounts when the engine ends the
+   breach. While open it OWNS the breach: `accessedCard` returns null (the per-card zoom does not
+   pop) and the ActionPanel gets `prompt=null`/`generalMoves=[]` (the no-duplicates rule), so the
+   DOM has exactly one `accessCard` path (the dialog's tiles), one `finishAccess` path, and one
+   `access-remaining` button. One click per card: the driver (`advanceArchives` in
+   `src/web/ui/archives-breach.ts`, parametrized over `{getState, apply}` so tests drive it bare)
+   answers the FORCED finish decision (`rule 7.1.5b` removed the trash option for cards already in
+   Archives) — but a decision the gesture did not request is never answered silently: when the
+   engine auto-chooses the last remaining candidate (`stepBreach`'s one-candidate shortcut), the
+   loop stops, the tile shows `data-state="accessing"`, and a Finish button appears. Corp prompts
+   that fire mid-breach (Send a Message's free-rez choice on steal) park the loop untouched — the
+   AI answers them and the human resumes; a runner-owned prompt the dialog cannot answer would hide
+   the modal (defensive gate in game.ts's `archivesActive`). DOM contract (pinned by
+   `tests/ui/archives_breach_dialog_test.ts`): `[data-modal="archives-breach"]` root; per-tile
+   `data-state="remaining|accessing|accessed|stolen"` + `data-instance`; remaining tiles are
+   `[data-action="accessCard"][data-target=…]` buttons (disabled while a decision pends);
+   `[data-action="finishAccess"]`; `[data-action="access-remaining"]`; status counters
+   `data-breach-accessed` / `data-breach-remaining` / `data-breach-stolen-points`. Cards render
+   agendas leftmost (stealing them is the point of the run) with a horizontal-scroll row
+   (`overflow-x: auto`, z-index 55 — above the card zoom, below the win modal). The template
+   expressions are compiled by Vue's RUNTIME compiler in the browser: plain JS only — a TS
+   annotation inside a template arrow ( `(id: string) => …` ) is a runtime SyntaxError that breaks
+   EVERY GameScreen mount (entry 3's zoom test caught it).
+   Files: `src/web/ui/archives-breach.ts`, `src/web/ui/archives-breach-dialog.ts`,
+   `src/web/ui/game.ts`, `src/web/app.ts`, `public/css/style.css`. Tests:
+   `tests/ui/archives_breach_dialog_test.ts`.

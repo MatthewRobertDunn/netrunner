@@ -23850,6 +23850,230 @@ var action_panel_default = defineComponent({
   `
 });
 
+// src/web/ui/archives-breach-dialog.ts
+var archives_breach_dialog_default = defineComponent({
+  name: "ArchivesBreachDialog",
+  components: {
+    CardTile: card_tile_default
+  },
+  props: {
+    /** The breach's ordered card list (see archives-breach.ts). */
+    entries: {
+      type: Array,
+      required: true
+    }
+  },
+  emits: [
+    "access",
+    "finish",
+    "remaining"
+  ],
+  setup(props) {
+    const backdropRef = ref(null);
+    let previousFocus = null;
+    onMounted(() => {
+      const doc2 = globalThis;
+      previousFocus = doc2.document?.activeElement ?? null;
+      backdropRef.value?.focus();
+    });
+    onUnmounted(() => {
+      previousFocus?.focus();
+      previousFocus = null;
+    });
+    function trapTab(e) {
+      const root = backdropRef.value;
+      if (!root) return;
+      const stops = [
+        root
+      ];
+      const buttons = root.querySelectorAll("button");
+      for (let i = 0; i < buttons.length; i++) {
+        const button = buttons[i];
+        if (!button.disabled) stops.push(button);
+      }
+      const doc2 = globalThis;
+      const current = doc2.document?.activeElement;
+      const at = current ? stops.indexOf(current) : -1;
+      const from = at === -1 ? 0 : at;
+      e.preventDefault();
+      const next = e.shiftKey ? stops[(from - 1 + stops.length) % stops.length] : stops[(from + 1) % stops.length];
+      next?.focus();
+    }
+    const remaining = computed2(() => props.entries.filter((e) => e.state === "remaining"));
+    const accessing = computed2(() => props.entries.find((e) => e.state === "accessing") ?? null);
+    const accessed = computed2(() => props.entries.filter((e) => e.state !== "remaining").length);
+    const stolenPoints = computed2(() => props.entries.reduce((sum, e) => sum + e.agendaPoints, 0));
+    function badgeFor(entry) {
+      if (entry.state === "accessing") return "Accessing\u2026";
+      if (entry.state === "stolen") return `Stolen +${entry.agendaPoints}`;
+      if (entry.state === "accessed") return "Accessed";
+      return "";
+    }
+    return {
+      backdropRef,
+      trapTab,
+      remaining,
+      accessing,
+      accessed,
+      stolenPoints,
+      badgeFor
+    };
+  },
+  template: `
+    <div
+      ref="backdropRef"
+      class="breach-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Accessing Archives"
+      data-modal="archives-breach"
+      tabindex="0"
+      @keydown.tab="trapTab"
+    >
+      <div class="breach-card">
+        <div class="breach-eyebrow">Successful run</div>
+        <h2 class="breach-title">Accessing Archives</h2>
+        <p class="breach-hint">
+          Every card in Archives is faceup and must be accessed (rule 7.3.4) \u2014
+          click a card to access it. Agendas are stolen automatically
+          (rule 7.1.6); cards already in Archives cannot be trashed
+          (rule 7.1.5b).
+        </p>
+
+        <div class="breach-status">
+          <span data-breach-accessed>Accessed {{ accessed }} of {{ entries.length }}</span>
+          <span data-breach-remaining>{{ remaining.length }} remaining</span>
+          <span v-if="stolenPoints > 0" class="breach-stolen" data-breach-stolen-points>
+            Stolen +{{ stolenPoints }} agenda points
+          </span>
+        </div>
+
+        <div class="breach-cards">
+          <template v-for="entry in entries" :key="entry.card.id">
+            <!-- Remaining: a real button (keyboard reachable); disabled while
+                 a forced finish decision is pending \u2014 that decision belongs to
+                 the accessing card. -->
+            <button
+              v-if="entry.state === 'remaining'"
+              class="breach-slot"
+              data-state="remaining"
+              :data-instance="entry.card.id"
+              data-action="accessCard"
+              :data-target="entry.card.id"
+              :disabled="!!accessing"
+              @click="$emit('access', entry.card.id)"
+            >
+              <card-tile :card="entry.card" />
+            </button>
+            <!-- Accessed / accessing / stolen: inert, badged in place. The
+                 tile itself carries data-card-id; the wrapper only scopes the
+                 copy (data-instance) and the breach state. -->
+            <div
+              v-else
+              class="breach-slot"
+              :data-state="entry.state"
+              :data-instance="entry.card.id"
+            >
+              <card-tile :card="entry.card" :highlight="entry.state === 'accessing'" :badge="badgeFor(entry)" />
+            </div>
+          </template>
+          <span v-if="!entries.length" class="breach-empty">Archives is empty</span>
+        </div>
+
+        <div class="breach-controls">
+          <button
+            v-if="accessing"
+            class="move-btn primary"
+            data-action="finishAccess"
+            @click="$emit('finish')"
+          >Finish access</button>
+          <button
+            class="move-btn"
+            data-action="access-remaining"
+            :disabled="!remaining.length && !accessing"
+            @click="$emit('remaining')"
+          >Access remaining</button>
+        </div>
+      </div>
+    </div>
+  `
+});
+
+// src/web/ui/archives-breach.ts
+function archivesBreachActive(state) {
+  return state.breach?.server === "archives";
+}
+function archivesBreachEntries(state) {
+  const breach = state.breach;
+  if (!breach || breach.server !== "archives") return [];
+  const chosen = new Set(breach.chosen);
+  const candidates = [
+    ...state.corp.discard,
+    ...state.servers.find((s) => s.id === "archives")?.root ?? []
+  ].filter((c) => !chosen.has(c.id));
+  candidates.sort((a, b) => Number(cardDef(b.cardId).type === "agenda") - Number(cardDef(a.cardId).type === "agenda"));
+  const entries = candidates.map((card) => ({
+    card,
+    state: "remaining",
+    agendaPoints: 0
+  }));
+  for (const id of breach.chosen) {
+    const card = findCardIn(state, id);
+    if (!card) continue;
+    const stolen = state.runner.score.some((c) => c.id === id);
+    entries.push({
+      card,
+      state: breach.accessing === id ? "accessing" : stolen ? "stolen" : "accessed",
+      agendaPoints: stolen ? cardDef(card.cardId).agendaPoints ?? 0 : 0
+    });
+  }
+  return entries;
+}
+function nextArchivesCandidate(state) {
+  for (const entry of archivesBreachEntries(state)) {
+    if (entry.state === "remaining") return entry.card.id;
+  }
+  return null;
+}
+function advanceArchives(intent, ctx) {
+  const inBreach = (s) => Boolean(s && !s.winner && s.breach && s.breach.server === "archives");
+  let requestedId = null;
+  if (intent.type === "card") {
+    const s = ctx.getState();
+    if (!inBreach(s)) return;
+    ctx.apply(ctx.humanSide, {
+      kind: "accessCard",
+      targetId: intent.instanceId
+    });
+    requestedId = intent.instanceId;
+  }
+  let guard = 0;
+  while (guard++ < 200) {
+    const s = ctx.getState();
+    if (!inBreach(s)) break;
+    const prompt = s.prompts[0];
+    if (prompt) {
+      if (prompt.player !== "runner" || prompt.kind !== "access-decision") break;
+      if (intent.type === "card" && prompt.cardId !== requestedId) break;
+      const before2 = ctx.getState();
+      ctx.apply(ctx.humanSide, {
+        kind: "finishAccess"
+      });
+      if (ctx.getState() === before2) break;
+      continue;
+    }
+    if (intent.type === "card") break;
+    const next = nextArchivesCandidate(s);
+    if (!next) break;
+    const before = ctx.getState();
+    ctx.apply(ctx.humanSide, {
+      kind: "accessCard",
+      targetId: next
+    });
+    if (ctx.getState() === before) break;
+  }
+}
+
 // src/web/ui/card-sheet.ts
 var SHEET_GROUP_TYPES = [
   "program",
@@ -24656,6 +24880,7 @@ var game_default = defineComponent({
   name: "GameScreen",
   components: {
     ActionPanel: action_panel_default,
+    ArchivesBreachDialog: archives_breach_dialog_default,
     CardSheet: card_sheet_default,
     CardTile: card_tile_default,
     CardZoom: card_zoom_default,
@@ -24683,7 +24908,8 @@ var game_default = defineComponent({
   },
   emits: [
     "move",
-    "new-game"
+    "new-game",
+    "archives-advance"
   ],
   setup(props, { emit: emit2 }) {
     const discardSelected = ref([]);
@@ -24753,7 +24979,14 @@ var game_default = defineComponent({
       }
       return count;
     });
+    const archivesActive = computed2(() => {
+      if (props.humanSide !== "runner" || !archivesBreachActive(props.state)) return false;
+      const pending = props.state.prompts[0];
+      return !pending || pending.player !== "runner" || pending.kind === "access-decision";
+    });
+    const archivesEntries = computed2(() => archivesActive.value ? archivesBreachEntries(props.state) : []);
     const accessedCard = computed2(() => {
+      if (archivesActive.value) return null;
       for (const p2 of props.state.prompts) {
         if (p2.kind === "access-decision" && p2.player === props.humanSide) {
           return findCardIn(props.state, p2.cardId);
@@ -24900,6 +25133,8 @@ var game_default = defineComponent({
       return keys;
     });
     const generalMoves = computed2(() => legal.value.filter((m) => !isCardMove(m) && !MOVE_KIND_GROUPS.run.has(m.kind) && !hostedOnTile(m) && !sheetHostedKeys.value.has(moveKey(m))));
+    const panelPrompt = computed2(() => archivesActive.value ? null : prompt.value);
+    const panelGeneralMoves = computed2(() => archivesActive.value ? [] : generalMoves.value);
     function cardMoves(cardId) {
       if (!isHumanTurn.value || prompt.value) return [];
       return legal.value.filter((m) => MOVE_KIND_GROUPS.card.has(m.kind) && "cardId" in m && m.cardId === cardId);
@@ -24963,6 +25198,10 @@ var game_default = defineComponent({
       run,
       breach,
       accessedCard,
+      archivesActive,
+      archivesEntries,
+      panelPrompt,
+      panelGeneralMoves,
       currentIceId,
       zoomActions,
       serverRows,
@@ -25158,9 +25397,9 @@ var game_default = defineComponent({
                 :ai-side-name="aiSideName"
                 :label="moveLabel"
                 :accessed-card-id="accessedCard ? accessedCard.cardId : null"
-                :prompt="prompt"
+                :prompt="panelPrompt"
                 :legal="legal"
-                :general-moves="generalMoves"
+                :general-moves="panelGeneralMoves"
                 :hand="hand"
                 :discard-selected="discardSelected"
                 :can-discard="canDiscard"
@@ -25196,6 +25435,21 @@ var game_default = defineComponent({
         :actions="zoomActions"
         @close="closeZoom"
         @move="playFromZoom"
+      />
+
+      <!-- Archives breach (human Runner only): the modal that owns the whole
+           breach \u2014 every card faceup, access all, agendas stolen
+           automatically. It is not dismissible (the breach is mandatory); it
+           unmounts when the engine ends the breach. The advance intents go to
+           the root, which owns the multi-move chain. Template expressions are
+           compiled by Vue's runtime compiler \u2014 plain JS only, no TS
+           annotations (docs/ui-gotchas.md, the archives-dialog entry). -->
+      <archives-breach-dialog
+        v-if="archivesActive"
+        :entries="archivesEntries"
+        @access="(id) => $emit('archives-advance', { type: 'card', instanceId: id })"
+        @finish="play({ kind: 'finishAccess' })"
+        @remaining="$emit('archives-advance', { type: 'remaining' })"
       />
 
       <!-- Game over: a dialog over the play surface (the announcement used to
@@ -25319,6 +25573,13 @@ var app_default = defineComponent({
     function onMove(move) {
       apply2(humanSide.value, move);
     }
+    function onArchivesAdvance(intent) {
+      advanceArchives(intent, {
+        getState: () => state.value,
+        apply: apply2,
+        humanSide: humanSide.value
+      });
+    }
     return {
       state,
       humanSide,
@@ -25329,7 +25590,8 @@ var app_default = defineComponent({
       presets: PRESETS,
       sideGlyph: SIDE_GLYPH,
       start,
-      onMove
+      onMove,
+      onArchivesAdvance
     };
   },
   template: `
@@ -25341,6 +25603,7 @@ var app_default = defineComponent({
           :thinking="thinking"
           :last-warning="lastWarning"
           @move="onMove"
+          @archives-advance="onArchivesAdvance"
           @new-game="state = null"
         />
       </template>

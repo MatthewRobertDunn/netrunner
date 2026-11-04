@@ -26,6 +26,8 @@
 import { computed, defineComponent, ref, watch } from "vue";
 import type { PropType } from "vue";
 import ActionPanel from "./action-panel.ts";
+import ArchivesBreachDialog from "./archives-breach-dialog.ts";
+import { archivesBreachActive, archivesBreachEntries } from "./archives-breach.ts";
 import CardSheet, { buildSheetGroups } from "./card-sheet.ts";
 import CardTile from "./card-tile.ts";
 import CardZoom from "./card-zoom.ts";
@@ -52,14 +54,23 @@ import {
 
 export default defineComponent({
   name: "GameScreen",
-  components: { ActionPanel, CardSheet, CardTile, CardZoom, ServerColumn, StatusBlock, WinModal },
+  components: {
+    ActionPanel,
+    ArchivesBreachDialog,
+    CardSheet,
+    CardTile,
+    CardZoom,
+    ServerColumn,
+    StatusBlock,
+    WinModal,
+  },
   props: {
     state: { type: Object as PropType<GameState>, required: true },
     humanSide: { type: String as PropType<PlayerSide>, required: true },
     thinking: { type: Boolean, default: false },
     lastWarning: { type: String, default: "" },
   },
-  emits: ["move", "new-game"],
+  emits: ["move", "new-game", "archives-advance"],
   setup(
     props: {
       state: GameState;
@@ -67,7 +78,9 @@ export default defineComponent({
       thinking: boolean;
       lastWarning: string;
     },
-    { emit }: { emit: (event: "move" | "new-game", ...args: unknown[]) => void },
+    { emit }: {
+      emit: (event: "move" | "new-game" | "archives-advance", ...args: unknown[]) => void;
+    },
   ) {
     const discardSelected = ref<string[]>([]);
     const zoomCardId = ref<string | null>(null);
@@ -184,7 +197,28 @@ export default defineComponent({
       }
       return count;
     });
+    /**
+     * The human Runner's Archives breach dialog domain (rules 7.3.2-7.3.4).
+     * While it is open it OWNS every breach decision: the per-card access
+     * zoom and the action panel's access affordances are suppressed (one
+     * surface, no duplicate buttons — docs/ui-gotchas.md, the no-duplicates
+     * rule). Corp-owned prompts that can fire mid-breach (Send a Message's
+     * free-rez choice on steal) stay underneath: the AI answers them and the
+     * dialog remains. A RUNNER-owned prompt the dialog cannot answer would
+     * hide the modal instead — no starter-pool card produces one, but the
+     * guard keeps the prompt box reachable if a future card does.
+     */
+    const archivesActive = computed(() => {
+      if (props.humanSide !== "runner" || !archivesBreachActive(props.state)) return false;
+      const pending = props.state.prompts[0];
+      return !pending || pending.player !== "runner" ||
+        pending.kind === "access-decision";
+    });
+    const archivesEntries = computed(() =>
+      archivesActive.value ? archivesBreachEntries(props.state) : []
+    );
     const accessedCard = computed(() => {
+      if (archivesActive.value) return null; // the breach dialog owns access
       for (const p of props.state.prompts) {
         // Only the human's own access decision pops the zoom: the AI answers
         // its accesses in ~60ms, so auto-opening on the opponent's prompt
@@ -445,6 +479,19 @@ export default defineComponent({
         ),
     );
 
+    /**
+     * The action panel's view of prompts and moves, quieted while the
+     * Archives breach dialog owns the breach: its access-decision prompt and
+     * accessCard moves would render duplicate affordances behind the modal
+     * (the no-duplicates rule), so the panel shows neither until the breach
+     * ends. Non-access prompts (discard, mulligan) can never coexist with a
+     * breach, but they pass through unchanged regardless.
+     */
+    const panelPrompt = computed(() => archivesActive.value ? null : prompt.value);
+    const panelGeneralMoves = computed<Move[]>(() =>
+      archivesActive.value ? [] : generalMoves.value
+    );
+
     /** Legal play/install moves for a card with this definition id. */
     function cardMoves(cardId: string): Move[] {
       if (!isHumanTurn.value || prompt.value) return [];
@@ -536,6 +583,10 @@ export default defineComponent({
       run,
       breach,
       accessedCard,
+      archivesActive,
+      archivesEntries,
+      panelPrompt,
+      panelGeneralMoves,
       currentIceId,
       zoomActions,
       serverRows,
@@ -731,9 +782,9 @@ export default defineComponent({
                 :ai-side-name="aiSideName"
                 :label="moveLabel"
                 :accessed-card-id="accessedCard ? accessedCard.cardId : null"
-                :prompt="prompt"
+                :prompt="panelPrompt"
                 :legal="legal"
-                :general-moves="generalMoves"
+                :general-moves="panelGeneralMoves"
                 :hand="hand"
                 :discard-selected="discardSelected"
                 :can-discard="canDiscard"
@@ -769,6 +820,21 @@ export default defineComponent({
         :actions="zoomActions"
         @close="closeZoom"
         @move="playFromZoom"
+      />
+
+      <!-- Archives breach (human Runner only): the modal that owns the whole
+           breach — every card faceup, access all, agendas stolen
+           automatically. It is not dismissible (the breach is mandatory); it
+           unmounts when the engine ends the breach. The advance intents go to
+           the root, which owns the multi-move chain. Template expressions are
+           compiled by Vue's runtime compiler — plain JS only, no TS
+           annotations (docs/ui-gotchas.md, the archives-dialog entry). -->
+      <archives-breach-dialog
+        v-if="archivesActive"
+        :entries="archivesEntries"
+        @access="(id) => $emit('archives-advance', { type: 'card', instanceId: id })"
+        @finish="play({ kind: 'finishAccess' })"
+        @remaining="$emit('archives-advance', { type: 'remaining' })"
       />
 
       <!-- Game over: a dialog over the play surface (the announcement used to
