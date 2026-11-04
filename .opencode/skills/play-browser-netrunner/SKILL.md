@@ -18,10 +18,8 @@ whenever the skill cites one, e.g. `grep -n "^7.3.4\." docs/rules-v26.03.txt` an
 items under that section. Recorded interpretations and known trip-hazards live in
 `docs/rules-gotchas.md` and `docs/rules-questions.md` — never edit the rules text itself.
 
-For a tutorial stripped of the physical-game setup and the starter-pool cards that aren't in this
-build, read `docs/web-game-tutorial.md` (adapts the Null Signal Games Learn-to-Play guides for both
-sides). It is the quickest way to learn the goal, the board, a turn on each side, and the run
-sequence.
+For a tutorial on the goal, the board, a turn on each side, and the run sequence — adapted to this
+web game — read `docs/web-game-tutorial.md`.
 
 - `data-action` is the verb: the **engine move kind** when the button plays a move (`run`,
   `prompt.answer`, `install`, `ability`, …), otherwise a UI verb (`zoom`, `close`, `discard-pick`,

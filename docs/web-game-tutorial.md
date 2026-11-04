@@ -1,27 +1,12 @@
 # Netrunner: a web-game tutorial for agents
 
-Adapted from the Null Signal Games Learn-to-Play guides (Corp + Runner), minus everything that
-doesn't apply to this web game. This file is the strategy and rules orientation for browser agents;
-the annotation scheme and per-button selectors live in
-`.opencode/skills/play-browser-netrunner/SKILL.md`.
+This file is the strategy and rules orientation for browser agents; the annotation scheme and
+per-button selectors live in `.opencode/skills/play-browser-netrunner/SKILL.md`.
 
-Originals:
-
-- https://nullsignal.games/players/learn-to-play/learn-to-play-corp/
-- https://nullsignal.games/players/learn-to-play/learn-to-play-runner/
-
-Differences from the physical game (read this first):
-
-- This web game uses the full starter decks and plays to **7 agenda points**, not the teaching
-  game's 6. There is no "STOP HERE" divider, no booster pack, no colored card backs.
-- There is no action reference card, no physical credit/click tracker, and no flipping a card to end
-  your turn: the turn ends when your clicks reach zero (the engine advances automatically).
-- Both players start with **5 credits and a 5-card hand** (rule 1.6.4, 1.6.6). The Corp gets **3
-  clicks** per turn, the Runner gets **4 clicks**.
-- Card art and flavor text are present on tiles but never drive decisions; the `data-*` attributes
-  in SKILL.md carry the same information in readable form.
-- For the authoritative wording of any rule, see `docs/rules-v26.03.txt` (the Netrunner
-  Comprehensive Rules v26.03); interpretations live in `docs/rules-questions.md`.
+Both players start with **5 credits and a 5-card hand** (rule 1.6.4, 1.6.6). The Corp gets **3
+clicks** per turn, the Runner gets **4 clicks** — a turn ends automatically when its clicks run out.
+**7 agenda points** wins. For the authoritative wording of any rule, see `docs/rules-v26.03.txt`
+(the Netrunner Comprehensive Rules v26.03); interpretations live in `docs/rules-questions.md`.
 
 ## The goal
 
@@ -53,7 +38,7 @@ many cards install each, and which ice protect them.
 
 ### The Corp's cards
 
-- **Identity** (The Syndicate): marks the seat. No ability in this build.
+- **Identity** (The Syndicate): marks the seat. No ability.
 - **Operations**: one-shot effects, played faceup from HQ, then trashed faceup to Archives. (Hedge
   Fund: gain 9; Seamless Launch: place 2 advancement counters on an already-installed card — not an
   "advance", but the counters count the same for agendas.)
@@ -80,7 +65,7 @@ many cards install each, and which ice protect them.
 
 All Runner cards install faceup and are paid for upfront.
 
-- **Identity** (The Catalyst): marks the seat. 4 memory units in this build. No ability.
+- **Identity** (The Catalyst): marks the seat. 4 memory units. No ability.
 - **Programs (icebreakers)**: break subroutines on ice of a matching subtype, provided the breaker's
   strength is at least the ice's current strength. Pump first (`pumpIcebreaker`), then break
   (`breakSubroutine`). Strength resets after each encounter. Starters: Cleaver (fracter, vs
@@ -103,13 +88,11 @@ All Runner cards install faceup and are paid for upfront.
 - **Events**: one-shot effects from hand, often run-sourcing, then trashed to the heap: Jailbreak,
   Overclock, Tread Lightly, Sure Gamble, Creative Commission, VRCation.
 
-### Damage and tags
+### Damage
 
 - **Net damage**: trash that many cards from the grip at random. Empty grip + more damage =
   flatline, Runner loses. Urtica Cipher (accessed) and Karunā / Diviner (subroutines) are the
   starter sources.
-- **Tags / bad publicity** exist on the status blocks, but no starter-pool card in this build moves
-  them — they are display-only for now.
 
 ## A Corp turn
 
@@ -170,5 +153,5 @@ cards accumulate.
 - Karunā offers a jack-out between its two net-damage subroutines; taking it skips the second.
 - Manegarm taxes AFTER the last ice, BEFORE success: 2 clicks, 5 credits, or the run ends.
 - Mayfly trashes itself when the run ends, not when its break resolves.
-- Cards entering Archives facedown stay facedown to the Runner until accessed; this build shows
-  every Archives card faceup at breach time.
+- Archives cards are all shown faceup at breach time (rule 7.3.2), so the breach dialog reveals the
+  whole pile — there is nothing left to discover by accessing one at a time.
