@@ -16909,7 +16909,6 @@ var mod_exports = {};
 __export(mod_exports, {
   AiGameError: () => AiGameError,
   EvalAI: () => EvalAI,
-  EvalAI2: () => EvalAI2,
   PASS_OPTION_ID: () => PASS_OPTION_ID,
   RandomAI: () => RandomAI,
   actorOf: () => actorOf,
@@ -22840,23 +22839,23 @@ function fnv1aHex(text) {
 function makeAIDecisionContext(state, side, seed) {
   const opponent = other(side);
   const opp = player(state, opponent);
-  const accessedId3 = state.breach?.accessing;
+  const accessedId2 = state.breach?.accessing;
   const ownDeck = player(state, side).deck.map((c) => c.cardId);
   const unseen = [];
-  for (const card of opp.hand) if (card.id !== accessedId3) unseen.push(card.cardId);
-  for (const card of opp.deck) if (card.id !== accessedId3) unseen.push(card.cardId);
+  for (const card of opp.hand) if (card.id !== accessedId2) unseen.push(card.cardId);
+  for (const card of opp.deck) if (card.id !== accessedId2) unseen.push(card.cardId);
   if (side === "runner") {
     for (const server of state.servers) {
       for (const card of [
         ...server.root,
         ...server.ice
       ]) {
-        if (card.id === accessedId3) continue;
+        if (card.id === accessedId2) continue;
         if (card.rezzed !== true) unseen.push(card.cardId);
       }
     }
     for (const card of state.corp.discard) {
-      if (card.id === accessedId3) continue;
+      if (card.id === accessedId2) continue;
       unseen.push(card.cardId);
     }
   }
@@ -22944,6 +22943,9 @@ var W_CORP_HAND = 0.65;
 var W_RUNNER_HAND = 1.6;
 var W_DECK_DANGER = 3;
 var W_AGENDA_IN_HAND = 0.6;
+var W_RESERVE_SHORTFALL = 0.9;
+var RESERVE_SHORTFALL_CAP = 4;
+var RESERVE_TARGET_CAP = 6;
 var W_ICE_REZZED_CENTRAL = 2.2;
 var W_ICE_REZZED_REMOTE = 1.5;
 var W_ICE_UNREZZED_CENTRAL = 1;
@@ -23008,6 +23010,9 @@ function playerTerm(state, side) {
       const def2 = cardDef(card.cardId);
       if (def2.type === "agenda") s += W_AGENDA_IN_HAND * (def2.agendaPoints ?? 0);
     }
+    const reserve = rezReserve(state);
+    const shortfall = Math.min(reserve - me.credits, RESERVE_SHORTFALL_CAP);
+    if (shortfall > 0) s -= W_RESERVE_SHORTFALL * shortfall;
   }
   s += side === "corp" ? corpBoardTerm(state) : runnerBoardTerm(state);
   return s;
@@ -23033,7 +23038,7 @@ function corpBoardTerm(state) {
       hasAnyIce = true;
       if (ice.rezzed === true) hasRezzedIce = true;
     }
-    const agendaGuard = hasRezzedIce ? 1 : hasAnyIce ? ROOT_AGENDA_HALED_FACTOR : ROOT_AGENDA_UNPROTECTED_FACTOR;
+    const agendaGuard = hasRezzedIce ? 1 : hasAnyIce ? rootGuardFactor(state, server) : ROOT_AGENDA_UNPROTECTED_FACTOR;
     if (server.root.length > 0) {
       if (!central) s += W_SERVER_SPREAD;
       for (const card of server.root) {
@@ -23105,8 +23110,11 @@ function rootValue(card, agendaGuard) {
       const worth = W_ROOT_AGENDA_BASE + W_ROOT_AGENDA_PER_POINT * points + W_ROOT_AGENDA_PROGRESS * progress + (advancementOf(card) >= req ? W_ROOT_AGENDA_READY : 0);
       return worth * agendaGuard;
     }
-    case "asset":
-      return W_ROOT_ASSET + W_ROOT_PER_CREDIT * (card.hostedCredits ?? 0) + respectTerm(card, def2);
+    case "asset": {
+      const base = W_ROOT_ASSET + W_ROOT_PER_CREDIT * (card.hostedCredits ?? 0);
+      const guardedBase = def2.subtypes.includes("ambush") ? base : base * agendaGuard;
+      return guardedBase + respectTerm(card, def2);
+    }
     case "upgrade":
       return W_ROOT_UPGRADE + respectTerm(card, def2);
     default:
@@ -23119,6 +23127,29 @@ function respectTerm(card, def2) {
     return W_TRAP_PER_ADVANCE * Math.min(advancement, TRAP_ADVANCE_CAP);
   }
   return W_BLUFF_PER_ADVANCE * Math.min(advancement, BLUFF_ADVANCE_CAP);
+}
+function rootGuardFactor(state, server) {
+  for (let i = server.ice.length - 1; i >= 0; i--) {
+    const ice = server.ice[i];
+    if (ice.rezzed !== true) {
+      return state.corp.credits >= rezCostFor(state, ice) ? ROOT_AGENDA_HALED_FACTOR : ROOT_AGENDA_UNPROTECTED_FACTOR;
+    }
+  }
+  return ROOT_AGENDA_HALED_FACTOR;
+}
+function rezReserve(state) {
+  let need = 0;
+  for (const server of state.servers) {
+    if (server.root.length === 0) continue;
+    for (let i = server.ice.length - 1; i >= 0; i--) {
+      const ice = server.ice[i];
+      if (ice.rezzed !== true) {
+        need += rezCostFor(state, ice);
+        break;
+      }
+    }
+  }
+  return Math.min(need, RESERVE_TARGET_CAP);
 }
 function advancementOf(card) {
   return card.advancement ?? 0;
@@ -23183,7 +23214,7 @@ function accessedId(state) {
 
 // src/ai/policy.ts
 var DEFAULT_SAMPLES = 32;
-var DEFAULT_TEMPERATURE = 2;
+var DEFAULT_TEMPERATURE = 1;
 var FLOOR = -0.9 * WIN;
 var EvalAI = class {
   name = "eval";
@@ -23193,354 +23224,6 @@ var EvalAI = class {
   constructor(opts = {}) {
     this.samples = opts.samples ?? DEFAULT_SAMPLES;
     this.temperature = opts.temperature ?? DEFAULT_TEMPERATURE;
-    this.seedSalt = opts.seedSalt ?? 0;
-  }
-  chooseMove(view, legal, ctx) {
-    const moves = legal.some((m) => m.kind === "continueRun") ? legal.filter((m) => m.kind !== "jackOut") : legal;
-    if (moves.length === 1) return moves[0];
-    const baseSeed = hashSeed(ctx.seed, this.seedSalt);
-    const sums = new Float64Array(moves.length);
-    let worlds = 0;
-    for (let k = 1; k <= this.samples; k++) {
-      const worldRng = makeRng(hashSeed(baseSeed, k));
-      let world;
-      try {
-        world = determinize(view, ctx, worldRng);
-      } catch {
-        continue;
-      }
-      worlds++;
-      for (let i = 0; i < moves.length; i++) {
-        const clone = fastCloneState(world);
-        const result = applyMove(clone, ctx.side, moves[i], {
-          mutate: true
-        });
-        const score = result.kind === "applied" ? evaluate(result.state, ctx.side) : FLOOR;
-        sums[i] = sums[i] + score;
-      }
-    }
-    if (worlds === 0) {
-      const rng = makeRng(baseSeed ^ 1542469173);
-      const idx = Math.floor(rng.next() * moves.length) % moves.length;
-      return moves[idx] ?? moves[0];
-    }
-    const avgs = new Float64Array(moves.length);
-    for (let i = 0; i < moves.length; i++) avgs[i] = sums[i] / worlds;
-    const pickRng = makeRng(hashSeed(baseSeed, 7919));
-    return moves[softmaxIndex(avgs, this.temperature, pickRng)];
-  }
-};
-function softmaxIndex(avgs, temperature, rng) {
-  let max = -Infinity;
-  for (const a of avgs) if (a > max) max = a;
-  let total = 0;
-  const weights = new Float64Array(avgs.length);
-  for (let i = 0; i < avgs.length; i++) {
-    const w = Math.exp((avgs[i] - max) / Math.max(temperature, 1e-9));
-    weights[i] = w;
-    total += w;
-  }
-  const roll = rng.next() * total;
-  let acc = 0;
-  for (let i = 0; i < weights.length; i++) {
-    acc += weights[i];
-    if (roll < acc) return i;
-  }
-  return weights.length - 1;
-}
-
-// src/ai/eval-v2.ts
-var WIN2 = 1e4;
-var DRAW2 = 0;
-var W_TARGET_PROXIMITY2 = 2;
-var W_AGENDA_POINT2 = 13;
-var W_CREDIT2 = 0.35;
-var W_CLICK2 = 0.9;
-var W_CORP_HAND2 = 0.65;
-var W_RUNNER_HAND2 = 1.6;
-var W_DECK_DANGER2 = 3;
-var W_AGENDA_IN_HAND2 = 0.6;
-var W_RESERVE_SHORTFALL = 0.9;
-var RESERVE_SHORTFALL_CAP = 4;
-var RESERVE_TARGET_CAP = 6;
-var W_ICE_REZZED_CENTRAL2 = 2.2;
-var W_ICE_REZZED_REMOTE2 = 1.5;
-var W_ICE_UNREZZED_CENTRAL2 = 1;
-var W_ICE_UNREZZED_REMOTE2 = 0.6;
-var W_ICE_STRENGTH2 = 0.3;
-var ICE_STRENGTH_CAP2 = 8;
-var W_ROOT_AGENDA_BASE2 = 1;
-var W_ROOT_AGENDA_PER_POINT2 = 2.5;
-var W_ROOT_AGENDA_PROGRESS2 = 5;
-var W_ROOT_AGENDA_READY2 = 1;
-var W_ROOT_ASSET2 = 1.6;
-var W_ROOT_PER_CREDIT2 = 0.3;
-var W_ROOT_UPGRADE2 = 0.8;
-var W_TRAP_PER_ADVANCE2 = 1.8;
-var TRAP_ADVANCE_CAP2 = 5;
-var W_BLUFF_PER_ADVANCE2 = 0.3;
-var BLUFF_ADVANCE_CAP2 = 2;
-var W_SERVER_SPREAD2 = 0.5;
-var W_ICE_GUARD_REZZED2 = 1.4;
-var W_ICE_GUARD_UNREZZED2 = 0.7;
-var ICE_GUARD_ROOTS_CAP2 = 2;
-var ROOT_AGENDA_UNPROTECTED_FACTOR2 = 0.08;
-var ROOT_AGENDA_HALED_FACTOR2 = 0.55;
-var W_PROGRAM2 = 2.2;
-var W_ICEBREAKER2 = 2.6;
-var W_HARDWARE2 = 1.4;
-var W_RESOURCE2 = 1;
-var W_INSTALLED_PER_CREDIT2 = 0.3;
-var W_MEMORY_OVERFLOW2 = 2;
-var W_TAG2 = 2.5;
-var W_RUN_BASE2 = 2;
-var W_RUN_PER_ROOT2 = 1;
-var W_RUN_ROOT_CAP2 = 3;
-var W_RUN_ICE_ENTRY2 = 0.55;
-var W_RUN_UNBREAKABLE2 = 2.4;
-var W_RUN_BREAKABLE_BILL2 = 0.4;
-var RUN_UNREZZED_ICE_FACTOR2 = 0.8;
-var W_ACCESS_AGENDA_PER_POINT2 = 0.8;
-var W_ACCESS_ASSET2 = 0.6;
-var W_ACCESS_UPGRADE2 = 0.3;
-var W_ACCESS_AMBUSH2 = 3;
-var W_ACCESS_AMBUSH_PER_ADVANCE2 = 1.2;
-function evaluate2(state, side) {
-  if (state.winner === side) return WIN2;
-  if (state.winner === "draw") return DRAW2;
-  if (state.winner) return -WIN2;
-  const opponent = side === "corp" ? "runner" : "corp";
-  return playerTerm2(state, side) - playerTerm2(state, opponent);
-}
-function playerTerm2(state, side) {
-  const me = side === "corp" ? state.corp : state.runner;
-  let s = 0;
-  s += W_AGENDA_POINT2 * me.agendaPoints;
-  const toGo = state.agendaPointTarget - me.agendaPoints;
-  if (toGo >= 1 && toGo <= 2) s += W_TARGET_PROXIMITY2 * (3 - toGo);
-  s += W_CREDIT2 * me.credits;
-  s += W_CLICK2 * me.clicks;
-  s += (side === "corp" ? W_CORP_HAND2 : W_RUNNER_HAND2) * me.hand.length;
-  if (me.deck.length <= 3) s -= W_DECK_DANGER2 * (4 - me.deck.length);
-  if (side === "corp") {
-    for (const card of me.hand) {
-      const def2 = cardDef(card.cardId);
-      if (def2.type === "agenda") s += W_AGENDA_IN_HAND2 * (def2.agendaPoints ?? 0);
-    }
-    const reserve = rezReserve(state);
-    const shortfall = Math.min(reserve - me.credits, RESERVE_SHORTFALL_CAP);
-    if (shortfall > 0) s -= W_RESERVE_SHORTFALL * shortfall;
-  }
-  s += side === "corp" ? corpBoardTerm2(state) : runnerBoardTerm2(state);
-  return s;
-}
-function corpBoardTerm2(state) {
-  let s = 0;
-  const accessed = accessedId2(state);
-  for (const server of state.servers) {
-    const central = server.id === "hq" || server.id === "rd";
-    let rootCount = 0;
-    for (const card of server.root) {
-      if (card.id === accessed) continue;
-      rootCount += 1;
-    }
-    for (const ice of server.ice) {
-      const printed = Math.min(cardDef(ice.cardId).strength ?? 0, ICE_STRENGTH_CAP2);
-      const rezzed = ice.rezzed === true;
-      s += (rezzed ? central ? W_ICE_REZZED_CENTRAL2 : W_ICE_REZZED_REMOTE2 : central ? W_ICE_UNREZZED_CENTRAL2 : W_ICE_UNREZZED_REMOTE2) + W_ICE_STRENGTH2 * printed + (rootCount > 0 ? Math.min(rootCount, ICE_GUARD_ROOTS_CAP2) * (rezzed ? W_ICE_GUARD_REZZED2 : W_ICE_GUARD_UNREZZED2) : 0) + respectTerm2(ice, cardDef(ice.cardId));
-    }
-    let hasRezzedIce = false;
-    let hasAnyIce = false;
-    for (const ice of server.ice) {
-      hasAnyIce = true;
-      if (ice.rezzed === true) hasRezzedIce = true;
-    }
-    const agendaGuard = hasRezzedIce ? 1 : hasAnyIce ? rootGuardFactor(state, server) : ROOT_AGENDA_UNPROTECTED_FACTOR2;
-    if (server.root.length > 0) {
-      if (!central) s += W_SERVER_SPREAD2;
-      for (const card of server.root) {
-        if (card.id === accessed) continue;
-        s += rootValue2(card, agendaGuard);
-      }
-    }
-  }
-  return s;
-}
-function runnerBoardTerm2(state) {
-  let s = 0;
-  const me = state.runner;
-  const accessed = accessedId2(state);
-  let memory = 0;
-  let consoles = 0;
-  for (const card of me.installed) {
-    const def2 = cardDef(card.cardId);
-    switch (def2.type) {
-      case "program":
-        s += def2.subtypes.includes("icebreaker") ? W_ICEBREAKER2 : W_PROGRAM2;
-        break;
-      case "hardware":
-        s += W_HARDWARE2;
-        break;
-      case "resource":
-        s += W_RESOURCE2;
-        break;
-      default:
-        break;
-    }
-    s += W_INSTALLED_PER_CREDIT2 * (card.hostedCredits ?? 0);
-    memory += def2.memoryCost ?? 0;
-    if (def2.subtypes.includes("console")) consoles += 1;
-  }
-  const over = memory - (4 + me.memoryLimitMod + consoles);
-  if (over > 0) s -= W_MEMORY_OVERFLOW2 * over;
-  s -= W_TAG2 * me.tags;
-  const run = state.run;
-  if (run) {
-    let rootCards = 0;
-    let iceAhead = 0;
-    for (const server of state.servers) {
-      if (server.id !== run.server) continue;
-      for (const card of server.root) {
-        if (card.id !== accessed) rootCards += 1;
-      }
-      if (run.position !== null) {
-        for (let i = 0; i <= run.position; i++) {
-          const ice = server.ice[i];
-          if (!ice) continue;
-          const weight = ice.rezzed === true ? 1 : RUN_UNREZZED_ICE_FACTOR2;
-          iceAhead += weight * iceAheadPenalty2(state, ice, server);
-        }
-      }
-    }
-    s += W_RUN_BASE2 + W_RUN_PER_ROOT2 * Math.min(rootCards, W_RUN_ROOT_CAP2) - iceAhead;
-  }
-  s += pendingAccessTerm2(state, accessed);
-  return s;
-}
-function rootValue2(card, agendaGuard) {
-  const def2 = cardDef(card.cardId);
-  switch (def2.type) {
-    case "agenda": {
-      const points = def2.agendaPoints ?? 0;
-      const req = def2.advancementRequirement ?? 0;
-      const progress = req > 0 ? Math.min(advancementOf2(card) / req, 1) : 1;
-      const worth = W_ROOT_AGENDA_BASE2 + W_ROOT_AGENDA_PER_POINT2 * points + W_ROOT_AGENDA_PROGRESS2 * progress + (advancementOf2(card) >= req ? W_ROOT_AGENDA_READY2 : 0);
-      return worth * agendaGuard;
-    }
-    case "asset": {
-      const base = W_ROOT_ASSET2 + W_ROOT_PER_CREDIT2 * (card.hostedCredits ?? 0);
-      const guardedBase = def2.subtypes.includes("ambush") ? base : base * agendaGuard;
-      return guardedBase + respectTerm2(card, def2);
-    }
-    case "upgrade":
-      return W_ROOT_UPGRADE2 + respectTerm2(card, def2);
-    default:
-      return 0;
-  }
-}
-function respectTerm2(card, def2) {
-  const advancement = Math.max(advancementOf2(card), 0);
-  if (def2.type === "asset" && def2.subtypes.includes("ambush")) {
-    return W_TRAP_PER_ADVANCE2 * Math.min(advancement, TRAP_ADVANCE_CAP2);
-  }
-  return W_BLUFF_PER_ADVANCE2 * Math.min(advancement, BLUFF_ADVANCE_CAP2);
-}
-function rootGuardFactor(state, server) {
-  for (let i = server.ice.length - 1; i >= 0; i--) {
-    const ice = server.ice[i];
-    if (ice.rezzed !== true) {
-      return state.corp.credits >= rezCostFor(state, ice) ? ROOT_AGENDA_HALED_FACTOR2 : ROOT_AGENDA_UNPROTECTED_FACTOR2;
-    }
-  }
-  return ROOT_AGENDA_HALED_FACTOR2;
-}
-function rezReserve(state) {
-  let need = 0;
-  for (const server of state.servers) {
-    if (server.root.length === 0) continue;
-    for (let i = server.ice.length - 1; i >= 0; i--) {
-      const ice = server.ice[i];
-      if (ice.rezzed !== true) {
-        need += rezCostFor(state, ice);
-        break;
-      }
-    }
-  }
-  return Math.min(need, RESERVE_TARGET_CAP);
-}
-function advancementOf2(card) {
-  return card.advancement ?? 0;
-}
-function staticBonus2(ice, server) {
-  const ss = behavior(ice.cardId)?.staticStrength;
-  if (ss?.kind === "bonus-if-remote") {
-    return server.id.startsWith("remote-") ? ss.amount ?? 0 : 0;
-  }
-  return 0;
-}
-function iceAheadPenalty2(state, ice, server) {
-  const def2 = cardDef(ice.cardId);
-  let penalty = W_RUN_ICE_ENTRY2;
-  const strength = Math.min((def2.strength ?? 0) + staticBonus2(ice, server), ICE_STRENGTH_CAP2);
-  penalty += 0.25 * strength;
-  penalty += iceCovered2(state, def2) ? W_RUN_BREAKABLE_BILL2 : W_RUN_UNBREAKABLE2;
-  return penalty;
-}
-function iceCovered2(state, def2) {
-  const iceSubtypes = def2.subtypes;
-  const targetBran = behavior(def2.id)?.breakAbility?.bioroid === true;
-  for (const program of state.runner.installed) {
-    const pd = cardDef(program.cardId);
-    if (!isIcebreaker(program)) continue;
-    if (targetBran) return true;
-    const breakDef = behaviors.get(program.cardId)?.breakAbility;
-    if (!breakDef) continue;
-    const match = breakDef.breaks.length === 0 || iceSubtypes.some((s) => breakDef.breaks.includes(s));
-    if (!match) continue;
-    const effective = pd.strength ?? 0;
-    const canPump = behaviors.get(program.cardId)?.pumpAbility !== void 0;
-    if (effective >= (def2.strength ?? 0) || canPump) return true;
-  }
-  return false;
-}
-function pendingAccessTerm2(state, id) {
-  if (!id) return 0;
-  const all = [
-    state.corp.hand,
-    state.corp.deck,
-    state.corp.discard
-  ];
-  for (const server of state.servers) all.push(server.root, server.ice);
-  for (const zone of all) {
-    for (const card of zone) {
-      if (card.id !== id) continue;
-      const def2 = cardDef(card.cardId);
-      if (def2.type === "agenda") return W_ACCESS_AGENDA_PER_POINT2 * (def2.agendaPoints ?? 0);
-      if (def2.type === "asset") {
-        return W_ACCESS_ASSET2 - (def2.subtypes.includes("ambush") ? W_ACCESS_AMBUSH2 + W_ACCESS_AMBUSH_PER_ADVANCE2 * Math.max(advancementOf2(card), 0) : 0);
-      }
-      if (def2.type === "upgrade") return W_ACCESS_UPGRADE2;
-      return 0;
-    }
-  }
-  return 0;
-}
-function accessedId2(state) {
-  return state.breach?.accessing;
-}
-
-// src/ai/policy-v2.ts
-var DEFAULT_SAMPLES2 = 32;
-var DEFAULT_TEMPERATURE2 = 1;
-var FLOOR2 = -0.9 * WIN2;
-var EvalAI2 = class {
-  name = "eval2";
-  samples;
-  temperature;
-  seedSalt;
-  constructor(opts = {}) {
-    this.samples = opts.samples ?? DEFAULT_SAMPLES2;
-    this.temperature = opts.temperature ?? DEFAULT_TEMPERATURE2;
     this.seedSalt = opts.seedSalt ?? 0;
   }
   chooseMove(view, legal, ctx) {
@@ -23562,7 +23245,7 @@ var EvalAI2 = class {
         const result = applyMove(clone, ctx.side, legal[i], {
           mutate: true
         });
-        const score = result.kind === "applied" ? evaluate2(result.state, ctx.side) : FLOOR2;
+        const score = result.kind === "applied" ? evaluate(result.state, ctx.side) : FLOOR;
         sums[i] = sums[i] + score;
       }
     }
@@ -23574,10 +23257,10 @@ var EvalAI2 = class {
     const avgs = new Float64Array(legal.length);
     for (let i = 0; i < legal.length; i++) avgs[i] = sums[i] / worlds;
     const pickRng = makeRng(hashSeed(baseSeed, 7919));
-    return legal[softmaxIndex2(avgs, this.temperature, pickRng)];
+    return legal[softmaxIndex(avgs, this.temperature, pickRng)];
   }
 };
-function softmaxIndex2(avgs, temperature, rng) {
+function softmaxIndex(avgs, temperature, rng) {
   let max = -Infinity;
   for (const a of avgs) if (a > max) max = a;
   let total = 0;

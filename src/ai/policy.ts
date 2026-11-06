@@ -1,6 +1,6 @@
 /**
- * EvalAI: a "fun" opponent built from determinization + a hand-written eval
- * (the evaluation function and its weights live in `./eval.ts`).
+ * EvalAI: an opponent built from determinization + a hand-written eval (the
+ * evaluation function and its weights live in `./eval.ts`).
  *
  * Algorithm (per decision):
  *   1. Sample K hypothetical worlds with `determinize(view, ctx, rng)` — one
@@ -8,24 +8,12 @@
  *      never sees the game's `rngState`).
  *   2. In each world, apply every legal move on a cheap clone and score the
  *      resulting position with `evaluate` FROM `ctx.side`'S perspective.
- *   3. Average each move's score across worlds BEFORE doing anything else —
- *      that averaging is the whole point: a trap remote reads as agenda in
- *      ~30% of worlds, so the runner runs it ~30% of the time instead of
- *      committing to one paranoid reading.
- *   4. Pick with a root softmax over the averages (temperature in eval units),
- *      sampled from a separate ctx-seeded stream. Deterministic given
- *      (view, legal, ctx): same inputs, same pick.
+ *   3. Average each move's score across worlds BEFORE doing anything else.
+ *   4. Pick with a root softmax over the averages, sampled from a separate
+ *      ctx-seeded stream. Deterministic given (view, legal, ctx).
  *
- * No depth search, no neural anything, no randomness in the eval itself —
- * variety comes only from determinization and the softmax.
- *
- * Eval scale (so the temperature is meaningful): one agenda point is worth
- * ~13 units and a credit 0.35, so a typical non-terminal position scores in
- * the -60..+60 range and two competing moves usually differ by 1-6 units.
- * The win bonus (10_000) dwarfs everything and is applied as a terminal
- * short-circuit. Default temperature is 2 units: a 2-unit favourite is picked
- * ~73% of the time — usually right, sometimes not, which is the requested
- * "fun" blend.
+ * The information boundary: the AI only ever sees (view, legal, ctx), and the
+ * eval runs only on determinized worlds.
  */
 
 import { applyMove } from "../engine/apply.ts";
@@ -46,7 +34,9 @@ export interface EvalAIOptions {
 }
 
 const DEFAULT_SAMPLES = 32;
-const DEFAULT_TEMPERATURE = 2;
+/** A 1-unit favourite is picked ~73% of the time, and a 2-unit favourite
+ * ~88%: the tuned strength setting trusts the eval. */
+const DEFAULT_TEMPERATURE = 1;
 
 /** Score for a move that turned out illegal in a hypothetical world. */
 const FLOOR = -0.9 * WIN;
@@ -68,21 +58,17 @@ export class EvalAI implements GameAI {
   }
 
   chooseMove(view: PlayerView, legal: Move[], ctx: AIDecisionContext): Move {
-    // Jack-out judgment (pricing the ice still ahead against what the server
-    // might hold) is future work: until the eval can weigh it, a movement
-    // phase that offers `runner.continueRun` should just continue — keeping
-    // `runner.jackOut` in the mix would make the fun AI randomly abandon runs
-    // it already priced as good.
-    const moves = legal.some((m) => m.kind === "continueRun")
-      ? legal.filter((m) => m.kind !== "jackOut")
-      : legal;
-    if (moves.length === 1) return moves[0]!;
+    // Movement phases that offer `runner.continueRun` keep `runner.jackOut` in
+    // the mix: the eval's run-pressure terms (ice ahead, unbreakable
+    // subroutines) are exactly the information a jack-out decision needs, so
+    // the softmax prices both options.
+    if (legal.length === 1) return legal[0]!;
     const baseSeed = hashSeed(ctx.seed, this.seedSalt);
 
     // World loop: AVERAGE FIRST (step 3 above). Every move is scored in every
     // world, so a move's number is its expected value across the opponent's
     // possible hidden configurations.
-    const sums = new Float64Array(moves.length);
+    const sums = new Float64Array(legal.length);
     let worlds = 0;
     for (let k = 1; k <= this.samples; k++) {
       const worldRng = makeRng(hashSeed(baseSeed, k));
@@ -95,9 +81,9 @@ export class EvalAI implements GameAI {
         continue;
       }
       worlds++;
-      for (let i = 0; i < moves.length; i++) {
+      for (let i = 0; i < legal.length; i++) {
         const clone = fastCloneState(world);
-        const result = applyMove(clone, ctx.side, moves[i]!, { mutate: true });
+        const result = applyMove(clone, ctx.side, legal[i]!, { mutate: true });
         // Legal on the real state but not here (determinize drift): the
         // guarded floor score keeps a bad hypothesis from winning.
         const score = result.kind === "applied" ? evaluate(result.state, ctx.side) : FLOOR;
@@ -107,15 +93,15 @@ export class EvalAI implements GameAI {
     if (worlds === 0) {
       // No world survived: uniform over the real legal moves.
       const rng = makeRng(baseSeed ^ 0x5bf03635);
-      const idx = Math.floor(rng.next() * moves.length) % moves.length;
-      return moves[idx] ?? moves[0]!;
+      const idx = Math.floor(rng.next() * legal.length) % legal.length;
+      return legal[idx] ?? legal[0]!;
     }
 
     // Softmax root selection over the per-move averages.
-    const avgs = new Float64Array(moves.length);
-    for (let i = 0; i < moves.length; i++) avgs[i] = sums[i]! / worlds;
+    const avgs = new Float64Array(legal.length);
+    for (let i = 0; i < legal.length; i++) avgs[i] = sums[i]! / worlds;
     const pickRng = makeRng(hashSeed(baseSeed, 7919));
-    return moves[softmaxIndex(avgs, this.temperature, pickRng)]!;
+    return legal[softmaxIndex(avgs, this.temperature, pickRng)]!;
   }
 }
 

@@ -18,6 +18,7 @@ import {
   fastCloneState,
   makeAIDecisionContext,
   makeRng,
+  starterDeckConfigs,
 } from "../src/mod.ts";
 import { RandomAI } from "../src/ai/random.ts";
 import { playGame } from "../src/ai/play.ts";
@@ -360,7 +361,53 @@ Deno.test("evaluate is monotone in obvious goods, zero-sum, and terminal", async
 });
 
 // ---------------------------------------------------------------------------
-// 6. Performance smoke: one decision on a mid-game state
+// 6. Credit management: the rez reserve (see src/ai/eval.ts RESERVE weights)
+// ---------------------------------------------------------------------------
+
+Deno.test("credits below the rez reserve are worth more than W_CREDIT", () => {
+  // Two positions identical except credits, both BELOW the cheapest live
+  // defense: the marginal credit must be worth strictly more than the flat
+  // rate, because spending it deepens the defense shortfall.
+  const rich = evalDeltaForCredits(6);
+  const poor = evalDeltaForCredits(1);
+  // The one-credit difference in the poor position must weigh MORE than in
+  // the rich one (shortfall term active only under the reserve).
+  assert(
+    poor > rich,
+    `marginal credit below reserve (${poor}) should outvalue one above it (${rich})`,
+  );
+});
+
+/** evaluate(A) - evaluate(B) where A and B differ by exactly one corp credit
+ * at the given level, with unrezzed guarding ice live in both. */
+function evalDeltaForCredits(credits: number): number {
+  const a = stateWithCreditsAndWall(credits);
+  const b = stateWithCreditsAndWall(credits - 1);
+  return evaluate(a, "corp") - evaluate(b, "corp");
+}
+
+function stateWithCreditsAndWall(credits: number): GameState {
+  const decks = starterDeckConfigs();
+  const state = engine.startGame({ ...decks, mode: "starter-decks", seed: 5 });
+  state.corp.credits = credits;
+  // Give HQ an agenda root card behind unrezzed ice, so a live defense
+  // exists and the reserve is nonzero.
+  const agenda = state.corp.hand.find((c) => cardDef(c.cardId).type === "agenda");
+  if (agenda) {
+    state.corp.hand.splice(state.corp.hand.indexOf(agenda), 1);
+    state.servers.find((s) => s.id === "hq")!.root.push(agenda);
+  }
+  const ice = state.corp.hand.find((c) => cardDef(c.cardId).type === "ice");
+  if (ice) {
+    state.corp.hand.splice(state.corp.hand.indexOf(ice), 1);
+    ice.rezzed = false;
+    state.servers.find((s) => s.id === "hq")!.ice.push(ice);
+  }
+  return state;
+}
+
+// ---------------------------------------------------------------------------
+// 7. Performance smoke: one decision on a mid-game state
 // ---------------------------------------------------------------------------
 
 Deno.test("EvalAI decides a mid-game position comfortably under 15s (perf smoke)", () => {

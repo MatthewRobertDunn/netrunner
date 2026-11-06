@@ -19,11 +19,6 @@ deno task verify
 # 2026-11-01: 24 full games — 12 seeds x both sides)
 deno run --allow-read scripts/check-ai.ts
 
-# AI strength match: EvalAI (v1) vs EvalAI2 (v2) head-to-head, win table
-# per seat + credit telemetry (~8 min for 80 seeds x both sides at 32
-# samples; default 30 seeds, both numbers are positional args)
-deno task ai-match
-
 # Whole-game invariant sweep: structural + redaction + move-cost checks after
 # every move across 96 random games (~9 s). Deterministic; run after engine
 # changes or before publishing. The suite-sized version lives in
@@ -70,8 +65,8 @@ deno task publish
   the accepted concession). Decision seeds derive only from `decisionSeedFor(view)` — never from
   `state.rngState`.
 - **AIs are pure functions of (view, legal, ctx):** no `Date.now()`, no unseeded randomness. EvalAI
-  is a deliberately _fun_ opponent (1-ply determinized eval + softmax); `infoSetKey(view)` in
-  `src/ai/context.ts` is the future ISMCTS tree key — don't weaken either.
+  is the strength-tuned opponent (1-ply determinized eval + softmax, credit-reserve aware);
+  `infoSetKey(view)` in `src/ai/context.ts` is the future ISMCTS tree key — don't weaken either.
 - **`applyMove` never mutates the caller's state** (it copies, or mutates only under `mutate: true`
   which AI playouts own). Read results from `result.state`.
 - **A move is a pure verb + parameters — it never carries the actor.** `Move` (`src/types.ts`) is
@@ -133,7 +128,7 @@ or commits.
    write `found.card.cardId` when using the UI helper — it's `found.cardId`. This crashed the render
    once.
 3. **`deno task check` covers both entry points plus the AI scripts** (`src/mod.ts` +
-   `src/web/entry.ts` + `scripts/check-ai.ts` + `scripts/check-invariants.ts` + `scripts/ai-match.ts`).
+   `src/web/entry.ts` + `scripts/check-ai.ts` + `scripts/check-invariants.ts`).
    The bare `deno check src/mod.ts` form only checks the engine.
 4. **Forgetting that the browser tool's `browser_snapshot` returns a string,** not an object — regex
    it directly, don't `JSON.stringify` first.

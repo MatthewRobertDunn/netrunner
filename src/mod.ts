@@ -90,13 +90,12 @@ export {
   AiGameError,
   decisionSeedFor,
   EvalAI,
-  EvalAI2,
   makeAIDecisionContext,
   playGame,
   RandomAI,
   randomAI,
 } from "./ai/mod.ts";
-export type { EvalAI2Options, EvalAIOptions, GameOutcome } from "./ai/mod.ts";
+export type { EvalAIOptions, GameOutcome } from "./ai/mod.ts";
 
 // Shared clone infrastructure (engine/determinize + AI playouts); kept on the
 // barrel because tests import it from here.

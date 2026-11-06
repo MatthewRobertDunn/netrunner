@@ -1,6 +1,14 @@
 /**
- * The hand-written evaluation function behind EvalAI — the AI decision loop
- * that consumes it lives in `./policy.ts`.
+ * The hand-written evaluation function behind EvalAI — the decision loop that
+ * consumes it lives in `./policy.ts`.
+ *
+ * Corp credit management is the tuning focus: a flat credit rate makes
+ * spending down every turn look free, so assets end up behind ice the corp
+ * cannot afford to rez and runs sail through. The eval therefore prices a
+ * rez-reserve (a soft credit floor set by what the cheapest live defense
+ * would cost to raise) and makes protection affordability-aware (content
+ * behind ice the corp cannot afford to rez counts as unguarded — see the
+ * `RESERVE` weights below).
  *
  * Eval scale (so the temperature is meaningful): one agenda point is worth
  * ~13 units and a credit 0.35, so a typical non-terminal position scores in
@@ -11,11 +19,13 @@
 
 import { cardDef } from "../cards/catalogue.ts";
 import { behavior, behaviors } from "../cards/effects.ts";
+import { rezCostFor } from "../engine/runs.ts";
 import { isIcebreaker } from "../engine/state.ts";
 import type { CardInstance, CardInstanceId, GameState, PlayerSide } from "../types.ts";
 
 /** Terminal bonus: the eval short-circuits to ±WIN when a winner exists. */
 export const WIN = 10_000;
+
 /** Terminal draw. */
 const DRAW = 0;
 /** Closing on the agenda-point target is worth disproportionately more: the
@@ -46,6 +56,23 @@ const W_DECK_DANGER = 3;
 /** An agenda sitting in the corp's hand: potential points it can install once
  * a server is guarded (the unstated alternative to a naked remote install). */
 const W_AGENDA_IN_HAND = 0.6;
+
+// Corp credit management. A flat W_CREDIT makes spending the last credits
+// look free, so assets end up behind ice the corp can never rez (runs then
+// sail through). Two fixes: a rez RESERVE (a soft credit floor priced by
+// what the cheapest live defense would cost to raise) and affordability-aware
+// protection (content behind ice the corp cannot afford to rez counts as
+// unguarded).
+/** Per credit of shortfall below the rez reserve: a credit under the floor is
+ * worth W_CREDIT + this, so econ/advance moves that strip the corp's last
+ * defense money stop looking free. */
+const W_RESERVE_SHORTFALL = 0.9;
+/** Cap on the shortfall penalty: a big unrezzed ice must not warp the whole
+ * eval — being one Hedge Fund away from affording it is legitimate. */
+const RESERVE_SHORTFALL_CAP = 4;
+/** Ceiling on the rez-reserve target itself: the pool covers the first wall
+ * per content server, not an endless war chest. */
+const RESERVE_TARGET_CAP = 6;
 
 // Corp board.
 /** Rezzed ice on a central server (HQ/R&D): it actually blocks runs. */
@@ -180,6 +207,13 @@ function playerTerm(state: GameState, side: PlayerSide): number {
       const def = cardDef(card.cardId);
       if (def.type === "agenda") s += W_AGENDA_IN_HAND * (def.agendaPoints ?? 0);
     }
+    // Rez reserve: credits below the cost of the cheapest live defense are
+    // worth more than W_CREDIT each — they are the pool the corp needs when a
+    // run shows up (rule 6.9.2b: the approach window is the only chance to
+    // rez the approached ice).
+    const reserve = rezReserve(state);
+    const shortfall = Math.min(reserve - me.credits, RESERVE_SHORTFALL_CAP);
+    if (shortfall > 0) s -= W_RESERVE_SHORTFALL * shortfall;
   }
 
   // Side-specific boards.
@@ -232,7 +266,7 @@ function corpBoardTerm(state: GameState): number {
     }
     const agendaGuard = hasRezzedIce
       ? 1
-      : (hasAnyIce ? ROOT_AGENDA_HALED_FACTOR : ROOT_AGENDA_UNPROTECTED_FACTOR);
+      : (hasAnyIce ? rootGuardFactor(state, server) : ROOT_AGENDA_UNPROTECTED_FACTOR);
     if (server.root.length > 0) {
       if (!central) s += W_SERVER_SPREAD;
       for (const card of server.root) {
@@ -326,9 +360,15 @@ function rootValue(card: CardInstance, agendaGuard: number): number {
         (advancementOf(card) >= req ? W_ROOT_AGENDA_READY : 0);
       return worth * agendaGuard;
     }
-    case "asset":
-      return W_ROOT_ASSET + W_ROOT_PER_CREDIT * (card.hostedCredits ?? 0) +
-        respectTerm(card, def);
+    case "asset": {
+      // A plain econ asset's value follows the same guard factor as an
+      // agenda — an asset the first breach trashes (hosted credits and all)
+      // is worth its unguarded value only. Ambush assets are exempt: being
+      // accessed is their whole point.
+      const base = W_ROOT_ASSET + W_ROOT_PER_CREDIT * (card.hostedCredits ?? 0);
+      const guardedBase = def.subtypes.includes("ambush") ? base : base * agendaGuard;
+      return guardedBase + respectTerm(card, def);
+    }
     case "upgrade":
       return W_ROOT_UPGRADE + respectTerm(card, def);
     default:
@@ -345,6 +385,43 @@ function respectTerm(card: CardInstance, def: ReturnType<typeof cardDef>): numbe
     return W_TRAP_PER_ADVANCE * Math.min(advancement, TRAP_ADVANCE_CAP);
   }
   return W_BLUFF_PER_ADVANCE * Math.min(advancement, BLUFF_ADVANCE_CAP);
+}
+
+/** Guard factor for a server whose ice is all unrezzed. The half-price
+ * "threat" value only holds if the corp could actually pay the rez when a run
+ * shows up (rule 6.9.2b) — ice it cannot afford is decoration, so the content
+ * behind it is priced as unguarded. */
+function rootGuardFactor(state: GameState, server: GameState["servers"][number]): number {
+  // Outermost unrezzed ice is the first one a run meets.
+  for (let i = server.ice.length - 1; i >= 0; i--) {
+    const ice = server.ice[i]!;
+    if (ice.rezzed !== true) {
+      return state.corp.credits >= rezCostFor(state, ice)
+        ? ROOT_AGENDA_HALED_FACTOR
+        : ROOT_AGENDA_UNPROTECTED_FACTOR;
+    }
+  }
+  return ROOT_AGENDA_HALED_FACTOR; // only rezzed ice: unreachable here
+}
+
+/** The credit pool the corp should keep to be able to raise its walls —
+ * the sum over content-bearing servers of the first (outermost) unrezzed ice's
+ * rez cost, capped: rezzing everything at once is never required, but the pool
+ * must cover more than just the single cheapest wall. 0 when everything is
+ * already rezzed or there is nothing to guard. */
+function rezReserve(state: GameState): number {
+  let need = 0;
+  for (const server of state.servers) {
+    if (server.root.length === 0) continue;
+    for (let i = server.ice.length - 1; i >= 0; i--) {
+      const ice = server.ice[i]!;
+      if (ice.rezzed !== true) {
+        need += rezCostFor(state, ice);
+        break; // the outermost unrezzed ice is the one a run meets first
+      }
+    }
+  }
+  return Math.min(need, RESERVE_TARGET_CAP);
 }
 
 /** The card's advancement counters, 0 when absent. */
