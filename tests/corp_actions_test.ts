@@ -339,7 +339,9 @@ Deno.test("corp actions: advance, install, breach, and event regressions", async
       while (t.turn.player === "corp" && !t.winner) {
         const moves = engine.getLegalMoves(t, "corp");
         if (moves.length === 0) break;
-        t = play(t, "corp", moves[0]!);
+        const move = moves.find((m) => m.kind === "gainCredits") ??
+          moves.find((m) => m.kind === "endTurn") ?? moves[0]!;
+        t = play(t, "corp", move);
       }
       t = burnUntil(t, "runner");
       assertEquals(

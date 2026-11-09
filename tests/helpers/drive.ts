@@ -33,7 +33,11 @@ export function burnUntil(
     const active = cur.turn.player;
     const moves = engine.getLegalMoves(cur, active);
     if (moves.length === 0) return cur;
-    cur = play(cur, active, moves[0]!);
+    // Decline the end-of-turn paid ability window (rule 5.6.2a) rather than
+    // taking an incidental score/rez — "burn" advances the turn, it does not
+    // play for the active side.
+    const move = moves.find((m) => m.kind === "endTurn") ?? moves[0]!;
+    cur = play(cur, active, move);
   }
   return cur;
 }
@@ -51,7 +55,8 @@ export function nextTurnOf(state: GameState, side: PlayerSide, maxIters = 60): G
   for (let i = 0; i < maxIters && !cur.winner && cur.turn.player === starter; i++) {
     const moves = engine.getLegalMoves(cur, starter);
     if (moves.length === 0) break;
-    cur = play(cur, starter, moves[0]!);
+    const move = moves.find((m) => m.kind === "endTurn") ?? moves[0]!;
+    cur = play(cur, starter, move);
   }
   return burnUntil(cur, side, maxIters);
 }

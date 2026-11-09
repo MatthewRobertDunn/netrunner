@@ -144,3 +144,17 @@ assertions. They live in the test files as the authoritative regression record:
    `(S)`-windows are Corp-turn-only). If you add a card with a free paid ability, an
    opponent-turn-payable one, or a click grant usable mid-run, implement the windows first — see
    `TODO.md` for the full analysis and sketch.
+
+7. **The paid ability window after the LAST click (rule 5.6.2a) must park the turn, not skip it.**
+   The settle loop used to roll straight into the discard phase the moment clicks hit 0, so a corp
+   that advanced an agenda to readiness with its last click could never score it (and could not rez
+   non-ice or use paid abilities either). Now `settle` parks while `endOfTurnWindowOpen`
+   (`src/engine/window.ts`), `getLegalMoves` offers the same window moves plus `endTurn`, and the
+   turn ends only on `endTurn` (or automatically when the window is empty). Both code paths read the
+   ONE generator in window.ts — never re-derive window moves in settle or the UI. Two traps: the
+   branch must be gated on `state.turn.player === playerSide` (otherwise the Corp could act during
+   the Runner's turn, since its clicks are 0 then), and window moves are clickless by definition —
+   `abilityLegality` supplies that filter, don't re-filter. The Runner's window (5.7.1e) is
+   `(P)`-only and the starter pool has no zero-click abilities, so it stays auto-ending; the
+   runner-turn `(R)` corp windows (5.7.1e/f — the Corp rezzing non-ice during the Runner's action
+   phase) remain unimplemented — see `TODO.md`.

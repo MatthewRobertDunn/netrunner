@@ -156,7 +156,11 @@ export function endCorpTurn(state: GameState, maxIters = 10): GameState {
     if (cur.turn.player !== "corp" || cur.winner) break;
     const legal = engine.getLegalMoves(cur, "corp");
     if (legal.length === 0) break;
-    const gain = legal.find((m) => m.kind === "gainCredits") ?? legal[0]!;
+    // Burn clicks with the basic credit action; once they are gone, decline
+    // the end-of-turn paid ability window explicitly (never take a window
+    // option — this helper ends the turn, it does not play for the corp).
+    const gain = legal.find((m) => m.kind === "gainCredits") ??
+      legal.find((m) => m.kind === "endTurn") ?? legal[0]!;
     cur = play(cur, "corp", gain);
   }
   return cur;

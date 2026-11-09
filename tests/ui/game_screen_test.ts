@@ -23,6 +23,7 @@ import {
   play,
   rezWindowState,
   runnerDeckStartingWith,
+  setInstalledAdvancement,
   starterDeckPair,
 } from "../helpers/fixtures.ts";
 
@@ -1171,6 +1172,66 @@ Deno.test("GameScreen advancement counters are readable from the DOM (rule 10.2.
       tile.attributes("data-hosted-credits"),
       "9",
       "the rez loaded 9 hosted credit counters, readable as data-hosted-credits",
+    );
+  });
+});
+
+Deno.test("GameScreen end-of-turn paid ability window (rule 5.6.2a)", async (t) => {
+  /** A corp state at clicks 0 with a ready agenda in a remote: the exact
+   * bug-report scenario, reached through real plays. */
+  function windowStateWithReadyAgenda() {
+    let s = newGameWithCorpHand(["offworld_office"]);
+    const install = assertDefined(
+      engine.getLegalMoves(s, "corp").find(
+        (m) =>
+          isCorpInstall(m) && m.cardId === "offworld_office" &&
+          m.server === "new-remote",
+      ),
+      "the corp can install the agenda",
+    );
+    s = play(s, "corp", install!);
+    while (s.corp.clicks > 1) {
+      s = play(s, "corp", { kind: "gainCredits" });
+    }
+    const agenda = assertDefined(
+      s.servers.find((x) => x.id === "remote-1")?.root.find(
+        (c) => c.cardId === "offworld_office",
+      ),
+    );
+    s = setInstalledAdvancement(s, agenda.id, 3); // req 4, one short
+    const advance = assertDefined(
+      engine.getLegalMoves(s, "corp").find(
+        (m) => m.kind === "advance" && m.targetId === agenda.id,
+      ),
+    );
+    return play(s, "corp", advance!); // the LAST click: the window opens
+  }
+
+  await t.step("at clicks 0 the window offers score + End turn", () => {
+    const s = windowStateWithReadyAgenda();
+    assertEquals(s.corp.clicks, 0);
+    assertEquals(s.turn.phase, "action", "the window parks the action phase");
+    const wrapper = mount(GameScreen, { props: { state: s, humanSide: "corp" } });
+    const endTurn = wrapper.find('[data-action="endTurn"]');
+    assert(endTurn.exists(), "the End turn button renders");
+    assertEquals(endTurn.text(), "End turn");
+    // The score move rides the Actions list alongside it (corp cards live on
+    // the board, so score is not sheet-hosted).
+    const actions = wrapper.find('[data-panel="actions"]');
+    assert(actions.exists(), "the actions panel renders");
+    assert(
+      actions.text().includes("Score"),
+      `the score move is visible in the actions panel: ${actions.text().slice(0, 200)}`,
+    );
+  });
+
+  await t.step("mid-turn (clicks remaining) no End turn button renders", () => {
+    const mid = newGameWithCorpHand(["offworld_office"]);
+    const wrapper = mount(GameScreen, { props: { state: mid, humanSide: "corp" } });
+    assertEquals(
+      wrapper.find('[data-action="endTurn"]').exists(),
+      false,
+      "endTurn is only legal once every click is spent",
     );
   });
 });

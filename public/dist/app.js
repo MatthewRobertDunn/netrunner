@@ -20413,6 +20413,67 @@ function maxHandSize(state, side) {
   return p2.baseHandSize + p2.maxHandSizeMod + bonus;
 }
 
+// src/engine/window.ts
+function endOfTurnWindowMoves(state, side) {
+  const moves = [];
+  if (side === "corp") {
+    for (const card of corpInstalled(state)) {
+      const def2 = cardDef(card.cardId);
+      if (def2.type === "agenda") {
+        if ((card.advancement ?? 0) >= (def2.advancementRequirement ?? 0)) {
+          moves.push({
+            kind: "score",
+            targetId: card.id
+          });
+        }
+      } else if (
+        // NOT here: rule 6.4.3 makes the approach window its only place.
+        (def2.type === "asset" || def2.type === "upgrade") && card.rezzed !== true && rezCostFor(state, card) <= state.corp.credits
+      ) {
+        moves.push({
+          kind: "rez",
+          targetId: card.id
+        });
+      }
+    }
+    addAbilityMoves(state, "corp", corpInstalled(state), moves);
+  } else {
+    addAbilityMoves(state, "runner", state.runner.installed, moves);
+  }
+  return moves;
+}
+function endOfTurnWindowOpen(state) {
+  return endOfTurnWindowMoves(state, state.turn.player).length > 0;
+}
+function addAbilityMoves(state, side, cards2, moves) {
+  for (const card of cards2) {
+    if (side === "corp" && card.rezzed !== true) continue;
+    const abilityCount = behaviors.get(card.cardId)?.paidAbilities?.length ?? 0;
+    if (supportStatus(card.cardId) === "unsupported") continue;
+    for (let i = 0; i < abilityCount; i++) {
+      const legality = abilityLegality(state, side, card, i);
+      if (!legality.ok) continue;
+      const servers = serversForAbility(state, card, i);
+      if (servers.length > 0) {
+        for (const server of servers) {
+          moves.push({
+            kind: "ability",
+            targetId: card.id,
+            abilityIndex: i,
+            server
+          });
+        }
+      } else {
+        moves.push({
+          kind: "ability",
+          targetId: card.id,
+          abilityIndex: i
+        });
+      }
+    }
+  }
+}
+
 // src/engine/settle.ts
 function settle(state) {
   let guard = 0;
@@ -20440,6 +20501,7 @@ function settle(state) {
       continue;
     }
     if (state.turn.phase === "action" && player(state, state.turn.player).clicks === 0) {
+      if (endOfTurnWindowOpen(state)) return;
       enterDiscardPhase(state);
       if (state.prompts.length > 0) return;
       continue;
@@ -20815,7 +20877,16 @@ function getLegalMoves(state, playerSide) {
   if (state.breach) {
     return breachMoves(state, playerSide);
   }
-  if (state.turn.phase !== "action" || p2.clicks <= 0) return [];
+  if (state.turn.phase !== "action") return [];
+  if (p2.clicks <= 0) {
+    if (state.turn.player !== playerSide) return [];
+    const windowMoves = endOfTurnWindowMoves(state, playerSide);
+    if (windowMoves.length === 0) return [];
+    windowMoves.push({
+      kind: "endTurn"
+    });
+    return windowMoves;
+  }
   if (playerSide === "corp") return corpActionMoves(state);
   return runnerActionMoves(state);
 }
@@ -20970,27 +21041,8 @@ function corpActionMoves(state) {
         targetId: card.id
       });
     }
-    if (def2.type === "agenda") {
-      const adv = card.advancement ?? 0;
-      const requirement = def2.advancementRequirement ?? 0;
-      if (adv >= requirement) moves.push({
-        kind: "score",
-        targetId: card.id
-      });
-    }
   }
-  for (const card of corpInstalled(state)) {
-    const def2 = cardDef(card.cardId);
-    if (def2.type !== "asset" && def2.type !== "upgrade") continue;
-    if (card.rezzed === true) continue;
-    if (rezCostFor(state, card) <= state.corp.credits) {
-      moves.push({
-        kind: "rez",
-        targetId: card.id
-      });
-    }
-  }
-  addAbilityMoves(state, "corp", corpInstalled(state), moves);
+  moves.push(...endOfTurnWindowMoves(state, "corp"));
   return moves;
 }
 function installServersFor(state, card) {
@@ -21079,7 +21131,7 @@ function runnerActionMoves(state) {
       server
     });
   }
-  addAbilityMoves(state, "runner", runner.installed, moves);
+  moves.push(...endOfTurnWindowMoves(state, "runner"));
   return moves;
 }
 function cardRestrictsRun(state, server) {
@@ -21197,34 +21249,6 @@ function breachMoves(state, playerSide) {
   }
   return moveList;
 }
-function addAbilityMoves(state, side, cards2, moves) {
-  for (const card of cards2) {
-    if (side === "corp" && card.rezzed !== true) continue;
-    const abilityCount = behaviors.get(card.cardId)?.paidAbilities?.length ?? 0;
-    if (supportStatus(card.cardId) === "unsupported") continue;
-    for (let i = 0; i < abilityCount; i++) {
-      const legality = abilityLegality(state, side, card, i);
-      if (!legality.ok) continue;
-      const servers = serversForAbility(state, card, i);
-      if (servers.length > 0) {
-        for (const server of servers) {
-          moves.push({
-            kind: "ability",
-            targetId: card.id,
-            abilityIndex: i,
-            server
-          });
-        }
-      } else {
-        moves.push({
-          kind: "ability",
-          targetId: card.id,
-          abilityIndex: i
-        });
-      }
-    }
-  }
-}
 function discardMoves(state, playerSide, prompt) {
   const cards2 = player(state, playerSide).hand;
   const count = Math.min(prompt.count, cards2.length);
@@ -21324,6 +21348,8 @@ function explainIllegal(playerSide, move) {
     case "score":
     case "rez":
       return "Not legal in the current Corp action phase state";
+    case "endTurn":
+      return "The turn can only end once every click is spent";
     case "playEvent":
     case "run":
       return "Not legal in the current Runner action phase state";
@@ -21442,6 +21468,10 @@ function applyResolvedMove(state, playerSide, move) {
     case "rez": {
       const found = findCard(state, move.targetId);
       if (found) rezCard(state, found.card);
+      break;
+    }
+    case "endTurn": {
+      enterDiscardPhase(state);
       break;
     }
     // Runner-only actions -------------------------------------------------
@@ -23508,6 +23538,8 @@ function describeMove(state, move) {
       const title = cardTitle(findCardIn(state, move.targetId)?.cardId ?? "");
       return `Ability ${move.abilityIndex + 1} \u2014 ${title}`;
     }
+    case "endTurn":
+      return "End turn";
     case "playEvent":
       return `Play ${cardTitle(move.cardId)}`;
     case "run":

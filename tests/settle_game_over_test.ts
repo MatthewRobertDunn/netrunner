@@ -51,7 +51,9 @@ function runAtUrtica(): GameState {
   while (s.turn.player === "corp" && !s.winner) {
     const moves = engine.getLegalMoves(s, "corp");
     if (moves.length === 0) break;
-    s = play(s, "corp", moves.find((m) => m.kind === "gainCredits") ?? moves[0]!);
+    const move = moves.find((m) => m.kind === "gainCredits") ??
+      moves.find((m) => m.kind === "endTurn") ?? moves[0]!;
+    s = play(s, "corp", move);
   }
   const run = assertDefined(
     engine.getLegalMoves(s, "runner").find(
@@ -140,7 +142,9 @@ Deno.test("settle: a game won mid-breach leaves no live run/breach (rule 10.4 cl
     while (s.turn.player === "corp" && !s.winner) {
       const moves = engine.getLegalMoves(s, "corp");
       if (moves.length === 0) break;
-      s = play(s, "corp", moves.find((m) => m.kind === "gainCredits") ?? moves[0]!);
+      const move = moves.find((m) => m.kind === "gainCredits") ??
+        moves.find((m) => m.kind === "endTurn") ?? moves[0]!;
+      s = play(s, "corp", move);
     }
     const run = assertDefined(
       engine.getLegalMoves(s, "runner").find(

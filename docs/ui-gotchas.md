@@ -52,12 +52,12 @@ and the test that pins the fix.
    (`sheetHostedKeys`, built from `ownGroups`), so the two can never drift. The old
    `INSTALLED_ACTION_KINDS` kind set was deleted when moves stopped carrying their actor: a kind can
    no longer distinguish `runner.ability` from `corp.ability` (both are now `ability`), and a
-   kind-only set would have silently dropped the Corp's installed-asset paid abilities (e.g. Regolith
-   Mining License's "[click]: take 3 credits") out of the Actions list — the Corp sheet renders no
-   card rows because its cards live on the board, so the Actions list is their ONLY surface. Deriving
-   from the rows keeps them reachable and adapts for free if the Corp sheet ever gains groups.
-   Duplicating the filter by kind is how the same action appears twice (under the program AND in the
-   Actions list). Files: `src/web/ui/card-sheet.ts`, `src/web/ui/game.ts`.
+   kind-only set would have silently dropped the Corp's installed-asset paid abilities (e.g.
+   Regolith Mining License's "[click]: take 3 credits") out of the Actions list — the Corp sheet
+   renders no card rows because its cards live on the board, so the Actions list is their ONLY
+   surface. Deriving from the rows keeps them reachable and adapts for free if the Corp sheet ever
+   gains groups. Duplicating the filter by kind is how the same action appears twice (under the
+   program AND in the Actions list). Files: `src/web/ui/card-sheet.ts`, `src/web/ui/game.ts`.
 
 6. **Game over is a modal, not a sidebar banner.** The win announcement lived in the action panel
    when that was a full-width row; once the panel moved into the card dock's own sheet (a narrow
@@ -84,8 +84,7 @@ and the test that pins the fix.
 
 8. **Every clickable carries `data-action` + parameter attributes — never `data-testid`.** The DOM
    contract for browser agents (and any scripted driving of the UI) is purely composite:
-   `[data-action="run"][data-server="hq"]`,
-   `[data-action="prompt.answer"][data-option="pass"]`,
+   `[data-action="run"][data-server="hq"]`, `[data-action="prompt.answer"][data-option="pass"]`,
    `[data-action="discard-pick"][data-card-id="unity"]`. The older scheme baked parameters into
    positional testid strings (`run-remote-2`), and that is exactly why coverage rotted: a control
    whose identity needed a second or third dimension (which subroutine? which option? which copy?)
@@ -93,22 +92,21 @@ and the test that pins the fix.
    hand-card buttons, prompt answers, zoom action buttons, and presets were all unreachable by
    attribute. Composite attributes fix the cause: each dimension gets its own named attribute, so a
    new capability is a new attribute, not a new string format. The vocabulary:
-   - Clickables: `data-action` = the engine move kind (`run`, `prompt.answer`,
-     `install`, `ability`, …) when the button plays a move, else a UI verb (`zoom`,
-     `close`, `discard-pick`, `discard-submit`, `open-access`, `show-result`, `new-game`,
-     `toggle-log`, `pick-side`, `pick-preset`, `random-seed`, `set-seed`, `start`).
+   - Clickables: `data-action` = the engine move kind (`run`, `prompt.answer`, `install`, `ability`,
+     …) when the button plays a move, else a UI verb (`zoom`, `close`, `discard-pick`,
+     `discard-submit`, `open-access`, `show-result`, `new-game`, `toggle-log`, `pick-side`,
+     `pick-preset`, `random-seed`, `set-seed`, `start`).
    - Move parameters (own attributes): `data-server`, `data-instance` (copy/instance id),
-     `data-target` (target instance), `data-sub` and
-     `data-ability` (1-based, matching the visible label), `data-option` (engine optionId; the
-     reserved decline is `data-option="pass"`), `data-preset`, `data-card-id` (the definition id
-     the move is about, e.g. `unity`).
+     `data-target` (target instance), `data-sub` and `data-ability` (1-based, matching the visible
+     label), `data-option` (engine optionId; the reserved decline is `data-option="pass"`),
+     `data-preset`, `data-card-id` (the definition id the move is about, e.g. `unity`).
    - INFORMATION families, prefixed so a name can never mean two things:
-     - `data-card-*` — properties of the card itself: `data-card-id`, `data-card-pos` (ice
-       position, innermost = 1), `data-card-effective-strength` (printed + the live pump, rule
-       3.9.5b — the number a Runner computes an encounter with). Only the EFFECTIVE strength is
-       emitted; an innate `data-card-strength` has room under the prefix but no consumer yet
-       (YAGNI). Effective strength is hidden with the card id (strength fingerprints the card,
-       10.2.2/4.6.3), so it is absent on a face-down tile.
+     - `data-card-*` — properties of the card itself: `data-card-id`, `data-card-pos` (ice position,
+       innermost = 1), `data-card-effective-strength` (printed + the live pump, rule 3.9.5b — the
+       number a Runner computes an encounter with). Only the EFFECTIVE strength is emitted; an
+       innate `data-card-strength` has room under the prefix but no consumer yet (YAGNI). Effective
+       strength is hidden with the card id (strength fingerprints the card, 10.2.2/4.6.3), so it is
+       absent on a face-down tile.
      - `data-hosted-*` — counters HOSTED on a card: `data-hosted-advancement`,
        `data-hosted-credits`. Open information (rule 10.2.3), so they ride the tile even when its
        identity is redacted. The prefix is what keeps `data-hosted-credits` (counters ON the card)
@@ -118,12 +116,12 @@ and the test that pins the fix.
        `data-player-discard`, `data-player-agenda-points`, and `data-player-tags` (Runner) /
        `data-player-bad-publicity` (Corp) — kept as separate names because tags and bad publicity
        are different things. The game-wide `data-agenda-target` sits on the status dock.
-   - Moves carry no actor: `data-action` is the bare verb (`run`, `install`, `draw`, `ability`) —
-     a move is verb + parameters, never `runner.run`. The seat comes from scope
+   - Moves carry no actor: `data-action` is the bare verb (`run`, `install`, `draw`, `ability`) — a
+     move is verb + parameters, never `runner.run`. The seat comes from scope
      (`[data-own="true"] [data-action="gainCredits"]`) and, for the one shared verb with two shapes,
      from the payload: `[data-action="install"][data-server="hq"]` is the Corp's install,
-     `[data-action="install"]` without a server is the Runner's. `isCorpInstall` /
-     `isRunnerInstall` in `src/types.ts` are the single guard for that distinction.
+     `[data-action="install"]` without a server is the Runner's. `isCorpInstall` / `isRunnerInstall`
+     in `src/types.ts` are the single guard for that distinction.
    - Scoping: `data-side` (`corp|runner`), `data-own` (`true|false` — `[data-own="true"]` is this
      seat's interface, `false` the mirror), `data-group` (sheet group).
    - Non-interactive markers: `data-dock` (`status|card|log`), `data-panel`
@@ -145,45 +143,46 @@ and the test that pins the fix.
    import elision drops an import specifier that is never referenced — and when no specifiers
    remain, the whole statement goes, side effects included. A new UI test file that copies
    `import { installRealCss } from "./setup.ts"` without CALLING the helper therefore compiles,
-   lints, and fmts clean, then fails every `mount()` with `ReferenceError: document is not
-   defined` — while sibling test files keep passing, so it looks like a per-file haunting rather
-   than a missing module. The diagnostic signature: a module-top `typeof globalThis.document` is
-   `"undefined"` only in the failing file, and Deno's transpile cache
-   (`~/.cache/deno/gen/file/.../<file>.js`) shows the setup import absent. Rule: import it bare
-   (`import "./setup.ts";` — the form `card_tile_test.ts`/`card_zoom_test.ts` already use); the
-   named import is only legitimate in files that actually call `installRealCss()` (game_screen_test.ts
-   does, twice). `docs/ui-gotchas.md` entry 10's dialog test is the regression that found this.
-   Files: `tests/ui/setup.ts` (header warning), `tests/ui/archives_breach_dialog_test.ts` (bare
-   import). Pin: none possible in `deno test` — the trap is invisible to fmt/lint/check — so the
-   setup.ts header comment and this entry are the guard.
+   lints, and fmts clean, then fails every `mount()` with
+   `ReferenceError: document is not
+   defined` — while sibling test files keep passing, so it looks
+   like a per-file haunting rather than a missing module. The diagnostic signature: a module-top
+   `typeof globalThis.document` is `"undefined"` only in the failing file, and Deno's transpile
+   cache (`~/.cache/deno/gen/file/.../<file>.js`) shows the setup import absent. Rule: import it
+   bare (`import "./setup.ts";` — the form `card_tile_test.ts`/`card_zoom_test.ts` already use); the
+   named import is only legitimate in files that actually call `installRealCss()`
+   (game_screen_test.ts does, twice). `docs/ui-gotchas.md` entry 10's dialog test is the regression
+   that found this. Files: `tests/ui/setup.ts` (header warning),
+   `tests/ui/archives_breach_dialog_test.ts` (bare import). Pin: none possible in `deno test` — the
+   trap is invisible to fmt/lint/check — so the setup.ts header comment and this entry are the
+   guard.
 
 10. **The Archives breach dialog is the human Runner's single surface for the breach; the zoom and
-   the action panel stand down while it is open.** A successful Archives run must access EVERY card
-   in the discard pile (rules 7.3.2-7.3.4, 7.4.1d) — nothing is declinable — so the modal is not
-   dismissible (no Esc, no backdrop click, no close button); it mounts while
-   `state.breach.server === "archives"` for the human Runner and unmounts when the engine ends the
-   breach. While open it OWNS the breach: `accessedCard` returns null (the per-card zoom does not
-   pop) and the ActionPanel gets `prompt=null`/`generalMoves=[]` (the no-duplicates rule), so the
-   DOM has exactly one `accessCard` path (the dialog's tiles), one `finishAccess` path, and one
-   `access-remaining` button. One click per card: the driver (`advanceArchives` in
-   `src/web/ui/archives-breach.ts`, parametrized over `{getState, apply}` so tests drive it bare)
-   answers the FORCED finish decision (`rule 7.1.5b` removed the trash option for cards already in
-   Archives) — but a decision the gesture did not request is never answered silently: when the
-   engine auto-chooses the last remaining candidate (`stepBreach`'s one-candidate shortcut), the
-   loop stops, the tile shows `data-state="accessing"`, and a Finish button appears. Corp prompts
-   that fire mid-breach (Send a Message's free-rez choice on steal) park the loop untouched — the
-   AI answers them and the human resumes; a runner-owned prompt the dialog cannot answer would hide
-   the modal (defensive gate in game.ts's `archivesActive`). DOM contract (pinned by
-   `tests/ui/archives_breach_dialog_test.ts`): `[data-modal="archives-breach"]` root; per-tile
-   `data-state="remaining|accessing|accessed|stolen"` + `data-instance`; remaining tiles are
-   `[data-action="accessCard"][data-target=…]` buttons (disabled while a decision pends);
-   `[data-action="finishAccess"]`; `[data-action="access-remaining"]`; status counters
-   `data-breach-accessed` / `data-breach-remaining` / `data-breach-stolen-points`. Cards render
-   agendas leftmost (stealing them is the point of the run) with a horizontal-scroll row
-   (`overflow-x: auto`, z-index 55 — above the card zoom, below the win modal). The template
-   expressions are compiled by Vue's RUNTIME compiler in the browser: plain JS only — a TS
-   annotation inside a template arrow ( `(id: string) => …` ) is a runtime SyntaxError that breaks
-   EVERY GameScreen mount (entry 3's zoom test caught it).
-   Files: `src/web/ui/archives-breach.ts`, `src/web/ui/archives-breach-dialog.ts`,
-   `src/web/ui/game.ts`, `src/web/app.ts`, `public/css/style.css`. Tests:
-   `tests/ui/archives_breach_dialog_test.ts`.
+    the action panel stand down while it is open.** A successful Archives run must access EVERY card
+    in the discard pile (rules 7.3.2-7.3.4, 7.4.1d) — nothing is declinable — so the modal is not
+    dismissible (no Esc, no backdrop click, no close button); it mounts while
+    `state.breach.server === "archives"` for the human Runner and unmounts when the engine ends the
+    breach. While open it OWNS the breach: `accessedCard` returns null (the per-card zoom does not
+    pop) and the ActionPanel gets `prompt=null`/`generalMoves=[]` (the no-duplicates rule), so the
+    DOM has exactly one `accessCard` path (the dialog's tiles), one `finishAccess` path, and one
+    `access-remaining` button. One click per card: the driver (`advanceArchives` in
+    `src/web/ui/archives-breach.ts`, parametrized over `{getState, apply}` so tests drive it bare)
+    answers the FORCED finish decision (`rule 7.1.5b` removed the trash option for cards already in
+    Archives) — but a decision the gesture did not request is never answered silently: when the
+    engine auto-chooses the last remaining candidate (`stepBreach`'s one-candidate shortcut), the
+    loop stops, the tile shows `data-state="accessing"`, and a Finish button appears. Corp prompts
+    that fire mid-breach (Send a Message's free-rez choice on steal) park the loop untouched — the
+    AI answers them and the human resumes; a runner-owned prompt the dialog cannot answer would hide
+    the modal (defensive gate in game.ts's `archivesActive`). DOM contract (pinned by
+    `tests/ui/archives_breach_dialog_test.ts`): `[data-modal="archives-breach"]` root; per-tile
+    `data-state="remaining|accessing|accessed|stolen"` + `data-instance`; remaining tiles are
+    `[data-action="accessCard"][data-target=…]` buttons (disabled while a decision pends);
+    `[data-action="finishAccess"]`; `[data-action="access-remaining"]`; status counters
+    `data-breach-accessed` / `data-breach-remaining` / `data-breach-stolen-points`. Cards render
+    agendas leftmost (stealing them is the point of the run) with a horizontal-scroll row
+    (`overflow-x: auto`, z-index 55 — above the card zoom, below the win modal). The template
+    expressions are compiled by Vue's RUNTIME compiler in the browser: plain JS only — a TS
+    annotation inside a template arrow ( `(id: string) => …` ) is a runtime SyntaxError that breaks
+    EVERY GameScreen mount (entry 3's zoom test caught it). Files: `src/web/ui/archives-breach.ts`,
+    `src/web/ui/archives-breach-dialog.ts`, `src/web/ui/game.ts`, `src/web/app.ts`,
+    `public/css/style.css`. Tests: `tests/ui/archives_breach_dialog_test.ts`.

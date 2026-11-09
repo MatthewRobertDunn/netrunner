@@ -153,7 +153,11 @@ function corpInstallIceThenEndTurn(
   let cur = play(s, "corp", install!);
   const ice = assertDefined(findInstalled(cur, iceId), `${iceId} is installed`);
   while (cur.turn.player === "corp" && !cur.winner) {
-    cur = play(cur, "corp", { kind: "gainCredits" });
+    const moves = engine.getLegalMoves(cur, "corp");
+    const move = moves.find((m) => m.kind === "gainCredits") ??
+      moves.find((m) => m.kind === "endTurn");
+    if (!move) break;
+    cur = play(cur, "corp", move);
   }
   assertEquals(cur.turn.player, "runner", "the runner's turn begins");
   return { state: cur, ice };
@@ -470,7 +474,11 @@ Deno.test("event texts: overclock's hosted credits pay the Manegarm toll during 
   assertDefined(rez, "rez is offered for the installed upgrade");
   s = play(s, "corp", rez!);
   while (s.turn.player === "corp" && !s.winner) {
-    s = play(s, "corp", { kind: "gainCredits" });
+    const moves = engine.getLegalMoves(s, "corp");
+    const move = moves.find((m) => m.kind === "gainCredits") ??
+      moves.find((m) => m.kind === "endTurn");
+    if (!move) break;
+    s = play(s, "corp", move);
   }
   s = burnUntil(s, "runner");
   assert(
@@ -547,7 +555,11 @@ Deno.test("event texts: overclock's hosted fund pays an access trash the pool ca
   assertDefined(installUpgrade, "the corp can add the unrezzed upgrade to remote-1");
   s = play(s, "corp", installUpgrade!);
   while (s.turn.player === "corp" && !s.winner) {
-    s = play(s, "corp", { kind: "gainCredits" });
+    const moves = engine.getLegalMoves(s, "corp");
+    const move = moves.find((m) => m.kind === "gainCredits") ??
+      moves.find((m) => m.kind === "endTurn");
+    if (!move) break;
+    s = play(s, "corp", move);
   }
   s = burnUntil(s, "runner");
   const nico = assertDefined(

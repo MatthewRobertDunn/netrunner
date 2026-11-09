@@ -1,5 +1,21 @@
 # TODO
 
+## Paid-ability windows during the opponent's action phase (rules 5.7.1e/f) — deferred
+
+**Status: documented gap, zero impact with the current card pool. Found 2026-11-09 while fixing the
+end-of-turn window (rule 5.6.2a, see `docs/rules-gotchas.md` entry 7).**
+
+Rule 5.7.1e/f open paid ability windows during the RUNNER's action phase (before/after each Runner
+action), and they are `(P)(R)`: players may use paid abilities AND the Corp may rez non-ice cards.
+The engine only surfaces Corp rez options during the Runner's turn inside run approach windows
+(6.9.2b/6.9.4e) — the Corp cannot rez an asset/upgrade outside the attacked server while the Runner
+is taking actions. With the starter pool this costs nothing (no reason to rez another server's
+asset mid-turn), but the same trigger conditions as the run-window TODO below apply. If
+implemented, the natural shape is the same as the 5.6.2a window fix: a settle-parked prompt or a
+window in the Runner's action phase whose options come from the shared generator in
+`src/engine/window.ts` (`endOfTurnWindowMoves` already enumerates corp rez + paid abilities; it
+would need a runner-turn variant that yields only the CORP's `(R)` options).
+
 ## Paid-ability windows during a run (rules 6.9.1e / 6.9.3b / 6.9.4b) — deferred
 
 **Status: documented gap, zero impact with the current card pool. Revisit when the first card lands

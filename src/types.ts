@@ -635,6 +635,9 @@ export type SharedMove =
   | { kind: "gainCredits" }
   | { kind: "draw" }
   | { kind: "ability"; targetId: CardInstanceId; abilityIndex: number; server?: ServerId }
+  // Declines the paid ability window that opens after the last action (rule
+  // 5.6.2a/5.7.1e) and ends the active player's action phase.
+  | { kind: "endTurn" }
   // Answers to pending prompts (generic; the option carries the effect)
   | { kind: "prompt.answer"; promptId: number; optionId: string };
 

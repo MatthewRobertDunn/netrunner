@@ -54,7 +54,8 @@ function endCorpTurn(state: GameState): GameState {
   while (!cur.winner && cur.turn.player === "corp") {
     const moves = engine.getLegalMoves(cur, "corp");
     if (moves.length === 0) break;
-    const gain = moves.find((m) => m.kind === "gainCredits") ?? moves[0]!;
+    const gain = moves.find((m) => m.kind === "gainCredits") ??
+      moves.find((m) => m.kind === "endTurn") ?? moves[0]!;
     cur = play(cur, "corp", gain);
     const discard = engine.getLegalMoves(cur, "corp").find((m) => m.kind === "discard");
     if (discard) cur = play(cur, "corp", discard);

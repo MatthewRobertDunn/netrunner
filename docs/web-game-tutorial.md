@@ -4,9 +4,11 @@ This file is the strategy and rules orientation for browser agents; the annotati
 per-button selectors live in `.opencode/skills/play-browser-netrunner/SKILL.md`.
 
 Both players start with **5 credits and a 5-card hand** (rule 1.6.4, 1.6.6). The Corp gets **3
-clicks** per turn, the Runner gets **4 clicks** — a turn ends automatically when its clicks run out.
-**7 agenda points** wins. For the authoritative wording of any rule, see `docs/rules-v26.03.txt`
-(the Netrunner Comprehensive Rules v26.03); interpretations live in `docs/rules-questions.md`.
+clicks** per turn, the Runner gets **4 clicks** — after the last click a paid ability window stays
+open (rule 5.6.2a) until the player takes it or clicks **End turn**; with nothing to decide, the
+turn ends by itself. **7 agenda points** wins. For the authoritative wording of any rule, see
+`docs/rules-v26.03.txt` (the Netrunner Comprehensive Rules v26.03); interpretations live in
+`docs/rules-questions.md`.
 
 ## The goal
 
@@ -100,7 +102,10 @@ All Runner cards install faceup and are paid for upfront.
 2. Three clicks of basic and card actions: `gainCredits`, `draw`, `playOperation`, `install` (into
    `new-remote` / an existing remote / a central), `advance` (agenda or advanceable card), `score`,
    `rez`, paid `ability`s (each names its `data-target`).
-3. Discard phase if hand > hand size (5, more with scored Superconducting Hub). Discarded cards go
+3. After the last click, the paid ability window (rule 5.6.2a) stays open: score a just-readied
+   agenda, rez an affordable asset/upgrade, or use paid abilities — then click **End turn**. (If
+   nothing is decidable the turn ends by itself.)
+4. Discard phase if hand > hand size (5, more with scored Superconducting Hub). Discarded cards go
    to Archives facedown.
 
 Good first turns: money (Hedge Fund or gain), ice on HQ, ice on R&D. Then install an agenda or asset
@@ -116,7 +121,8 @@ unrezzed ice's rez costs so a run threatens a real rez.
    encounter leaves (`rez-window` is the Corp's, prompt `pass` on it when testing).
 3. On breach: access everything the server offers (HQ: one random card; R&D: top card; Archives:
    every card; remote root: each card). Steal agendas automatically; optionally pay trash costs for
-   assets/upgrades. The turn ends when clicks reach zero (there is no End Turn button).
+   assets/upgrades. The turn ends when clicks reach zero — the Runner's window is paid-abilities
+   only (rule 5.7.1e), and the starter pool has no zero-click abilities, so it ends automatically.
 
 Good first turns: economy (Telework, Sure Gamble), install one icebreaker of each needed subtype,
 then run the emptiest server. Early HQ runs are cheap information; Archives becomes worth it once

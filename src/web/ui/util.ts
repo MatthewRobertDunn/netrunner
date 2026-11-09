@@ -306,6 +306,8 @@ export function describeMove(state: GameState, move: Move): string {
       const title = cardTitle(findCardIn(state, move.targetId)?.cardId ?? "");
       return `Ability ${move.abilityIndex + 1} — ${title}`;
     }
+    case "endTurn":
+      return "End turn";
     case "playEvent":
       return `Play ${cardTitle(move.cardId)}`;
     case "run":

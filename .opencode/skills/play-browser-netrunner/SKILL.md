@@ -209,11 +209,14 @@ missing scheme. Note also that the tile's snapshot name comes from its card titl
 (`"Hedge Fund Gain 9 credits."`); its `data-card-id` (the definition id `hedge_fund`) is on the
 tile, and `data-instance` on the slot — use those, not the name.
 
-Turn end: spend clicks with any legal moves; the turn auto-ends at 0 clicks (there is no End Turn
-button). If hand > hand-size, the discard prompt appears. **At 0 clicks the `draw` and `gainCredits`
-buttons disappear entirely** — there is no "End Turn" affordance, so a missing basic-action button
-at the end of a turn is the normal handoff, not a missing control. Poll `[data-banner]` /
-`[data-state]` and wait for the AI to finish before reading the board again.
+Turn end: spend clicks with any legal moves. At 0 clicks the **end-of-turn paid ability window**
+(rule 5.6.2a) opens if anything remains decidable — a ready agenda to score, an affordable unrezzed
+asset/upgrade to rez — and `[data-action="endTurn"]` ("End turn") renders in the Actions list
+alongside those options. The turn ends when the player clicks **End turn** (or automatically when
+the window is empty). **At 0 clicks the `draw` and `gainCredits` buttons disappear entirely** — a
+missing basic-action button is normal there; look for `[data-action="endTurn"]` and the window
+options instead. If hand > hand-size, the discard prompt appears after the window closes. Poll
+`[data-banner]` / `[data-state]` and wait for the AI to finish before reading the board again.
 
 ## Corp loop
 
@@ -243,7 +246,9 @@ Corp cards live on the board (not as sheet rows) — locate installed cards by
 remain.** `gainCredits` and `draw` live on their own tiles in the side panel (not the list), and the
 no-duplicates rule excludes any move already rendered under a card — so a mid-turn with just "gain a
 credit" or "draw a card" shows an empty `.moves`. Don't read that as the turn having ended: the
-tiles are the reliable signal that clicks remain.
+tiles are the reliable signal that clicks remain. At 0 clicks the same list instead carries
+`[data-action="endTurn"]` (when the end-of-turn window has options) or is empty because the turn
+already ended.
 
 ## Prompts (the decision points)
 

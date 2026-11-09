@@ -6,14 +6,8 @@
  */
 
 import { cardDef } from "../cards/catalogue.ts";
-import {
-  behavior,
-  behaviors,
-  breakAbilityDef,
-  pumpAbilityDef,
-  supportStatus,
-} from "../cards/effects.ts";
-import { abilityLegality, serversForAbility } from "./effects.ts";
+import { behavior, behaviors, breakAbilityDef, pumpAbilityDef } from "../cards/effects.ts";
+import { endOfTurnWindowMoves } from "./window.ts";
 import { randomAccessCandidateCount, specificAccessCandidates } from "./settle.ts";
 import {
   allServers,
@@ -73,7 +67,21 @@ export function getLegalMoves(state: GameState, playerSide: PlayerSide): Move[] 
   }
 
   // --- Action phase basics -------------------------------------------------
-  if (state.turn.phase !== "action" || p.clicks <= 0) return [];
+  if (state.turn.phase !== "action") return [];
+  if (p.clicks <= 0) {
+    // Not the active player's turn (e.g. the Corp mid-Runner-turn): its clicks
+    // are spent from its own ended turn, but it has no window to act in.
+    if (state.turn.player !== playerSide) return [];
+    // The paid ability window that opens after every action stays open after
+    // the LAST one (rule 5.6.2a for the Corp, 5.7.1e for the Runner): the
+    // active player may still score, rez non-ice, or use paid abilities, and
+    // ends the turn by declining the window (`endTurn`). An empty window needs
+    // no decision, so there is no move and `settle` advances the phase.
+    const windowMoves = endOfTurnWindowMoves(state, playerSide);
+    if (windowMoves.length === 0) return [];
+    windowMoves.push({ kind: "endTurn" });
+    return windowMoves;
+  }
   if (playerSide === "corp") return corpActionMoves(state);
   return runnerActionMoves(state);
 }
@@ -227,7 +235,9 @@ function corpActionMoves(state: GameState): Move[] {
     moves.push({ kind: "playOperation", cardId: card.cardId });
   }
 
-  // Advance and score installed cards.
+  // Advance installed cards (a click action, rule 5.2.6f). The score/rez/paid
+  // half of this phase is the same window that reopens after the last click,
+  // so it is generated once by `endOfTurnWindowMoves` below.
   for (const card of corpInstalled(state)) {
     const def = cardDef(card.cardId);
     // Rule 1.18.3: Agendas can always be advanced; non-agenda cards only if printed
@@ -238,25 +248,12 @@ function corpActionMoves(state: GameState): Move[] {
     if (isAdvanceable && state.corp.credits >= 1) {
       moves.push({ kind: "advance", targetId: card.id });
     }
-    if (def.type === "agenda") {
-      const adv = card.advancement ?? 0;
-      const requirement = def.advancementRequirement ?? 0;
-      if (adv >= requirement) moves.push({ kind: "score", targetId: card.id });
-    }
   }
 
-  // Rez installed non-ice cards (ice is rezzed during runs only).
-  for (const card of corpInstalled(state)) {
-    const def = cardDef(card.cardId);
-    if (def.type !== "asset" && def.type !== "upgrade") continue;
-    if (card.rezzed === true) continue;
-    if (rezCostFor(state, card) <= state.corp.credits) {
-      moves.push({ kind: "rez", targetId: card.id });
-    }
-  }
-
-  // Paid abilities on installed cards.
-  addAbilityMoves(state, "corp", corpInstalled(state), moves);
+  // Rule 5.6.2a: score ready agendas, rez affordable non-ice cards, and use
+  // paid abilities — the window that precedes every action (and follows the
+  // last one, where `getLegalMoves` calls the same generator directly).
+  moves.push(...endOfTurnWindowMoves(state, "corp"));
   return moves;
 }
 
@@ -356,8 +353,8 @@ function runnerActionMoves(state: GameState): Move[] {
     moves.push({ kind: "run", server });
   }
 
-  // Paid abilities on installed Runner cards.
-  addAbilityMoves(state, "runner", runner.installed, moves);
+  // Rule 5.7.1e: paid abilities (window precedes every Runner action too).
+  moves.push(...endOfTurnWindowMoves(state, "runner"));
   return moves;
 }
 
@@ -499,36 +496,6 @@ function breachMoves(state: GameState, playerSide: PlayerSide): Move[] {
 // ---------------------------------------------------------------------------
 // Shared helpers
 // ---------------------------------------------------------------------------
-
-function addAbilityMoves(
-  state: GameState,
-  side: PlayerSide,
-  cards: CardInstance[],
-  moves: Move[],
-): void {
-  for (const card of cards) {
-    // Rule 1.8.6: an ability is active only while its source card is active.
-    // Corp assets, ice, and upgrades become active when they are rezzed (rule
-    // 1.8.4), and installed agendas are inactive until scored — so an unrezzed
-    // Corp card offers no paid abilities. Runner cards are installed faceup and
-    // are always active, so they are offered regardless of `rezzed`.
-    if (side === "corp" && card.rezzed !== true) continue;
-    const abilityCount = behaviors.get(card.cardId)?.paidAbilities?.length ?? 0;
-    if (supportStatus(card.cardId) === "unsupported") continue;
-    for (let i = 0; i < abilityCount; i++) {
-      const legality = abilityLegality(state, side, card, i);
-      if (!legality.ok) continue;
-      const servers = serversForAbility(state, card, i);
-      if (servers.length > 0) {
-        for (const server of servers) {
-          moves.push({ kind: "ability", targetId: card.id, abilityIndex: i, server });
-        }
-      } else {
-        moves.push({ kind: "ability", targetId: card.id, abilityIndex: i });
-      }
-    }
-  }
-}
 
 /**
  * Every legal discard move for `playerSide` in response to `prompt`.

@@ -129,6 +129,8 @@ function explainIllegal(playerSide: PlayerSide, move: Move): string {
     case "score":
     case "rez":
       return "Not legal in the current Corp action phase state";
+    case "endTurn":
+      return "The turn can only end once every click is spent";
     case "playEvent":
     case "run":
       return "Not legal in the current Runner action phase state";
@@ -268,6 +270,13 @@ function applyResolvedMove(state: GameState, playerSide: PlayerSide, move: Move)
       const found = findCard(state, move.targetId);
       // rezCard fires the on-rez triggers (load credits) itself.
       if (found) rezCard(state, found.card);
+      break;
+    }
+    case "endTurn": {
+      // The paid ability window after the last click is declined: the action
+      // phase is complete (rule 5.6.2c→d / 5.7.1g→h) and play proceeds to the
+      // discard phase, where `settle` handles hand size or the next turn.
+      enterDiscardPhase(state);
       break;
     }
 

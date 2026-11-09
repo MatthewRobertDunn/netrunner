@@ -34,6 +34,7 @@ import {
 } from "./state.ts";
 import { rngNext } from "./rng.ts";
 import { enterDiscardPhase } from "./turns.ts";
+import { endOfTurnWindowOpen } from "./window.ts";
 import type { CardInstance, GameState, PlayerSide, ServerId } from "../types.ts";
 
 /** Resolve automatic rules until input is needed (or the game ends). */
@@ -74,8 +75,12 @@ export function settle(state: GameState): void {
       continue;
     }
 
-    // Action phase: out of clicks -> discard phase (rule 5.6.3 / 5.7.2).
+    // Action phase: out of clicks -> the paid ability window after the last
+    // action (rule 5.6.2a / 5.7.1e) stays open until the active player
+    // declines it (`endTurn`). While it has options, park; otherwise the
+    // action phase is complete (rule 5.6.3 / 5.7.2).
     if (state.turn.phase === "action" && player(state, state.turn.player).clicks === 0) {
+      if (endOfTurnWindowOpen(state)) return;
       enterDiscardPhase(state);
       if (state.prompts.length > 0) return;
       continue;
