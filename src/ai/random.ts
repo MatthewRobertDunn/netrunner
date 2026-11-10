@@ -15,6 +15,7 @@ import type { AIDecisionContext, GameAI, Move, PlayerView } from "../types.ts";
 
 export class RandomAI implements GameAI {
   readonly name = "random";
+  readonly version = "0.1.0";
 
   chooseMove(_view: PlayerView, legal: Move[], ctx: AIDecisionContext): Move {
     const rng = makeRng(ctx.seed);

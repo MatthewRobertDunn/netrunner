@@ -599,6 +599,12 @@ export interface AIDecisionContext {
 export interface GameAI {
   /** Short human-readable name, used in test output and tournament logs. */
   readonly name: string;
+  /**
+   * Optional version string, printed in match summaries so two builds of the
+   * same engine are distinguishable (e.g. "Eval 0.4.0" vs "Eval 0.4.2").
+   * Engines without a version print as just their name.
+   */
+  readonly version?: string;
   /** Pick a move from `legal` for `ctx.side`, seeing only `view` and `ctx`. */
   chooseMove(view: PlayerView, legal: Move[], ctx: AIDecisionContext): Move;
 }

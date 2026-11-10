@@ -47,6 +47,7 @@ const FLOOR = -0.9 * WIN;
 
 export class EvalAI implements GameAI {
   readonly name = "eval";
+  readonly version = "0.4.0";
   readonly samples: number;
   readonly temperature: number;
   readonly seedSalt: number;

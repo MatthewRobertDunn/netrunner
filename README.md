@@ -41,6 +41,12 @@ invariants, and the mistakes worth not repeating.
   loop and `src/ai/eval.ts` for the evaluation).
   `playGame({ corp, runner, state })` runs a full game between any two AIs; decisions are routed by
   _who may act_ (the turn player, or the prompted player during rez windows and accesses).
+- **Engine-vs-engine matches.** `runMatch({ engineA, engineB, games })` (in `src/match/harness.ts`)
+  plays N games between any two `GameAI`s and prints a score table that includes each engine's
+  `name` and optional `version` ("Eval 0.4.0" vs "Eval 0.4.2"). Sides alternate every game in
+  seed-shared pairs, so neither engine inherits the other's seed luck. Fielding a new engine is one
+  line: `deno task engine-match --a eval --b random --games 40` (the registry lives in
+  `scripts/engine-match.ts`), or import `runMatch` directly.
 
 ## Setup
 
@@ -277,6 +283,10 @@ src/
                       DEFAULT_SAMPLES constant — 1-ply eval, softmax root)
     eval.ts           The scoring function evaluate() + weights (no decision loop)
     play.ts           playGame loop, AiGameError
+  match/
+    harness.ts        runMatch: engine-vs-engine matches (plugin layer over playGame —
+                      sides alternate in seed-shared pairs; reads name/version for the
+                      score table, so any GameAI plugs in as-is)
   web/
     entry.ts          Browser entry (bundled into public/dist/app.js)
     app.ts            Vue root: setup screen + game screen (trusted shell)
@@ -287,7 +297,7 @@ tests/                Smoke, cards, setup, runs, servers, visibility, determinis
   helpers/            assert.ts, fixtures.ts, boundary.ts, drive.ts, invariants.ts
                       (shared test helpers)
 scripts/              import-starter-decks.ts, fetch-card-images.ts, build-web.ts,
-                      check-ai.ts, check-invariants.ts, publish.ts,
+                      check-ai.ts, check-invariants.ts, engine-match.ts, publish.ts,
                       export-docker-images.ts (dev only)
 ```
 

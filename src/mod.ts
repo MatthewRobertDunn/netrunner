@@ -97,6 +97,18 @@ export {
 } from "./ai/mod.ts";
 export type { EvalAIOptions, GameOutcome } from "./ai/mod.ts";
 
+// The engine-vs-engine match harness: a thin plugin layer over `playGame`.
+// `runMatch` accepts any two `GameAI`s (one-line integration for a new engine)
+// and reports side-balanced, seed-paired scores.
+export { displayName, runMatch } from "./match/harness.ts";
+export type {
+  EnginePlugin,
+  EnginePluginLike,
+  MatchConfig,
+  MatchGame,
+  MatchSummary,
+} from "./match/harness.ts";
+
 // Shared clone infrastructure (engine/determinize + AI playouts); kept on the
 // barrel because tests import it from here.
 export { fastCloneState } from "./engine/clone.ts";
